@@ -27,7 +27,7 @@ export function isLogoCached(teamId: string): boolean {
  * Get cached logo URL (local path)
  */
 export function getCachedLogoUrl(teamId: string, size: number): string | null {
-  if (!isLogoCached(teamId, size)) return null;
+  if (!isLogoCached(teamId)) return null;
   return getLocalLogoPath(teamId, size);
 }
 
