@@ -34,9 +34,10 @@ export default function CountdownClock() {
           tournamentStartTime: '12:00 PM EST',
           numberOfPlayers: 0,
           totalPrizeAmount: 0,
-          siteName: "Warren's March Madness",
+          siteName: "Warren&apos;s March Madness",
           siteDescription: 'Annual March Madness Bracket Challenge',
           oldSiteUrl: 'https://warrensmadness.webnode.page/',
+          standingsTabs: 2,
         });
       }
     };
