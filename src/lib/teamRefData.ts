@@ -6,7 +6,6 @@ export interface TeamRefData {
   id: string;
 }
 
-const TEAM_REF_SHEET_ID = '1X2J_UsBAnIaxdGQt1nF0DN9llkky1zFcPU_nky01pAI';
 
 // Cache for team reference data
 let cachedTeamData: TeamRefData[] | null = null;

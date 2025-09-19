@@ -1,6 +1,6 @@
 import { siteConfig } from '@/config/site';
-import { Star, Trophy, Crown, Award, Calendar, Target, Zap, Users, Medal } from 'lucide-react';
-import { getHallOfFameData, HallOfFameEntry } from '@/lib/googleSheets';
+import { Star, Trophy, Crown, Calendar, Users, Medal } from 'lucide-react';
+import { getHallOfFameData } from '@/lib/googleSheets';
 
 export default async function HallOfFamePage() {
   const hallOfFameData = await getHallOfFameData();
@@ -53,8 +53,8 @@ export default async function HallOfFamePage() {
   });
   
   const multipleWinners = Array.from(top3Counts.entries())
-    .filter(([_, data]) => data.count > 1)
-    .sort(([_, a], [__, b]) => b.count - a.count);
+    .filter(([, data]) => data.count > 1)
+    .sort(([, a], [, b]) => b.count - a.count);
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -81,7 +81,7 @@ export default async function HallOfFamePage() {
           </div>
           
           <div className="space-y-6">
-            {hallOfFameData.map((entry, index) => (
+            {hallOfFameData.map((entry) => (
               <div key={entry.year} className="flex items-center p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">
                 <div className="flex-shrink-0 w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center mr-4">
                   <Trophy className="h-6 w-6 text-white" />
@@ -116,7 +116,7 @@ export default async function HallOfFamePage() {
             </div>
             
             <div className="space-y-4">
-              {hallOfFameData.map((entry, index) => (
+              {hallOfFameData.map((entry) => (
                 <div key={entry.year} className="bg-yellow-50 rounded-lg p-4 border-l-4 border-yellow-500">
                   <div className="flex items-center justify-between">
                     <div>

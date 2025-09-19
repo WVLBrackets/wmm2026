@@ -164,7 +164,6 @@ export default function StandingsTable() {
         const standingsStart = performance.now();
         console.log(`📊 Starting standings fetch for ${day}`);
         const standingsPromise = getStandingsData(day);
-        const teamRefPromise = getTeamRefData();
         
         // Wait for standings data
         const data = await standingsPromise;
@@ -258,7 +257,6 @@ export default function StandingsTable() {
     }
 
     console.log(`🔍 Processing ${missingTeams.length} missing teams`);
-    const processStart = performance.now();
 
     // Add missing teams to global cache synchronously
     missingTeams.forEach(teamName => {
@@ -270,8 +268,6 @@ export default function StandingsTable() {
         globalTeamCache.set(teamName, { id: 'unknown', name: teamName });
       }
     });
-    
-    const processEnd = performance.now();
     const totalTime = performance.now() - preloadStart;
     
     // Update local state with global cache
@@ -291,15 +287,6 @@ export default function StandingsTable() {
   };
 
   // Legacy preload function (kept for compatibility)
-  const preloadTeamData = async (data: StandingsData) => {
-    try {
-      const teamRefData = await getTeamRefData();
-      preloadTeamDataWithRef(data, teamRefData);
-    } catch (error) {
-      console.error('Error preloading team data:', error);
-      setTeamCache(new Map(globalTeamCache));
-    }
-  };
 
   // Filter and search standings
   const filteredEntries = standingsData?.entries.filter(entry => {
@@ -361,21 +348,6 @@ export default function StandingsTable() {
     );
   };
 
-  const renderFinals = (finals: string[]) => {
-    return (
-      <div className="flex gap-2 justify-center">
-        {finals.map((team, index) => (
-          <TeamLogo
-            key={index}
-            teamName={team}
-            size={30}
-            teamCache={teamCache}
-            className="relative"
-          />
-        ))}
-      </div>
-    );
-  };
 
   const renderChampion = (champion: string, tb: number) => {
     return (

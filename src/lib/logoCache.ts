@@ -19,7 +19,7 @@ function getLocalLogoPath(teamId: string, size: number): string {
 /**
  * Check if a logo is cached locally
  */
-export function isLogoCached(teamId: string, size: number): boolean {
+export function isLogoCached(teamId: string): boolean {
   return DOWNLOADED_TEAM_IDS.has(teamId);
 }
 
@@ -35,7 +35,7 @@ export function getCachedLogoUrl(teamId: string, size: number): string | null {
  * Preload logos for a list of team IDs
  * Since logos are already downloaded, this is a no-op
  */
-export async function preloadLogos(teamIds: string[], sizes: number[] = [30, 75]): Promise<void> {
+export async function preloadLogos(teamIds: string[]): Promise<void> {
   // Logos are already downloaded locally, no need to do anything
   console.log(`🖼️ Using local logos for ${teamIds.length} teams`);
 }

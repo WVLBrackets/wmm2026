@@ -2,7 +2,7 @@
 // Optimized for frequent use across the site
 
 import { getTeamIdByAbbr } from './teamRefData';
-import { getCachedLogoUrl, isLogoCached, preloadLogos } from './logoCache';
+import { getCachedLogoUrl, preloadLogos } from './logoCache';
 
 export interface TeamInfo {
   id: string;

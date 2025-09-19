@@ -20,7 +20,6 @@ export interface HallOfFameEntry {
 
 // Google Sheet ID from your URL: 1qFjvpimsmilkuJT_zOn3IhidkqLpzbX8MRn1cQxjuHw
 const GOOGLE_SHEET_ID = '1qFjvpimsmilkuJT_zOn3IhidkqLpzbX8MRn1cQxjuHw';
-const GOOGLE_SHEET_RANGE = 'Sheet1!A1:I100'; // Adjust range as needed
 
 // Function to fetch data from Google Sheets
 export const getHallOfFameData = async (): Promise<HallOfFameEntry[]> => {
