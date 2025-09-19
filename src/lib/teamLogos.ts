@@ -142,7 +142,7 @@ export function getCacheStats(): { logoUrlCache: number; teamInfoCache: number }
  */
 export async function preloadStandingsLogos(teamIds: string[]): Promise<void> {
   console.log(`🖼️ Preloading logos for ${teamIds.length} teams`);
-  await preloadLogos(teamIds, [30, 75]);
+  await preloadLogos(teamIds);
   console.log(`✅ Logo preload completed`);
 }
 
