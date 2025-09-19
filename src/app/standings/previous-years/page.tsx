@@ -38,7 +38,7 @@ export default function PreviousYearsPage() {
             </p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
               <p className="text-sm text-blue-800">
-                <strong>Coming Soon:</strong> We're working on adding historical data from previous tournaments. 
+                <strong>Coming Soon:</strong> We&apos;re working on adding historical data from previous tournaments. 
                 This will include past champions, final standings, and tournament statistics.
               </p>
             </div>

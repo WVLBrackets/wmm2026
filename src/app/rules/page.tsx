@@ -1,5 +1,4 @@
-import { siteConfig } from '@/config/site';
-import { BookOpen, DollarSign, Clock, Trophy, Mail, FileSpreadsheet } from 'lucide-react';
+import { DollarSign, Clock, Trophy, FileSpreadsheet } from 'lucide-react';
 
 export default function RulesPage() {
   return (
@@ -34,7 +33,7 @@ export default function RulesPage() {
                 <div className="flex-shrink-0 w-2 h-2 bg-blue-600 rounded-full mt-2 mr-3"></div>
                 <p className="text-gray-700">
                   Entries must be received by <strong>9:00 AM Pacific time</strong> on Thursday, 3/20/26, 
-                  the first day of the First Round. (We ignore the 'First Four' games)
+                  the first day of the First Round. (We ignore the &apos;First Four&apos; games)
                 </p>
               </div>
             </div>
@@ -114,7 +113,7 @@ export default function RulesPage() {
             
             <div className="bg-orange-50 rounded-lg p-6">
               <p className="text-gray-700">
-                The "First Four" play-in games are <strong>ignored</strong> in our scoring.
+                The &quot;First Four&quot; play-in games are <strong>ignored</strong> in our scoring.
               </p>
             </div>
           </div>
@@ -137,14 +136,14 @@ export default function RulesPage() {
               <div className="flex items-start">
                 <div className="flex-shrink-0 w-2 h-2 bg-green-600 rounded-full mt-2 mr-3"></div>
                 <p className="text-gray-700">
-                  The Tracker provides <strong>detailed visibility</strong> to everyone's picks.
+                  The Tracker provides <strong>detailed visibility</strong> to everyone&apos;s picks.
                 </p>
               </div>
               
               <div className="flex items-start">
                 <div className="flex-shrink-0 w-2 h-2 bg-green-600 rounded-full mt-2 mr-3"></div>
                 <p className="text-gray-700">
-                  You don't have to use The Tracker - the <strong>website standings will be updated nightly</strong>.
+                  You don&apos;t have to use The Tracker - the <strong>website standings will be updated nightly</strong>.
                 </p>
               </div>
             </div>

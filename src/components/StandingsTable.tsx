@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { getStandingsData, getAvailableDays, getCurrentTournamentYear, StandingsEntry, StandingsData, clearStandingsCache } from '@/lib/standingsData';
-import { getTeamInfo, getTeamLogoUrl, getLogoUrlSync, preloadStandingsLogos } from '@/lib/teamLogos';
+import { getTeamInfo, getLogoUrlSync, preloadStandingsLogos } from '@/lib/teamLogos';
 import { getTeamRefData } from '@/lib/teamRefData';
 import { initializeLogoCache } from '@/lib/logoCache';
-import { Trophy, Medal, Search, Filter, Download, RefreshCw, Calendar } from 'lucide-react';
+import { Trophy, Medal, Search, RefreshCw, Calendar } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -94,7 +94,7 @@ function TeamLogo({
 }
 
 // Global team cache that persists across day changes
-let globalTeamCache = new Map<string, { id: string; name: string }>();
+const globalTeamCache = new Map<string, { id: string; name: string }>();
 
 export default function StandingsTable() {
   const [standingsData, setStandingsData] = useState<StandingsData | null>(null);
@@ -223,7 +223,7 @@ export default function StandingsTable() {
   }, [selectedDay]); // Run when selectedDay changes, but handleDayChange will override for user interactions
 
   // Optimized preload function that uses pre-fetched team reference data
-  const preloadTeamDataWithRef = (data: StandingsData, teamRefData: any[]) => {
+  const preloadTeamDataWithRef = (data: StandingsData, teamRefData: { abbr: string; id: string; name: string }[]) => {
     const preloadStart = performance.now();
     console.log(`🔄 Starting team preload for ${data.entries.length} entries`);
     

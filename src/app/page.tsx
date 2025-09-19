@@ -1,5 +1,5 @@
 import { siteConfig } from '@/config/site';
-import { Trophy, Calendar, Users, DollarSign } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import CountdownClock from '@/components/CountdownClock';
 import Announcements from '@/components/Announcements';
 import Image from 'next/image';

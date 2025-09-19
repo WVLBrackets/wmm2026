@@ -1,4 +1,3 @@
-import { siteConfig } from '@/config/site';
 import { CreditCard, DollarSign, Users, Heart, AlertCircle, CheckCircle } from 'lucide-react';
 
 export default function PaymentsPage() {

@@ -19,7 +19,7 @@ export interface StandingsData {
 const STANDINGS_SHEET_ID = '12c8VEI6ZoIhRXg8b0rEfYWAOI86Ye_ZPY9G1sPaBRFs';
 
 // Cache for standings data to improve performance
-let standingsCache = new Map<string, { data: StandingsData; timestamp: number }>();
+const standingsCache = new Map<string, { data: StandingsData; timestamp: number }>();
 const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes cache
 
 /**

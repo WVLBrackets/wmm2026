@@ -69,7 +69,7 @@ export default function DynamicNavigation() {
                 />
                 <div>
                   <h1 className="text-xl font-bold text-gray-900">
-                    Warren's March Madness
+                    Warren&apos;s March Madness
                   </h1>
                   <p className="hidden xl:block text-sm text-gray-600">
                     Loading...
