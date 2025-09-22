@@ -7,7 +7,7 @@ import { getCachedLogoUrl, preloadLogos } from './logoCache';
 export interface TeamInfo {
   id: string;
   name: string;
-  logoUrl: string;
+  logoUrl: string | null;
 }
 
 // Cache for logo URLs to avoid repeated string concatenation
@@ -74,9 +74,9 @@ export async function getTeamInfo(teamName: string, size: number = 30): Promise<
       console.warn(`Team logo not found for: "${teamName}". Please add to team reference data.`);
       // Return a placeholder that will show the team name as text
       const placeholderInfo: TeamInfo = {
-        id: 'unknown',
+        id: 'placeholder',
         name: teamName,
-        logoUrl: ''
+        logoUrl: null
       };
       teamInfoCache.set(cacheKey, placeholderInfo);
       return placeholderInfo;
@@ -98,9 +98,9 @@ export async function getTeamInfo(teamName: string, size: number = 30): Promise<
     console.error(`Error getting team info for ${teamName}:`, error);
     // Return a placeholder that will show the team name as text
     const errorInfo: TeamInfo = {
-      id: 'unknown',
+      id: 'placeholder',
       name: teamName,
-      logoUrl: ''
+      logoUrl: null
     };
     teamInfoCache.set(cacheKey, errorInfo);
     return errorInfo;

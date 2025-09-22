@@ -6,6 +6,9 @@ export interface TeamRefData {
   id: string;
 }
 
+// Google Sheets configuration
+const TEAM_REF_SHEET_ID = '1qFjvpimsmilkuJT_zOn3IhidkqLpzbX8MRn1cQxjuHw';
+
 
 // Cache for team reference data
 let cachedTeamData: TeamRefData[] | null = null;
@@ -27,13 +30,16 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
     return cachedTeamData;
   }
 
-  // Temporarily use fallback data due to Google Sheets fetch issues
-  // TODO: Fix Google Sheets access and re-enable fetch
-  console.log('📋 Using fallback team reference data (Google Sheets temporarily disabled)');
+  // Use fallback data for now - Google Sheets has CORS issues
+  console.log('📋 Using fallback team reference data (Google Sheets has CORS issues)');
   const fallbackStart = performance.now();
   const fallbackData = getFallbackTeamData();
   const fallbackEnd = performance.now();
   console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
+  
+  // Log available team abbreviations for debugging
+  console.log(`📋 Available team abbreviations (${fallbackData.length} total):`, 
+    fallbackData.map(t => t.abbr).sort().join(', '));
   
   cachedTeamData = fallbackData;
   lastFetchTime = now;
@@ -41,57 +47,6 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
   const totalTime = performance.now() - startTime;
   console.log(`✅ Team reference data ready in ${totalTime.toFixed(2)}ms`);
   return fallbackData;
-
-  /* 
-  // Commented out due to fetch issues - need to investigate Google Sheets access
-  try {
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${TEAM_REF_SHEET_ID}/export?format=csv&gid=0`;
-    
-    console.log('Fetching team reference data from:', csvUrl);
-    
-    // Add a small delay to avoid rate limiting
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    const response = await fetch(csvUrl, {
-      method: 'GET',
-      headers: {
-        'Accept': 'text/csv',
-      },
-    });
-    
-    if (!response.ok) {
-      console.error(`HTTP error! status: ${response.status}`);
-      throw new Error(`Failed to fetch team reference data: ${response.status} ${response.statusText}`);
-    }
-    
-    const csvText = await response.text();
-    console.log('CSV response length:', csvText.length);
-    console.log('CSV preview:', csvText.substring(0, 500));
-    
-    const teamData = parseTeamRefCSV(csvText);
-    console.log('Parsed team data count:', teamData.length);
-    console.log('First 10 teams:', teamData.slice(0, 10));
-    console.log('Looking for specific teams:');
-    console.log('UConn:', teamData.find(t => t.abbr === 'UConn'));
-    console.log('UNC:', teamData.find(t => t.abbr === 'UNC'));
-    console.log('UK:', teamData.find(t => t.abbr === 'UK'));
-    console.log('Tenn:', teamData.find(t => t.abbr === 'Tenn'));
-    
-    // Update cache
-    cachedTeamData = teamData;
-    lastFetchTime = now;
-    
-    return teamData;
-  } catch (error) {
-    console.error('Error fetching team reference data:', error);
-    console.log('Falling back to static team data');
-    // Return fallback data if fetch fails
-    const fallbackData = getFallbackTeamData();
-    cachedTeamData = fallbackData;
-    lastFetchTime = now;
-    return fallbackData;
-  }
-  */
 }
 
 /**
@@ -177,6 +132,9 @@ export async function getTeamIdByAbbr(abbr: string): Promise<string | null> {
   try {
     const teamData = await getTeamRefData();
     const team = teamData.find(t => t.abbr === abbr);
+    if (!team) {
+      console.warn(`⚠️ Team abbreviation not found: "${abbr}" - Please add to team reference data`);
+    }
     return team ? team.id : null;
   } catch (error) {
     console.error(`Error getting team ID for ${abbr}:`, error);
@@ -216,6 +174,17 @@ function getFallbackTeamData(): TeamRefData[] {
     { abbr: 'Neb', id: '158' },       // Nebraska Cornhuskers
     { abbr: 'WaSt', id: '2655' },     // Washington State Cougars
     { abbr: 'StMary', id: '2608' },   // Saint Mary's Gaels
+    
+    // Missing abbreviations from standings data (from Google Sheet)
+    { abbr: 'JM', id: '256' },         // James Madison Dukes (Row 137)
+    { abbr: 'TA&M', id: '245' },       // Texas A&M Aggies (Row 63)
+    { abbr: 'DRK', id: '2181' },       // Drake Bulldogs (Row 90)
+    { abbr: 'Drk', id: '2181' },       // Drake Bulldogs (alternative case)
+    { abbr: 'FLO', id: '57' },         // Florida Gators
+    { abbr: 'Flo', id: '57' },         // Florida Gators (alternative case)
+    { abbr: 'Texas', id: '251' },      // Texas Longhorns
+    { abbr: 'TTech', id: '2641' },     // Texas Tech Red Raiders
+    { abbr: 'FAU', id: '2229' },       // Florida Atlantic Owls
     
     // Teams from Google Sheet
     { abbr: 'AA', id: '1' },          // Alaska Anchorage Seawolves
