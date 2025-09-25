@@ -21,7 +21,7 @@ function TeamLogo({
   className?: string;
   teamCache?: Map<string, { id: string; name: string }>;
 }) {
-  const [teamInfo, setTeamInfo] = useState<{ id: string; name: string; logoUrl: string } | null>(null);
+  const [teamInfo, setTeamInfo] = useState<{ id: string; name: string; logoUrl: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,7 +41,7 @@ function TeamLogo({
         setTeamInfo(info);
       } catch (error) {
         console.error('Error loading team info:', error);
-        setTeamInfo({ id: 'unknown', name: teamName, logoUrl: '' });
+        setTeamInfo({ id: 'unknown', name: teamName, logoUrl: null });
       } finally {
         setLoading(false);
       }

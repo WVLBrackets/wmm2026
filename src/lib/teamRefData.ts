@@ -6,8 +6,8 @@ export interface TeamRefData {
   id: string;
 }
 
-// Google Sheets configuration
-const TEAM_REF_SHEET_ID = '1qFjvpimsmilkuJT_zOn3IhidkqLpzbX8MRn1cQxjuHw';
+// Google Sheets configuration (currently using fallback data due to CORS)
+// const TEAM_REF_SHEET_ID = '1qFjvpimsmilkuJT_zOn3IhidkqLpzbX8MRn1cQxjuHw';
 
 
 // Cache for team reference data
@@ -50,9 +50,9 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
 }
 
 /**
- * Parse CSV data into team reference entries
+ * Parse CSV data into team reference entries (currently unused)
  */
-function parseTeamRefCSV(csvText: string): TeamRefData[] {
+/* function parseTeamRefCSV(csvText: string): TeamRefData[] {
   const lines = csvText.split('\n').filter(line => line.trim());
   const teamData: TeamRefData[] = [];
   
@@ -98,7 +98,7 @@ function parseTeamRefCSV(csvText: string): TeamRefData[] {
   }
   
   return teamData;
-}
+} */
 
 /**
  * Parse a single CSV line, handling quoted fields
