@@ -380,11 +380,12 @@ export default function StandingsTable() {
             standingsData.eliminatedTeams || []
           ) : undefined;
           
-          // Debug logging for UNC specifically
-          if (team === 'UNC') {
-            console.log(`🔍 UNC Debug in renderFinalFour:`);
+          // Debug logging for UNC and Houston specifically
+          if (team === 'UNC' || team === 'Hou') {
+            console.log(`🔍 ${team} Debug in renderFinalFour:`);
             console.log(`  - isFinalsTeam: ${isFinalsTeam}`);
             console.log(`  - semifinalWinners: [${(standingsData.semifinalWinners || []).join(', ')}]`);
+            console.log(`  - semifinalKey: [${(standingsData.semifinalKey || []).join(', ')}]`);
             console.log(`  - eliminatedTeams: [${(standingsData.eliminatedTeams || []).join(', ')}]`);
             console.log(`  - semifinalColor: ${semifinalColor}`);
           }

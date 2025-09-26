@@ -130,17 +130,14 @@ function parseStandingsCSV(csvText: string): { entries: StandingsEntry[]; quarte
   // Col K (index 10): Final winner (Champion)
   const finalWinner = keyRow[10]?.trim() || '';
   
-  // Extract Column O (Out) - eliminated teams
+  // Extract Column O (Out) - eliminated teams from row 2 (Key row)
   const eliminatedTeams: string[] = [];
-  for (let i = 2; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-    const columns = parseCSVLine(line);
-    if (columns.length > 14) { // Column O is index 14
-      const outTeam = columns[14]?.trim();
-      if (outTeam && outTeam !== '') {
-        eliminatedTeams.push(outTeam);
-      }
+  if (keyRow.length > 14) { // Column O is index 14
+    const outTeam = keyRow[14]?.trim();
+    if (outTeam && outTeam !== '') {
+      // Split by comma if multiple teams are listed
+      const teams = outTeam.split(',').map(team => team.trim()).filter(team => team !== '');
+      eliminatedTeams.push(...teams);
     }
   }
   
