@@ -398,11 +398,7 @@ export default function StandingsTable() {
               teamCache={teamCache}
               backgroundColor={quarterfinalColor}
               borderColor={semifinalColor}
-              className={`relative ${
-                isFinalsTeam
-                  ? 'ring-2 ring-blue-500 ring-offset-0'
-                  : ''
-              }`}
+              className="relative"
             />
           );
         })}
