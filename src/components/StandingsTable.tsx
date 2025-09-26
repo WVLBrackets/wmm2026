@@ -334,7 +334,7 @@ export default function StandingsTable() {
 
   const renderFinalFour = (finalFour: string[], finals: string[]) => {
     return (
-      <div className="grid grid-cols-2 gap-2 p-2 bg-gray-50 rounded-lg border-2 border-gray-200 w-fit">
+      <div className="grid grid-cols-2 gap-1 p-2 bg-gray-50 rounded-lg border-2 border-gray-200 w-fit">
         {finalFour.map((team, index) => {
           const isFinalsTeam = finals.includes(team);
           return (
