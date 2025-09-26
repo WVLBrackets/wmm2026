@@ -379,6 +379,15 @@ export default function StandingsTable() {
             standingsData.eliminatedTeams || []
           ) : undefined;
           
+          // Debug logging for UNC specifically
+          if (team === 'UNC') {
+            console.log(`🔍 UNC Debug in renderFinalFour:`);
+            console.log(`  - isFinalsTeam: ${isFinalsTeam}`);
+            console.log(`  - semifinalWinners: [${(standingsData.semifinalWinners || []).join(', ')}]`);
+            console.log(`  - eliminatedTeams: [${(standingsData.eliminatedTeams || []).join(', ')}]`);
+            console.log(`  - semifinalColor: ${semifinalColor}`);
+          }
+          
           return (
             <TeamLogo
               key={index}
