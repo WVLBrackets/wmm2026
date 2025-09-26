@@ -267,21 +267,20 @@ export function getQuarterfinalColor(
   console.log(`  - Quarterfinal winners: [${quarterfinalWinners.join(', ')}]`);
   console.log(`  - Eliminated teams: [${eliminatedTeams.join(', ')}]`);
   
-  // If team is eliminated, it's incorrect
+  // PRIORITY: If there are quarterfinal results, use those (winners override eliminated status)
+  if (quarterfinalWinners.length > 0) {
+    if (quarterfinalWinners.includes(team)) {
+      console.log(`  - Result: CORRECT (team matches quarterfinal winner)`);
+      return 'correct';
+    } else {
+      console.log(`  - Result: INCORRECT (team doesn't match quarterfinal winners)`);
+      return 'incorrect';
+    }
+  }
+  
+  // If no quarterfinal results yet, check if team is eliminated
   if (eliminatedTeams.includes(team)) {
     console.log(`  - Result: INCORRECT (team is eliminated)`);
-    return 'incorrect';
-  }
-  
-  // If there are quarterfinal results and team matches, it's correct
-  if (quarterfinalWinners.length > 0 && quarterfinalWinners.includes(team)) {
-    console.log(`  - Result: CORRECT (team matches quarterfinal winner)`);
-    return 'correct';
-  }
-  
-  // If there are quarterfinal results but team doesn't match, it's incorrect
-  if (quarterfinalWinners.length > 0 && !quarterfinalWinners.includes(team)) {
-    console.log(`  - Result: INCORRECT (team doesn't match quarterfinal winners)`);
     return 'incorrect';
   }
   
