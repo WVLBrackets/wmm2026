@@ -77,11 +77,12 @@ function TeamLogo({
           width: `${size}px`,
           height: `${size}px`,
           objectFit: 'contain',
-          imageRendering: size <= 40 ? 'crisp-edges' : 'auto' // Crisp edges for small images
+          imageRendering: size <= 40 ? 'crisp-edges' : 'high-quality' // Crisp edges for small images, high quality for larger ones
         }}
-        quality={size <= 40 ? 100 : 95} // Higher quality for smaller images
+        quality={100} // Maximum quality for all images
         priority={size > 50} // Prioritize loading for larger logos
         unoptimized={size <= 40} // Skip Next.js optimization for very small images to preserve sharpness
+        sizes={`${size}px`} // Specify exact size for better optimization
         onError={(e) => {
           const target = e.target as HTMLImageElement;
           target.style.display = 'none';
