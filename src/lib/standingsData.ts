@@ -70,6 +70,8 @@ export async function getStandingsData(day: string = 'Day1'): Promise<StandingsD
     console.log(`📊 Semifinal Winners: ${semifinalWinners.join(', ')}`);
     console.log(`📊 Final Winner: ${finalWinner}`);
     console.log(`📊 Eliminated Teams: ${eliminatedTeams.join(', ')}`);
+    console.log(`🔍 OUT column raw value: "${keyRow[14]?.trim() || ''}"`);
+    console.log(`🔍 Parsed eliminated teams: [${eliminatedTeams.join(', ')}]`);
     
         const standingsData: StandingsData = {
           day,
