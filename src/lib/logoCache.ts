@@ -25,8 +25,14 @@ export function isLogoCached(teamId: string): boolean {
 
 /**
  * Get cached logo URL (local path)
+ * In production, always return null to use ESPN URLs
  */
 export function getCachedLogoUrl(teamId: string, size: number): string | null {
+  // In production (Vercel), always use ESPN URLs instead of local paths
+  if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
+    return null;
+  }
+  
   if (!isLogoCached(teamId)) return null;
   return getLocalLogoPath(teamId, size);
 }
