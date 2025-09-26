@@ -23,7 +23,7 @@ function TeamLogo({
   className?: string;
   teamCache?: Map<string, { id: string; name: string }>;
   backgroundColor?: 'correct' | 'incorrect' | 'neutral';
-  borderColor?: 'correct' | 'incorrect' | 'neutral';
+  borderColor?: 'correct' | 'incorrect' | 'neutral' | undefined;
 }) {
   const [teamInfo, setTeamInfo] = useState<{ id: string; name: string; logoUrl: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,10 +79,11 @@ function TeamLogo({
     else if (backgroundColor === 'incorrect') bgClass = 'bg-red-50';
     else bgClass = 'bg-gray-50';
     
-    // Border color logic
+    // Border color logic - only apply if borderColor is defined
     if (borderColor === 'correct') borderClass = 'ring-2 ring-green-500';
     else if (borderColor === 'incorrect') borderClass = 'ring-2 ring-red-500';
-    else borderClass = 'ring-1 ring-gray-300';
+    else if (borderColor === 'neutral') borderClass = 'ring-1 ring-gray-300';
+    // If borderColor is undefined, no border class is applied
     
     return `${bgClass} ${borderClass}`;
   };
@@ -372,7 +373,7 @@ export default function StandingsTable() {
             team, 
             standingsData.semifinalWinners || [], 
             standingsData.eliminatedTeams || []
-          ) : 'neutral';
+          ) : undefined;
           
           return (
             <TeamLogo
