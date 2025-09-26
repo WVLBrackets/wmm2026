@@ -99,7 +99,7 @@ export async function getStandingsData(day: string = 'Day1'): Promise<StandingsD
 /**
  * Parse CSV data into standings entries
  */
-function parseStandingsCSV(csvText: string): { entries: StandingsEntry[]; quarterfinalWinners: string[]; semifinalWinners: string[]; finalWinner: string; eliminatedTeams: string[] } {
+function parseStandingsCSV(csvText: string): { entries: StandingsEntry[]; quarterfinalWinners: string[]; semifinalWinners: string[]; semifinalKey: string[]; finalWinner: string; eliminatedTeams: string[] } {
   const lines = csvText.split('\n').filter(line => line.trim());
   const entries: StandingsEntry[] = [];
   
