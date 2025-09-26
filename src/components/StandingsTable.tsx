@@ -83,11 +83,11 @@ function TeamLogo({
       bgClass = 'bg-gradient-to-br from-gray-50 to-gray-100';
     }
     
-    // Border color logic - only apply if borderColor is defined
-    if (borderColor === 'correct') borderClass = 'ring-2 ring-green-500';
-    else if (borderColor === 'incorrect') borderClass = 'ring-2 ring-red-500';
-    else if (borderColor === 'neutral') borderClass = 'ring-1 ring-gray-300';
-    // If borderColor is undefined, no border class is applied
+           // Border color logic - only apply if borderColor is defined
+           if (borderColor === 'correct') borderClass = 'ring-2 ring-green-500';
+           else if (borderColor === 'incorrect') borderClass = 'ring-2 ring-red-500';
+           else if (borderColor === 'neutral') borderClass = 'ring-1 ring-black';
+           // If borderColor is undefined, no border class is applied
     
     return `${bgClass} ${borderClass}`;
   };
