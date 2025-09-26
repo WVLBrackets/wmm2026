@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getStandingsData, getAvailableDays, getCurrentTournamentYear, StandingsEntry, StandingsData, clearStandingsCache } from '@/lib/standingsData';
+import { getStandingsData, getAvailableDays, getCurrentTournamentYear, StandingsEntry, StandingsData, clearStandingsCache, getTeamPickColor } from '@/lib/standingsData';
 import { getTeamInfo, getLogoUrlSync, preloadStandingsLogos } from '@/lib/teamLogos';
 import { getTeamRefData } from '@/lib/teamRefData';
 import { initializeLogoCache } from '@/lib/logoCache';
@@ -14,12 +14,14 @@ function TeamLogo({
   teamName, 
   size, 
   className, 
-  teamCache 
+  teamCache,
+  colorStatus
 }: { 
   teamName: string; 
   size: number; 
   className?: string;
   teamCache?: Map<string, { id: string; name: string }>;
+  colorStatus?: 'correct' | 'incorrect' | 'neutral';
 }) {
   const [teamInfo, setTeamInfo] = useState<{ id: string; name: string; logoUrl: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,8 +67,15 @@ function TeamLogo({
     );
   }
 
+  // Color coding based on tournament results
+  const getColorClasses = () => {
+    if (colorStatus === 'correct') return 'ring-2 ring-green-500 bg-green-50';
+    if (colorStatus === 'incorrect') return 'ring-2 ring-red-500 bg-red-50';
+    return 'ring-1 ring-gray-300 bg-gray-50';
+  };
+
   return (
-    <div className={className}>
+    <div className={`${className} ${getColorClasses()}`}>
       <Image
         src={teamInfo.logoUrl}
         alt={teamName}
@@ -332,17 +341,19 @@ export default function StandingsTable() {
     return <span className="text-gray-600 font-medium text-xs">{rank}</span>;
   };
 
-  const renderFinalFour = (finalFour: string[], finals: string[]) => {
+  const renderFinalFour = (finalFour: string[], finals: string[], standingsData: StandingsData) => {
     return (
       <div className="grid grid-cols-2 gap-1 p-2 bg-gray-50 rounded-lg border-2 border-gray-200 w-fit">
         {finalFour.map((team, index) => {
           const isFinalsTeam = finals.includes(team);
+          const colorStatus = getTeamPickColor(team, standingsData.tournamentKey || [], standingsData.eliminatedTeams || []);
           return (
             <TeamLogo
               key={index}
               teamName={team}
               size={32}
               teamCache={teamCache}
+              colorStatus={colorStatus}
               className={`relative ${
                 isFinalsTeam
                   ? 'ring-2 ring-blue-500 ring-offset-0'
@@ -356,13 +367,15 @@ export default function StandingsTable() {
   };
 
 
-  const renderChampion = (champion: string, tb: number) => {
+  const renderChampion = (champion: string, tb: number, standingsData: StandingsData) => {
+    const colorStatus = getTeamPickColor(champion, standingsData.tournamentKey || [], standingsData.eliminatedTeams || []);
     return (
       <div className="flex flex-col items-center gap-0.5">
         <TeamLogo
           teamName={champion}
           size={70}
           teamCache={teamCache}
+          colorStatus={colorStatus}
           className="rounded"
         />
         <div className="text-xs text-gray-600 font-medium">
@@ -552,10 +565,10 @@ export default function StandingsTable() {
                   </div>
                 </td>
                 <td className="px-3 py-2" style={{width: '100px', minWidth: '100px'}}>
-                  {renderFinalFour(entry.finalFour, entry.finals)}
+                  {renderFinalFour(entry.finalFour, entry.finals, standingsData)}
                 </td>
                 <td className="px-3 py-2 w-18">
-                  {renderChampion(entry.champion, entry.tb)}
+                  {renderChampion(entry.champion, entry.tb, standingsData)}
                 </td>
               </tr>
               ))

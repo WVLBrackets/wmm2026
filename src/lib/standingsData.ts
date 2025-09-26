@@ -14,6 +14,8 @@ export interface StandingsData {
   day: string;
   entries: StandingsEntry[];
   lastUpdated: string;
+  tournamentKey?: string[]; // Row 2: Actual tournament winners
+  eliminatedTeams?: string[]; // Column O: Teams that are out
 }
 
 const STANDINGS_SHEET_ID = '12c8VEI6ZoIhRXg8b0rEfYWAOI86Ye_ZPY9G1sPaBRFs';
@@ -58,14 +60,18 @@ export async function getStandingsData(day: string = 'Day1'): Promise<StandingsD
     console.log(`📄 Standings CSV response length: ${csvText.length}`);
     console.log(`📄 Standings CSV preview:`, csvText.substring(0, 200));
     
-    const entries = parseStandingsCSV(csvText);
+    const { entries, tournamentKey, eliminatedTeams } = parseStandingsCSV(csvText);
     const parseEnd = performance.now();
     console.log(`🔍 CSV parsing completed in ${(parseEnd - parseStart).toFixed(2)}ms`);
+    console.log(`📊 Tournament Key: ${tournamentKey.join(', ')}`);
+    console.log(`📊 Eliminated Teams: ${eliminatedTeams.join(', ')}`);
     
     const standingsData: StandingsData = {
       day,
       entries,
-      lastUpdated: new Date().toISOString()
+      lastUpdated: new Date().toISOString(),
+      tournamentKey,
+      eliminatedTeams
     };
     
     // Cache the result
@@ -85,11 +91,29 @@ export async function getStandingsData(day: string = 'Day1'): Promise<StandingsD
 /**
  * Parse CSV data into standings entries
  */
-function parseStandingsCSV(csvText: string): StandingsEntry[] {
+function parseStandingsCSV(csvText: string): { entries: StandingsEntry[]; tournamentKey: string[]; eliminatedTeams: string[] } {
   const lines = csvText.split('\n').filter(line => line.trim());
   const entries: StandingsEntry[] = [];
   
-  // Skip header rows (first 2 rows are headers)
+  // Extract Row 2 (Key) - actual tournament winners
+  const keyRow = lines[1] ? parseCSVLine(lines[1]) : [];
+  const tournamentKey = keyRow.filter(team => team && team.trim() !== '');
+  
+  // Extract Column O (Out) - eliminated teams
+  const eliminatedTeams: string[] = [];
+  for (let i = 2; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const columns = parseCSVLine(line);
+    if (columns.length > 14) { // Column O is index 14
+      const outTeam = columns[14]?.trim();
+      if (outTeam && outTeam !== '') {
+        eliminatedTeams.push(outTeam);
+      }
+    }
+  }
+  
+  // Parse player entries starting from row 3
   for (let i = 2; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
@@ -129,7 +153,7 @@ function parseStandingsCSV(csvText: string): StandingsEntry[] {
     }
   }
   
-  return entries;
+  return { entries, tournamentKey, eliminatedTeams };
 }
 
 /**
@@ -209,11 +233,35 @@ export function getStandingsCacheStats(): { size: number; entries: string[] } {
 }
 
 /**
+ * Color coding logic for team picks based on tournament results
+ */
+export function getTeamPickColor(
+  team: string, 
+  tournamentKey: string[], 
+  eliminatedTeams: string[]
+): 'correct' | 'incorrect' | 'neutral' {
+  // If team is in eliminated teams, it's incorrect
+  if (eliminatedTeams.includes(team)) {
+    return 'incorrect';
+  }
+  
+  // If team is in tournament key, it's correct
+  if (tournamentKey.includes(team)) {
+    return 'correct';
+  }
+  
+  // If no data available, neutral
+  return 'neutral';
+}
+
+/**
  * Fallback standings data when Google Sheets is unavailable
  */
 function getFallbackStandingsData(day: string): StandingsData {
   return {
     day,
+    tournamentKey: [], // No tournament key in fallback
+    eliminatedTeams: [], // No eliminated teams in fallback
     entries: [
       {
         rank: 1,
