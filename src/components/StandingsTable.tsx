@@ -74,10 +74,14 @@ function TeamLogo({
     let bgClass = '';
     let borderClass = '';
     
-    // Background color logic
-    if (backgroundColor === 'correct') bgClass = 'bg-green-50';
-    else if (backgroundColor === 'incorrect') bgClass = 'bg-red-50';
-    else bgClass = 'bg-gray-50';
+    // Background color logic with enhanced visibility and gradients
+    if (backgroundColor === 'correct') {
+      bgClass = 'bg-gradient-to-br from-green-100 to-green-200 shadow-sm';
+    } else if (backgroundColor === 'incorrect') {
+      bgClass = 'bg-gradient-to-br from-red-100 to-red-200 shadow-sm';
+    } else {
+      bgClass = 'bg-gradient-to-br from-gray-50 to-gray-100';
+    }
     
     // Border color logic - only apply if borderColor is defined
     if (borderColor === 'correct') borderClass = 'ring-2 ring-green-500';
