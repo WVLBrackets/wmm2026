@@ -70,8 +70,6 @@ export async function getStandingsData(day: string = 'Day1'): Promise<StandingsD
     console.log(`📊 Semifinal Winners: ${semifinalWinners.join(', ')}`);
     console.log(`📊 Final Winner: ${finalWinner}`);
     console.log(`📊 Eliminated Teams: ${eliminatedTeams.join(', ')}`);
-    console.log(`🔍 OUT column raw value: "${keyRow[14]?.trim() || ''}"`);
-    console.log(`🔍 Parsed eliminated teams: [${eliminatedTeams.join(', ')}]`);
     
         const standingsData: StandingsData = {
           day,
@@ -145,6 +143,7 @@ function parseStandingsCSV(csvText: string): { entries: StandingsEntry[]; quarte
     }
   }
   console.log(`🔍 Final eliminated teams array: [${eliminatedTeams.join(', ')}]`);
+  console.log(`🔍 OUT column raw value: "${keyRow[14]?.trim() || ''}"`);
   
   // Parse player entries starting from row 3
   for (let i = 2; i < lines.length; i++) {
