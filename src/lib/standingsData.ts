@@ -134,12 +134,15 @@ function parseStandingsCSV(csvText: string): { entries: StandingsEntry[]; quarte
   const eliminatedTeams: string[] = [];
   if (keyRow.length > 14) { // Column O is index 14
     const outTeam = keyRow[14]?.trim();
+    console.log(`🔍 OUT column raw value: "${outTeam}"`);
     if (outTeam && outTeam !== '') {
       // Split by comma if multiple teams are listed
       const teams = outTeam.split(',').map(team => team.trim()).filter(team => team !== '');
+      console.log(`🔍 Parsed eliminated teams: [${teams.join(', ')}]`);
       eliminatedTeams.push(...teams);
     }
   }
+  console.log(`🔍 Final eliminated teams array: [${eliminatedTeams.join(', ')}]`);
   
   // Parse player entries starting from row 3
   for (let i = 2; i < lines.length; i++) {
