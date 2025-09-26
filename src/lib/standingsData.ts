@@ -16,6 +16,7 @@ export interface StandingsData {
   lastUpdated: string;
   quarterfinalWinners?: string[]; // Col E-H: Quarterfinal winners (Final Four)
   semifinalWinners?: string[]; // Col I-J: Semifinal winners (Finals)
+  semifinalKey?: string[]; // Col I-J: Raw KEY values (including blanks)
   finalWinner?: string; // Col K: Final winner (Champion)
   eliminatedTeams?: string[]; // Column O: Teams that are out
 }
@@ -62,7 +63,7 @@ export async function getStandingsData(day: string = 'Day1'): Promise<StandingsD
     console.log(`📄 Standings CSV response length: ${csvText.length}`);
     console.log(`📄 Standings CSV preview:`, csvText.substring(0, 200));
     
-    const { entries, quarterfinalWinners, semifinalWinners, finalWinner, eliminatedTeams } = parseStandingsCSV(csvText);
+        const { entries, quarterfinalWinners, semifinalWinners, semifinalKey, finalWinner, eliminatedTeams } = parseStandingsCSV(csvText);
     const parseEnd = performance.now();
     console.log(`🔍 CSV parsing completed in ${(parseEnd - parseStart).toFixed(2)}ms`);
     console.log(`📊 Quarterfinal Winners: ${quarterfinalWinners.join(', ')}`);
@@ -70,15 +71,16 @@ export async function getStandingsData(day: string = 'Day1'): Promise<StandingsD
     console.log(`📊 Final Winner: ${finalWinner}`);
     console.log(`📊 Eliminated Teams: ${eliminatedTeams.join(', ')}`);
     
-    const standingsData: StandingsData = {
-      day,
-      entries,
-      lastUpdated: new Date().toISOString(),
-      quarterfinalWinners,
-      semifinalWinners,
-      finalWinner,
-      eliminatedTeams
-    };
+        const standingsData: StandingsData = {
+          day,
+          entries,
+          lastUpdated: new Date().toISOString(),
+          quarterfinalWinners,
+          semifinalWinners,
+          semifinalKey,
+          finalWinner,
+          eliminatedTeams
+        };
     
     // Cache the result
     standingsCache.set(day, { data: standingsData, timestamp: Date.now() });
@@ -118,6 +120,12 @@ function parseStandingsCSV(csvText: string): { entries: StandingsEntry[]; quarte
     keyRow[8]?.trim() || '',
     keyRow[9]?.trim() || ''
   ].filter(team => team !== '');
+  
+  // Col I-J (indices 8-9): Raw KEY values (including blanks)
+  const semifinalKey = [
+    keyRow[8]?.trim() || '',
+    keyRow[9]?.trim() || ''
+  ];
   
   // Col K (index 10): Final winner (Champion)
   const finalWinner = keyRow[10]?.trim() || '';
@@ -176,7 +184,7 @@ function parseStandingsCSV(csvText: string): { entries: StandingsEntry[]; quarte
     }
   }
   
-  return { entries, quarterfinalWinners, semifinalWinners, finalWinner, eliminatedTeams };
+  return { entries, quarterfinalWinners, semifinalWinners, semifinalKey, finalWinner, eliminatedTeams };
 }
 
 /**
@@ -295,32 +303,36 @@ export function getQuarterfinalColor(
 export function getSemifinalColor(
   team: string,
   semifinalWinners: string[],
+  semifinalKey: string[],
   eliminatedTeams: string[]
 ): 'correct' | 'incorrect' | 'neutral' {
   console.log(`🔍 Semifinal color check for "${team}":`);
   console.log(`  - Semifinal winners: [${semifinalWinners.join(', ')}]`);
+  console.log(`  - Semifinal key: [${semifinalKey.join(', ')}]`);
   console.log(`  - Eliminated teams: [${eliminatedTeams.join(', ')}]`);
   
-  // PRIORITY: If there are semifinal results, use those (winners override eliminated status)
-  if (semifinalWinners.length > 0) {
+  // Check if this team's semifinal game has been played (non-blank in KEY)
+  const teamSemifinalPlayed = semifinalKey.includes(team);
+  
+  if (teamSemifinalPlayed) {
+    // Team's semifinal has been played - check if they won
     if (semifinalWinners.includes(team)) {
-      console.log(`  - Result: CORRECT (team matches semifinal winner)`);
+      console.log(`  - Result: CORRECT (team won their semifinal)`);
       return 'correct';
     } else {
-      console.log(`  - Result: INCORRECT (team doesn't match semifinal winners)`);
+      console.log(`  - Result: INCORRECT (team lost their semifinal)`);
       return 'incorrect';
     }
+  } else {
+    // Team's semifinal hasn't been played yet
+    if (eliminatedTeams.includes(team)) {
+      console.log(`  - Result: INCORRECT (team is eliminated)`);
+      return 'incorrect';
+    } else {
+      console.log(`  - Result: NEUTRAL (semifinal not played yet)`);
+      return 'neutral';
+    }
   }
-  
-  // If no semifinal results yet, check if team is eliminated
-  if (eliminatedTeams.includes(team)) {
-    console.log(`  - Result: INCORRECT (team is eliminated)`);
-    return 'incorrect';
-  }
-  
-  // No results yet and team not eliminated, neutral
-  console.log(`  - Result: NEUTRAL (no results yet)`);
-  return 'neutral';
 }
 
 /**
@@ -358,6 +370,7 @@ function getFallbackStandingsData(day: string): StandingsData {
     day,
     quarterfinalWinners: [], // No quarterfinal winners in fallback
     semifinalWinners: [], // No semifinal winners in fallback
+    semifinalKey: ['', ''], // No semifinal results in fallback
     finalWinner: '', // No final winner in fallback
     eliminatedTeams: [], // No eliminated teams in fallback
     entries: [

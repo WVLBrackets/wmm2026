@@ -376,6 +376,7 @@ export default function StandingsTable() {
           const semifinalColor = isFinalsTeam ? getSemifinalColor(
             team, 
             standingsData.semifinalWinners || [], 
+            standingsData.semifinalKey || [],
             standingsData.eliminatedTeams || []
           ) : undefined;
           
