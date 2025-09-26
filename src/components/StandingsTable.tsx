@@ -76,10 +76,12 @@ function TeamLogo({
         style={{
           width: `${size}px`,
           height: `${size}px`,
-          objectFit: 'contain'
+          objectFit: 'contain',
+          imageRendering: size <= 40 ? 'crisp-edges' : 'auto' // Crisp edges for small images
         }}
-        quality={95}
+        quality={size <= 40 ? 100 : 95} // Higher quality for smaller images
         priority={size > 50} // Prioritize loading for larger logos
+        unoptimized={size <= 40} // Skip Next.js optimization for very small images to preserve sharpness
         onError={(e) => {
           const target = e.target as HTMLImageElement;
           target.style.display = 'none';
@@ -338,7 +340,7 @@ export default function StandingsTable() {
             <TeamLogo
               key={index}
               teamName={team}
-              size={28}
+              size={32}
               teamCache={teamCache}
               className={`relative ${
                 isFinalsTeam
