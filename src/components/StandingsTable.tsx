@@ -331,14 +331,14 @@ export default function StandingsTable() {
 
   const renderFinalFour = (finalFour: string[], finals: string[]) => {
     return (
-      <div className="grid grid-cols-2 gap-1 p-2 bg-gray-50 rounded-lg border-2 border-gray-200 w-fit">
+      <div className="grid grid-cols-2 gap-0.5 p-1.5 bg-gray-50 rounded-lg border-2 border-gray-200 w-fit">
         {finalFour.map((team, index) => {
           const isFinalsTeam = finals.includes(team);
           return (
             <TeamLogo
               key={index}
               teamName={team}
-              size={30}
+              size={28}
               teamCache={teamCache}
               className={`relative ${
                 isFinalsTeam
@@ -358,7 +358,7 @@ export default function StandingsTable() {
       <div className="flex flex-col items-center gap-0.5">
         <TeamLogo
           teamName={champion}
-          size={75}
+          size={70}
           teamCache={teamCache}
           className="rounded"
         />
@@ -475,22 +475,22 @@ export default function StandingsTable() {
         <table className="w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-1 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+              <th className="px-1 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
                 Rank
               </th>
               <th className="px-1 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{maxWidth: '80px'}}>
                 Player
               </th>
-              <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" style={{width: '60px', minWidth: '60px'}}>
+              <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" style={{width: '50px', minWidth: '50px'}}>
                 <div className="flex flex-col items-center">
                   <span>Pts</span>
                   <span className="text-xs italic font-normal">back</span>
                 </div>
               </th>
-              <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" style={{width: '120px', minWidth: '120px'}}>
+              <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" style={{width: '100px', minWidth: '100px'}}>
                 Final Four
               </th>
-              <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+              <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-18">
                 Champ
               </th>
             </tr>
@@ -519,7 +519,7 @@ export default function StandingsTable() {
               // Normal data display
               filteredEntries.map((entry, index) => (
               <tr key={`${entry.player}-${index}`} className={`hover:bg-gray-50 transition-colors ${getRankColor(entry.rank)}`}>
-                <td className="px-1 py-2 whitespace-nowrap w-12">
+                <td className="px-1 py-2 whitespace-nowrap w-10">
                   <div className="flex items-center justify-center">
                     {getRankIcon(entry.rank)}
                   </div>
@@ -538,7 +538,7 @@ export default function StandingsTable() {
                     )}
                   </div>
                 </td>
-                <td className="px-3 py-2 whitespace-nowrap" style={{width: '60px', minWidth: '60px'}}>
+                <td className="px-3 py-2 whitespace-nowrap" style={{width: '50px', minWidth: '50px'}}>
                   <div className="flex flex-col items-center">
                     <div className="text-lg font-bold text-blue-600">
                       {entry.points}
@@ -548,10 +548,10 @@ export default function StandingsTable() {
                     </div>
                   </div>
                 </td>
-                <td className="px-3 py-2" style={{width: '120px', minWidth: '120px'}}>
+                <td className="px-3 py-2" style={{width: '100px', minWidth: '100px'}}>
                   {renderFinalFour(entry.finalFour, entry.finals)}
                 </td>
-                <td className="px-3 py-2 w-20">
+                <td className="px-3 py-2 w-18">
                   {renderChampion(entry.champion, entry.tb)}
                 </td>
               </tr>
