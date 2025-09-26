@@ -17,8 +17,8 @@ const logoUrlCache = new Map<string, string>();
 const ESPN_BASE_URL = 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/ncaa/500/';
 const ESPN_EXTENSION = '.png';
 
-// High-resolution base URL for better quality
-const ESPN_HIGH_RES_BASE_URL = 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/ncaa/500/';
+// High-resolution base URL for better quality (currently unused but available for future use)
+// const ESPN_HIGH_RES_BASE_URL = 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/ncaa/500/';
 
 /**
  * High-performance function to generate ESPN team logo URLs

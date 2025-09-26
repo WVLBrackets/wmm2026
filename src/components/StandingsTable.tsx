@@ -77,7 +77,7 @@ function TeamLogo({
           width: `${size}px`,
           height: `${size}px`,
           objectFit: 'contain',
-          imageRendering: size <= 40 ? 'crisp-edges' : 'high-quality' // Crisp edges for small images, high quality for larger ones
+          imageRendering: size <= 40 ? 'crisp-edges' : 'auto' // Crisp edges for small images, auto for larger ones
         }}
         quality={100} // Maximum quality for all images
         priority={size > 50} // Prioritize loading for larger logos
