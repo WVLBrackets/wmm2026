@@ -42,6 +42,9 @@ export function getTeamLogoUrl(teamId: string, size: number = 30): string {
   // Generate new URL
   const logoUrl = `${ESPN_BASE_URL}${teamId}${ESPN_EXTENSION}&h=${size}&w=${size}`;
   
+  // Debug logging
+  console.log(`🔍 Generated logo URL for teamId "${teamId}", size ${size}:`, logoUrl);
+  
   // Cache the result
   logoUrlCache.set(cacheKey, logoUrl);
   
@@ -69,6 +72,8 @@ export async function getTeamInfo(teamName: string, size: number = 30): Promise<
   
   try {
     const teamId = await getTeamIdByAbbr(teamName);
+    
+    console.log(`🔍 Looking up team "${teamName}" -> teamId: "${teamId}"`);
     
     if (!teamId) {
       console.warn(`Team logo not found for: "${teamName}". Please add to team reference data.`);
