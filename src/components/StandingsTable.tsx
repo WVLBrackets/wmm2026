@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getStandingsData, getAvailableDays, getCurrentTournamentYear, StandingsEntry, StandingsData, clearStandingsCache, getTeamPickColor } from '@/lib/standingsData';
+import { getStandingsData, getAvailableDays, getCurrentTournamentYear, StandingsEntry, StandingsData, clearStandingsCache, getQuarterfinalColor, getSemifinalColor, getFinalColor } from '@/lib/standingsData';
 import { getTeamInfo, getLogoUrlSync, preloadStandingsLogos } from '@/lib/teamLogos';
 import { getTeamRefData } from '@/lib/teamRefData';
 import { initializeLogoCache } from '@/lib/logoCache';
@@ -15,13 +15,15 @@ function TeamLogo({
   size, 
   className, 
   teamCache,
-  colorStatus
+  backgroundColor,
+  borderColor
 }: { 
   teamName: string; 
   size: number; 
   className?: string;
   teamCache?: Map<string, { id: string; name: string }>;
-  colorStatus?: 'correct' | 'incorrect' | 'neutral';
+  backgroundColor?: 'correct' | 'incorrect' | 'neutral';
+  borderColor?: 'correct' | 'incorrect' | 'neutral';
 }) {
   const [teamInfo, setTeamInfo] = useState<{ id: string; name: string; logoUrl: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,9 +71,20 @@ function TeamLogo({
 
   // Color coding based on tournament results
   const getColorClasses = () => {
-    if (colorStatus === 'correct') return 'ring-2 ring-green-500 bg-green-50';
-    if (colorStatus === 'incorrect') return 'ring-2 ring-red-500 bg-red-50';
-    return 'ring-1 ring-gray-300 bg-gray-50';
+    let bgClass = '';
+    let borderClass = '';
+    
+    // Background color logic
+    if (backgroundColor === 'correct') bgClass = 'bg-green-50';
+    else if (backgroundColor === 'incorrect') bgClass = 'bg-red-50';
+    else bgClass = 'bg-gray-50';
+    
+    // Border color logic
+    if (borderColor === 'correct') borderClass = 'ring-2 ring-green-500';
+    else if (borderColor === 'incorrect') borderClass = 'ring-2 ring-red-500';
+    else borderClass = 'ring-1 ring-gray-300';
+    
+    return `${bgClass} ${borderClass}`;
   };
 
   return (
@@ -346,14 +359,29 @@ export default function StandingsTable() {
       <div className="grid grid-cols-2 gap-1 p-2 bg-gray-50 rounded-lg border-2 border-gray-200 w-fit">
         {finalFour.map((team, index) => {
           const isFinalsTeam = finals.includes(team);
-          const colorStatus = getTeamPickColor(team, standingsData.tournamentKey || [], standingsData.eliminatedTeams || []);
+          
+          // Quarterfinals color for background
+          const quarterfinalColor = getQuarterfinalColor(
+            team, 
+            standingsData.quarterfinalWinners || [], 
+            standingsData.eliminatedTeams || []
+          );
+          
+          // Semifinals color for border
+          const semifinalColor = getSemifinalColor(
+            team, 
+            standingsData.semifinalWinners || [], 
+            standingsData.eliminatedTeams || []
+          );
+          
           return (
             <TeamLogo
               key={index}
               teamName={team}
               size={32}
               teamCache={teamCache}
-              colorStatus={colorStatus}
+              backgroundColor={quarterfinalColor}
+              borderColor={semifinalColor}
               className={`relative ${
                 isFinalsTeam
                   ? 'ring-2 ring-blue-500 ring-offset-0'
@@ -368,14 +396,21 @@ export default function StandingsTable() {
 
 
   const renderChampion = (champion: string, tb: number, standingsData: StandingsData) => {
-    const colorStatus = getTeamPickColor(champion, standingsData.tournamentKey || [], standingsData.eliminatedTeams || []);
+    // Finals color for both background and border
+    const finalColor = getFinalColor(
+      champion, 
+      standingsData.finalWinner || '', 
+      standingsData.eliminatedTeams || []
+    );
+    
     return (
       <div className="flex flex-col items-center gap-0.5">
         <TeamLogo
           teamName={champion}
           size={70}
           teamCache={teamCache}
-          colorStatus={colorStatus}
+          backgroundColor={finalColor}
+          borderColor={finalColor}
           className="rounded"
         />
         <div className="text-xs text-gray-600 font-medium">

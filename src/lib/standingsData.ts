@@ -14,7 +14,9 @@ export interface StandingsData {
   day: string;
   entries: StandingsEntry[];
   lastUpdated: string;
-  tournamentKey?: string[]; // Row 2: Actual tournament winners
+  quarterfinalWinners?: string[]; // Col E-H: Quarterfinal winners (Final Four)
+  semifinalWinners?: string[]; // Col I-J: Semifinal winners (Finals)
+  finalWinner?: string; // Col K: Final winner (Champion)
   eliminatedTeams?: string[]; // Column O: Teams that are out
 }
 
@@ -60,17 +62,21 @@ export async function getStandingsData(day: string = 'Day1'): Promise<StandingsD
     console.log(`📄 Standings CSV response length: ${csvText.length}`);
     console.log(`📄 Standings CSV preview:`, csvText.substring(0, 200));
     
-    const { entries, tournamentKey, eliminatedTeams } = parseStandingsCSV(csvText);
+    const { entries, quarterfinalWinners, semifinalWinners, finalWinner, eliminatedTeams } = parseStandingsCSV(csvText);
     const parseEnd = performance.now();
     console.log(`🔍 CSV parsing completed in ${(parseEnd - parseStart).toFixed(2)}ms`);
-    console.log(`📊 Tournament Key: ${tournamentKey.join(', ')}`);
+    console.log(`📊 Quarterfinal Winners: ${quarterfinalWinners.join(', ')}`);
+    console.log(`📊 Semifinal Winners: ${semifinalWinners.join(', ')}`);
+    console.log(`📊 Final Winner: ${finalWinner}`);
     console.log(`📊 Eliminated Teams: ${eliminatedTeams.join(', ')}`);
     
     const standingsData: StandingsData = {
       day,
       entries,
       lastUpdated: new Date().toISOString(),
-      tournamentKey,
+      quarterfinalWinners,
+      semifinalWinners,
+      finalWinner,
       eliminatedTeams
     };
     
@@ -91,13 +97,30 @@ export async function getStandingsData(day: string = 'Day1'): Promise<StandingsD
 /**
  * Parse CSV data into standings entries
  */
-function parseStandingsCSV(csvText: string): { entries: StandingsEntry[]; tournamentKey: string[]; eliminatedTeams: string[] } {
+function parseStandingsCSV(csvText: string): { entries: StandingsEntry[]; quarterfinalWinners: string[]; semifinalWinners: string[]; finalWinner: string; eliminatedTeams: string[] } {
   const lines = csvText.split('\n').filter(line => line.trim());
   const entries: StandingsEntry[] = [];
   
   // Extract Row 2 (Key) - actual tournament winners
   const keyRow = lines[1] ? parseCSVLine(lines[1]) : [];
-  const tournamentKey = keyRow.filter(team => team && team.trim() !== '');
+  
+  // Extract specific columns from Key row
+  // Col E-H (indices 4-7): Quarterfinal winners (Final Four)
+  const quarterfinalWinners = [
+    keyRow[4]?.trim() || '',
+    keyRow[5]?.trim() || '',
+    keyRow[6]?.trim() || '',
+    keyRow[7]?.trim() || ''
+  ].filter(team => team !== '');
+  
+  // Col I-J (indices 8-9): Semifinal winners (Finals)
+  const semifinalWinners = [
+    keyRow[8]?.trim() || '',
+    keyRow[9]?.trim() || ''
+  ].filter(team => team !== '');
+  
+  // Col K (index 10): Final winner (Champion)
+  const finalWinner = keyRow[10]?.trim() || '';
   
   // Extract Column O (Out) - eliminated teams
   const eliminatedTeams: string[] = [];
@@ -153,7 +176,7 @@ function parseStandingsCSV(csvText: string): { entries: StandingsEntry[]; tourna
     }
   }
   
-  return { entries, tournamentKey, eliminatedTeams };
+  return { entries, quarterfinalWinners, semifinalWinners, finalWinner, eliminatedTeams };
 }
 
 /**
@@ -233,24 +256,83 @@ export function getStandingsCacheStats(): { size: number; entries: string[] } {
 }
 
 /**
- * Color coding logic for team picks based on tournament results
+ * Color coding logic for quarterfinals (Final Four backgrounds)
  */
-export function getTeamPickColor(
-  team: string, 
-  tournamentKey: string[], 
+export function getQuarterfinalColor(
+  team: string,
+  quarterfinalWinners: string[],
   eliminatedTeams: string[]
 ): 'correct' | 'incorrect' | 'neutral' {
-  // If team is in eliminated teams, it's incorrect
+  // If team is eliminated, it's incorrect
   if (eliminatedTeams.includes(team)) {
     return 'incorrect';
   }
   
-  // If team is in tournament key, it's correct
-  if (tournamentKey.includes(team)) {
+  // If there are quarterfinal results and team matches, it's correct
+  if (quarterfinalWinners.length > 0 && quarterfinalWinners.includes(team)) {
     return 'correct';
   }
   
-  // If no data available, neutral
+  // If there are quarterfinal results but team doesn't match, it's incorrect
+  if (quarterfinalWinners.length > 0 && !quarterfinalWinners.includes(team)) {
+    return 'incorrect';
+  }
+  
+  // No results yet and team not eliminated, neutral
+  return 'neutral';
+}
+
+/**
+ * Color coding logic for semifinals (Final Four borders)
+ */
+export function getSemifinalColor(
+  team: string,
+  semifinalWinners: string[],
+  eliminatedTeams: string[]
+): 'correct' | 'incorrect' | 'neutral' {
+  // If team is eliminated, it's incorrect
+  if (eliminatedTeams.includes(team)) {
+    return 'incorrect';
+  }
+  
+  // If there are semifinal results and team matches, it's correct
+  if (semifinalWinners.length > 0 && semifinalWinners.includes(team)) {
+    return 'correct';
+  }
+  
+  // If there are semifinal results but team doesn't match, it's incorrect
+  if (semifinalWinners.length > 0 && !semifinalWinners.includes(team)) {
+    return 'incorrect';
+  }
+  
+  // No results yet and team not eliminated, neutral
+  return 'neutral';
+}
+
+/**
+ * Color coding logic for finals (Champion background and border)
+ */
+export function getFinalColor(
+  team: string,
+  finalWinner: string,
+  eliminatedTeams: string[]
+): 'correct' | 'incorrect' | 'neutral' {
+  // If team is eliminated, it's incorrect
+  if (eliminatedTeams.includes(team)) {
+    return 'incorrect';
+  }
+  
+  // If there is a final result and team matches, it's correct
+  if (finalWinner && finalWinner === team) {
+    return 'correct';
+  }
+  
+  // If there is a final result but team doesn't match, it's incorrect
+  if (finalWinner && finalWinner !== team) {
+    return 'incorrect';
+  }
+  
+  // No result yet and team not eliminated, neutral
   return 'neutral';
 }
 
@@ -260,7 +342,9 @@ export function getTeamPickColor(
 function getFallbackStandingsData(day: string): StandingsData {
   return {
     day,
-    tournamentKey: [], // No tournament key in fallback
+    quarterfinalWinners: [], // No quarterfinal winners in fallback
+    semifinalWinners: [], // No semifinal winners in fallback
+    finalWinner: '', // No final winner in fallback
     eliminatedTeams: [], // No eliminated teams in fallback
     entries: [
       {
