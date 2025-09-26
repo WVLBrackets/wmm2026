@@ -297,22 +297,29 @@ export function getSemifinalColor(
   semifinalWinners: string[],
   eliminatedTeams: string[]
 ): 'correct' | 'incorrect' | 'neutral' {
-  // If team is eliminated, it's incorrect
+  console.log(`🔍 Semifinal color check for "${team}":`);
+  console.log(`  - Semifinal winners: [${semifinalWinners.join(', ')}]`);
+  console.log(`  - Eliminated teams: [${eliminatedTeams.join(', ')}]`);
+  
+  // PRIORITY: If there are semifinal results, use those (winners override eliminated status)
+  if (semifinalWinners.length > 0) {
+    if (semifinalWinners.includes(team)) {
+      console.log(`  - Result: CORRECT (team matches semifinal winner)`);
+      return 'correct';
+    } else {
+      console.log(`  - Result: INCORRECT (team doesn't match semifinal winners)`);
+      return 'incorrect';
+    }
+  }
+  
+  // If no semifinal results yet, check if team is eliminated
   if (eliminatedTeams.includes(team)) {
-    return 'incorrect';
-  }
-  
-  // If there are semifinal results and team matches, it's correct
-  if (semifinalWinners.length > 0 && semifinalWinners.includes(team)) {
-    return 'correct';
-  }
-  
-  // If there are semifinal results but team doesn't match, it's incorrect
-  if (semifinalWinners.length > 0 && !semifinalWinners.includes(team)) {
+    console.log(`  - Result: INCORRECT (team is eliminated)`);
     return 'incorrect';
   }
   
   // No results yet and team not eliminated, neutral
+  console.log(`  - Result: NEUTRAL (no results yet)`);
   return 'neutral';
 }
 
