@@ -367,12 +367,12 @@ export default function StandingsTable() {
             standingsData.eliminatedTeams || []
           );
           
-          // Semifinals color for border
-          const semifinalColor = getSemifinalColor(
+          // Semifinals color for border - ONLY for finalist teams
+          const semifinalColor = isFinalsTeam ? getSemifinalColor(
             team, 
             standingsData.semifinalWinners || [], 
             standingsData.eliminatedTeams || []
-          );
+          ) : 'neutral';
           
           return (
             <TeamLogo
