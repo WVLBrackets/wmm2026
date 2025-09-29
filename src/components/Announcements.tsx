@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Megaphone } from 'lucide-react';
+import Image from 'next/image';
 
 interface Announcement {
   date: string;
@@ -118,7 +119,15 @@ export default function Announcements() {
       <div className="space-y-4 flex-grow">
         {announcements.map((announcement, index) => (
           <div key={index} className="flex items-start">
-            <span className="flex-shrink-0 w-2 h-2 bg-blue-600 rounded-full mt-2 mr-3"></span>
+            <div className="flex-shrink-0 mt-1 mr-3">
+              <Image
+                src="/images/basketball icon.png"
+                alt="Basketball"
+                width={16}
+                height={16}
+                className="w-4 h-4"
+              />
+            </div>
             <div className="flex-grow">
               <div className="flex items-center justify-between">
                 <p className="text-gray-700 flex-grow">{announcement.text}</p>
