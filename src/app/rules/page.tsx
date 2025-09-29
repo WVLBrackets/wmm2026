@@ -1,11 +1,12 @@
 'use client';
 
-import { DollarSign, Clock, Trophy, FileSpreadsheet, AlertTriangle, Dog, Calculator } from 'lucide-react';
+import { DollarSign, Trophy, FileSpreadsheet, AlertTriangle, Dog, Calculator } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getSiteConfig } from '@/config/site';
+import { SiteConfigData } from '@/lib/siteConfig';
 
 export default function RulesPage() {
-  const [siteConfig, setSiteConfig] = useState<any>(null);
+  const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
