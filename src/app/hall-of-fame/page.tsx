@@ -87,56 +87,72 @@ export default async function HallOfFamePage() {
             <h2 className="text-2xl font-bold text-gray-900">Tournament History</h2>
           </div>
           
-          <div className="space-y-6">
+          <div className="space-y-3">
             {hallOfFameData.map((entry) => {
               const isHiatus = entry.firstPlace.name === 'HIATUS';
               
               return (
-                <div key={entry.year} className={`flex items-center p-4 rounded-lg border-l-4 ${
+                <div key={entry.year} className={`rounded-lg border-l-4 ${
                   isHiatus 
                     ? 'bg-gray-100 border-gray-400' 
                     : 'bg-yellow-50 border-yellow-500'
                 }`}>
-                  <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center mr-4 ${
-                    isHiatus ? 'bg-gray-400' : 'bg-yellow-500'
-                  }`}>
+                  {/* Main team logo header - fills row with no padding */}
+                  <div className={`flex items-center ${isHiatus ? 'p-4' : 'p-0'}`}>
                     {isHiatus ? (
-                      <Shield className="h-6 w-6 text-white" />
-                    ) : (
-                      <Trophy className="h-6 w-6 text-white" />
-                    )}
-                  </div>
-                  <div className="flex-grow">
-                    <h3 className={`text-lg font-semibold ${
-                      isHiatus ? 'text-gray-600' : 'text-gray-900'
-                    }`}>
-                      {entry.year} {isHiatus ? 'Tournament' : 'Champion'}
-                    </h3>
-                    {isHiatus ? (
-                      <p className="text-gray-500 font-medium italic">
-                        Tournament Not Held
-                      </p>
+                      <div className="flex items-center p-4">
+                        <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center mr-4 bg-gray-400">
+                          <Shield className="h-6 w-6 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-600">
+                            {entry.year} Tournament
+                          </h3>
+                          <p className="text-gray-500 font-medium italic">
+                            Tournament Not Held
+                          </p>
+                        </div>
+                      </div>
                     ) : (
                       <>
-                        <div className="flex items-center gap-3">
-                          <TeamLogo teamName={entry.firstPlace.team} size={32} />
-                          <div>
-                            <p className="text-yellow-700 font-medium">
-                              {entry.firstPlace.name} ({entry.firstPlace.score} pts)
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              {entry.firstPlace.team} • {entry.totalEntries} entries
-                            </p>
-                          </div>
+                        {/* Large team logo that fills the row */}
+                        <div className="flex-shrink-0 w-20 h-20 flex items-center justify-center bg-white rounded-l-lg">
+                          <TeamLogo teamName={entry.firstPlace.team} size={80} />
+                        </div>
+                        <div className="flex-grow p-4">
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {entry.year} Champion
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            {entry.totalEntries} entries
+                          </p>
                         </div>
                       </>
                     )}
                   </div>
+                  
+                  {/* Data rows for non-hiatus years */}
                   {!isHiatus && (
-                    <div className="text-right">
-                      <div className="text-sm text-gray-600">
-                        <p>2nd: {entry.secondPlace.name} ({entry.secondPlace.score})</p>
-                        <p>3rd: {entry.thirdPlace.name} ({entry.thirdPlace.score})</p>
+                    <div className="px-4 pb-4 space-y-2">
+                      {/* Row 1: Gold Crown, Player, Points */}
+                      <div className="flex items-center gap-3">
+                        <Crown className="h-5 w-5 text-yellow-600" />
+                        <span className="font-medium text-yellow-700">{entry.firstPlace.name}</span>
+                        <span className="text-sm text-gray-600">({entry.firstPlace.score} pts)</span>
+                      </div>
+                      
+                      {/* Row 2: Silver Trophy, Player, Points */}
+                      <div className="flex items-center gap-3">
+                        <Trophy className="h-5 w-5 text-gray-400" />
+                        <span className="font-medium text-gray-700">{entry.secondPlace.name}</span>
+                        <span className="text-sm text-gray-600">({entry.secondPlace.score} pts)</span>
+                      </div>
+                      
+                      {/* Row 3: Bronze Medal, Player, Points */}
+                      <div className="flex items-center gap-3">
+                        <Medal className="h-5 w-5 text-amber-600" />
+                        <span className="font-medium text-gray-700">{entry.thirdPlace.name}</span>
+                        <span className="text-sm text-gray-600">({entry.thirdPlace.score} pts)</span>
                       </div>
                     </div>
                   )}
@@ -155,40 +171,39 @@ export default async function HallOfFamePage() {
               <h3 className="text-xl font-bold text-gray-900">All-Time Champions</h3>
             </div>
             
-            <div className="space-y-4">
+            <div className="space-y-3">
               {hallOfFameData.map((entry) => {
                 const isHiatus = entry.firstPlace.name === 'HIATUS';
                 
                 return (
-                  <div key={entry.year} className={`rounded-lg p-4 border-l-4 ${
+                  <div key={entry.year} className={`rounded-lg border-l-4 ${
                     isHiatus 
                       ? 'bg-gray-100 border-gray-400' 
                       : 'bg-yellow-50 border-yellow-500'
                   }`}>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        {isHiatus ? (
-                          <>
+                    {/* Main team logo header */}
+                    <div className={`flex items-center ${isHiatus ? 'p-4' : 'p-0'}`}>
+                      {isHiatus ? (
+                        <div className="flex items-center p-4">
+                          <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center mr-4 bg-gray-400">
+                            <Shield className="h-6 w-6 text-white" />
+                          </div>
+                          <div>
                             <p className="font-semibold text-gray-600 italic">Tournament Not Held</p>
                             <p className="text-sm text-gray-500">{entry.year} Tournament</p>
-                          </>
-                        ) : (
-                          <>
-                            <div className="flex items-center gap-3">
-                              <TeamLogo teamName={entry.firstPlace.team} size={24} />
-                              <div>
-                                <p className="font-semibold text-gray-900">{entry.firstPlace.name}</p>
-                                <p className="text-sm text-gray-600">{entry.year} Champion • {entry.firstPlace.score} pts</p>
-                                <p className="text-xs text-gray-500">{entry.firstPlace.team}</p>
-                              </div>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                      {isHiatus ? (
-                        <Shield className="h-6 w-6 text-gray-400" />
+                          </div>
+                        </div>
                       ) : (
-                        <Trophy className="h-6 w-6 text-yellow-500" />
+                        <>
+                          {/* Large team logo */}
+                          <div className="flex-shrink-0 w-16 h-16 flex items-center justify-center bg-white rounded-l-lg">
+                            <TeamLogo teamName={entry.firstPlace.team} size={64} />
+                          </div>
+                          <div className="flex-grow p-4">
+                            <p className="font-semibold text-gray-900">{entry.firstPlace.name}</p>
+                            <p className="text-sm text-gray-600">{entry.year} Champion • {entry.firstPlace.score} pts</p>
+                          </div>
+                        </>
                       )}
                     </div>
                   </div>
