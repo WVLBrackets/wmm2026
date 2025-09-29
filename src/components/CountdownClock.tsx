@@ -38,6 +38,7 @@ export default function CountdownClock() {
           siteDescription: 'Annual March Madness Bracket Challenge',
           oldSiteUrl: 'https://warrensmadness.webnode.page/',
           standingsTabs: 2,
+          footerText: '© 2001 Warren\'s March Madness | All rights reserved',
         });
       }
     };
