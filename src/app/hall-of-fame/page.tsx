@@ -150,12 +150,7 @@ export default async function HallOfFamePage() {
                       
                       {/* Row 3: Bronze Medal, Player, Points */}
                       <div className="flex items-center gap-3">
-                        <div className="relative">
-                          <Medal className="h-5 w-5 text-amber-600" />
-                          <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-amber-800" style={{ fontSize: '8px', lineHeight: '1' }}>
-                            3
-                          </span>
-                        </div>
+                        <Medal className="h-5 w-5 text-amber-600" />
                         <span className="font-medium text-gray-700">{entry.thirdPlace.name}</span>
                         <span className="text-sm text-gray-600">({entry.thirdPlace.score} pts)</span>
                       </div>
