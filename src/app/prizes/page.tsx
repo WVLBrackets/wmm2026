@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getSiteConfig } from '@/config/site';
-import { SiteConfigData } from '@/lib/siteConfig';
+import { SiteConfigData, getFallbackSiteConfig } from '@/lib/siteConfig';
 import { Gift, Trophy, Medal, Crown, AlertCircle } from 'lucide-react';
 
 export default function PrizesPage() {
@@ -16,12 +16,8 @@ export default function PrizesPage() {
         setSiteConfig(config);
       } catch (error) {
         console.error('Error loading site config:', error);
-        // Use fallback values
-        setSiteConfig({
-          totalPrizeAmount: 0,
-          numberOfPlayers: 0,
-          prizesActiveForecast: 'Forecast'
-        } as SiteConfigData);
+        // Use centralized fallback config
+        setSiteConfig(getFallbackSiteConfig());
       } finally {
         setIsLoading(false);
       }
