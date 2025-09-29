@@ -116,7 +116,7 @@ export default async function HallOfFamePage() {
                     ) : (
                       <>
                         {/* Large team logo that fills the row */}
-                        <div className="flex-shrink-0 w-20 h-20 flex items-center justify-center bg-white rounded-l-lg">
+                        <div className="flex-shrink-0 w-20 h-20 flex items-center justify-center">
                           <TeamLogo teamName={entry.firstPlace.team} size={80} />
                         </div>
                         <div className="flex-grow p-4">
@@ -150,7 +150,12 @@ export default async function HallOfFamePage() {
                       
                       {/* Row 3: Bronze Medal, Player, Points */}
                       <div className="flex items-center gap-3">
-                        <Medal className="h-5 w-5 text-amber-600" />
+                        <div className="relative">
+                          <Medal className="h-5 w-5 text-amber-600" />
+                          <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-amber-800" style={{ fontSize: '8px', lineHeight: '1' }}>
+                            3
+                          </span>
+                        </div>
                         <span className="font-medium text-gray-700">{entry.thirdPlace.name}</span>
                         <span className="text-sm text-gray-600">({entry.thirdPlace.score} pts)</span>
                       </div>
@@ -196,7 +201,7 @@ export default async function HallOfFamePage() {
                       ) : (
                         <>
                           {/* Large team logo */}
-                          <div className="flex-shrink-0 w-16 h-16 flex items-center justify-center bg-white rounded-l-lg">
+                          <div className="flex-shrink-0 w-16 h-16 flex items-center justify-center">
                             <TeamLogo teamName={entry.firstPlace.team} size={64} />
                           </div>
                           <div className="flex-grow p-4">
