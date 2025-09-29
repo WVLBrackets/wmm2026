@@ -43,6 +43,7 @@ export default function DynamicNavigation() {
           oldSiteUrl: 'https://warrensmadness.webnode.page/',
           standingsTabs: 2,
           footerText: '© 2001 Warren\'s March Madness | All rights reserved',
+          contactMe: 'warren@example.com',
         });
       }
     };

@@ -16,6 +16,7 @@ export interface SiteConfigData {
   oldSiteUrl: string;
   standingsTabs: number;
   footerText: string;
+  contactMe: string;
 }
 
 // Function to fetch site config from Google Sheets
@@ -82,6 +83,9 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
           case 'footer_text':
             config.footerText = value;
             break;
+          case 'contact_me':
+            config.contactMe = value;
+            break;
         }
       }
     }
@@ -135,4 +139,5 @@ export const getFallbackSiteConfig = (): SiteConfigData => ({
   oldSiteUrl: 'https://warrensmadness.webnode.page/',
   standingsTabs: parseInt(process.env.NEXT_PUBLIC_STANDINGS_TABS || '2'),
   footerText: process.env.NEXT_PUBLIC_FOOTER_TEXT || '© 2001 Warren\'s March Madness | All rights reserved',
+  contactMe: process.env.NEXT_PUBLIC_CONTACT_ME || 'warren@example.com',
 });
