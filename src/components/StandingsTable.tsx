@@ -475,9 +475,6 @@ export default function StandingsTable() {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex items-center gap-4">
             <h2 className="text-2xl font-bold text-gray-900">{tournamentYear} Standings</h2>
-            <span className="hidden sm:block text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-              {standingsData?.day} • {filteredEntries.length} players
-            </span>
             <Link 
               href="/standings/previous-years"
               className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 transition-colors"
