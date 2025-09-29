@@ -1,5 +1,5 @@
 import { getSiteConfig } from '@/config/site';
-import { Star, Trophy, Crown, Calendar, Users, Medal, Pause } from 'lucide-react';
+import { Star, Trophy, Crown, Calendar, Users, Medal, Shield } from 'lucide-react';
 import { getHallOfFameData } from '@/lib/googleSheets';
 import TeamLogo from './TeamLogo';
 
@@ -101,7 +101,7 @@ export default async function HallOfFamePage() {
                     isHiatus ? 'bg-gray-400' : 'bg-yellow-500'
                   }`}>
                     {isHiatus ? (
-                      <Pause className="h-6 w-6 text-white" />
+                      <Shield className="h-6 w-6 text-white" />
                     ) : (
                       <Trophy className="h-6 w-6 text-white" />
                     )}
@@ -186,7 +186,7 @@ export default async function HallOfFamePage() {
                         )}
                       </div>
                       {isHiatus ? (
-                        <Pause className="h-6 w-6 text-gray-400" />
+                        <Shield className="h-6 w-6 text-gray-400" />
                       ) : (
                         <Trophy className="h-6 w-6 text-yellow-500" />
                       )}
