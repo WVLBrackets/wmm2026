@@ -488,9 +488,8 @@ export default function StandingsTable() {
           </div>
           
           <div className="flex flex-row gap-3 items-center">
-            {/* Day selector with label */}
+            {/* Day selector */}
             <div className="flex items-center gap-2">
-              <span className="hidden sm:block text-sm text-gray-500">Day:</span>
               <select
                 value={displayDay}
                 onChange={(e) => handleDayChange(e.target.value)}
