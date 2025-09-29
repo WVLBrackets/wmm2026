@@ -1,6 +1,7 @@
 import { getSiteConfig } from '@/config/site';
 import { Star, Trophy, Crown, Calendar, Users, Medal, Pause } from 'lucide-react';
 import { getHallOfFameData } from '@/lib/googleSheets';
+import TeamLogo from './TeamLogo';
 
 export default async function HallOfFamePage() {
   const siteConfig = await getSiteConfig();
@@ -117,12 +118,17 @@ export default async function HallOfFamePage() {
                       </p>
                     ) : (
                       <>
-                        <p className="text-yellow-700 font-medium">
-                          {entry.firstPlace.name} ({entry.firstPlace.score} pts)
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {entry.firstPlace.team} • {entry.totalEntries} entries
-                        </p>
+                        <div className="flex items-center gap-3">
+                          <TeamLogo teamName={entry.firstPlace.team} size={32} />
+                          <div>
+                            <p className="text-yellow-700 font-medium">
+                              {entry.firstPlace.name} ({entry.firstPlace.score} pts)
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              {entry.firstPlace.team} • {entry.totalEntries} entries
+                            </p>
+                          </div>
+                        </div>
                       </>
                     )}
                   </div>
@@ -168,9 +174,14 @@ export default async function HallOfFamePage() {
                           </>
                         ) : (
                           <>
-                            <p className="font-semibold text-gray-900">{entry.firstPlace.name}</p>
-                            <p className="text-sm text-gray-600">{entry.year} Champion • {entry.firstPlace.score} pts</p>
-                            <p className="text-xs text-gray-500">{entry.firstPlace.team}</p>
+                            <div className="flex items-center gap-3">
+                              <TeamLogo teamName={entry.firstPlace.team} size={24} />
+                              <div>
+                                <p className="font-semibold text-gray-900">{entry.firstPlace.name}</p>
+                                <p className="text-sm text-gray-600">{entry.year} Champion • {entry.firstPlace.score} pts</p>
+                                <p className="text-xs text-gray-500">{entry.firstPlace.team}</p>
+                              </div>
+                            </div>
                           </>
                         )}
                       </div>
