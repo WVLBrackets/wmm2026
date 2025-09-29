@@ -1,7 +1,63 @@
-import { siteConfig } from '@/config/site';
-import { Gift, Trophy, Medal, Star, Crown, Target, Zap } from 'lucide-react';
+'use client';
+
+import { useState, useEffect } from 'react';
+import { getSiteConfig } from '@/config/site';
+import { SiteConfigData } from '@/lib/siteConfig';
+import { Gift, Trophy, Medal, Crown, AlertCircle } from 'lucide-react';
 
 export default function PrizesPage() {
+  const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadSiteConfig = async () => {
+      try {
+        const config = await getSiteConfig();
+        setSiteConfig(config);
+      } catch (error) {
+        console.error('Error loading site config:', error);
+        // Use fallback values
+        setSiteConfig({
+          totalPrizeAmount: 0,
+          numberOfPlayers: 0,
+          prizesActiveForecast: 'Forecast'
+        } as SiteConfigData);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadSiteConfig();
+  }, []);
+
+  // Calculate prize amounts based on player count
+  const calculatePrizes = () => {
+    if (!siteConfig) return { first: 0, second: 0, third: 0, total: 0 };
+    
+    // Calculate total prize pool: $5 per entry
+    const totalPrize = siteConfig.numberOfPlayers * 5;
+    return {
+      first: Math.round(totalPrize * 0.60),
+      second: Math.round(totalPrize * 0.30),
+      third: Math.round(totalPrize * 0.10),
+      total: totalPrize
+    };
+  };
+
+  const prizes = calculatePrizes();
+  const isActive = siteConfig?.prizesActiveForecast === 'Active';
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading prize information...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -10,13 +66,26 @@ export default function PrizesPage() {
         <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-lg shadow-lg p-8 mb-8">
           <div className="text-center text-white">
             <Gift className="h-16 w-16 mx-auto mb-4" />
-            <h2 className="text-3xl font-bold mb-2">Total Prize Pool</h2>
+            <h2 className="text-3xl font-bold mb-2">
+              {isActive ? 'Prize Pool' : `Estimated Prize Pool - ${siteConfig?.tournamentYear || '2026'}`}
+            </h2>
             <p className="text-5xl font-bold mb-4">
-              ${siteConfig.totalPrizeAmount.toLocaleString()}
+              ${prizes.total.toLocaleString()}{!isActive && '*'}
             </p>
             <p className="text-lg opacity-90">
-              Compete for your share of the prize pool!
+              {isActive 
+                ? `Based on ${siteConfig?.numberOfPlayers || 0} confirmed entries`
+                : `Projected based on last year's number of entries (${siteConfig?.numberOfPlayers || 0})`
+              }
             </p>
+            {!isActive && (
+              <div className="mt-4 bg-yellow-600 bg-opacity-30 rounded-lg p-3">
+                <div className="flex items-center justify-center">
+                  <AlertCircle className="h-5 w-5 mr-2" />
+                  <span className="text-sm">Prize amounts will be finalized based on the actual number of entries</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -29,12 +98,11 @@ export default function PrizesPage() {
               <h3 className="text-2xl font-bold text-gray-900 mb-2">1st Place</h3>
               <p className="text-3xl font-bold text-yellow-600 mb-2">Champion</p>
               <div className="bg-yellow-50 rounded-lg p-4 mb-4">
-                <p className="text-2xl font-bold text-yellow-700">60% of Prize Pool</p>
-                <p className="text-sm text-gray-600">Based on ${siteConfig.totalPrizeAmount.toLocaleString()} total</p>
+                <p className="text-2xl font-bold text-yellow-700">${prizes.first.toLocaleString()}{!isActive && '*'}</p>
+                <p className="text-sm text-gray-600">
+                  {isActive ? '60% of confirmed prize pool' : '60% of projected prize pool'}
+                </p>
               </div>
-              <p className="text-gray-600 text-sm">
-                The ultimate March Madness champion!
-              </p>
             </div>
           </div>
 
@@ -45,12 +113,11 @@ export default function PrizesPage() {
               <h3 className="text-2xl font-bold text-gray-900 mb-2">2nd Place</h3>
               <p className="text-3xl font-bold text-gray-600 mb-2">Runner-Up</p>
               <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                <p className="text-2xl font-bold text-gray-700">25% of Prize Pool</p>
-                <p className="text-sm text-gray-600">Based on ${siteConfig.totalPrizeAmount.toLocaleString()} total</p>
+                <p className="text-2xl font-bold text-gray-700">${prizes.second.toLocaleString()}{!isActive && '*'}</p>
+                <p className="text-sm text-gray-600">
+                  {isActive ? '30% of confirmed prize pool' : '30% of projected prize pool'}
+                </p>
               </div>
-              <p className="text-gray-600 text-sm">
-                So close to the championship!
-              </p>
             </div>
           </div>
 
@@ -61,128 +128,36 @@ export default function PrizesPage() {
               <h3 className="text-2xl font-bold text-gray-900 mb-2">3rd Place</h3>
               <p className="text-3xl font-bold text-orange-600 mb-2">Third Place</p>
               <div className="bg-orange-50 rounded-lg p-4 mb-4">
-                <p className="text-2xl font-bold text-orange-700">10% of Prize Pool</p>
-                <p className="text-sm text-gray-600">Based on ${siteConfig.totalPrizeAmount.toLocaleString()} total</p>
+                <p className="text-2xl font-bold text-orange-700">${prizes.third.toLocaleString()}{!isActive && '*'}</p>
+                <p className="text-sm text-gray-600">
+                  {isActive ? '10% of confirmed prize pool' : '10% of projected prize pool'}
+                </p>
               </div>
-              <p className="text-gray-600 text-sm">
-                Still a podium finish!
+            </div>
+          </div>
+        </div>
+
+        {/* Forecast Note */}
+        {!isActive && (
+          <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-lg mt-8">
+            <div className="flex items-center">
+              <span className="text-red-600 text-2xl font-bold mr-3">*</span>
+              <p className="text-red-800 font-medium">
+                Prizes estimated based on {siteConfig?.numberOfPlayers || 0} entries
               </p>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Special Prizes */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 text-center mb-8">Special Prizes</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Perfect Bracket */}
-            <div className="bg-white rounded-lg shadow-lg p-6 border-t-4 border-purple-500">
-              <div className="text-center">
-                <Star className="h-12 w-12 text-purple-500 mx-auto mb-3" />
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Perfect Bracket</h3>
-                <p className="text-2xl font-bold text-purple-600 mb-2">$500 Bonus</p>
-                <p className="text-gray-600 text-sm">
-                  Predict every game correctly and win an extra $500!
-                </p>
-              </div>
-            </div>
-
-            {/* Last Place */}
-            <div className="bg-white rounded-lg shadow-lg p-6 border-t-4 border-red-500">
-              <div className="text-center">
-                <Target className="h-12 w-12 text-red-500 mx-auto mb-3" />
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Last Place</h3>
-                <p className="text-2xl font-bold text-red-600 mb-2">$50 Consolation</p>
-                <p className="text-gray-600 text-sm">
-                  Even the worst bracket gets a consolation prize!
-                </p>
-              </div>
-            </div>
-
-            {/* Most Upsets */}
-            <div className="bg-white rounded-lg shadow-lg p-6 border-t-4 border-green-500">
-              <div className="text-center">
-                <Zap className="h-12 w-12 text-green-500 mx-auto mb-3" />
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Most Upsets</h3>
-                <p className="text-2xl font-bold text-green-600 mb-2">$100 Bonus</p>
-                <p className="text-gray-600 text-sm">
-                  Correctly predict the most underdog victories!
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Prize Distribution Details */}
-        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Prize Distribution</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Main Prizes</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center py-2 px-4 bg-yellow-50 rounded">
-                  <span className="font-medium">1st Place (Champion)</span>
-                  <span className="font-bold text-yellow-600">60%</span>
-                </div>
-                <div className="flex justify-between items-center py-2 px-4 bg-gray-50 rounded">
-                  <span className="font-medium">2nd Place (Runner-Up)</span>
-                  <span className="font-bold text-gray-600">25%</span>
-                </div>
-                <div className="flex justify-between items-center py-2 px-4 bg-orange-50 rounded">
-                  <span className="font-medium">3rd Place</span>
-                  <span className="font-bold text-orange-600">10%</span>
-                </div>
-                <div className="flex justify-between items-center py-2 px-4 bg-blue-50 rounded">
-                  <span className="font-medium">Tournament Operations</span>
-                  <span className="font-bold text-blue-600">5%</span>
-                </div>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Bonus Prizes</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center py-2 px-4 bg-purple-50 rounded">
-                  <span className="font-medium">Perfect Bracket</span>
-                  <span className="font-bold text-purple-600">$500</span>
-                </div>
-                <div className="flex justify-between items-center py-2 px-4 bg-green-50 rounded">
-                  <span className="font-medium">Most Upsets</span>
-                  <span className="font-bold text-green-600">$100</span>
-                </div>
-                <div className="flex justify-between items-center py-2 px-4 bg-red-50 rounded">
-                  <span className="font-medium">Last Place</span>
-                  <span className="font-bold text-red-600">$50</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Important Notes */}
-        <div className="bg-blue-50 border-l-4 border-blue-400 p-6 rounded-lg">
-          <h3 className="text-lg font-semibold text-blue-900 mb-3">Important Notes</h3>
-          <ul className="space-y-2 text-blue-800">
-            <li className="flex items-start">
-              <span className="text-blue-600 mr-2">•</span>
-              Prize amounts are based on the total prize pool of ${siteConfig.totalPrizeAmount.toLocaleString()}
-            </li>
-            <li className="flex items-start">
-              <span className="text-blue-600 mr-2">•</span>
-              All prizes will be distributed within 30 days of tournament completion
-            </li>
-            <li className="flex items-start">
-              <span className="text-blue-600 mr-2">•</span>
-              In case of ties, prizes will be split equally among tied participants
-            </li>
-            <li className="flex items-start">
-              <span className="text-blue-600 mr-2">•</span>
-              Perfect bracket bonus is in addition to regular prize winnings
-            </li>
-          </ul>
-        </div>
       </div>
     </div>
   );
 }
+
+
+
+
+
+
+
+

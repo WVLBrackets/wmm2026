@@ -17,6 +17,7 @@ export interface SiteConfigData {
   standingsTabs: number;
   footerText: string;
   contactMe: string;
+  prizesActiveForecast: string;
 }
 
 // Function to fetch site config from Google Sheets
@@ -62,7 +63,7 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
           case 'tournament_start_time':
             config.tournamentStartTime = value;
             break;
-          case 'number_of_players':
+          case 'player_count':
             config.numberOfPlayers = parseInt(value) || 0;
             break;
           case 'total_prize_amount':
@@ -85,6 +86,9 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
             break;
           case 'contact_me':
             config.contactMe = value;
+            break;
+          case 'prizes_active_forecast':
+            config.prizesActiveForecast = value;
             break;
         }
       }
@@ -140,4 +144,5 @@ export const getFallbackSiteConfig = (): SiteConfigData => ({
   standingsTabs: parseInt(process.env.NEXT_PUBLIC_STANDINGS_TABS || '2'),
   footerText: process.env.NEXT_PUBLIC_FOOTER_TEXT || '© 2001 Warren\'s March Madness | All rights reserved',
   contactMe: process.env.NEXT_PUBLIC_CONTACT_ME || 'warren@example.com',
+  prizesActiveForecast: process.env.NEXT_PUBLIC_PRIZES_ACTIVE_FORECAST || 'Forecast',
 });
