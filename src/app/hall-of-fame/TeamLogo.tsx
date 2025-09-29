@@ -16,7 +16,9 @@ export default function TeamLogo({ teamName, size = 40 }: TeamLogoProps) {
   useEffect(() => {
     const loadTeamInfo = async () => {
       try {
+        console.log(`🏀 Loading team info for: "${teamName}"`);
         const info = await getTeamInfo(teamName);
+        console.log(`🏀 Team info result for "${teamName}":`, info);
         setTeamInfo(info);
       } catch (error) {
         console.error(`Failed to load team info for ${teamName}:`, error);

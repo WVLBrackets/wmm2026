@@ -1,7 +1,7 @@
 // High-performance team logo mapping for ESPN team logos
 // Optimized for frequent use across the site
 
-import { getTeamIdByAbbr } from './teamRefData';
+import { getTeamIdByAbbr, getTeamIdByName } from './teamRefData';
 import { getCachedLogoUrl, preloadLogos } from './logoCache';
 
 export interface TeamInfo {
@@ -79,7 +79,13 @@ export async function getTeamInfo(teamName: string, size: number = 30): Promise<
   }
   
   try {
-    const teamId = await getTeamIdByAbbr(teamName);
+    // Try to get team ID by name first (for full team names like "Florida Gators")
+    let teamId = await getTeamIdByName(teamName);
+    
+    // If not found by name, try by abbreviation
+    if (!teamId) {
+      teamId = await getTeamIdByAbbr(teamName);
+    }
     
     console.log(`🔍 Looking up team "${teamName}" -> teamId: "${teamId}"`);
     

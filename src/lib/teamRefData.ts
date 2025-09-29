@@ -143,6 +143,72 @@ export async function getTeamIdByAbbr(abbr: string): Promise<string | null> {
 }
 
 /**
+ * Get team ID by full team name (e.g., "Florida Gators" -> "57")
+ */
+export async function getTeamIdByName(teamName: string): Promise<string | null> {
+  try {
+    const teamData = await getTeamRefData();
+    
+    // First try exact match
+    let team = teamData.find(t => t.abbr === teamName);
+    if (team) {
+      return team.id;
+    }
+    
+    // Map common full team names to abbreviations
+    const teamNameMap: { [key: string]: string } = {
+      'Florida Gators': 'Fla',
+      'UConn Huskies': 'UConn', 
+      'UConn': 'UConn',
+      'Florida': 'Fla',
+      'Gators': 'Fla',
+      'Huskies': 'UConn',
+      'North Carolina': 'UNC',
+      'UNC': 'UNC',
+      'Duke': 'Duke',
+      'Kentucky': 'Kentucky',
+      'Kansas': 'Kansas',
+      'Arizona': 'Arizona',
+      'Alabama': 'Alabama',
+      'Auburn': 'Auburn',
+      'Arkansas': 'Arkansas',
+      'Tennessee': 'Tennessee',
+      'Texas': 'Texas',
+      'Texas A&M': 'TA&M',
+      'Texas Tech': 'TTech',
+      'Florida State': 'FlaSt',
+      'Florida Atlantic': 'FAU',
+      'Drake': 'DRK',
+      'Gonzaga': 'Gonz',
+      'Michigan State': 'MicSt',
+      'Iowa State': 'IoSt',
+      'NC State': 'NCSt',
+      'Notre Dame': 'ND',
+      'Indiana': 'Ind',
+      'Georgia Tech': 'GaTech',
+      'California': 'Cal',
+      'Colorado': 'Colo',
+      'Colorado State': 'ColoSt'
+    };
+    
+    const mappedAbbr = teamNameMap[teamName];
+    if (mappedAbbr) {
+      team = teamData.find(t => t.abbr === mappedAbbr);
+      if (team) {
+        console.log(`🏀 Mapped "${teamName}" -> "${mappedAbbr}" -> ID: ${team.id}`);
+        return team.id;
+      }
+    }
+    
+    console.warn(`⚠️ Team name not found: "${teamName}" - Please add to team name mapping`);
+    return null;
+  } catch (error) {
+    console.error(`Error getting team ID for ${teamName}:`, error);
+    return null;
+  }
+}
+
+/**
  * Fallback team data if Google Sheets is unavailable
  */
 function getFallbackTeamData(): TeamRefData[] {
