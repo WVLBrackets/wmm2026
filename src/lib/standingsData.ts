@@ -32,7 +32,7 @@ const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes cache
  * Get the last modified time from the Google Sheet
  * This looks for a timestamp in a specific cell (e.g., A1) that gets updated when data changes
  */
-async function getSheetLastModified(day: string): Promise<string | null> {
+async function getSheetLastModified(): Promise<string | null> {
   try {
     // Try to get a timestamp from a specific cell in the sheet
     // For now, we'll use the current time, but this can be updated to read from a cell
@@ -99,7 +99,7 @@ export async function getStandingsData(day: string = 'Day1'): Promise<StandingsD
     console.log(`📊 Eliminated Teams: ${eliminatedTeams.join(', ')}`);
     
     // Get the sheet's last modified time
-    const sheetLastModified = await getSheetLastModified(day);
+    const sheetLastModified = await getSheetLastModified();
     
         const standingsData: StandingsData = {
           day,
@@ -461,7 +461,6 @@ function getFallbackStandingsData(day: string): StandingsData {
         tb: 139,
         paid: true
       }
-    ],
-    lastUpdated: new Date().toISOString()
+    ]
   };
 }
