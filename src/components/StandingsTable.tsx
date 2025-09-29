@@ -639,7 +639,7 @@ export default function StandingsTable() {
         <div className="flex items-center justify-between text-sm text-gray-500">
           <span>
             {standingsData ? (
-              <>Last updated: {new Date(standingsData.lastUpdated).toLocaleString()}</>
+              <>Last updated: {new Date(standingsData.sheetLastModified || standingsData.lastUpdated).toLocaleString()}</>
             ) : (
               <>Loading latest data...</>
             )}

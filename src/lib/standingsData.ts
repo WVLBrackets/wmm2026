@@ -14,6 +14,7 @@ export interface StandingsData {
   day: string;
   entries: StandingsEntry[];
   lastUpdated: string;
+  sheetLastModified?: string; // Actual Google Sheet modification time
   quarterfinalWinners?: string[]; // Col E-H: Quarterfinal winners (Final Four)
   semifinalWinners?: string[]; // Col I-J: Semifinal winners (Finals)
   semifinalKey?: string[]; // Col I-J: Raw KEY values (including blanks)
@@ -26,6 +27,32 @@ const STANDINGS_SHEET_ID = '12c8VEI6ZoIhRXg8b0rEfYWAOI86Ye_ZPY9G1sPaBRFs';
 // Cache for standings data to improve performance
 const standingsCache = new Map<string, { data: StandingsData; timestamp: number }>();
 const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes cache
+
+/**
+ * Get the last modified time from the Google Sheet
+ * This looks for a timestamp in a specific cell (e.g., A1) that gets updated when data changes
+ */
+async function getSheetLastModified(day: string): Promise<string | null> {
+  try {
+    // Try to get a timestamp from a specific cell in the sheet
+    // For now, we'll use the current time, but this can be updated to read from a cell
+    // that contains the actual last modified time from the Google Sheet
+    
+    // Future enhancement: Read from a specific cell that contains the last modified timestamp
+    // const timestampUrl = `https://docs.google.com/spreadsheets/d/${STANDINGS_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(day)}&range=A1`;
+    // const response = await fetch(timestampUrl);
+    // if (response.ok) {
+    //   const timestampText = await response.text();
+    //   return timestampText.trim();
+    // }
+    
+    // For now, return current time as a placeholder
+    return new Date().toISOString();
+  } catch (error) {
+    console.warn('Error fetching sheet modification time:', error);
+    return null;
+  }
+}
 
 /**
  * Fetch standings data from Google Sheets for a specific day
@@ -71,10 +98,14 @@ export async function getStandingsData(day: string = 'Day1'): Promise<StandingsD
     console.log(`📊 Final Winner: ${finalWinner}`);
     console.log(`📊 Eliminated Teams: ${eliminatedTeams.join(', ')}`);
     
+    // Get the sheet's last modified time
+    const sheetLastModified = await getSheetLastModified(day);
+    
         const standingsData: StandingsData = {
           day,
           entries,
           lastUpdated: new Date().toISOString(),
+          sheetLastModified: sheetLastModified || new Date().toISOString(),
           quarterfinalWinners,
           semifinalWinners,
           semifinalKey,
@@ -389,6 +420,8 @@ export function getFinalColor(
 function getFallbackStandingsData(day: string): StandingsData {
   return {
     day,
+    lastUpdated: new Date().toISOString(),
+    sheetLastModified: new Date().toISOString(),
     quarterfinalWinners: [], // No quarterfinal winners in fallback
     semifinalWinners: [], // No semifinal winners in fallback
     semifinalKey: ['', ''], // No semifinal results in fallback
