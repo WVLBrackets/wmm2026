@@ -118,26 +118,52 @@ export default function Announcements() {
       
       <div className="space-y-4 flex-grow">
         {announcements.map((announcement, index) => (
-          <div key={index} className="relative">
-            <div className="flex items-start">
-              <div className="flex-shrink-0 mt-1 mr-3">
-                <Image
-                  src="/images/basketball icon.png"
-                  alt="Basketball"
-                  width={16}
-                  height={16}
-                  className="w-4 h-4"
-                />
+          <div key={index}>
+            {/* Mobile layout: Full width text with timestamp underneath */}
+            <div className="block md:hidden">
+              <div className="flex items-start mb-2">
+                <div className="flex-shrink-0 mt-1 mr-3">
+                  <Image
+                    src="/images/basketball icon.png"
+                    alt="Basketball"
+                    width={16}
+                    height={16}
+                    className="w-4 h-4"
+                  />
+                </div>
+                <div className="flex-grow">
+                  <p className="text-gray-700">{announcement.text}</p>
+                </div>
               </div>
-              <div className="flex-grow pr-20">
-                <p className="text-gray-700">{announcement.text}</p>
+              <div className="text-right">
+                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                  {announcement.date}
+                </span>
               </div>
             </div>
-            {/* Timestamp positioned absolutely in top-right corner */}
-            <div className="absolute top-0 right-0">
-              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                {announcement.date}
-              </span>
+            
+            {/* Desktop layout: Original layout with absolute positioning */}
+            <div className="hidden md:block relative">
+              <div className="flex items-start">
+                <div className="flex-shrink-0 mt-1 mr-3">
+                  <Image
+                    src="/images/basketball icon.png"
+                    alt="Basketball"
+                    width={16}
+                    height={16}
+                    className="w-4 h-4"
+                  />
+                </div>
+                <div className="flex-grow pr-20">
+                  <p className="text-gray-700">{announcement.text}</p>
+                </div>
+              </div>
+              {/* Timestamp positioned absolutely in top-right corner */}
+              <div className="absolute top-0 right-0">
+                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                  {announcement.date}
+                </span>
+              </div>
             </div>
           </div>
         ))}
