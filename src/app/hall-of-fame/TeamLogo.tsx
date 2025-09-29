@@ -54,15 +54,29 @@ export default function TeamLogo({ teamName, size = 40 }: TeamLogoProps) {
   }
 
   return (
-    <Image
-      src={teamInfo.logoUrl}
-      alt={`${teamInfo.name} logo`}
-      width={size}
-      height={size}
-      className="rounded"
-      quality={100}
-      unoptimized={true}
-      style={{ imageRendering: 'crisp-edges' }}
-    />
+    <div 
+      className="flex items-center justify-center"
+      style={{ width: size, height: size }}
+    >
+      <Image
+        src={teamInfo.logoUrl}
+        alt={`${teamInfo.name} logo`}
+        width={size}
+        height={size}
+        className="object-contain"
+        quality={100}
+        unoptimized={true}
+        priority={size >= 64}
+        style={{ 
+          imageRendering: 'crisp-edges',
+          backgroundColor: 'transparent',
+          maxWidth: '100%',
+          maxHeight: '100%'
+        }}
+        onError={(e) => {
+          console.warn(`Failed to load logo for ${teamInfo.name}:`, teamInfo.logoUrl);
+        }}
+      />
+    </div>
   );
 }
