@@ -167,8 +167,12 @@ export async function getTeamIdByName(teamName: string): Promise<string | null> 
       'North Carolina': 'UNC',
       'UNC': 'UNC',
       'Duke': 'Duke',
-      'Kentucky': 'Kentucky',
-      'Kansas': 'Kansas',
+      'Kentucky': 'UK',
+      'Kentucky Wildcats': 'UK',
+      'Wildcats': 'UK',
+      'Kansas': 'KU',
+      'Kansas Jayhawks': 'KU',
+      'Jayhawks': 'KU',
       'Arizona': 'Arizona',
       'Alabama': 'Alabama',
       'Auburn': 'Auburn',
@@ -182,6 +186,7 @@ export async function getTeamIdByName(teamName: string): Promise<string | null> 
       'Drake': 'DRK',
       'Gonzaga': 'Gonz',
       'Michigan State': 'MicSt',
+      'Spartans': 'MicSt',
       'Iowa State': 'IoSt',
       'NC State': 'NCSt',
       'Notre Dame': 'ND',
@@ -236,9 +241,10 @@ export async function getTeamIdByName(teamName: string): Promise<string | null> 
       'Louisville Cardinals': 'Louisville',
       'Louisville': 'Louisville',
       'Cardinals': 'Louisville',
-      'Syracuse Orange': 'Syracuse',
-      'Syracuse': 'Syracuse',
-      'Orange': 'Syracuse',
+      'Syracuse Orange': 'Syra',
+      'Syracuse': 'Syra',
+      'Orange': 'Syra',
+      'Orangemen': 'Syra',
       'Pittsburgh Panthers': 'Pitt',
       'Pittsburgh': 'Pitt',
       'Panthers': 'Pitt',
@@ -636,6 +642,8 @@ function getFallbackTeamData(): TeamRefData[] {
     
     // Missing major teams
     { abbr: 'UVA', id: '258' },        // Virginia Cavaliers
+    { abbr: 'Maryland', id: '120' },   // Maryland Terrapins
+    { abbr: 'Louisville', id: '97' },  // Louisville Cardinals
     
     // Additional teams from Google Sheet
     { abbr: 'GeoSt', id: '2247' },    // Georgia State Panthers
