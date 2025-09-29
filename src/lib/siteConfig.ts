@@ -15,6 +15,7 @@ export interface SiteConfigData {
   siteDescription: string;
   oldSiteUrl: string;
   standingsTabs: number;
+  footerText: string;
 }
 
 // Function to fetch site config from Google Sheets
@@ -78,6 +79,9 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
           case 'standings_tabs':
             config.standingsTabs = parseInt(value) || 2;
             break;
+          case 'footer_text':
+            config.footerText = value;
+            break;
         }
       }
     }
@@ -130,4 +134,5 @@ export const getFallbackSiteConfig = (): SiteConfigData => ({
   siteDescription: process.env.NEXT_PUBLIC_SITE_DESCRIPTION || 'Annual March Madness Bracket Challenge',
   oldSiteUrl: 'https://warrensmadness.webnode.page/',
   standingsTabs: parseInt(process.env.NEXT_PUBLIC_STANDINGS_TABS || '2'),
+  footerText: process.env.NEXT_PUBLIC_FOOTER_TEXT || '© 2001 Warren\'s March Madness | All rights reserved',
 });
