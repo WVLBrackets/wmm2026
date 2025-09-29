@@ -251,11 +251,19 @@ export async function getAvailableDays(): Promise<string[]> {
 }
 
 /**
- * Get the current tournament year
+ * Get the current tournament year from Google Sheets config
  */
-export function getCurrentTournamentYear(): string {
-  // For now, return 2025. In the future, this could be dynamic
-  return '2025';
+export async function getCurrentTournamentYear(): Promise<string> {
+  try {
+    // Import the site config to get the tournament year
+    const { getSiteConfig } = await import('@/config/site');
+    const siteConfig = await getSiteConfig();
+    
+    return siteConfig.tournamentYear || '2025'; // Fallback to 2025 if not found
+  } catch (error) {
+    console.error('Error fetching tournament year from config:', error);
+    return '2025'; // Fallback to 2025 on error
+  }
 }
 
 /**

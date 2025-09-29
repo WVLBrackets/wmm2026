@@ -138,7 +138,7 @@ export default function StandingsTable() {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [tournamentYear] = useState<string>(getCurrentTournamentYear());
+  const [tournamentYear, setTournamentYear] = useState<string>('2025'); // Default fallback
   const [teamCache, setTeamCache] = useState<Map<string, { id: string; name: string }>>(globalTeamCache);
 
   // Function to calculate points back
@@ -157,6 +157,20 @@ export default function StandingsTable() {
   // Initialize logo cache on component mount
   useEffect(() => {
     initializeLogoCache();
+  }, []);
+
+  // Load tournament year from Google Sheets config
+  useEffect(() => {
+    const loadTournamentYear = async () => {
+      try {
+        const year = await getCurrentTournamentYear();
+        setTournamentYear(year);
+      } catch (error) {
+        console.error('Error loading tournament year:', error);
+        // Keep the default fallback value
+      }
+    };
+    loadTournamentYear();
   }, []);
 
   // Load available days on component mount
