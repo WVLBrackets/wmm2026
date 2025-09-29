@@ -3,7 +3,7 @@
 import { DollarSign, Trophy, FileSpreadsheet, AlertTriangle, Dog, Calculator } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getSiteConfig } from '@/config/site';
-import { SiteConfigData } from '@/lib/siteConfig';
+import { SiteConfigData, getFallbackSiteConfig } from '@/lib/siteConfig';
 
 export default function RulesPage() {
   const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
@@ -17,10 +17,7 @@ export default function RulesPage() {
       } catch (error) {
         console.error('Error loading site config:', error);
         // Use fallback values
-        setSiteConfig({
-          tournamentStartDate: '2026-03-20T09:00:00-08:00', // Default to March 20, 2026 9:00 AM Pacific
-          tournamentStartTime: '9:00 AM Pacific'
-        });
+        setSiteConfig(getFallbackSiteConfig());
       } finally {
         setIsLoading(false);
       }
