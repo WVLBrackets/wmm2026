@@ -90,16 +90,47 @@ export default async function HallOfFamePage() {
           <div className="space-y-3">
             {hallOfFameData.map((entry) => {
               const isHiatus = entry.firstPlace.name === 'HIATUS';
+              const is2020 = entry.year === '2020';
+              const is2016 = entry.year === '2016';
               
               return (
                 <div key={entry.year} className={`rounded-lg border-l-4 ${
-                  isHiatus 
+                  isHiatus || is2020 || is2016
                     ? 'bg-gray-100 border-gray-400' 
                     : 'bg-yellow-50 border-yellow-500'
                 }`}>
                   {/* Main team logo header - fills row with no padding */}
-                  <div className={`flex items-center ${isHiatus ? 'p-4' : 'p-0'}`}>
-                    {isHiatus ? (
+                  <div className={`flex items-center ${isHiatus || is2020 || is2016 ? 'p-4' : 'p-0'}`}>
+                    {is2020 ? (
+                      <div className="flex items-center p-4">
+                        <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center mr-4 bg-gray-400">
+                          <Shield className="h-6 w-6 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-600">
+                            {entry.year} Tournament
+                          </h3>
+                          <p className="text-gray-500 font-medium italic">
+                            Tournament Cancelled
+                          </p>
+                        </div>
+                      </div>
+                    ) : is2016 ? (
+                      <>
+                        {/* Large team logo for 2016 winner */}
+                        <div className="flex-shrink-0 w-20 h-20 flex items-center justify-center">
+                          <TeamLogo teamName={entry.firstPlace.team} size={80} />
+                        </div>
+                        <div className="flex-grow p-4">
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {entry.year} Tournament
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            WMM Hiatus
+                          </p>
+                        </div>
+                      </>
+                    ) : isHiatus ? (
                       <div className="flex items-center p-4">
                         <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center mr-4 bg-gray-400">
                           <Shield className="h-6 w-6 text-white" />
@@ -131,8 +162,41 @@ export default async function HallOfFamePage() {
                     )}
                   </div>
                   
-                  {/* Data rows for non-hiatus years */}
-                  {!isHiatus && (
+                  {/* Data rows for special cases and normal years */}
+                  {is2020 && (
+                    <div className="px-4 pb-4 space-y-2">
+                      {/* Row 2: Tournament Cancelled */}
+                      <div className="flex items-center gap-3">
+                        <Shield className="h-5 w-5 text-gray-500" />
+                        <span className="font-medium text-gray-700">Tournament Cancelled</span>
+                      </div>
+                      
+                      {/* Row 3: Global Pandemic */}
+                      <div className="flex items-center gap-3">
+                        <Shield className="h-5 w-5 text-red-500" />
+                        <span className="font-medium text-gray-700">Global Pandemic</span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {is2016 && (
+                    <div className="px-4 pb-4 space-y-2">
+                      {/* Row 2: 2016 Tournament */}
+                      <div className="flex items-center gap-3">
+                        <Crown className="h-5 w-5 text-yellow-600" />
+                        <span className="font-medium text-yellow-700">2016 Tournament</span>
+                      </div>
+                      
+                      {/* Row 3: WMM Hiatus */}
+                      <div className="flex items-center gap-3">
+                        <Trophy className="h-5 w-5 text-gray-400" />
+                        <span className="font-medium text-gray-700">WMM Hiatus</span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Data rows for normal years */}
+                  {!isHiatus && !is2020 && !is2016 && (
                     <div className="px-4 pb-4 space-y-2">
                       {/* Row 1: Gold Crown, Player, Points */}
                       <div className="flex items-center gap-3">

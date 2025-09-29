@@ -122,6 +122,40 @@ export const getHallOfFameData = async (): Promise<HallOfFameEntry[]> => {
           score: 101
         },
         totalEntries: 457
+      },
+      {
+        year: "2020",
+        firstPlace: {
+          name: "HIATUS",
+          team: "HIATUS",
+          score: 0
+        },
+        secondPlace: {
+          name: "HIATUS",
+          score: 0
+        },
+        thirdPlace: {
+          name: "HIATUS",
+          score: 0
+        },
+        totalEntries: 0
+      },
+      {
+        year: "2016",
+        firstPlace: {
+          name: "Villanova Wildcats",
+          team: "Villanova Wildcats",
+          score: 0
+        },
+        secondPlace: {
+          name: "HIATUS",
+          score: 0
+        },
+        thirdPlace: {
+          name: "HIATUS",
+          score: 0
+        },
+        totalEntries: 0
       }
     ];
   }
