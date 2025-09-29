@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { siteConfig } from "@/config/site";
 import DynamicNavigation from "@/components/DynamicNavigation";
+import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: siteConfig.siteName,
@@ -27,6 +28,7 @@ export default function RootLayout({
         <main>
           {children}
         </main>
+        <Footer />
       </body>
     </html>
   );
