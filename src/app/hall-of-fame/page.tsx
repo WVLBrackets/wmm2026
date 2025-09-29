@@ -1,8 +1,9 @@
-import { siteConfig } from '@/config/site';
-import { Star, Trophy, Crown, Calendar, Users, Medal } from 'lucide-react';
+import { getSiteConfig } from '@/config/site';
+import { Star, Trophy, Crown, Calendar, Users, Medal, Pause } from 'lucide-react';
 import { getHallOfFameData } from '@/lib/googleSheets';
 
 export default async function HallOfFamePage() {
+  const siteConfig = await getSiteConfig();
   const hallOfFameData = await getHallOfFameData();
   
   // Calculate multiple top 3 finishers
@@ -12,6 +13,11 @@ export default async function HallOfFamePage() {
   }>();
   
   hallOfFameData.forEach(entry => {
+    // Skip HIATUS years for multiple winners calculation
+    if (entry.firstPlace.name === 'HIATUS') {
+      return;
+    }
+    
     // Check first place
     const firstPlaceName = entry.firstPlace.name;
     if (top3Counts.has(firstPlaceName)) {
@@ -81,28 +87,56 @@ export default async function HallOfFamePage() {
           </div>
           
           <div className="space-y-6">
-            {hallOfFameData.map((entry) => (
-              <div key={entry.year} className="flex items-center p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">
-                <div className="flex-shrink-0 w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center mr-4">
-                  <Trophy className="h-6 w-6 text-white" />
-                </div>
-                <div className="flex-grow">
-                  <h3 className="text-lg font-semibold text-gray-900">{entry.year} Champion</h3>
-                  <p className="text-yellow-700 font-medium">
-                    {entry.firstPlace.name} ({entry.firstPlace.score} pts)
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    {entry.firstPlace.team} • {entry.totalEntries} entries
-                  </p>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm text-gray-600">
-                    <p>2nd: {entry.secondPlace.name} ({entry.secondPlace.score})</p>
-                    <p>3rd: {entry.thirdPlace.name} ({entry.thirdPlace.score})</p>
+            {hallOfFameData.map((entry) => {
+              const isHiatus = entry.firstPlace.name === 'HIATUS';
+              
+              return (
+                <div key={entry.year} className={`flex items-center p-4 rounded-lg border-l-4 ${
+                  isHiatus 
+                    ? 'bg-gray-100 border-gray-400' 
+                    : 'bg-yellow-50 border-yellow-500'
+                }`}>
+                  <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center mr-4 ${
+                    isHiatus ? 'bg-gray-400' : 'bg-yellow-500'
+                  }`}>
+                    {isHiatus ? (
+                      <Pause className="h-6 w-6 text-white" />
+                    ) : (
+                      <Trophy className="h-6 w-6 text-white" />
+                    )}
                   </div>
+                  <div className="flex-grow">
+                    <h3 className={`text-lg font-semibold ${
+                      isHiatus ? 'text-gray-600' : 'text-gray-900'
+                    }`}>
+                      {entry.year} {isHiatus ? 'Tournament' : 'Champion'}
+                    </h3>
+                    {isHiatus ? (
+                      <p className="text-gray-500 font-medium italic">
+                        Tournament Not Held
+                      </p>
+                    ) : (
+                      <>
+                        <p className="text-yellow-700 font-medium">
+                          {entry.firstPlace.name} ({entry.firstPlace.score} pts)
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {entry.firstPlace.team} • {entry.totalEntries} entries
+                        </p>
+                      </>
+                    )}
+                  </div>
+                  {!isHiatus && (
+                    <div className="text-right">
+                      <div className="text-sm text-gray-600">
+                        <p>2nd: {entry.secondPlace.name} ({entry.secondPlace.score})</p>
+                        <p>3rd: {entry.thirdPlace.name} ({entry.thirdPlace.score})</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -116,18 +150,39 @@ export default async function HallOfFamePage() {
             </div>
             
             <div className="space-y-4">
-              {hallOfFameData.map((entry) => (
-                <div key={entry.year} className="bg-yellow-50 rounded-lg p-4 border-l-4 border-yellow-500">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold text-gray-900">{entry.firstPlace.name}</p>
-                      <p className="text-sm text-gray-600">{entry.year} Champion • {entry.firstPlace.score} pts</p>
-                      <p className="text-xs text-gray-500">{entry.firstPlace.team}</p>
+              {hallOfFameData.map((entry) => {
+                const isHiatus = entry.firstPlace.name === 'HIATUS';
+                
+                return (
+                  <div key={entry.year} className={`rounded-lg p-4 border-l-4 ${
+                    isHiatus 
+                      ? 'bg-gray-100 border-gray-400' 
+                      : 'bg-yellow-50 border-yellow-500'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        {isHiatus ? (
+                          <>
+                            <p className="font-semibold text-gray-600 italic">Tournament Not Held</p>
+                            <p className="text-sm text-gray-500">{entry.year} Tournament</p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="font-semibold text-gray-900">{entry.firstPlace.name}</p>
+                            <p className="text-sm text-gray-600">{entry.year} Champion • {entry.firstPlace.score} pts</p>
+                            <p className="text-xs text-gray-500">{entry.firstPlace.team}</p>
+                          </>
+                        )}
+                      </div>
+                      {isHiatus ? (
+                        <Pause className="h-6 w-6 text-gray-400" />
+                      ) : (
+                        <Trophy className="h-6 w-6 text-yellow-500" />
+                      )}
                     </div>
-                    <Trophy className="h-6 w-6 text-yellow-500" />
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -196,25 +251,36 @@ export default async function HallOfFamePage() {
           
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <h3 className="text-2xl font-bold text-blue-600 mb-1">{hallOfFameData.length}</h3>
+              <h3 className="text-2xl font-bold text-blue-600 mb-1">
+                {hallOfFameData.filter(entry => entry.firstPlace.name !== 'HIATUS').length}
+              </h3>
               <p className="text-sm text-gray-600">Tournaments Completed</p>
             </div>
             
             <div className="text-center p-4 bg-green-50 rounded-lg">
-              <h3 className="text-2xl font-bold text-green-600 mb-1">{hallOfFameData.length}</h3>
+              <h3 className="text-2xl font-bold text-green-600 mb-1">
+                {hallOfFameData.filter(entry => entry.firstPlace.name !== 'HIATUS').length}
+              </h3>
               <p className="text-sm text-gray-600">Champions Crowned</p>
             </div>
             
             <div className="text-center p-4 bg-purple-50 rounded-lg">
               <h3 className="text-2xl font-bold text-purple-600 mb-1">
-                {hallOfFameData.reduce((sum, entry) => sum + entry.totalEntries, 0)}
+                {hallOfFameData
+                  .filter(entry => entry.firstPlace.name !== 'HIATUS')
+                  .reduce((sum, entry) => sum + entry.totalEntries, 0)
+                }
               </h3>
               <p className="text-sm text-gray-600">Total Entries</p>
             </div>
             
             <div className="text-center p-4 bg-orange-50 rounded-lg">
               <h3 className="text-2xl font-bold text-orange-600 mb-1">
-                {Math.round(hallOfFameData.reduce((sum, entry) => sum + entry.totalEntries, 0) / hallOfFameData.length)}
+                {(() => {
+                  const activeTournaments = hallOfFameData.filter(entry => entry.firstPlace.name !== 'HIATUS');
+                  const totalEntries = activeTournaments.reduce((sum, entry) => sum + entry.totalEntries, 0);
+                  return activeTournaments.length > 0 ? Math.round(totalEntries / activeTournaments.length) : 0;
+                })()}
               </h3>
               <p className="text-sm text-gray-600">Avg Entries/Tournament</p>
             </div>
