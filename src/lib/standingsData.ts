@@ -30,27 +30,30 @@ const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes cache
 
 /**
  * Get the last modified time from the Google Sheet
- * This looks for a timestamp in a specific cell (e.g., A1) that gets updated when data changes
+ * This reads a timestamp from cell A1 that should be updated when data changes
  */
-async function getSheetLastModified(): Promise<string | null> {
+async function getSheetLastModified(day: string): Promise<string | null> {
   try {
-    // Try to get a timestamp from a specific cell in the sheet
-    // For now, we'll use the current time, but this can be updated to read from a cell
-    // that contains the actual last modified time from the Google Sheet
+    // Read from cell A1 which should contain the last modified timestamp
+    const timestampUrl = `https://docs.google.com/spreadsheets/d/${STANDINGS_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(day)}&range=A1`;
     
-    // Future enhancement: Read from a specific cell that contains the last modified timestamp
-    // const timestampUrl = `https://docs.google.com/spreadsheets/d/${STANDINGS_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(day)}&range=A1`;
-    // const response = await fetch(timestampUrl);
-    // if (response.ok) {
-    //   const timestampText = await response.text();
-    //   return timestampText.trim();
-    // }
+    const response = await fetch(timestampUrl);
+    if (response.ok) {
+      const timestampText = await response.text();
+      const timestamp = timestampText.trim();
+      
+      // If the cell contains a valid timestamp, use it
+      if (timestamp && timestamp !== '' && !timestamp.includes('Error')) {
+        console.log(`📅 Found sheet timestamp in A1: ${timestamp}`);
+        return timestamp;
+      }
+    }
     
-    // For now, return current time as a placeholder
+    console.log('📅 No timestamp found in A1, using current time');
     return new Date().toISOString();
   } catch (error) {
     console.warn('Error fetching sheet modification time:', error);
-    return null;
+    return new Date().toISOString();
   }
 }
 
@@ -99,7 +102,7 @@ export async function getStandingsData(day: string = 'Day1'): Promise<StandingsD
     console.log(`📊 Eliminated Teams: ${eliminatedTeams.join(', ')}`);
     
     // Get the sheet's last modified time
-    const sheetLastModified = await getSheetLastModified();
+    const sheetLastModified = await getSheetLastModified(day);
     
         const standingsData: StandingsData = {
           day,
