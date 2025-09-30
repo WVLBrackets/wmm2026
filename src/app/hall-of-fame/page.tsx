@@ -7,61 +7,96 @@ export default async function HallOfFamePage() {
   const siteConfig = await getSiteConfig();
   const hallOfFameData = await getHallOfFameData();
   
-  // Calculate multiple top 3 finishers
-  const top3Counts = new Map<string, { 
-    count: number; 
-    finishes: { year: string; position: string; place: number }[] 
+  // Calculate comprehensive podium finishers with winnings
+  const podiumFinishers = new Map<string, { 
+    name: string;
+    firstPlace: number;
+    secondPlace: number;
+    thirdPlace: number;
+    totalWinnings: number;
+    finishes: { year: string; position: string; place: number; points: number }[] 
   }>();
   
   hallOfFameData.forEach(entry => {
-    // Skip HIATUS years for multiple winners calculation
-    if (entry.firstPlace.name === 'HIATUS') {
+    // Skip HIATUS years and special cases for podium calculation
+    if (entry.firstPlace.name === 'HIATUS' || entry.year === '2020' || entry.year === '2016') {
       return;
     }
     
-    // Check first place
+    // Process first place
     const firstPlaceName = entry.firstPlace.name;
-    if (top3Counts.has(firstPlaceName)) {
-      const existing = top3Counts.get(firstPlaceName)!;
-      existing.count++;
-      existing.finishes.push({ year: entry.year, position: '1st Place', place: 1 });
-    } else {
-      top3Counts.set(firstPlaceName, {
-        count: 1,
-        finishes: [{ year: entry.year, position: '1st Place', place: 1 }]
+    if (!podiumFinishers.has(firstPlaceName)) {
+      podiumFinishers.set(firstPlaceName, {
+        name: firstPlaceName,
+        firstPlace: 0,
+        secondPlace: 0,
+        thirdPlace: 0,
+        totalWinnings: 0,
+        finishes: []
       });
     }
+    const firstPlaceData = podiumFinishers.get(firstPlaceName)!;
+    firstPlaceData.firstPlace++;
+    firstPlaceData.totalWinnings += entry.firstPlace.score;
+    firstPlaceData.finishes.push({ 
+      year: entry.year, 
+      position: '1st Place', 
+      place: 1, 
+      points: entry.firstPlace.score 
+    });
     
-    // Check second place
+    // Process second place
     const secondPlaceName = entry.secondPlace.name;
-    if (top3Counts.has(secondPlaceName)) {
-      const existing = top3Counts.get(secondPlaceName)!;
-      existing.count++;
-      existing.finishes.push({ year: entry.year, position: '2nd Place', place: 2 });
-    } else {
-      top3Counts.set(secondPlaceName, {
-        count: 1,
-        finishes: [{ year: entry.year, position: '2nd Place', place: 2 }]
+    if (!podiumFinishers.has(secondPlaceName)) {
+      podiumFinishers.set(secondPlaceName, {
+        name: secondPlaceName,
+        firstPlace: 0,
+        secondPlace: 0,
+        thirdPlace: 0,
+        totalWinnings: 0,
+        finishes: []
       });
     }
+    const secondPlaceData = podiumFinishers.get(secondPlaceName)!;
+    secondPlaceData.secondPlace++;
+    secondPlaceData.totalWinnings += entry.secondPlace.score;
+    secondPlaceData.finishes.push({ 
+      year: entry.year, 
+      position: '2nd Place', 
+      place: 2, 
+      points: entry.secondPlace.score 
+    });
     
-    // Check third place
+    // Process third place
     const thirdPlaceName = entry.thirdPlace.name;
-    if (top3Counts.has(thirdPlaceName)) {
-      const existing = top3Counts.get(thirdPlaceName)!;
-      existing.count++;
-      existing.finishes.push({ year: entry.year, position: '3rd Place', place: 3 });
-    } else {
-      top3Counts.set(thirdPlaceName, {
-        count: 1,
-        finishes: [{ year: entry.year, position: '3rd Place', place: 3 }]
+    if (!podiumFinishers.has(thirdPlaceName)) {
+      podiumFinishers.set(thirdPlaceName, {
+        name: thirdPlaceName,
+        firstPlace: 0,
+        secondPlace: 0,
+        thirdPlace: 0,
+        totalWinnings: 0,
+        finishes: []
       });
     }
+    const thirdPlaceData = podiumFinishers.get(thirdPlaceName)!;
+    thirdPlaceData.thirdPlace++;
+    thirdPlaceData.totalWinnings += entry.thirdPlace.score;
+    thirdPlaceData.finishes.push({ 
+      year: entry.year, 
+      position: '3rd Place', 
+      place: 3, 
+      points: entry.thirdPlace.score 
+    });
   });
   
-  const multipleWinners = Array.from(top3Counts.entries())
-    .filter(([, data]) => data.count > 1)
-    .sort(([, a], [, b]) => b.count - a.count);
+  // Convert to array and sort by total winnings descending
+  const sortedPodiumFinishers = Array.from(podiumFinishers.values())
+    .sort((a, b) => b.totalWinnings - a.totalWinnings);
+  
+  const multipleWinners = sortedPodiumFinishers
+    .filter(finisher => finisher.firstPlace > 1)
+    .sort((a, b) => b.firstPlace - a.firstPlace);
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -165,13 +200,7 @@ export default async function HallOfFamePage() {
                   {/* Data rows for special cases and normal years */}
                   {is2020 && (
                     <div className="px-4 pb-4 space-y-2">
-                      {/* Row 2: Tournament Cancelled */}
-                      <div className="flex items-center gap-3">
-                        <Shield className="h-5 w-5 text-gray-500" />
-                        <span className="font-medium text-gray-700">Tournament Cancelled</span>
-                      </div>
-                      
-                      {/* Row 3: Global Pandemic */}
+                      {/* Row 2: Global Pandemic */}
                       <div className="flex items-center gap-3">
                         <Shield className="h-5 w-5 text-red-500" />
                         <span className="font-medium text-gray-700">Global Pandemic</span>
@@ -181,17 +210,7 @@ export default async function HallOfFamePage() {
                   
                   {is2016 && (
                     <div className="px-4 pb-4 space-y-2">
-                      {/* Row 2: 2016 Tournament */}
-                      <div className="flex items-center gap-3">
-                        <Crown className="h-5 w-5 text-yellow-600" />
-                        <span className="font-medium text-yellow-700">2016 Tournament</span>
-                      </div>
-                      
-                      {/* Row 3: WMM Hiatus */}
-                      <div className="flex items-center gap-3">
-                        <Trophy className="h-5 w-5 text-gray-400" />
-                        <span className="font-medium text-gray-700">WMM Hiatus</span>
-                      </div>
+                      {/* No additional rows for 2016 - just the top two lines */}
                     </div>
                   )}
                   
@@ -233,46 +252,42 @@ export default async function HallOfFamePage() {
             <div className="text-center mb-6">
               <Trophy className="h-12 w-12 text-yellow-500 mx-auto mb-3" />
               <h3 className="text-xl font-bold text-gray-900">All-Time Champions</h3>
+              <p className="text-sm text-gray-600 mt-2">Every podium finisher ranked by total winnings</p>
             </div>
             
-            <div className="space-y-3">
-              {hallOfFameData.map((entry) => {
-                const isHiatus = entry.firstPlace.name === 'HIATUS';
-                
-                return (
-                  <div key={entry.year} className={`rounded-lg border-l-4 ${
-                    isHiatus 
-                      ? 'bg-gray-100 border-gray-400' 
-                      : 'bg-yellow-50 border-yellow-500'
-                  }`}>
-                    {/* Main team logo header */}
-                    <div className={`flex items-center ${isHiatus ? 'p-4' : 'p-0'}`}>
-                      {isHiatus ? (
-                        <div className="flex items-center p-4">
-                          <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center mr-4 bg-gray-400">
-                            <Shield className="h-6 w-6 text-white" />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-gray-600 italic">Tournament Not Held</p>
-                            <p className="text-sm text-gray-500">{entry.year} Tournament</p>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          {/* Large team logo */}
-                          <div className="flex-shrink-0 w-16 h-16 flex items-center justify-center">
-                            <TeamLogo teamName={entry.firstPlace.team} size={64} />
-                          </div>
-                          <div className="flex-grow p-4">
-                            <p className="font-semibold text-gray-900">{entry.firstPlace.name}</p>
-                            <p className="text-sm text-gray-600">{entry.year} Champion • {entry.firstPlace.score} pts</p>
-                          </div>
-                        </>
-                      )}
+            <div className="space-y-4">
+              {sortedPodiumFinishers.map((finisher, index) => (
+                <div key={finisher.name} className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-4 border-l-4 border-yellow-500">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h4 className="text-lg font-bold text-gray-900">#{index + 1} {finisher.name}</h4>
+                      <p className="text-sm text-gray-600">Total Winnings: {finisher.totalWinnings} pts</p>
+                    </div>
+                    <div className="text-right">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Crown className="h-4 w-4 text-yellow-600" />
+                        <span>{finisher.firstPlace}</span>
+                        <Trophy className="h-4 w-4 text-gray-400" />
+                        <span>{finisher.secondPlace}</span>
+                        <Medal className="h-4 w-4 text-amber-600" />
+                        <span>{finisher.thirdPlace}</span>
+                      </div>
                     </div>
                   </div>
-                );
-              })}
+                  
+                  <div className="space-y-2">
+                    {finisher.finishes.map((finish, finishIndex) => (
+                      <div key={finishIndex} className="flex items-center gap-3 text-sm">
+                        {finish.place === 1 && <Crown className="h-4 w-4 text-yellow-600" />}
+                        {finish.place === 2 && <Trophy className="h-4 w-4 text-gray-400" />}
+                        {finish.place === 3 && <Medal className="h-4 w-4 text-amber-600" />}
+                        <span className="font-medium text-gray-700">{finish.year}</span>
+                        <span className="text-gray-500">({finish.points} pts)</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
