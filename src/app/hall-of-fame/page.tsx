@@ -300,23 +300,21 @@ export default async function HallOfFamePage() {
             
             <div className="space-y-4">
               {multipleWinners.length > 0 ? (
-                multipleWinners.map(([playerName, data]) => (
-                  <div key={playerName} className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-500">
+                multipleWinners.map((finisher) => (
+                  <div key={finisher.name} className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-500">
                     <div className="flex items-center justify-between">
                       <div className="flex-grow">
-                        <p className="font-semibold text-gray-900">{playerName}</p>
+                        <p className="font-semibold text-gray-900">{finisher.name}</p>
                         <p className="text-sm text-gray-600 mb-2">
-                          {data.count} Top 3 Finish{data.count > 1 ? 'es' : ''}
+                          {finisher.firstPlace} Championship{finisher.firstPlace > 1 ? 's' : ''}
                         </p>
                         <div className="space-y-1">
-                          {data.finishes
+                          {finisher.finishes
+                            .filter(finish => finish.place === 1)
                             .sort((a, b) => parseInt(b.year) - parseInt(a.year)) // Sort by year, newest first
                             .map((finish, index) => (
                             <div key={index} className="flex items-center text-xs">
-                              <Medal className={`h-4 w-4 mr-2 ${
-                                finish.place === 1 ? 'text-yellow-500' : 
-                                finish.place === 2 ? 'text-gray-400' : 'text-orange-500'
-                              }`} />
+                              <Crown className="h-4 w-4 mr-2 text-yellow-500" />
                               <span className="text-gray-700">
                                 {finish.year}: {finish.position}
                               </span>
@@ -326,7 +324,7 @@ export default async function HallOfFamePage() {
                       </div>
                       <div className="text-right ml-4">
                         <Star className="h-6 w-6 text-blue-500" />
-                        <p className="text-xs text-blue-600 font-medium">{data.count}x Top 3</p>
+                        <p className="text-xs text-blue-600 font-medium">{finisher.firstPlace}x Champion</p>
                       </div>
                     </div>
                   </div>
