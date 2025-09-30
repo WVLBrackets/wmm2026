@@ -88,7 +88,8 @@ export default function DynamicNavigation() {
               />
               <div>
                 <h1 className="text-xl font-bold text-gray-900">
-                  {siteConfig.siteName}
+                  <span className="hidden md:inline">{siteConfig.siteName}</span>
+                  <span className="md:hidden">WMM</span>
                 </h1>
                 <p className="hidden xl:block text-sm text-gray-600">
                   {siteConfig.lastYearChampionship} Champ - {siteConfig.lastYearWinner}
@@ -120,47 +121,73 @@ export default function DynamicNavigation() {
             })}
           </div>
 
-          {/* Mobile menu button */}
-          <div className="lg:hidden">
+          {/* Mobile Navigation Icons */}
+          <div className="lg:hidden flex items-center space-x-2">
+            {navigationItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href;
+              
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`p-2 rounded-md transition-colors ${
+                    isActive
+                      ? 'bg-blue-100 text-blue-600'
+                      : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
+                  }`}
+                  title={item.name}
+                >
+                  <Icon className="h-5 w-5" />
+                </Link>
+              );
+            })}
+            
+            {/* Mobile menu button */}
             <button
               type="button"
               onClick={toggleMobileMenu}
-              className="text-gray-600 hover:text-blue-600 focus:outline-none focus:text-blue-600"
+              className="p-2 text-gray-600 hover:text-blue-600 focus:outline-none focus:text-blue-600"
               aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
             >
               {isMobileMenuOpen ? (
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5" />
               ) : (
-                <Menu className="h-6 w-6" />
+                <Menu className="h-5 w-5" />
               )}
             </button>
           </div>
         </div>
 
-        {/* Mobile Navigation */}
+        {/* Mobile Navigation Menu */}
         {isMobileMenuOpen && (
           <div className="lg:hidden border-t border-gray-200">
-            <div className="py-2 space-y-1">
-              {navigationItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = pathname === item.href;
-                
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className={`flex items-center space-x-3 px-3 py-2 rounded-md text-base font-medium transition-colors ${
-                      isActive
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    <Icon className="h-5 w-5" />
-                    <span>{item.name}</span>
-                  </Link>
-                );
-              })}
+            <div className="py-4">
+              <h3 className="px-3 text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                Navigation Icons
+              </h3>
+              <div className="space-y-1">
+                {navigationItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = pathname === item.href;
+                  
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`flex items-center space-x-3 px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                        isActive
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Icon className="h-5 w-5" />
+                      <span>{item.name}</span>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
