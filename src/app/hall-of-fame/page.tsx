@@ -37,12 +37,15 @@ export default async function HallOfFamePage() {
     }
     const firstPlaceData = podiumFinishers.get(firstPlaceName)!;
     firstPlaceData.firstPlace++;
-    firstPlaceData.totalWinnings += entry.firstPlace.score;
+    // Calculate winnings: total players × $5 × 60% for 1st place
+    const firstPlaceWinnings = entry.totalEntries * 5 * 0.60;
+    firstPlaceData.totalWinnings += firstPlaceWinnings;
     firstPlaceData.finishes.push({ 
       year: entry.year, 
       position: '1st Place', 
       place: 1, 
-      points: entry.firstPlace.score 
+      points: entry.firstPlace.score,
+      winnings: firstPlaceWinnings
     });
     
     // Process second place
@@ -59,12 +62,15 @@ export default async function HallOfFamePage() {
     }
     const secondPlaceData = podiumFinishers.get(secondPlaceName)!;
     secondPlaceData.secondPlace++;
-    secondPlaceData.totalWinnings += entry.secondPlace.score;
+    // Calculate winnings: total players × $5 × 30% for 2nd place
+    const secondPlaceWinnings = entry.totalEntries * 5 * 0.30;
+    secondPlaceData.totalWinnings += secondPlaceWinnings;
     secondPlaceData.finishes.push({ 
       year: entry.year, 
       position: '2nd Place', 
       place: 2, 
-      points: entry.secondPlace.score 
+      points: entry.secondPlace.score,
+      winnings: secondPlaceWinnings
     });
     
     // Process third place
@@ -81,12 +87,15 @@ export default async function HallOfFamePage() {
     }
     const thirdPlaceData = podiumFinishers.get(thirdPlaceName)!;
     thirdPlaceData.thirdPlace++;
-    thirdPlaceData.totalWinnings += entry.thirdPlace.score;
+    // Calculate winnings: total players × $5 × 10% for 3rd place
+    const thirdPlaceWinnings = entry.totalEntries * 5 * 0.10;
+    thirdPlaceData.totalWinnings += thirdPlaceWinnings;
     thirdPlaceData.finishes.push({ 
       year: entry.year, 
       position: '3rd Place', 
       place: 3, 
-      points: entry.thirdPlace.score 
+      points: entry.thirdPlace.score,
+      winnings: thirdPlaceWinnings
     });
   });
   
@@ -261,7 +270,7 @@ export default async function HallOfFamePage() {
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <h4 className="text-lg font-bold text-gray-900">#{index + 1} {finisher.name}</h4>
-                      <p className="text-sm text-gray-600">Total Winnings: {finisher.totalWinnings} pts</p>
+                      <p className="text-sm text-gray-600">Total Winnings: ${finisher.totalWinnings.toFixed(2)}</p>
                     </div>
                     <div className="text-right">
                       <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -282,7 +291,7 @@ export default async function HallOfFamePage() {
                         {finish.place === 2 && <Trophy className="h-4 w-4 text-gray-400" />}
                         {finish.place === 3 && <Medal className="h-4 w-4 text-amber-600" />}
                         <span className="font-medium text-gray-700">{finish.year}</span>
-                        <span className="text-gray-500">({finish.points} pts)</span>
+                        <span className="text-gray-500">(${finish.winnings.toFixed(2)})</span>
                       </div>
                     ))}
                   </div>
