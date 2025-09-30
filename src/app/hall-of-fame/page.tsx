@@ -366,20 +366,12 @@ export default async function HallOfFamePage() {
                           <h4 className={`text-sm font-bold ${index < 10 ? 'text-yellow-900' : 'text-gray-900'}`}>
                             {finisher.name}
                           </h4>
-                          <p className={`text-xs ${index < 10 ? 'text-yellow-700' : 'text-gray-600'}`}>
-                            ${finisher.totalWinnings.toFixed(2)}
-                          </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="flex items-center gap-1 text-xs text-gray-600">
-                          <Crown className="h-3 w-3 text-yellow-600" />
-                          <span>{finisher.firstPlace}</span>
-                          <Trophy className="h-3 w-3 text-gray-400" />
-                          <span>{finisher.secondPlace}</span>
-                          <Medal className="h-3 w-3 text-amber-600" />
-                          <span>{finisher.thirdPlace}</span>
-                        </div>
+                        <p className={`text-sm font-bold ${index < 10 ? 'text-yellow-700' : 'text-gray-900'}`}>
+                          ${finisher.totalWinnings.toFixed(2)}
+                        </p>
                       </div>
                     </div>
                     
