@@ -414,7 +414,10 @@ export default async function HallOfFamePage() {
             
             <div className="text-center p-4 bg-green-50 rounded-lg">
               <h3 className="text-2xl font-bold text-green-600 mb-1">
-                {hallOfFameData.filter(entry => entry.firstPlace.name !== 'HIATUS').length}
+                {new Set(hallOfFameData
+                  .filter(entry => entry.firstPlace.name !== 'HIATUS')
+                  .map(entry => entry.firstPlace.name)
+                ).size}
               </h3>
               <p className="text-sm text-gray-600">Champions Crowned</p>
             </div>
