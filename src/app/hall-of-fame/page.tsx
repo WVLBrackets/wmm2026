@@ -146,13 +146,60 @@ export default async function HallOfFamePage() {
         <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-lg shadow-lg p-8 mb-8">
           <div className="text-center text-white">
             <Crown className="h-20 w-20 mx-auto mb-4" />
-            <h2 className="text-3xl font-bold mb-2">Current Champion</h2>
+            <h2 className="text-3xl font-bold mb-2">Reigning Champion</h2>
             <p className="text-4xl font-bold mb-2">
               {siteConfig.lastYearWinner}
             </p>
             <p className="text-lg opacity-90">
               {siteConfig.lastYearChampionship} Tournament Winner
             </p>
+          </div>
+        </div>
+
+        {/* Tournament Statistics */}
+        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
+          <div className="flex items-center mb-6">
+            <Users className="h-8 w-8 text-blue-600 mr-3" />
+            <h2 className="text-2xl font-bold text-gray-900">Tournament Statistics</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="text-center p-4 bg-blue-50 rounded-lg">
+              <h3 className="text-2xl font-bold text-blue-600 mb-1">
+                {hallOfFameData.filter(entry => entry.firstPlace.name !== 'HIATUS').length}
+              </h3>
+              <p className="text-sm text-gray-600">Tournaments Completed</p>
+            </div>
+            
+            <div className="text-center p-4 bg-green-50 rounded-lg">
+              <h3 className="text-2xl font-bold text-green-600 mb-1">
+                {new Set(hallOfFameData
+                  .filter(entry => entry.firstPlace.name !== 'HIATUS')
+                  .flatMap(entry => [entry.firstPlace.name, entry.secondPlace.name, entry.thirdPlace.name])
+                ).size}
+              </h3>
+              <p className="text-sm text-gray-600">Money Winners</p>
+            </div>
+            
+            <div className="text-center p-4 bg-purple-50 rounded-lg">
+              <h3 className="text-2xl font-bold text-purple-600 mb-1">
+                {hallOfFameData
+                  .filter(entry => entry.firstPlace.name !== 'HIATUS')
+                  .reduce((sum, entry) => sum + entry.totalEntries, 0)
+                }
+              </h3>
+              <p className="text-sm text-gray-600">Total Entries</p>
+            </div>
+            
+            <div className="text-center p-4 bg-yellow-50 rounded-lg">
+              <h3 className="text-2xl font-bold text-yellow-600 mb-1">
+                ${hallOfFameData
+                  .filter(entry => entry.firstPlace.name !== 'HIATUS')
+                  .reduce((sum, entry) => sum + (entry.totalEntries * 5), 0)
+                  .toLocaleString()}
+              </h3>
+              <p className="text-sm text-gray-600">Total Prize Dollars</p>
+            </div>
           </div>
         </div>
 
@@ -397,53 +444,6 @@ export default async function HallOfFamePage() {
 
         </div>
 
-        {/* Tournament Statistics */}
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          <div className="flex items-center mb-6">
-            <Users className="h-8 w-8 text-blue-600 mr-3" />
-            <h2 className="text-2xl font-bold text-gray-900">Tournament Statistics</h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <h3 className="text-2xl font-bold text-blue-600 mb-1">
-                {hallOfFameData.filter(entry => entry.firstPlace.name !== 'HIATUS').length}
-              </h3>
-              <p className="text-sm text-gray-600">Tournaments Completed</p>
-            </div>
-            
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <h3 className="text-2xl font-bold text-green-600 mb-1">
-                {new Set(hallOfFameData
-                  .filter(entry => entry.firstPlace.name !== 'HIATUS')
-                  .map(entry => entry.firstPlace.name)
-                ).size}
-              </h3>
-              <p className="text-sm text-gray-600">Champions Crowned</p>
-            </div>
-            
-            <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <h3 className="text-2xl font-bold text-purple-600 mb-1">
-                {hallOfFameData
-                  .filter(entry => entry.firstPlace.name !== 'HIATUS')
-                  .reduce((sum, entry) => sum + entry.totalEntries, 0)
-                }
-              </h3>
-              <p className="text-sm text-gray-600">Total Entries</p>
-            </div>
-            
-            <div className="text-center p-4 bg-orange-50 rounded-lg">
-              <h3 className="text-2xl font-bold text-orange-600 mb-1">
-                {(() => {
-                  const activeTournaments = hallOfFameData.filter(entry => entry.firstPlace.name !== 'HIATUS');
-                  const totalEntries = activeTournaments.reduce((sum, entry) => sum + entry.totalEntries, 0);
-                  return activeTournaments.length > 0 ? Math.round(totalEntries / activeTournaments.length) : 0;
-                })()}
-              </h3>
-              <p className="text-sm text-gray-600">Avg Entries/Tournament</p>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
