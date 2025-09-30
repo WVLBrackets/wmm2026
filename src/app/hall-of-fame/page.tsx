@@ -147,11 +147,8 @@ export default async function HallOfFamePage() {
           <div className="text-center text-white">
             <Crown className="h-20 w-20 mx-auto mb-4" />
             <h2 className="text-3xl font-bold mb-2">Reigning Champion</h2>
-            <p className="text-4xl font-bold mb-2">
+            <p className="text-4xl font-bold">
               {siteConfig.lastYearWinner}
-            </p>
-            <p className="text-lg opacity-90">
-              {siteConfig.lastYearChampionship}
             </p>
           </div>
         </div>
@@ -178,7 +175,7 @@ export default async function HallOfFamePage() {
                   .flatMap(entry => [entry.firstPlace.name, entry.secondPlace.name, entry.thirdPlace.name])
                 ).size}
               </h3>
-              <p className="text-sm text-gray-600">Money Winners</p>
+              <p className="text-sm text-gray-600">Unique Money Winners</p>
             </div>
             
             <div className="text-center p-4 bg-purple-50 rounded-lg">
@@ -333,115 +330,126 @@ export default async function HallOfFamePage() {
           </div>
         </div>
 
-        {/* Hall of Fame Categories */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-          {/* All-Time Champions */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <div className="text-center mb-6">
-              <Trophy className="h-12 w-12 text-yellow-500 mx-auto mb-3" />
-              <h3 className="text-xl font-bold text-gray-900">All Time Leaders - Career</h3>
-              <p className="text-sm text-gray-600 mt-2">Top 25 highest total money winners</p>
-            </div>
-            
-            <div className="space-y-2">
-              {sortedPodiumFinishers.slice(0, 25).map((finisher, index) => (
-                <div key={finisher.name} className={`rounded-lg p-4 border-l-4 ${
-                  index < 10 
-                    ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-500 shadow-md' 
-                    : 'bg-gray-50 border-gray-300'
-                }`}>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                        index < 10 
-                          ? 'bg-yellow-500 text-white' 
-                          : 'bg-gray-400 text-white'
-                      }`}>
-                        {index + 1}
-                      </div>
-                      <div>
-                        <h4 className={`text-lg font-bold ${index < 10 ? 'text-yellow-900' : 'text-gray-900'}`}>
-                          {finisher.name}
-                        </h4>
-                        <p className={`text-sm ${index < 10 ? 'text-yellow-700' : 'text-gray-600'}`}>
-                          Total Winnings: ${finisher.totalWinnings.toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Crown className="h-4 w-4 text-yellow-600" />
-                        <span>{finisher.firstPlace}</span>
-                        <Trophy className="h-4 w-4 text-gray-400" />
-                        <span>{finisher.secondPlace}</span>
-                        <Medal className="h-4 w-4 text-amber-600" />
-                        <span>{finisher.thirdPlace}</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    {finisher.finishes.map((finish, finishIndex) => (
-                      <div key={finishIndex} className="flex items-center gap-3 text-sm">
-                        {finish.place === 1 && <Crown className="h-4 w-4 text-yellow-600" />}
-                        {finish.place === 2 && <Trophy className="h-4 w-4 text-gray-400" />}
-                        {finish.place === 3 && <Medal className="h-4 w-4 text-amber-600" />}
-                        <span className="font-medium text-gray-700">{finish.year}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+        {/* All Time Leaders */}
+        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
+          <div className="text-center mb-8">
+            <Trophy className="h-12 w-12 text-yellow-500 mx-auto mb-3" />
+            <h2 className="text-2xl font-bold text-gray-900">All Time Leaders</h2>
           </div>
-
-          {/* All Time Leaders - Single Season */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <div className="text-center mb-6">
-              <Star className="h-12 w-12 text-blue-500 mx-auto mb-3" />
-              <h3 className="text-xl font-bold text-gray-900">All Time Leaders - Single Season</h3>
-              <p className="text-sm text-gray-600 mt-2">Top 25 highest point totals in any single year</p>
-            </div>
-            
-            <div className="space-y-2">
-              {top25SingleSeason.map((record, index) => (
-                <div key={`${record.name}-${record.year}`} className={`rounded-lg p-3 border-l-4 ${
-                  index < 10 
-                    ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-500 shadow-md' 
-                    : 'bg-gray-50 border-gray-300'
-                }`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                        index < 10 
-                          ? 'bg-blue-500 text-white' 
-                          : 'bg-gray-400 text-white'
-                      }`}>
-                        {index + 1}
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Career Leaders */}
+            <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg p-6 border border-yellow-200">
+              <div className="text-center mb-6">
+                <Crown className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
+                <h3 className="text-lg font-bold text-gray-900">Career</h3>
+                <p className="text-sm text-gray-600">Top 25 highest total money winners</p>
+              </div>
+              
+              <div className="space-y-2">
+                {sortedPodiumFinishers.slice(0, 25).map((finisher, index) => (
+                  <div key={finisher.name} className={`rounded-lg p-3 border-l-4 ${
+                    index < 10 
+                      ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-500 shadow-md' 
+                      : 'bg-white border-gray-300'
+                  }`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                          index < 10 
+                            ? 'bg-yellow-500 text-white' 
+                            : 'bg-gray-400 text-white'
+                        }`}>
+                          {index + 1}
+                        </div>
+                        <div>
+                          <h4 className={`text-sm font-bold ${index < 10 ? 'text-yellow-900' : 'text-gray-900'}`}>
+                            {finisher.name}
+                          </h4>
+                          <p className={`text-xs ${index < 10 ? 'text-yellow-700' : 'text-gray-600'}`}>
+                            ${finisher.totalWinnings.toFixed(2)}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className={`font-semibold ${index < 10 ? 'text-blue-900' : 'text-gray-900'}`}>
-                          {record.name}
-                        </p>
-                        <p className="text-sm text-gray-600">{record.year}</p>
+                      <div className="text-right">
+                        <div className="flex items-center gap-1 text-xs text-gray-600">
+                          <Crown className="h-3 w-3 text-yellow-600" />
+                          <span>{finisher.firstPlace}</span>
+                          <Trophy className="h-3 w-3 text-gray-400" />
+                          <span>{finisher.secondPlace}</span>
+                          <Medal className="h-3 w-3 text-amber-600" />
+                          <span>{finisher.thirdPlace}</span>
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right">
+                    
+                    <div className="space-y-1">
+                      {finisher.finishes.slice(0, 3).map((finish, finishIndex) => (
+                        <div key={finishIndex} className="flex items-center gap-2 text-xs">
+                          {finish.place === 1 && <Crown className="h-3 w-3 text-yellow-600" />}
+                          {finish.place === 2 && <Trophy className="h-3 w-3 text-gray-400" />}
+                          {finish.place === 3 && <Medal className="h-3 w-3 text-amber-600" />}
+                          <span className="font-medium text-gray-700">{finish.year}</span>
+                        </div>
+                      ))}
+                      {finisher.finishes.length > 3 && (
+                        <div className="text-xs text-gray-500">
+                          +{finisher.finishes.length - 3} more
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Single Season Leaders */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
+              <div className="text-center mb-6">
+                <Star className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                <h3 className="text-lg font-bold text-gray-900">Single Season</h3>
+                <p className="text-sm text-gray-600">Top 25 highest point totals in any single year</p>
+              </div>
+              
+              <div className="space-y-2">
+                {top25SingleSeason.map((record, index) => (
+                  <div key={`${record.name}-${record.year}`} className={`rounded-lg p-3 border-l-4 ${
+                    index < 10 
+                      ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-500 shadow-md' 
+                      : 'bg-white border-gray-300'
+                  }`}>
+                    <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        {record.place === 1 && <Crown className="h-4 w-4 text-yellow-600" />}
-                        {record.place === 2 && <Trophy className="h-4 w-4 text-gray-400" />}
-                        {record.place === 3 && <Medal className="h-4 w-4 text-amber-600" />}
-                        <span className={`font-bold ${index < 10 ? 'text-blue-600' : 'text-gray-600'}`}>
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                          index < 10 
+                            ? 'bg-blue-500 text-white' 
+                            : 'bg-gray-400 text-white'
+                        }`}>
+                          {index + 1}
+                        </div>
+                        <div>
+                          <p className={`text-sm font-semibold ${index < 10 ? 'text-blue-900' : 'text-gray-900'}`}>
+                            {record.name}
+                          </p>
+                          <div className="flex items-center gap-1">
+                            {record.place === 1 && <Crown className="h-3 w-3 text-yellow-600" />}
+                            {record.place === 2 && <Trophy className="h-3 w-3 text-gray-400" />}
+                            {record.place === 3 && <Medal className="h-3 w-3 text-amber-600" />}
+                            <p className="text-xs text-gray-600">{record.year}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className={`text-lg font-bold ${index < 10 ? 'text-blue-600' : 'text-gray-600'}`}>
                           {record.points} pts
                         </span>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
-
         </div>
 
       </div>
