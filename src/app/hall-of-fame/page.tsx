@@ -14,7 +14,7 @@ export default async function HallOfFamePage() {
     secondPlace: number;
     thirdPlace: number;
     totalWinnings: number;
-    finishes: { year: string; position: string; place: number; points: number }[] 
+    finishes: { year: string; position: string; place: number; points: number; winnings: number }[] 
   }>();
   
   hallOfFameData.forEach(entry => {
