@@ -123,7 +123,7 @@ export default function DynamicNavigation() {
 
           {/* Mobile Navigation Icons */}
           <div className="lg:hidden flex items-center space-x-2">
-            {navigationItems.map((item) => {
+            {navigationItems.filter(item => item.name !== 'Home').map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
               
