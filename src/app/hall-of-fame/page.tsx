@@ -103,9 +103,41 @@ export default async function HallOfFamePage() {
   const sortedPodiumFinishers = Array.from(podiumFinishers.values())
     .sort((a, b) => b.totalWinnings - a.totalWinnings);
   
-  const multipleWinners = sortedPodiumFinishers
-    .filter(finisher => finisher.firstPlace > 1)
-    .sort((a, b) => b.firstPlace - a.firstPlace);
+  // Calculate single season records (top 25 point totals)
+  const singleSeasonRecords: { name: string; year: string; points: number; place: number }[] = [];
+  
+  hallOfFameData.forEach(entry => {
+    // Skip HIATUS years and special cases
+    if (entry.firstPlace.name === 'HIATUS' || entry.year === '2020' || entry.year === '2016') {
+      return;
+    }
+    
+    singleSeasonRecords.push({
+      name: entry.firstPlace.name,
+      year: entry.year,
+      points: entry.firstPlace.score,
+      place: 1
+    });
+    
+    singleSeasonRecords.push({
+      name: entry.secondPlace.name,
+      year: entry.year,
+      points: entry.secondPlace.score,
+      place: 2
+    });
+    
+    singleSeasonRecords.push({
+      name: entry.thirdPlace.name,
+      year: entry.year,
+      points: entry.thirdPlace.score,
+      place: 3
+    });
+  });
+  
+  // Sort by points descending and take top 25
+  const top25SingleSeason = singleSeasonRecords
+    .sort((a, b) => b.points - a.points)
+    .slice(0, 25);
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -260,17 +292,34 @@ export default async function HallOfFamePage() {
           <div className="bg-white rounded-lg shadow-lg p-6">
             <div className="text-center mb-6">
               <Trophy className="h-12 w-12 text-yellow-500 mx-auto mb-3" />
-              <h3 className="text-xl font-bold text-gray-900">All-Time Champions</h3>
-              <p className="text-sm text-gray-600 mt-2">Every podium finisher ranked by total winnings</p>
+              <h3 className="text-xl font-bold text-gray-900">All Time Leaders - Career</h3>
+              <p className="text-sm text-gray-600 mt-2">Top 25 highest total money winners</p>
             </div>
             
-            <div className="space-y-4">
-              {sortedPodiumFinishers.map((finisher, index) => (
-                <div key={finisher.name} className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-4 border-l-4 border-yellow-500">
+            <div className="space-y-2">
+              {sortedPodiumFinishers.slice(0, 25).map((finisher, index) => (
+                <div key={finisher.name} className={`rounded-lg p-4 border-l-4 ${
+                  index < 10 
+                    ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-500 shadow-md' 
+                    : 'bg-gray-50 border-gray-300'
+                }`}>
                   <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <h4 className="text-lg font-bold text-gray-900">#{index + 1} {finisher.name}</h4>
-                      <p className="text-sm text-gray-600">Total Winnings: ${finisher.totalWinnings.toFixed(2)}</p>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                        index < 10 
+                          ? 'bg-yellow-500 text-white' 
+                          : 'bg-gray-400 text-white'
+                      }`}>
+                        {index + 1}
+                      </div>
+                      <div>
+                        <h4 className={`text-lg font-bold ${index < 10 ? 'text-yellow-900' : 'text-gray-900'}`}>
+                          {finisher.name}
+                        </h4>
+                        <p className={`text-sm ${index < 10 ? 'text-yellow-700' : 'text-gray-600'}`}>
+                          Total Winnings: ${finisher.totalWinnings.toFixed(2)}
+                        </p>
+                      </div>
                     </div>
                     <div className="text-right">
                       <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -284,14 +333,13 @@ export default async function HallOfFamePage() {
                     </div>
                   </div>
                   
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {finisher.finishes.map((finish, finishIndex) => (
                       <div key={finishIndex} className="flex items-center gap-3 text-sm">
                         {finish.place === 1 && <Crown className="h-4 w-4 text-yellow-600" />}
                         {finish.place === 2 && <Trophy className="h-4 w-4 text-gray-400" />}
                         {finish.place === 3 && <Medal className="h-4 w-4 text-amber-600" />}
                         <span className="font-medium text-gray-700">{finish.year}</span>
-                        <span className="text-gray-500">(${finish.winnings.toFixed(2)})</span>
                       </div>
                     ))}
                   </div>
@@ -300,55 +348,50 @@ export default async function HallOfFamePage() {
             </div>
           </div>
 
-          {/* Multiple Winners */}
+          {/* All Time Leaders - Single Season */}
           <div className="bg-white rounded-lg shadow-lg p-6">
             <div className="text-center mb-6">
               <Star className="h-12 w-12 text-blue-500 mx-auto mb-3" />
-              <h3 className="text-xl font-bold text-gray-900">Multiple Winners</h3>
+              <h3 className="text-xl font-bold text-gray-900">All Time Leaders - Single Season</h3>
+              <p className="text-sm text-gray-600 mt-2">Top 25 highest point totals in any single year</p>
             </div>
             
-            <div className="space-y-4">
-              {multipleWinners.length > 0 ? (
-                multipleWinners.map((finisher) => (
-                  <div key={finisher.name} className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-500">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-grow">
-                        <p className="font-semibold text-gray-900">{finisher.name}</p>
-                        <p className="text-sm text-gray-600 mb-2">
-                          {finisher.firstPlace} Championship{finisher.firstPlace > 1 ? 's' : ''}
-                        </p>
-                        <div className="space-y-1">
-                          {finisher.finishes
-                            .filter(finish => finish.place === 1)
-                            .sort((a, b) => parseInt(b.year) - parseInt(a.year)) // Sort by year, newest first
-                            .map((finish, index) => (
-                            <div key={index} className="flex items-center text-xs">
-                              <Crown className="h-4 w-4 mr-2 text-yellow-500" />
-                              <span className="text-gray-700">
-                                {finish.year}: {finish.position}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="text-right ml-4">
-                        <Star className="h-6 w-6 text-blue-500" />
-                        <p className="text-xs text-blue-600 font-medium">{finisher.firstPlace}x Champion</p>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="bg-gray-50 rounded-lg p-4">
+            <div className="space-y-2">
+              {top25SingleSeason.map((record, index) => (
+                <div key={`${record.name}-${record.year}`} className={`rounded-lg p-3 border-l-4 ${
+                  index < 10 
+                    ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-500 shadow-md' 
+                    : 'bg-gray-50 border-gray-300'
+                }`}>
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold text-gray-900">No Multiple Top 3 Finishers Yet</p>
-                      <p className="text-sm text-gray-600">Players with multiple top 3 finishes will appear here</p>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                        index < 10 
+                          ? 'bg-blue-500 text-white' 
+                          : 'bg-gray-400 text-white'
+                      }`}>
+                        {index + 1}
+                      </div>
+                      <div>
+                        <p className={`font-semibold ${index < 10 ? 'text-blue-900' : 'text-gray-900'}`}>
+                          {record.name}
+                        </p>
+                        <p className="text-sm text-gray-600">{record.year}</p>
+                      </div>
                     </div>
-                    <Star className="h-6 w-6 text-gray-400" />
+                    <div className="text-right">
+                      <div className="flex items-center gap-2">
+                        {record.place === 1 && <Crown className="h-4 w-4 text-yellow-600" />}
+                        {record.place === 2 && <Trophy className="h-4 w-4 text-gray-400" />}
+                        {record.place === 3 && <Medal className="h-4 w-4 text-amber-600" />}
+                        <span className={`font-bold ${index < 10 ? 'text-blue-600' : 'text-gray-600'}`}>
+                          {record.points} pts
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              )}
+              ))}
             </div>
           </div>
 
