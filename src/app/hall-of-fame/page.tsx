@@ -151,7 +151,7 @@ export default async function HallOfFamePage() {
               {siteConfig.lastYearWinner}
             </p>
             <p className="text-lg opacity-90">
-              {siteConfig.lastYearChampionship} Tournament Winner
+              {siteConfig.lastYearChampionship}
             </p>
           </div>
         </div>
