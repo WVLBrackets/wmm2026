@@ -1,0 +1,99 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e4]:
+      - link "Tournament Bracket Warren's March Madness 2025 Champ - Randy Phillips (Randy Line Sports)" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - img "Tournament Bracket" [ref=e7] [cursor=pointer]
+        - generic [ref=e8] [cursor=pointer]:
+          - heading "Warren's March Madness" [level=1] [ref=e9] [cursor=pointer]
+          - paragraph [ref=e10] [cursor=pointer]: 2025 Champ - Randy Phillips (Randy Line Sports)
+      - generic [ref=e11]:
+        - link "Home" [ref=e12] [cursor=pointer]:
+          - /url: /
+          - img [ref=e13] [cursor=pointer]
+          - text: Home
+        - link "Standings" [ref=e16] [cursor=pointer]:
+          - /url: /standings
+          - img [ref=e17] [cursor=pointer]
+          - text: Standings
+        - link "Rules" [ref=e23] [cursor=pointer]:
+          - /url: /rules
+          - img [ref=e24] [cursor=pointer]
+          - text: Rules
+        - link "Payments" [ref=e26] [cursor=pointer]:
+          - /url: /payments
+          - img [ref=e27] [cursor=pointer]
+          - text: Payments
+        - link "Prizes" [ref=e29] [cursor=pointer]:
+          - /url: /prizes
+          - img [ref=e30] [cursor=pointer]
+          - text: Prizes
+        - link "Hall of Fame" [ref=e34] [cursor=pointer]:
+          - /url: /hall-of-fame
+          - img [ref=e35] [cursor=pointer]
+          - text: Hall of Fame
+  - main [ref=e37]:
+    - generic [ref=e40]:
+      - generic [ref=e42]:
+        - generic [ref=e43]:
+          - heading "2025 Standings" [level=2] [ref=e44]
+          - generic [ref=e45]: Day1 • 1 players
+          - link "Previous Years" [ref=e46] [cursor=pointer]:
+            - /url: /standings/previous-years
+            - img [ref=e47] [cursor=pointer]
+            - text: Previous Years
+        - generic [ref=e49]:
+          - generic [ref=e50]:
+            - generic [ref=e51]: "Day:"
+            - combobox [ref=e52]:
+              - option "Day2"
+              - option "Day1" [selected]
+          - generic [ref=e53]:
+            - img [ref=e54]
+            - textbox "Search players..." [active] [ref=e57]: Utes_1
+          - button "Refresh" [ref=e58]:
+            - img [ref=e59]
+            - text: Refresh
+      - table [ref=e65]:
+        - rowgroup [ref=e66]:
+          - row "Rank Player Pts back Final Four Champ" [ref=e67]:
+            - cell "Rank" [ref=e68]
+            - cell "Player" [ref=e69]
+            - cell "Pts back" [ref=e70]:
+              - generic [ref=e71]:
+                - generic [ref=e72]: Pts
+                - generic [ref=e73]: back
+            - cell "Final Four" [ref=e74]
+            - cell "Champ" [ref=e75]
+        - rowgroup [ref=e76]:
+          - 'row "Utes_1 56 - UConn UNC UK UK Tenn UNC TB: 150" [ref=e77]':
+            - cell [ref=e78]:
+              - img [ref=e80]
+            - cell "Utes_1" [ref=e86]:
+              - generic [ref=e87]:
+                - generic [ref=e88]: Utes_1
+                - img [ref=e90]
+            - cell "56 -" [ref=e92]:
+              - generic [ref=e93]:
+                - generic [ref=e94]: "56"
+                - generic [ref=e95]: "-"
+            - cell "UConn UNC UK UK Tenn" [ref=e96]:
+              - generic [ref=e97]:
+                - img "UConn" [ref=e99]
+                - img "UNC" [ref=e101]
+                - generic [ref=e102]:
+                  - generic [ref=e103]: UK
+                  - generic [ref=e104]: UK
+                - img "Tenn" [ref=e106]
+            - 'cell "UNC TB: 150" [ref=e107]':
+              - generic [ref=e108]:
+                - img "UNC" [ref=e110]
+                - generic [ref=e111]: "TB: 150"
+      - generic [ref=e113]:
+        - generic [ref=e114]: "Last updated: 10/2/2025, 3:47:13 AM"
+        - generic [ref=e115]: Showing 1 of 454 players
+  - alert [ref=e116]
+```

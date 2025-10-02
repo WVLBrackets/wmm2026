@@ -1,0 +1,43 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e4]:
+      - link "Tournament Bracket Warren's March Madness 2025 Champ - Randy Phillips (Randy Line Sports)" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - img "Tournament Bracket" [ref=e7] [cursor=pointer]
+        - generic [ref=e8] [cursor=pointer]:
+          - heading "Warren's March Madness" [level=1] [ref=e9] [cursor=pointer]
+          - paragraph [ref=e10] [cursor=pointer]: 2025 Champ - Randy Phillips (Randy Line Sports)
+      - generic [ref=e11]:
+        - link "Home" [ref=e12] [cursor=pointer]:
+          - /url: /
+          - img [ref=e13] [cursor=pointer]
+          - text: Home
+        - link "Standings" [ref=e16] [cursor=pointer]:
+          - /url: /standings
+          - img [ref=e17] [cursor=pointer]
+          - text: Standings
+        - link "Rules" [ref=e23] [cursor=pointer]:
+          - /url: /rules
+          - img [ref=e24] [cursor=pointer]
+          - text: Rules
+        - link "Payments" [ref=e26] [cursor=pointer]:
+          - /url: /payments
+          - img [ref=e27] [cursor=pointer]
+          - text: Payments
+        - link "Prizes" [ref=e29] [cursor=pointer]:
+          - /url: /prizes
+          - img [ref=e30] [cursor=pointer]
+          - text: Prizes
+        - link "Hall of Fame" [ref=e34] [cursor=pointer]:
+          - /url: /hall-of-fame
+          - img [ref=e35] [cursor=pointer]
+          - text: Hall of Fame
+  - main [ref=e37]:
+    - generic [ref=e41]:
+      - img [ref=e42]
+      - generic [ref=e47]: Loading standings...
+  - alert [ref=e48]
+```
