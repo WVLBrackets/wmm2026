@@ -143,13 +143,15 @@ export default async function HallOfFamePage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
         {/* Current Champion Spotlight */}
-        <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-lg shadow-lg p-8 mb-8">
-          <div className="text-center text-white">
-            <Crown className="h-20 w-20 mx-auto mb-4" />
-            <h2 className="text-3xl font-bold mb-2">Reigning Champion</h2>
-            <p className="text-4xl font-bold">
-              {siteConfig.lastYearWinner}
-            </p>
+        <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-lg shadow-lg p-6 mb-8">
+          <div className="flex items-center text-white">
+            <Crown className="h-16 w-16 mr-4 flex-shrink-0" />
+            <div>
+              <h2 className="text-2xl font-bold mb-1">Reigning Champion</h2>
+              <p className="text-3xl font-bold">
+                {siteConfig.lastYearWinner}
+              </p>
+            </div>
           </div>
         </div>
 
