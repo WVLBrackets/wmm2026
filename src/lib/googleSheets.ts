@@ -46,25 +46,22 @@ export const getHallOfFameData = async (): Promise<HallOfFameEntry[]> => {
       const fields = parseCSVLine(line);
       
       if (fields.length >= 9 && fields[0] && fields[0] !== 'Year') {
-        // Debug: Log the fields to see the actual structure
-        console.log('Parsing Hall of Fame entry:', fields);
-        
         data.push({
           year: fields[0],
           firstPlace: {
             name: fields[1],
-            team: fields[2],
-            score: parseInt(fields[3]) || 0
+            team: fields[3], // Team name is in position 3, not 2
+            score: parseInt(fields[4]) || 0 // Score is in position 4, not 3
           },
           secondPlace: {
-            name: fields[4],
-            score: parseInt(fields[5]) || 0
+            name: fields[5], // Second place name is in position 5, not 4
+            score: parseInt(fields[6]) || 0 // Second place score is in position 6, not 5
           },
           thirdPlace: {
-            name: fields[6],
-            score: parseInt(fields[7]) || 0
+            name: fields[7], // Third place name is in position 7, not 6
+            score: parseInt(fields[8]) || 0 // Third place score is in position 8, not 7
           },
-          totalEntries: parseInt(fields[8]) || 0
+          totalEntries: parseInt(fields[9]) || 0 // Total entries is in position 9, not 8
         });
       }
     }
