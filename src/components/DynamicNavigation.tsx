@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { getSiteConfig } from '@/config/site';
-import { SiteConfigData, getFallbackSiteConfig } from '@/lib/siteConfig';
+import { SiteConfigData } from '@/lib/siteConfig';
 import { Home, Trophy, BookOpen, CreditCard, Gift, Star, Menu, X } from 'lucide-react';
 import Image from 'next/image';
 
@@ -30,7 +30,22 @@ export default function DynamicNavigation() {
       } catch (error) {
         console.error('Failed to load site config:', error);
         // Use centralized fallback config
-        setSiteConfig(getFallbackSiteConfig());
+        setSiteConfig({
+          tournamentYear: '2026',
+          lastYearWinner: 'Randy Phillips (Randy Line Sports)',
+          lastYearChampionship: 2025,
+          tournamentStartDate: '2026-03-18T12:00:00-05:00',
+          tournamentStartTime: '12:00 PM EST',
+          numberOfPlayers: 0,
+          totalPrizeAmount: 0,
+          siteName: "Warren's March Madness",
+          siteDescription: 'Annual March Madness Bracket Challenge',
+          oldSiteUrl: 'https://warrensmadness.webnode.page/',
+          standingsTabs: 2,
+          footerText: '© 2001 Warren\'s March Madness | All rights reserved',
+          contactMe: 'warren@example.com',
+          prizesActiveForecast: 'Forecast',
+        });
       }
     };
 

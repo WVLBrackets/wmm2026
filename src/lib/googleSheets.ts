@@ -46,6 +46,9 @@ export const getHallOfFameData = async (): Promise<HallOfFameEntry[]> => {
       const fields = parseCSVLine(line);
       
       if (fields.length >= 9 && fields[0] && fields[0] !== 'Year') {
+        // Debug: Log the fields to see the actual structure
+        console.log('Parsing Hall of Fame entry:', fields);
+        
         data.push({
           year: fields[0],
           firstPlace: {
