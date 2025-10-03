@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getSiteConfig } from '@/config/site';
-import { SiteConfigData, getFallbackSiteConfig } from '@/lib/siteConfig';
+import { SiteConfigData } from '@/lib/siteConfig';
 import { Gift, Trophy, Medal, Crown, AlertCircle } from 'lucide-react';
 
 export default function PrizesPage() {
@@ -16,8 +16,13 @@ export default function PrizesPage() {
         setSiteConfig(config);
       } catch (error) {
         console.error('Error loading site config:', error);
-        // Use centralized fallback config
-        setSiteConfig(getFallbackSiteConfig());
+        // Use fallback values
+        setSiteConfig({
+          tournamentStartDate: '2026-03-20',
+          tournamentStartTime: '9:00 AM Pacific',
+          siteName: 'Warren\'s March Madness',
+          siteDescription: 'Annual NCAA Tournament Bracket Challenge'
+        });
       } finally {
         setIsLoading(false);
       }

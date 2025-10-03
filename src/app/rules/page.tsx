@@ -3,7 +3,7 @@
 import { DollarSign, Trophy, FileSpreadsheet, AlertTriangle, Dog, Calculator } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getSiteConfig } from '@/config/site';
-import { SiteConfigData, getFallbackSiteConfig } from '@/lib/siteConfig';
+import { SiteConfigData } from '@/lib/siteConfig';
 
 export default function RulesPage() {
   const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
@@ -17,7 +17,12 @@ export default function RulesPage() {
       } catch (error) {
         console.error('Error loading site config:', error);
         // Use fallback values
-        setSiteConfig(getFallbackSiteConfig());
+        setSiteConfig({
+          tournamentStartDate: '2026-03-20',
+          tournamentStartTime: '9:00 AM Pacific',
+          siteName: 'Warren\'s March Madness',
+          siteDescription: 'Annual NCAA Tournament Bracket Challenge'
+        });
       } finally {
         setIsLoading(false);
       }
