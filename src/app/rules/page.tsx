@@ -18,10 +18,20 @@ export default function RulesPage() {
         console.error('Error loading site config:', error);
         // Use fallback values
         setSiteConfig({
-          tournamentStartDate: '2026-03-20',
-          tournamentStartTime: '9:00 AM Pacific',
-          siteName: 'Warren\'s March Madness',
-          siteDescription: 'Annual NCAA Tournament Bracket Challenge'
+          tournamentYear: '2026',
+          lastYearWinner: 'Randy Phillips (Randy Line Sports)',
+          lastYearChampionship: 2025,
+          tournamentStartDate: '2026-03-18T12:00:00-05:00',
+          tournamentStartTime: '12:00 PM EST',
+          numberOfPlayers: 0,
+          totalPrizeAmount: 0,
+          siteName: "Warren's March Madness",
+          siteDescription: 'Annual March Madness Bracket Challenge',
+          oldSiteUrl: 'https://warrensmadness.webnode.page/',
+          standingsTabs: 2,
+          footerText: '© 2001 Warren\'s March Madness | All rights reserved',
+          contactMe: 'warren@example.com',
+          prizesActiveForecast: 'Forecast',
         });
       } finally {
         setIsLoading(false);
