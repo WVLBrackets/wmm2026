@@ -110,10 +110,10 @@ export default function Announcements() {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-4 h-full flex flex-col">
-      <div className="flex items-center mb-3">
-        <Megaphone className="h-5 w-5 text-blue-600 mr-2" />
-        <h3 className="text-base font-semibold text-gray-900">Announcements</h3>
+    <div className="bg-white rounded-lg shadow-lg p-5 h-full flex flex-col">
+      <div className="flex items-center mb-4">
+        <Megaphone className="h-6 w-6 text-blue-600 mr-2" />
+        <h3 className="text-lg font-semibold text-gray-900">Announcements</h3>
       </div>
       
       <div className="space-y-3 flex-grow">

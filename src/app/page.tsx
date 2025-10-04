@@ -5,12 +5,12 @@ import Image from 'next/image';
 
 export default function Home() {
   return (
-    <div className="bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1">
         {/* Top Row: Countdown Clock, Announcements, Logo */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
           {/* Countdown Clock - Narrow */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-lg p-3 h-full flex flex-col justify-center">
