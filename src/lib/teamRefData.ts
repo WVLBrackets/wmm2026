@@ -41,10 +41,10 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
     const teamMappings = await response.json();
     
     // Convert to TeamRefData format
-    const teamData: TeamRefData[] = Object.entries(teamMappings).map(([abbr, teamInfo]: [string, any]) => ({
+    const teamData: TeamRefData[] = Object.entries(teamMappings).map(([abbr, teamInfo]) => ({
       abbr,
-      id: teamInfo.id,
-      name: teamInfo.name
+      id: (teamInfo as { id: string; name: string; abbr: string }).id,
+      name: (teamInfo as { id: string; name: string; abbr: string }).name
     }));
     
     console.log(`📋 Loaded ${teamData.length} teams from local JSON file`);
@@ -65,18 +65,18 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
     console.log('📋 Falling back to hardcoded team data');
     
     // Use fallback data
-    const fallbackStart = performance.now();
-    const fallbackData = getFallbackTeamData();
-    const fallbackEnd = performance.now();
-    console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
-    
-    cachedTeamData = fallbackData;
-    lastFetchTime = now;
-    
-    const totalTime = performance.now() - startTime;
-    console.log(`✅ Team reference data ready in ${totalTime.toFixed(2)}ms`);
-    return fallbackData;
-  }
+  const fallbackStart = performance.now();
+  const fallbackData = getFallbackTeamData();
+  const fallbackEnd = performance.now();
+  console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
+  
+  cachedTeamData = fallbackData;
+  lastFetchTime = now;
+  
+  const totalTime = performance.now() - startTime;
+  console.log(`✅ Team reference data ready in ${totalTime.toFixed(2)}ms`);
+  return fallbackData;
+}
 }
 
 /**

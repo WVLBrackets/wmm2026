@@ -285,7 +285,7 @@ export async function getAvailableDays(): Promise<string[]> {
         days.push('Final');
         console.log('✅ Found "Final" tab - added as first option');
       }
-    } catch (error) {
+    } catch {
       console.log('ℹ️ "Final" tab not found or not accessible');
     }
     

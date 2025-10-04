@@ -4,9 +4,8 @@ import { useState, useEffect } from 'react';
 import { getStandingsData, getAvailableDays, getCurrentTournamentYear, StandingsEntry, StandingsData, clearStandingsCache, getQuarterfinalColor, getSemifinalColor, getFinalColor } from '@/lib/standingsData';
 import { getTeamInfo, getLogoUrlSync } from '@/lib/teamLogos';
 import { getTeamRefData } from '@/lib/teamRefData';
-import { Trophy, Medal, Search, RefreshCw, Calendar } from 'lucide-react';
+import { Trophy, Medal, Search, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
-import Link from 'next/link';
 
 // TeamLogo component to handle async team info loading with fallback
 function TeamLogo({ 
@@ -45,10 +44,10 @@ function TeamLogo({
         // Fallback to async lookup if not in cache
         const info = await getTeamInfo(teamName, size);
         setTeamInfo(info);
-        } catch (error: any) {
-          console.error('Error loading team info:', error);
+        } catch (error: unknown) {
+        console.error('Error loading team info:', error);
           setTeamInfo({ id: 'placeholder', name: teamName, logoUrl: '/images/basketball icon.png' });
-        } finally {
+      } finally {
         setLoading(false);
       }
     };
@@ -77,11 +76,11 @@ function TeamLogo({
       bgClass = 'bg-gradient-to-br from-gray-50 to-gray-100';
     }
     
-    // Border color logic - only apply if borderColor is defined
-    if (borderColor === 'correct') borderClass = 'ring-2 ring-green-500';
-    else if (borderColor === 'incorrect') borderClass = 'ring-2 ring-red-500';
-    else if (borderColor === 'neutral') borderClass = 'ring-1 ring-black';
-    // If borderColor is undefined, no border class is applied
+           // Border color logic - only apply if borderColor is defined
+           if (borderColor === 'correct') borderClass = 'ring-2 ring-green-500';
+           else if (borderColor === 'incorrect') borderClass = 'ring-2 ring-red-500';
+           else if (borderColor === 'neutral') borderClass = 'ring-1 ring-black';
+           // If borderColor is undefined, no border class is applied
     
     return `${bgClass} ${borderClass}`;
   };
@@ -298,7 +297,7 @@ export default function StandingsTable() {
       }
     };
     loadInitialStandings();
-  }, [selectedDay]); // Run when selectedDay changes, but handleDayChange will override for user interactions
+  }, [selectedDay, standingsData]); // Run when selectedDay changes, but handleDayChange will override for user interactions
 
   // Optimized preload function that uses pre-fetched team reference data
   const preloadTeamDataWithRef = (data: StandingsData, teamRefData: { abbr: string; id: string }[]) => {
@@ -352,11 +351,6 @@ export default function StandingsTable() {
     // Update local state with global cache
     setTeamCache(new Map(globalTeamCache));
     console.log(`✅ Added ${missingTeams.length} new teams to cache (${globalTeamCache.size} total) in ${totalTime.toFixed(2)}ms`);
-    
-    // Preload logos for all teams in background
-    const teamIds = Array.from(globalTeamCache.values())
-      .map(team => team.id)
-      .filter(id => id !== 'unknown');
     
     // Logo preloading is now handled automatically by the local file system
   };

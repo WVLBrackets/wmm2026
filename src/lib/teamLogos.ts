@@ -19,7 +19,7 @@ const teamInfoCache = new Map<string, TeamInfo>();
  * @param size - Logo size in pixels (default: 30) - used for Next.js Image optimization
  * @returns Local logo URL
  */
-export function getTeamLogoUrl(teamId: string, size: number = 30): string {
+export function getTeamLogoUrl(teamId: string, _size: number = 30): string {
   // Use local logo files for better performance and reliability
   return `/logos/teams/${teamId}.png`;
 }
