@@ -360,7 +360,7 @@ export default function StandingsTable() {
 
   const renderFinalFour = (finalFour: string[], finals: string[], standingsData: StandingsData) => {
     return (
-      <div className="grid grid-cols-2 gap-1 p-2 bg-gray-50 rounded-lg border-2 border-gray-200 w-fit">
+      <div className="grid grid-cols-2 gap-0.5 p-1 bg-gray-50 rounded border border-gray-200 w-fit">
         {finalFour.map((team, index) => {
           const isFinalsTeam = finals.includes(team);
           
@@ -393,7 +393,7 @@ export default function StandingsTable() {
             <TeamLogo
               key={index}
               teamName={team}
-              size={32}
+              size={24}
               teamCache={teamCache}
               backgroundColor={quarterfinalColor}
               borderColor={semifinalColor}
@@ -419,7 +419,7 @@ export default function StandingsTable() {
       <div className="flex flex-col items-center gap-0.5">
         <TeamLogo
           teamName={champion}
-          size={70}
+          size={60}
           teamCache={teamCache}
           backgroundColor={finalColor}
           borderColor={finalColor}
@@ -539,13 +539,13 @@ export default function StandingsTable() {
                   <span className="text-xs font-normal text-gray-400 italic"><span className="text-green-600">$</span> = paid</span>
                 </div>
               </th>
-              <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300" style={{width: '50px', minWidth: '50px'}}>
+              <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300" style={{width: '40px', minWidth: '40px'}}>
                 <div className="flex flex-col items-center">
                   <span>Pts</span>
                   <span className="text-xs italic font-normal">back</span>
                 </div>
               </th>
-              <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300" style={{width: '100px', minWidth: '100px'}}>
+              <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300" style={{width: '80px', minWidth: '80px'}}>
                 Final Four
               </th>
               <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-18">
@@ -594,17 +594,17 @@ export default function StandingsTable() {
                     )}
                   </div>
                 </td>
-                <td className="px-3 py-2 whitespace-nowrap border-r border-gray-300" style={{width: '50px', minWidth: '50px'}}>
+                <td className="px-2 py-2 whitespace-nowrap border-r border-gray-300" style={{width: '40px', minWidth: '40px'}}>
                   <div className="flex flex-col items-center">
-                    <div className="text-lg font-bold text-blue-600">
+                    <div className="text-sm font-bold text-blue-600">
                       {entry.points}
                     </div>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-xs text-gray-500">
                       {calculatePointsBack(entry, standingsData.entries)}
                     </div>
                   </div>
                 </td>
-                <td className="px-3 py-2 border-r border-gray-300" style={{width: '100px', minWidth: '100px'}}>
+                <td className="px-2 py-2 border-r border-gray-300" style={{width: '80px', minWidth: '80px'}}>
                   {renderFinalFour(entry.finalFour, entry.finals, standingsData)}
                 </td>
                 <td className="px-3 py-2 w-18">
