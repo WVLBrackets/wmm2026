@@ -8,13 +8,13 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Top Row: Countdown Clock, Announcements, Logo */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-16">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-8">
           {/* Countdown Clock - Narrow */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-lg p-4 h-full flex flex-col justify-center">
-              <Calendar className="h-6 w-6 text-blue-600 mx-auto mb-2" />
+            <div className="bg-white rounded-lg shadow-lg p-3 h-full flex flex-col justify-center">
+              <Calendar className="h-5 w-5 text-blue-600 mx-auto mb-1" />
               <CountdownClock />
             </div>
           </div>
@@ -28,12 +28,12 @@ export default function Home() {
 
           {/* Warren's March Madness Logo - Narrow */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-lg p-3 h-full flex items-center justify-center">
+            <div className="bg-white rounded-lg shadow-lg p-2 h-full flex items-center justify-center">
               <Image 
                 src="/images/warrens-march-madness.png" 
                 alt="Warren's March Madness" 
-                width={150} 
-                height={75} 
+                width={120} 
+                height={60} 
                 className="max-w-full h-auto object-contain"
                 priority
               />
