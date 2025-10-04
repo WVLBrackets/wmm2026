@@ -73,9 +73,10 @@ export async function getStandingsData(day: string = 'Day1'): Promise<StandingsD
   }
 
   try {
-    // Use the original working URL format
-    const sheetName = encodeURIComponent(day);
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${STANDINGS_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${sheetName}`;
+    // Convert "Day1" to "Day 1", "Day2" to "Day 2", etc.
+    const sheetName = day.replace(/^Day(\d+)$/, 'Day $1');
+    const encodedSheetName = encodeURIComponent(sheetName);
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${STANDINGS_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodedSheetName}`;
     
     console.log(`🌐 Fetching standings data for ${day} from:`, csvUrl);
     const fetchStart = performance.now();
