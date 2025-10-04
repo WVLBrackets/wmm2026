@@ -372,7 +372,7 @@ export default async function HallOfFamePage() {
                                   {finish.place === 1 && <Crown className="h-3 w-3 text-yellow-600" />}
                                   {finish.place === 2 && <Trophy className="h-3 w-3 text-gray-400" />}
                                   {finish.place === 3 && <Medal className="h-3 w-3 text-amber-600" />}
-                                  <span className="font-medium text-gray-700">{finish.year}</span>
+                                  <span className="text-xs text-gray-600">{finish.year}</span>
                                   {finishIndex < Math.min(finisher.finishes.length, 5) - 1 && (
                                     <span className="text-gray-400 mx-1">-</span>
                                   )}
