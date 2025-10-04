@@ -345,7 +345,7 @@ export default async function HallOfFamePage() {
               
               <div className="space-y-2">
                 {sortedPodiumFinishers.slice(0, 25).map((finisher, index) => (
-                  <div key={`podium-finisher-${index}-${finisher.name}`} className={`rounded-lg p-3 border-l-4 ${
+                  <div key={`podium-finisher-${index}-${finisher.name}`} className={`rounded-lg p-3 border-l-4 min-h-[60px] ${
                     index < 10 
                       ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-500 shadow-md' 
                       : 'bg-white border-gray-300'
@@ -387,9 +387,9 @@ export default async function HallOfFamePage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className={`text-sm font-bold ${index < 10 ? 'text-yellow-700' : 'text-gray-900'}`}>
+                        <span className={`text-lg font-bold ${index < 10 ? 'text-yellow-700' : 'text-gray-900'}`}>
                           ${finisher.totalWinnings.toFixed(2)}
-                        </p>
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -407,7 +407,7 @@ export default async function HallOfFamePage() {
               
               <div className="space-y-2">
                 {top25SingleSeason.map((record, index) => (
-                  <div key={`single-season-${index}-${record.name}-${record.year}`} className={`rounded-lg p-3 border-l-4 ${
+                  <div key={`single-season-${index}-${record.name}-${record.year}`} className={`rounded-lg p-3 border-l-4 min-h-[60px] ${
                     index < 10 
                       ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-500 shadow-md' 
                       : 'bg-white border-gray-300'
