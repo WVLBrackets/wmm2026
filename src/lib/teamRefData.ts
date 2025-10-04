@@ -30,25 +30,72 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
     return cachedTeamData;
   }
 
-  // Temporarily disable Google Sheets fetch to debug image issues
-  console.log('📋 Using fallback team reference data (Google Sheets disabled for debugging)');
-  
-  // Use fallback data for now
-  const fallbackStart = performance.now();
-  const fallbackData = getFallbackTeamData();
-  const fallbackEnd = performance.now();
-  console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
-  
-  // Log available team abbreviations for debugging
-  console.log(`📋 Available team abbreviations (${fallbackData.length} total):`, 
-    fallbackData.map(t => t.abbr).sort().join(', '));
-  
-  cachedTeamData = fallbackData;
-  lastFetchTime = now;
-  
-  const totalTime = performance.now() - startTime;
-  console.log(`✅ Team reference data ready in ${totalTime.toFixed(2)}ms`);
-  return fallbackData;
+  // Try to fetch from Google Sheets first
+  try {
+    console.log('📋 Attempting to fetch team reference data from Google Sheets...');
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${TEAM_REF_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=RefData`;
+    console.log(`📋 Fetching from: ${csvUrl}`);
+    
+    const response = await fetch(csvUrl, {
+      method: 'GET',
+      mode: 'cors',
+      headers: {
+        'Accept': 'text/csv',
+        'Content-Type': 'text/csv',
+      }
+    });
+    
+    console.log(`📋 Response status: ${response.status} ${response.statusText}`);
+    console.log(`📋 Response headers:`, Object.fromEntries(response.headers.entries()));
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const csvText = await response.text();
+    console.log(`📋 Successfully fetched CSV data (${csvText.length} characters)`);
+    console.log(`📋 CSV preview:`, csvText.substring(0, 500));
+    
+    const teamData = parseTeamRefCSV(csvText);
+    console.log(`📋 Parsed ${teamData.length} teams from Google Sheets`);
+    
+    // Log available team abbreviations for debugging
+    console.log(`📋 Available team abbreviations (${teamData.length} total):`, 
+      teamData.map(t => t.abbr).sort().join(', '));
+    
+    cachedTeamData = teamData;
+    lastFetchTime = now;
+    
+    const totalTime = performance.now() - startTime;
+    console.log(`✅ Team reference data loaded from Google Sheets in ${totalTime.toFixed(2)}ms`);
+    return teamData;
+    
+  } catch (error) {
+    console.error('📋 Failed to fetch from Google Sheets:', error);
+    console.error('📋 Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+    
+    // Use fallback data if Google Sheets fails
+    console.log('📋 Using fallback team reference data due to Google Sheets error');
+    const fallbackStart = performance.now();
+    const fallbackData = getFallbackTeamData();
+    const fallbackEnd = performance.now();
+    console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
+    
+    // Log available team abbreviations for debugging
+    console.log(`📋 Available team abbreviations (${fallbackData.length} total):`, 
+      fallbackData.map(t => t.abbr).sort().join(', '));
+    
+    cachedTeamData = fallbackData;
+    lastFetchTime = now;
+    
+    const totalTime = performance.now() - startTime;
+    console.log(`✅ Team reference data ready in ${totalTime.toFixed(2)}ms`);
+    return fallbackData;
+  }
 }
 
 /**
