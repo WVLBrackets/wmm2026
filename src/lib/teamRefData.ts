@@ -4,10 +4,14 @@
 export interface TeamRefData {
   abbr: string;
   id: string;
+  name: string;
 }
 
 // Local team mappings configuration
 const TEAM_MAPPINGS_PATH = '/data/team-mappings.json';
+
+// Import the JSON data directly for better development support
+import teamMappingsData from '../../public/data/team-mappings.json';
 
 // Cache for team reference data
 let cachedTeamData: TeamRefData[] | null = null;
@@ -33,57 +37,93 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
     // Fetch from local JSON file
     console.log('📋 Fetching team reference data from local JSON file');
     
-    // Try to fetch the file with proper headers
-    const response = await fetch(TEAM_MAPPINGS_PATH, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
+    // Create AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
     
-    if (!response.ok) {
-      console.error(`❌ Failed to fetch team mappings: ${response.status} ${response.statusText}`);
-      throw new Error(`Failed to fetch team mappings: ${response.status} ${response.statusText}`);
+    try {
+      // Try to fetch the file with proper headers
+      const response = await fetch(TEAM_MAPPINGS_PATH, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        console.error(`❌ Failed to fetch team mappings: ${response.status} ${response.statusText}`);
+        throw new Error(`Failed to fetch team mappings: ${response.status} ${response.statusText}`);
+      }
+      
+      const teamMappings = await response.json();
+      
+      // Convert to TeamRefData format
+      const teamData: TeamRefData[] = Object.entries(teamMappings).map(([abbr, teamInfo]) => ({
+        abbr,
+        id: (teamInfo as { id: string; name: string; abbr: string }).id,
+        name: (teamInfo as { id: string; name: string; abbr: string }).name
+      }));
+      
+      console.log(`📋 Loaded ${teamData.length} teams from local JSON file`);
+      
+      // Log available team abbreviations for debugging
+      console.log(`📋 Available team abbreviations (${teamData.length} total):`, 
+        teamData.map(t => t.abbr).sort().join(', '));
+      
+      cachedTeamData = teamData;
+      lastFetchTime = now;
+      
+      const totalTime = performance.now() - startTime;
+      console.log(`✅ Team reference data ready in ${totalTime.toFixed(2)}ms`);
+      return teamData;
+      
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      console.error('❌ Network error fetching team mappings:', fetchError);
+      throw fetchError;
     }
-    
-    const teamMappings = await response.json();
-    
-    // Convert to TeamRefData format
-    const teamData: TeamRefData[] = Object.entries(teamMappings).map(([abbr, teamInfo]) => ({
-      abbr,
-      id: (teamInfo as { id: string; name: string; abbr: string }).id,
-      name: (teamInfo as { id: string; name: string; abbr: string }).name
-    }));
-    
-    console.log(`📋 Loaded ${teamData.length} teams from local JSON file`);
-    
-    // Log available team abbreviations for debugging
-    console.log(`📋 Available team abbreviations (${teamData.length} total):`, 
-      teamData.map(t => t.abbr).sort().join(', '));
-    
-    cachedTeamData = teamData;
-    lastFetchTime = now;
-    
-    const totalTime = performance.now() - startTime;
-    console.log(`✅ Team reference data ready in ${totalTime.toFixed(2)}ms`);
-    return teamData;
     
   } catch (error) {
     console.error('❌ Error loading team mappings from local JSON:', error);
-    console.log('📋 Falling back to hardcoded team data');
+    console.log('📋 Falling back to imported JSON data');
     
-    // Use fallback data
-    const fallbackStart = performance.now();
-    const fallbackData = getFallbackTeamData();
-    const fallbackEnd = performance.now();
-    console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
-    
-    cachedTeamData = fallbackData;
-    lastFetchTime = now;
-    
-    const totalTime = performance.now() - startTime;
-    console.log(`✅ Team reference data ready in ${totalTime.toFixed(2)}ms`);
-    return fallbackData;
+    try {
+      // Try to use the imported JSON data
+      const teamData: TeamRefData[] = Object.entries(teamMappingsData).map(([abbr, teamInfo]: [string, any]) => ({
+        abbr,
+        id: teamInfo.id,
+        name: teamInfo.name
+      }));
+      
+      console.log(`📋 Loaded ${teamData.length} teams from imported JSON data`);
+      
+      cachedTeamData = teamData;
+      lastFetchTime = now;
+      
+      const totalTime = performance.now() - startTime;
+      console.log(`✅ Team reference data ready in ${totalTime.toFixed(2)}ms`);
+      return teamData;
+      
+    } catch (importError) {
+      console.error('❌ Error with imported JSON data:', importError);
+      console.log('📋 Falling back to hardcoded team data');
+      
+      // Use hardcoded fallback data
+      const fallbackStart = performance.now();
+      const fallbackData = getFallbackTeamData();
+      const fallbackEnd = performance.now();
+      console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
+      
+      cachedTeamData = fallbackData;
+      lastFetchTime = now;
+      
+      const totalTime = performance.now() - startTime;
+      console.log(`✅ Team reference data ready in ${totalTime.toFixed(2)}ms`);
+      return fallbackData;
+    }
   }
 }
 
@@ -449,43 +489,43 @@ export async function getTeamIdByName(teamName: string): Promise<string | null> 
 function getFallbackTeamData(): TeamRefData[] {
   return [
     // Common tournament teams
-    { abbr: 'UConn', id: '41' },      // Connecticut Huskies
-    { abbr: 'UNC', id: '153' },       // North Carolina Tar Heels  
-    { abbr: 'UK', id: '96' },         // Kentucky Wildcats
-    { abbr: 'KU', id: '2305' },       // Kansas Jayhawks
-    { abbr: 'Tenn', id: '2633' },     // Tennessee Volunteers
-    { abbr: 'Duke', id: '150' },      // Duke Blue Devils
-    { abbr: 'Purd', id: '2509' },     // Purdue Boilermakers
-    { abbr: 'Hou', id: '248' },       // Houston Cougars
-    { abbr: 'Cre', id: '156' },       // Creighton Bluejays
-    { abbr: 'IoSt', id: '66' },       // Iowa State Cyclones
-    { abbr: 'Zona', id: '12' },       // Arizona Wildcats
-    { abbr: 'MicSt', id: '127' },     // Michigan State Spartans
-    { abbr: 'Flo', id: '57' },        // Florida Gators
-    { abbr: 'Bama', id: '333' },      // Alabama Crimson Tide
-    { abbr: 'NCSt', id: '152' },      // NC State Wolfpack
-    { abbr: 'Gonz', id: '2250' },     // Gonzaga Bulldogs
-    { abbr: 'Marq', id: '269' },      // Marquette Golden Eagles
-    { abbr: 'Bylr', id: '239' },      // Baylor Bears
-    { abbr: 'Ill', id: '356' },       // Illinois Fighting Illini
-    { abbr: 'Clem', id: '228' },      // Clemson Tigers
-    { abbr: 'Wisc', id: '275' },      // Wisconsin Badgers
-    { abbr: 'SoCar', id: '2579' },    // South Carolina Gamecocks
-    { abbr: 'Ore', id: '2483' },      // Oregon Ducks
-    { abbr: 'Neb', id: '158' },       // Nebraska Cornhuskers
-    { abbr: 'WaSt', id: '265' },      // Washington State Cougars
-    { abbr: 'StMary', id: '2608' },   // Saint Mary's Gaels
-    { abbr: 'Mary', id: '2608' },     // Saint Mary's Gaels (alternative abbreviation)
-    { abbr: 'StJ', id: '2599' },      // St. John's Red Storm
-    { abbr: 'MeM', id: '235' },       // Memphis Tigers
+    { abbr: 'UConn', id: '41', name: 'Connecticut' },      // Connecticut Huskies
+    { abbr: 'UNC', id: '153', name: 'North Carolina' },       // North Carolina Tar Heels  
+    { abbr: 'UK', id: '96', name: 'Kentucky' },         // Kentucky Wildcats
+    { abbr: 'KU', id: '2305', name: 'Kansas' },       // Kansas Jayhawks
+    { abbr: 'Tenn', id: '2633', name: 'Tennessee' },     // Tennessee Volunteers
+    { abbr: 'Duke', id: '150', name: 'Duke' },      // Duke Blue Devils
+    { abbr: 'Purd', id: '2509', name: 'Purdue' },     // Purdue Boilermakers
+    { abbr: 'Hou', id: '248', name: 'Houston' },       // Houston Cougars
+    { abbr: 'Cre', id: '156', name: 'Creighton' },       // Creighton Bluejays
+    { abbr: 'IoSt', id: '66', name: 'Iowa State' },       // Iowa State Cyclones
+    { abbr: 'Zona', id: '12', name: 'Arizona' },       // Arizona Wildcats
+    { abbr: 'MicSt', id: '127', name: 'Michigan State' },     // Michigan State Spartans
+    { abbr: 'Flo', id: '57', name: 'Florida' },        // Florida Gators
+    { abbr: 'Bama', id: '333', name: 'Alabama' },      // Alabama Crimson Tide
+    { abbr: 'NCSt', id: '152', name: 'NC State' },      // NC State Wolfpack
+    { abbr: 'Gonz', id: '2250', name: 'Gonzaga' },     // Gonzaga Bulldogs
+    { abbr: 'Marq', id: '269', name: 'Marquette' },      // Marquette Golden Eagles
+    { abbr: 'Bylr', id: '239', name: 'Baylor' },      // Baylor Bears
+    { abbr: 'Ill', id: '356', name: 'Illinois' },       // Illinois Fighting Illini
+    { abbr: 'Clem', id: '228', name: 'Clemson' },      // Clemson Tigers
+    { abbr: 'Wisc', id: '275', name: 'Wisconsin' },      // Wisconsin Badgers
+    { abbr: 'SoCar', id: '2579', name: 'South Carolina' },    // South Carolina Gamecocks
+    { abbr: 'Ore', id: '2483', name: 'Oregon' },      // Oregon Ducks
+    { abbr: 'Neb', id: '158', name: 'Nebraska' },       // Nebraska Cornhuskers
+    { abbr: 'WaSt', id: '265', name: 'Washington State' },      // Washington State Cougars
+    { abbr: 'StMary', id: '2608', name: 'Saint Mary\'s' },   // Saint Mary's Gaels
+    { abbr: 'Mary', id: '120', name: 'Maryland' },     // Maryland Terrapins
+    { abbr: 'StJ', id: '2599', name: 'St. John\'s' },      // St. John's Red Storm
+    { abbr: 'MeM', id: '235', name: 'Memphis' },       // Memphis Tigers
     
     // Missing abbreviations from standings data
-    { abbr: 'JM', id: '256' },        // James Madison Dukes
-    { abbr: 'TA&M', id: '245' },      // Texas A&M Aggies
-    { abbr: 'Drk', id: '2181' },      // Drake Bulldogs
-    { abbr: 'FLO', id: '57' },        // Florida Gators
-    { abbr: 'Texas', id: '251' },     // Texas Longhorns
-    { abbr: 'TTech', id: '2641' },    // Texas Tech Red Raiders
-    { abbr: 'FAU', id: '2226' },      // Florida Atlantic Owls
+    { abbr: 'JM', id: '256', name: 'James Madison' },        // James Madison Dukes
+    { abbr: 'TA&M', id: '245', name: 'Texas A&M' },      // Texas A&M Aggies
+    { abbr: 'Drk', id: '2181', name: 'Drake' },      // Drake Bulldogs
+    { abbr: 'FLO', id: '57', name: 'Florida' },        // Florida Gators
+    { abbr: 'Texas', id: '251', name: 'Texas' },     // Texas Longhorns
+    { abbr: 'TTech', id: '2641', name: 'Texas Tech' },    // Texas Tech Red Raiders
+    { abbr: 'FAU', id: '2226', name: 'Florida Atlantic' },      // Florida Atlantic Owls
   ];
 }
