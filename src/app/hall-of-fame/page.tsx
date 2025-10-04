@@ -235,6 +235,9 @@ export default async function HallOfFamePage() {
                     {is2020 ? `${entry.year} - Tournament Cancelled` :
                      is2016 ? `${entry.year} - WMM Hiatus` :
                      isHiatus ? `${entry.year} - Tournament Not Held` :
+                     entry.totalEntries === 0 ? (
+                       <span>{entry.year} - <span className="italic">unknown</span></span>
+                     ) :
                      `${entry.year} - ${entry.totalEntries} entries`}
                   </div>
                   {/* Logo in top right corner */}
