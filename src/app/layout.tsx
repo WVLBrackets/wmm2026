@@ -10,9 +10,9 @@ export const metadata: Metadata = {
   keywords: ["March Madness", "Basketball", "Tournament", "Bracket", "NCAA"],
   authors: [{ name: "Warren" }],
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon.ico',
-    apple: '/favicon.ico',
+    icon: '/basketball-favicon.png',
+    shortcut: '/basketball-favicon.png',
+    apple: '/basketball-favicon.png',
   },
   openGraph: {
     title: siteConfig.siteName,
@@ -28,6 +28,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" href="/basketball-favicon.png" />
+        <link rel="shortcut icon" href="/basketball-favicon.png" />
+        <link rel="apple-touch-icon" href="/basketball-favicon.png" />
+      </head>
       <body className="font-sans antialiased" suppressHydrationWarning={true}>
         <DynamicNavigation />
         <main>
