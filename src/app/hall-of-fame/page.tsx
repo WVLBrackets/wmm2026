@@ -350,7 +350,7 @@ export default async function HallOfFamePage() {
                       ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-500 shadow-md' 
                       : 'bg-white border-gray-300'
                   }`}>
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
                           index < 10 
@@ -363,36 +363,33 @@ export default async function HallOfFamePage() {
                           <h4 className={`text-sm font-bold ${index < 10 ? 'text-yellow-900' : 'text-gray-900'}`}>
                             {finisher.name}
                           </h4>
+                          <div className="flex items-center gap-1 flex-wrap">
+                            {finisher.finishes
+                              .sort((a, b) => parseInt(b.year) - parseInt(a.year)) // Sort by year descending (most recent first)
+                              .slice(0, 5) // Show up to 5 finishes
+                              .map((finish, finishIndex) => (
+                                <span key={finishIndex} className="flex items-center gap-1">
+                                  {finish.place === 1 && <Crown className="h-3 w-3 text-yellow-600" />}
+                                  {finish.place === 2 && <Trophy className="h-3 w-3 text-gray-400" />}
+                                  {finish.place === 3 && <Medal className="h-3 w-3 text-amber-600" />}
+                                  <span className="font-medium text-gray-700">{finish.year}</span>
+                                  {finishIndex < Math.min(finisher.finishes.length, 5) - 1 && (
+                                    <span className="text-gray-400 mx-1">-</span>
+                                  )}
+                                </span>
+                              ))}
+                            {finisher.finishes.length > 5 && (
+                              <span className="text-gray-500 ml-1">
+                                +{finisher.finishes.length - 5} more
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className={`text-sm font-bold ${index < 10 ? 'text-yellow-700' : 'text-gray-900'}`}>
                           ${finisher.totalWinnings.toFixed(2)}
                         </p>
-                      </div>
-                    </div>
-                    
-                    <div className="text-xs">
-                      <div className="flex items-center gap-1 flex-wrap">
-                        {finisher.finishes
-                          .sort((a, b) => parseInt(b.year) - parseInt(a.year)) // Sort by year descending (most recent first)
-                          .slice(0, 5) // Show up to 5 finishes
-                          .map((finish, finishIndex) => (
-                            <span key={finishIndex} className="flex items-center gap-1">
-                              {finish.place === 1 && <Crown className="h-3 w-3 text-yellow-600" />}
-                              {finish.place === 2 && <Trophy className="h-3 w-3 text-gray-400" />}
-                              {finish.place === 3 && <Medal className="h-3 w-3 text-amber-600" />}
-                              <span className="font-medium text-gray-700">{finish.year}</span>
-                              {finishIndex < Math.min(finisher.finishes.length, 5) - 1 && (
-                                <span className="text-gray-400 mx-1">-</span>
-                              )}
-                            </span>
-                          ))}
-                        {finisher.finishes.length > 5 && (
-                          <span className="text-gray-500 ml-1">
-                            +{finisher.finishes.length - 5} more
-                          </span>
-                        )}
                       </div>
                     </div>
                   </div>
