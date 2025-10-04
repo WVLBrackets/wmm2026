@@ -9,6 +9,11 @@ export const metadata: Metadata = {
   description: siteConfig.siteDescription,
   keywords: ["March Madness", "Basketball", "Tournament", "Bracket", "NCAA"],
   authors: [{ name: "Warren" }],
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/favicon.ico',
+  },
   openGraph: {
     title: siteConfig.siteName,
     description: siteConfig.siteDescription,
