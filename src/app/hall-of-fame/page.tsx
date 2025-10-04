@@ -299,19 +299,25 @@ export default async function HallOfFamePage() {
                       {/* Row 1: Gold Crown, Player, Points */}
                       <div className="flex items-center gap-3">
                         <Crown className="h-5 w-5 text-yellow-600" />
-                        <span className="font-medium text-yellow-700">{entry.firstPlace.name} - {entry.firstPlace.score}</span>
+                        <span className="font-medium text-yellow-700">
+                          {entry.firstPlace.name}{entry.firstPlace.score > 0 ? ` - ${entry.firstPlace.score}` : ''}
+                        </span>
                       </div>
                       
                       {/* Row 2: Silver Trophy, Player, Points */}
                       <div className="flex items-center gap-3">
                         <Trophy className="h-5 w-5 text-gray-400" />
-                        <span className="font-medium text-gray-700">{entry.secondPlace.name} - {entry.secondPlace.score}</span>
+                        <span className="font-medium text-gray-700">
+                          {entry.secondPlace.name}{entry.secondPlace.score > 0 ? ` - ${entry.secondPlace.score}` : ''}
+                        </span>
                       </div>
                       
                       {/* Row 3: Bronze Medal, Player, Points */}
                       <div className="flex items-center gap-3">
                         <Medal className="h-5 w-5 text-amber-600" />
-                        <span className="font-medium text-gray-700">{entry.thirdPlace.name} - {entry.thirdPlace.score}</span>
+                        <span className="font-medium text-gray-700">
+                          {entry.thirdPlace.name}{entry.thirdPlace.score > 0 ? ` - ${entry.thirdPlace.score}` : ''}
+                        </span>
                       </div>
                     </div>
                   )}
