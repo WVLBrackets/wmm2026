@@ -222,59 +222,23 @@ export default function StandingsTable() {
   }, [selectedDay]);
 
   // Handle day selection with immediate UI update
-  const handleDayChange = async (day: string) => {
-    const startTime = performance.now();
-    console.log(`🔄 Day change started: ${day} at ${startTime.toFixed(2)}ms`);
+  const handleDayChange = (day: string) => {
+    console.log(`🔄 Day change requested: ${day}`);
     
-    // Update dropdown display immediately (instant UI response)
-    const uiUpdateStart = performance.now();
-    setDisplayDay(day); // This updates the dropdown instantly
+    // Update both display and selected day immediately
+    setDisplayDay(day);
+    setSelectedDay(day);
     setLoading(true);
     setError(null);
     // Clear standings data immediately to show loading state
     setStandingsData(null);
-    const uiUpdateEnd = performance.now();
-    console.log(`⚡ UI update completed in ${(uiUpdateEnd - uiUpdateStart).toFixed(2)}ms`);
-    
-    // Load data in background without blocking UI
-    const loadDataInBackground = async () => {
-      try {
-        const standingsStart = performance.now();
-        console.log(`📊 Starting standings fetch for ${day}`);
-        const standingsPromise = getStandingsData(day);
-        
-        // Wait for standings data
-        const data = await standingsPromise;
-        const standingsEnd = performance.now();
-        console.log(`✅ Standings data loaded in ${(standingsEnd - standingsStart).toFixed(2)}ms`);
-        
-        // Update UI with new data
-        setStandingsData(data);
-        setLoading(false);
-        setTeamCache(new Map(globalTeamCache));
-        console.log(`🏈 Team cache updated (${globalTeamCache.size} teams cached)`);
-        
-        const totalTime = performance.now() - startTime;
-        console.log(`🎉 Total day change completed in ${totalTime.toFixed(2)}ms`);
-      } catch (error) {
-        setError('Failed to load standings data');
-        console.error('❌ Error loading standings:', error);
-        setLoading(false);
-      }
-    };
-    
-    // Start background loading
-    loadDataInBackground();
   };
 
-  // Load initial standings data when selectedDay is first set
+  // Load standings data when selectedDay changes
   useEffect(() => {
     if (!selectedDay) return; // Don't load if no day is selected
     
-    // Only load if we don't have standings data yet (initial load)
-    if (standingsData) return;
-    
-    const loadInitialStandings = async () => {
+    const loadStandings = async () => {
       setLoading(true);
       setError(null);
       
@@ -296,8 +260,8 @@ export default function StandingsTable() {
         setLoading(false);
       }
     };
-    loadInitialStandings();
-  }, [selectedDay, standingsData]); // Run when selectedDay changes, but handleDayChange will override for user interactions
+    loadStandings();
+  }, [selectedDay]); // Run whenever selectedDay changes
 
   // Optimized preload function that uses pre-fetched team reference data
   const preloadTeamDataWithRef = (data: StandingsData, teamRefData: { abbr: string; id: string }[]) => {
