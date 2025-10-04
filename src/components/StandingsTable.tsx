@@ -2,21 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import { getStandingsData, getAvailableDays, getCurrentTournamentYear, StandingsEntry, StandingsData, clearStandingsCache, getQuarterfinalColor, getSemifinalColor, getFinalColor } from '@/lib/standingsData';
-import { getTeamInfo, getLogoUrlSync, preloadStandingsLogos } from '@/lib/teamLogos';
+import { getTeamInfo, getLogoUrlSync } from '@/lib/teamLogos';
 import { getTeamRefData } from '@/lib/teamRefData';
-import { initializeLogoCache } from '@/lib/logoCache';
 import { Trophy, Medal, Search, RefreshCw, Calendar } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
-// TeamLogo component to handle async team info loading
+// TeamLogo component to handle async team info loading with fallback
 function TeamLogo({ 
   teamName, 
   size, 
   className, 
   teamCache,
   backgroundColor,
-  borderColor
+  borderColor,
+  teamIndex
 }: { 
   teamName: string; 
   size: number; 
@@ -24,9 +24,11 @@ function TeamLogo({
   teamCache?: Map<string, { id: string; name: string }>;
   backgroundColor?: 'correct' | 'incorrect' | 'neutral';
   borderColor?: 'correct' | 'incorrect' | 'neutral' | undefined;
+  teamIndex?: number;
 }) {
   const [teamInfo, setTeamInfo] = useState<{ id: string; name: string; logoUrl: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     const loadTeamInfo = async () => {
@@ -43,10 +45,10 @@ function TeamLogo({
         // Fallback to async lookup if not in cache
         const info = await getTeamInfo(teamName, size);
         setTeamInfo(info);
-      } catch (error) {
-        console.error('Error loading team info:', error);
-        setTeamInfo({ id: 'unknown', name: teamName, logoUrl: null });
-      } finally {
+        } catch (error: any) {
+          console.error('Error loading team info:', error);
+          setTeamInfo({ id: 'placeholder', name: teamName, logoUrl: '/images/basketball icon.png' });
+        } finally {
         setLoading(false);
       }
     };
@@ -57,14 +59,6 @@ function TeamLogo({
     return (
       <div className={`w-${size/4} h-${size/4} bg-gray-200 rounded flex items-center justify-center ${className}`}>
         <div className="text-xs">...</div>
-      </div>
-    );
-  }
-
-  if (!teamInfo || !teamInfo.logoUrl) {
-    return (
-      <div className={`w-${size/4} h-${size/4} bg-gray-200 rounded flex items-center justify-center text-xs font-bold ${className}`}>
-        {teamName}
       </div>
     );
   }
@@ -83,19 +77,65 @@ function TeamLogo({
       bgClass = 'bg-gradient-to-br from-gray-50 to-gray-100';
     }
     
-           // Border color logic - only apply if borderColor is defined
-           if (borderColor === 'correct') borderClass = 'ring-2 ring-green-500';
-           else if (borderColor === 'incorrect') borderClass = 'ring-2 ring-red-500';
-           else if (borderColor === 'neutral') borderClass = 'ring-1 ring-black';
-           // If borderColor is undefined, no border class is applied
+    // Border color logic - only apply if borderColor is defined
+    if (borderColor === 'correct') borderClass = 'ring-2 ring-green-500';
+    else if (borderColor === 'incorrect') borderClass = 'ring-2 ring-red-500';
+    else if (borderColor === 'neutral') borderClass = 'ring-1 ring-black';
+    // If borderColor is undefined, no border class is applied
     
     return `${bgClass} ${borderClass}`;
   };
 
+  // If we have a team info but no logo URL, or if the image failed to load, show fallback
+  const shouldShowFallback = !teamInfo || !teamInfo.logoUrl || imageError || teamInfo.id === 'placeholder';
+
+  if (shouldShowFallback) {
+    return (
+      <div className={`${className} ${getColorClasses()}`}>
+        <div 
+          className="relative flex items-center justify-center rounded"
+          style={{ width: size, height: size }}
+        >
+          {/* Basketball background */}
+          <Image
+            src="/images/basketball icon.png"
+            alt="Basketball fallback"
+            width={size}
+            height={size}
+            className="object-contain rounded"
+            quality={85}
+            style={{ 
+              imageRendering: 'auto',
+              backgroundColor: 'transparent',
+              maxWidth: '100%',
+              maxHeight: '100%'
+            }}
+          />
+          
+          {/* Overlay text */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <div className="text-white font-bold text-center leading-none" style={{ fontSize: '6px' }}>
+              {teamName.substring(0, 3).toUpperCase()}
+            </div>
+            {teamIndex !== undefined ? (
+              <div className="text-white font-bold text-center leading-none mt-0.5" style={{ fontSize: '6px' }}>
+                {teamIndex}
+              </div>
+            ) : (
+              <div className="text-white font-bold text-center leading-none mt-0.5" style={{ fontSize: '6px' }}>
+                ?
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`${className} ${getColorClasses()}`}>
       <Image
-        src={teamInfo.logoUrl}
+        src={teamInfo.logoUrl || '/images/basketball icon.png'}
         alt={teamName}
         width={size}
         height={size}
@@ -104,23 +144,14 @@ function TeamLogo({
           width: `${size}px`,
           height: `${size}px`,
           objectFit: 'contain',
-          imageRendering: size <= 40 ? 'crisp-edges' : 'auto' // Crisp edges for small images, auto for larger ones
+          imageRendering: 'auto' // Use auto for better quality with local files
         }}
-        quality={100} // Maximum quality for all images
+        quality={85} // Good balance of quality vs file size
         priority={size > 50} // Prioritize loading for larger logos
-        unoptimized={size <= 40} // Skip Next.js optimization for very small images to preserve sharpness
         sizes={`${size}px`} // Specify exact size for better optimization
-        onError={(e) => {
-          const target = e.target as HTMLImageElement;
-          target.style.display = 'none';
-          const parent = target.parentElement;
-          if (parent) {
-            // Create a proper fallback div instead of innerHTML
-            const fallbackDiv = document.createElement('div');
-            fallbackDiv.className = `w-${size/4} h-${size/4} bg-gray-200 rounded flex items-center justify-center text-xs font-bold`;
-            fallbackDiv.textContent = teamName;
-            parent.appendChild(fallbackDiv);
-          }
+        onError={() => {
+          console.warn(`Failed to load logo for ${teamInfo.name}:`, teamInfo.logoUrl);
+          setImageError(true);
         }}
       />
     </div>
@@ -156,7 +187,7 @@ export default function StandingsTable() {
 
   // Initialize logo cache on component mount
   useEffect(() => {
-    initializeLogoCache();
+    // Logo cache is now handled automatically by the local file system
   }, []);
 
   // Load tournament year from Google Sheets config
@@ -327,11 +358,7 @@ export default function StandingsTable() {
       .map(team => team.id)
       .filter(id => id !== 'unknown');
     
-    if (teamIds.length > 0) {
-      preloadStandingsLogos(teamIds).catch(error => {
-        console.error('❌ Logo preload failed:', error);
-      });
-    }
+    // Logo preloading is now handled automatically by the local file system
   };
 
   // Legacy preload function (kept for compatibility)
@@ -413,6 +440,7 @@ export default function StandingsTable() {
               backgroundColor={quarterfinalColor}
               borderColor={semifinalColor}
               className="relative"
+              teamIndex={index + 1}
             />
           );
         })}
@@ -438,6 +466,7 @@ export default function StandingsTable() {
           backgroundColor={finalColor}
           borderColor={finalColor}
           className="rounded"
+          teamIndex={undefined}
         />
         <div className="text-xs text-gray-600 font-medium">
           TB: {tb}

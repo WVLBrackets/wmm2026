@@ -1,14 +1,13 @@
-// Team reference data from Google Sheets
-// Fetches team abbreviations and ESPN IDs from the RefData tab
+// Team reference data from local JSON file
+// Fetches team abbreviations and ESPN IDs from local team-mappings.json
 
 export interface TeamRefData {
   abbr: string;
   id: string;
 }
 
-// Google Sheets configuration
-const TEAM_REF_SHEET_ID = '1X2J_UsBAnIaxdGQt1nF0DN9llkky1zFcPU_nky01pAI';
-
+// Local team mappings configuration
+const TEAM_MAPPINGS_PATH = '/data/team-mappings.json';
 
 // Cache for team reference data
 let cachedTeamData: TeamRefData[] | null = null;
@@ -16,7 +15,7 @@ let lastFetchTime = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 /**
- * Fetch team reference data from Google Sheets
+ * Fetch team reference data from local JSON file
  */
 export async function getTeamRefData(): Promise<TeamRefData[]> {
   const startTime = performance.now();
@@ -30,101 +29,54 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
     return cachedTeamData;
   }
 
-  // Use fallback data for now - Google Sheets access needs to be configured
-  console.log('📋 Using fallback team reference data (Google Sheets access needs configuration)');
-  
-  // Use fallback data
-  const fallbackStart = performance.now();
-  const fallbackData = getFallbackTeamData();
-  const fallbackEnd = performance.now();
-  console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
-  
-  // Log available team abbreviations for debugging
-  console.log(`📋 Available team abbreviations (${fallbackData.length} total):`, 
-    fallbackData.map(t => t.abbr).sort().join(', '));
-  
-  cachedTeamData = fallbackData;
-  lastFetchTime = now;
-  
-  const totalTime = performance.now() - startTime;
-  console.log(`✅ Team reference data ready in ${totalTime.toFixed(2)}ms`);
-  return fallbackData;
-}
-
-/**
- * Parse CSV data into team reference entries
- */
-function parseTeamRefCSV(csvText: string): TeamRefData[] {
-  const lines = csvText.split('\n').filter(line => line.trim());
-  const teamData: TeamRefData[] = [];
-  
-  console.log('Total lines in CSV:', lines.length);
-  console.log('First few lines:', lines.slice(0, 3));
-  
-  // Skip header row
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
+  try {
+    // Fetch from local JSON file
+    console.log('📋 Fetching team reference data from local JSON file');
+    const response = await fetch(TEAM_MAPPINGS_PATH);
     
-    const columns = parseCSVLine(line);
-    if (i <= 10) { // Only log first 10 rows to avoid spam
-      console.log(`Row ${i}:`, columns);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch team mappings: ${response.status} ${response.statusText}`);
     }
     
-    if (columns.length >= 3) {
-      try {
-        const team: TeamRefData = {
-          abbr: columns[1] || '', // Column B (Abbr)
-          id: columns[2] || ''    // Column C (ID)
-        };
-        
-        // Only add if both abbr and id are present
-        if (team.abbr && team.id) {
-          teamData.push(team);
-          if (i <= 10) { // Only log first 10 teams to avoid spam
-            console.log(`Added team: ${team.abbr} -> ${team.id}`);
-          }
-        } else {
-          if (i <= 10) { // Only log first 10 skips to avoid spam
-            console.log(`Skipped row ${i}: missing abbr or id`, team);
-          }
-        }
-      } catch (error) {
-        console.warn('Error parsing team reference row:', line, error);
-      }
-    } else {
-      if (i <= 10) { // Only log first 10 skips to avoid spam
-        console.log(`Skipped row ${i}: not enough columns`, columns);
-      }
-    }
+    const teamMappings = await response.json();
+    
+    // Convert to TeamRefData format
+    const teamData: TeamRefData[] = Object.entries(teamMappings).map(([abbr, teamInfo]: [string, any]) => ({
+      abbr,
+      id: teamInfo.id,
+      name: teamInfo.name
+    }));
+    
+    console.log(`📋 Loaded ${teamData.length} teams from local JSON file`);
+    
+    // Log available team abbreviations for debugging
+    console.log(`📋 Available team abbreviations (${teamData.length} total):`, 
+      teamData.map(t => t.abbr).sort().join(', '));
+    
+    cachedTeamData = teamData;
+    lastFetchTime = now;
+    
+    const totalTime = performance.now() - startTime;
+    console.log(`✅ Team reference data ready in ${totalTime.toFixed(2)}ms`);
+    return teamData;
+    
+  } catch (error) {
+    console.error('❌ Error loading team mappings from local JSON:', error);
+    console.log('📋 Falling back to hardcoded team data');
+    
+    // Use fallback data
+    const fallbackStart = performance.now();
+    const fallbackData = getFallbackTeamData();
+    const fallbackEnd = performance.now();
+    console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
+    
+    cachedTeamData = fallbackData;
+    lastFetchTime = now;
+    
+    const totalTime = performance.now() - startTime;
+    console.log(`✅ Team reference data ready in ${totalTime.toFixed(2)}ms`);
+    return fallbackData;
   }
-  
-  return teamData;
-}
-
-/**
- * Parse a single CSV line, handling quoted fields
- */
-function parseCSVLine(line: string): string[] {
-  const result: string[] = [];
-  let current = '';
-  let inQuotes = false;
-  
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    
-    if (char === '"') {
-      inQuotes = !inQuotes;
-    } else if (char === ',' && !inQuotes) {
-      result.push(current.trim());
-      current = '';
-    } else {
-      current += char;
-    }
-  }
-  
-  result.push(current.trim());
-  return result;
 }
 
 /**
@@ -160,11 +112,11 @@ export async function getTeamIdByName(teamName: string): Promise<string | null> 
     // Map common full team names to abbreviations
     const teamNameMap: { [key: string]: string } = {
       // Major teams
-      'Florida Gators': 'Fla',
+      'Florida Gators': 'Flo',
       'UConn Huskies': 'UConn', 
       'UConn': 'UConn',
-      'Florida': 'Fla',
-      'Gators': 'Fla',
+      'Florida': 'Flo',
+      'Gators': 'Flo',
       'North Carolina': 'UNC',
       'North Carolina Tar Heels': 'UNC',
       'Tar Heels': 'UNC',
@@ -177,17 +129,17 @@ export async function getTeamIdByName(teamName: string): Promise<string | null> 
       'Kansas': 'KU',
       'Kansas Jayhawks': 'KU',
       'Jayhawks': 'KU',
-      'Arizona': 'Arizona',
-      'Alabama': 'Alabama',
-      'Auburn': 'Auburn',
-      'Arkansas': 'Arkansas',
-      'Tennessee': 'Tennessee',
+      'Arizona': 'Zona',
+      'Alabama': 'Bama',
+      'Auburn': 'Aub',
+      'Arkansas': 'Ark',
+      'Tennessee': 'Tenn',
       'Texas': 'Texas',
       'Texas A&M': 'TA&M',
       'Texas Tech': 'TTech',
-      'Florida State': 'FlaSt',
+      'Florida State': 'FSU',
       'Florida Atlantic': 'FAU',
-      'Drake': 'DRK',
+      'Drake': 'Drk',
       'Gonzaga': 'Gonz',
       'Michigan State': 'MicSt',
       'Michigan State Spartans': 'MicSt',
@@ -195,137 +147,137 @@ export async function getTeamIdByName(teamName: string): Promise<string | null> 
       'NC State': 'NCSt',
       'Notre Dame': 'ND',
       'Indiana': 'Ind',
-      'Georgia Tech': 'GaTech',
+      'Georgia Tech': 'GT',
       'California': 'Cal',
       'Colorado': 'Colo',
-      'Colorado State': 'ColoSt',
+      'Colorado State': 'ColSt',
       
       // Additional major teams
       'Virginia Cavaliers': 'UVA',
       'Virginia': 'UVA',
       'Cavaliers': 'UVA',
-      'Villanova Wildcats': 'Vill',
-      'Villanova': 'Vill',
-      'Michigan Wolverines': 'Michigan',
-      'Michigan': 'Michigan',
-      'Wolverines': 'Michigan',
-      'Ohio State Buckeyes': 'OhioSt',
-      'Ohio State': 'OhioSt',
-      'Buckeyes': 'OhioSt',
-      'Wisconsin Badgers': 'Wisconsin',
-      'Wisconsin': 'Wisconsin',
-      'Badgers': 'Wisconsin',
-      'Purdue Boilermakers': 'Purdue',
-      'Purdue': 'Purdue',
-      'Boilermakers': 'Purdue',
-      'Illinois Fighting Illini': 'Illinois',
-      'Illinois': 'Illinois',
-      'Fighting Illini': 'Illinois',
+      'Villanova Wildcats': 'Nova',
+      'Villanova': 'Nova',
+      'Michigan Wolverines': 'Mich',
+      'Michigan': 'Mich',
+      'Wolverines': 'Mich',
+      'Ohio State Buckeyes': 'OhSt',
+      'Ohio State': 'OhSt',
+      'Buckeyes': 'OhSt',
+      'Wisconsin Badgers': 'Wisc',
+      'Wisconsin': 'Wisc',
+      'Badgers': 'Wisc',
+      'Purdue Boilermakers': 'Purd',
+      'Purdue': 'Purd',
+      'Boilermakers': 'Purd',
+      'Illinois Fighting Illini': 'Ill',
+      'Illinois': 'Ill',
+      'Fighting Illini': 'Ill',
       'Iowa Hawkeyes': 'Iowa',
       'Iowa': 'Iowa',
       'Hawkeyes': 'Iowa',
-      'Minnesota Golden Gophers': 'Minnesota',
-      'Minnesota': 'Minnesota',
-      'Golden Gophers': 'Minnesota',
-      'Nebraska Cornhuskers': 'Nebraska',
-      'Nebraska': 'Nebraska',
-      'Cornhuskers': 'Nebraska',
-      'Northwestern Wildcats': 'Northwestern',
-      'Northwestern': 'Northwestern',
-      'Penn State Nittany Lions': 'PennSt',
-      'Penn State': 'PennSt',
-      'Nittany Lions': 'PennSt',
-      'Rutgers Scarlet Knights': 'Rutgers',
-      'Rutgers': 'Rutgers',
-      'Scarlet Knights': 'Rutgers',
-      'Maryland Terrapins': 'Maryland',
-      'Maryland': 'Maryland',
-      'Terrapins': 'Maryland',
-      'Louisville Cardinals': 'Louisville',
-      'Louisville': 'Louisville',
-      'Cardinals': 'Louisville',
-      'Syracuse Orange': 'Syra',
-      'Syracuse': 'Syra',
-      'Orange': 'Syra',
-      'Orangemen': 'Syra',
-      'Syracuse Orangemen': 'Syra',
+      'Minnesota Golden Gophers': 'Minn',
+      'Minnesota': 'Minn',
+      'Golden Gophers': 'Minn',
+      'Nebraska Cornhuskers': 'Neb',
+      'Nebraska': 'Neb',
+      'Cornhuskers': 'Neb',
+      'Northwestern Wildcats': 'NW',
+      'Northwestern': 'NW',
+      'Penn State Nittany Lions': 'PSU',
+      'Penn State': 'PSU',
+      'Nittany Lions': 'PSU',
+      'Rutgers Scarlet Knights': 'Rut',
+      'Rutgers': 'Rut',
+      'Scarlet Knights': 'Rut',
+      'Maryland Terrapins': 'Mary',
+      'Maryland': 'Mary',
+      'Terrapins': 'Mary',
+      'Louisville Cardinals': 'Lou',
+      'Louisville': 'Lou',
+      'Cardinals': 'Lou',
+      'Syracuse Orange': 'Syr',
+      'Syracuse': 'Syr',
+      'Orange': 'Syr',
+      'Orangemen': 'Syr',
+      'Syracuse Orangemen': 'Syr',
       'Pittsburgh Panthers': 'Pitt',
       'Pittsburgh': 'Pitt',
       'Boston College Eagles': 'BC',
       'Boston College': 'BC',
-      'Clemson Tigers': 'Clemson',
-      'Clemson': 'Clemson',
-      'Georgia Bulldogs': 'Georgia',
-      'Georgia': 'Georgia',
-      'South Carolina Gamecocks': 'SCar',
-      'South Carolina': 'SCar',
-      'Gamecocks': 'SCar',
-      'Missouri Tigers': 'Missouri',
-      'Missouri': 'Missouri',
-      'Ole Miss Rebels': 'Miss',
-      'Ole Miss': 'Miss',
-      'Rebels': 'Miss',
-      'Mississippi State Bulldogs': 'MissSt',
-      'Mississippi State': 'MissSt',
+      'Clemson Tigers': 'Clem',
+      'Clemson': 'Clem',
+      'Georgia Bulldogs': 'UGA',
+      'Georgia': 'UGA',
+      'South Carolina Gamecocks': 'SoCar',
+      'South Carolina': 'SoCar',
+      'Gamecocks': 'SoCar',
+      'Missouri Tigers': 'Mizz',
+      'Missouri': 'Mizz',
+      'Ole Miss Rebels': 'OM',
+      'Ole Miss': 'OM',
+      'Rebels': 'OM',
+      'Mississippi State Bulldogs': 'MsSt',
+      'Mississippi State': 'MsSt',
       'LSU Tigers': 'LSU',
       'LSU': 'LSU',
-      'Oklahoma Sooners': 'Oklahoma',
-      'Oklahoma': 'Oklahoma',
+      'Oklahoma Sooners': 'OU',
+      'Oklahoma': 'OU',
       'Oklahoma State Cowboys': 'OkSt',
       'Oklahoma State': 'OkSt',
-      'Baylor Bears': 'Baylor',
-      'Baylor': 'Baylor',
+      'Baylor Bears': 'Bylr',
+      'Baylor': 'Bylr',
       'TCU Horned Frogs': 'TCU',
       'TCU': 'TCU',
       'Horned Frogs': 'TCU',
-      'West Virginia Mountaineers': 'WVU',
-      'West Virginia': 'WVU',
-      'Kansas State Wildcats': 'KState',
-      'Kansas State': 'KState',
+      'West Virginia Mountaineers': 'WV',
+      'West Virginia': 'WV',
+      'Kansas State Wildcats': 'KSt',
+      'Kansas State': 'KSt',
       'Iowa State Cyclones': 'IoSt',
-      'Oregon Ducks': 'Oregon',
-      'Oregon': 'Oregon',
-      'Oregon State Beavers': 'OregonSt',
-      'Oregon State': 'OregonSt',
-      'Washington Huskies': 'Washington',
-      'Washington': 'Washington',
-      'Washington State Cougars': 'WashSt',
-      'Washington State': 'WashSt',
+      'Oregon Ducks': 'Ore',
+      'Oregon': 'Ore',
+      'Oregon State Beavers': 'OrSt',
+      'Oregon State': 'OrSt',
+      'Washington Huskies': 'Wash',
+      'Washington': 'Wash',
+      'Washington State Cougars': 'WaSt',
+      'Washington State': 'WaSt',
       'UCLA Bruins': 'UCLA',
       'UCLA': 'UCLA',
       'USC Trojans': 'USC',
       'USC': 'USC',
-      'Stanford Cardinal': 'Stanford',
-      'Stanford': 'Stanford',
+      'Stanford Cardinal': 'Stan',
+      'Stanford': 'Stan',
       'California Golden Bears': 'Cal',
       'Utah Utes': 'Utah',
       'Utah': 'Utah',
-      'Arizona State Sun Devils': 'ASU',
-      'Arizona State': 'ASU',
+      'Arizona State Sun Devils': 'AzSt',
+      'Arizona State': 'AzSt',
       'Colorado Buffaloes': 'Colo',
-      'Utah State Aggies': 'UtahSt',
-      'Utah State': 'UtahSt',
+      'Utah State Aggies': 'USt',
+      'Utah State': 'USt',
       'San Diego State Aztecs': 'SDSU',
       'San Diego State': 'SDSU',
-      'Boise State Broncos': 'BoiseSt',
-      'Boise State': 'BoiseSt',
-      'Nevada Wolf Pack': 'Nevada',
-      'Nevada': 'Nevada',
+      'Boise State Broncos': 'Boise',
+      'Boise State': 'Boise',
+      'Nevada Wolf Pack': 'Nev',
+      'Nevada': 'Nev',
       'UNLV Runnin Rebels': 'UNLV',
       'UNLV': 'UNLV',
-      'New Mexico Lobos': 'NewMex',
-      'New Mexico': 'NewMex',
+      'New Mexico Lobos': 'NewMx',
+      'New Mexico': 'NewMx',
       'Wyoming': 'Wyoming',
       'Air Force': 'AirForce',
       'Army': 'Army',
       'Navy': 'Navy',
-      'Memphis Tigers': 'Memphis',
-      'Memphis': 'Memphis',
+      'Memphis Tigers': 'Mem',
+      'Memphis': 'Mem',
       'Cincinnati Bearcats': 'Cincinnati',
       'Cincinnati': 'Cincinnati',
       'Bearcats': 'Cincinnati',
-      'Houston Cougars': 'Houston',
-      'Houston': 'Houston',
+      'Houston Cougars': 'Hou',
+      'Houston': 'Hou',
       'Tulane Green Wave': 'Tulane',
       'Tulane': 'Tulane',
       'Green Wave': 'Tulane',
@@ -343,15 +295,15 @@ export async function getTeamIdByName(teamName: string): Promise<string | null> 
       'UCF Knights': 'UCF',
       'UCF': 'UCF',
       'Knights': 'UCF',
-      'USF Bulls': 'USF',
-      'USF': 'USF',
-      'Bulls': 'USF',
+      'USF Bulls': 'SFla',
+      'USF': 'SFla',
+      'Bulls': 'SFla',
       'Marshall Thundering Herd': 'Marshall',
       'Marshall': 'Marshall',
       'Thundering Herd': 'Marshall',
-      'Western Kentucky Hilltoppers': 'WKU',
-      'Western Kentucky': 'WKU',
-      'Hilltoppers': 'WKU',
+      'Western Kentucky Hilltoppers': 'WKy',
+      'Western Kentucky': 'WKy',
+      'Hilltoppers': 'WKy',
       'Middle Tennessee Blue Raiders': 'MTSU',
       'Middle Tennessee': 'MTSU',
       'Blue Raiders': 'MTSU',
@@ -374,9 +326,9 @@ export async function getTeamIdByName(teamName: string): Promise<string | null> 
       'Old Dominion Monarchs': 'ODU',
       'Old Dominion': 'ODU',
       'Monarchs': 'ODU',
-      'Liberty Flames': 'Liberty',
-      'Liberty': 'Liberty',
-      'Flames': 'Liberty',
+      'Liberty Flames': 'Lib',
+      'Liberty': 'Lib',
+      'Flames': 'Lib',
       'Appalachian State Mountaineers': 'AppSt',
       'Appalachian State': 'AppSt',
       'Georgia Southern Eagles': 'GaSouthern',
@@ -386,17 +338,17 @@ export async function getTeamIdByName(teamName: string): Promise<string | null> 
       'Chanticleers': 'Coastal',
       'Troy Trojans': 'Troy',
       'Troy': 'Troy',
-      'South Alabama Jaguars': 'USA',
-      'South Alabama': 'USA',
-      'Jaguars': 'USA',
-      'Georgia State Panthers': 'GaState',
-      'Georgia State': 'GaState',
+      'South Alabama Jaguars': 'SAla',
+      'South Alabama': 'SAla',
+      'Jaguars': 'SAla',
+      'Georgia State Panthers': 'GeoSt',
+      'Georgia State': 'GeoSt',
       'UL Monroe Warhawks': 'ULM',
       'UL Monroe': 'ULM',
       'Warhawks': 'ULM',
-      'Louisiana Ragin Cajuns': 'ULL',
-      'Louisiana': 'ULL',
-      'Ragin Cajuns': 'ULL',
+      'Louisiana Ragin Cajuns': 'UL',
+      'Louisiana': 'UL',
+      'Ragin Cajuns': 'UL',
       'Arkansas State Red Wolves': 'ArkSt',
       'Arkansas State': 'ArkSt',
       'Red Wolves': 'ArkSt',
@@ -405,20 +357,20 @@ export async function getTeamIdByName(teamName: string): Promise<string | null> 
       'UTEP Miners': 'UTEP',
       'UTEP': 'UTEP',
       'Miners': 'UTEP',
-      'New Mexico State Aggies': 'NMSU',
-      'New Mexico State': 'NMSU',
+      'New Mexico State Aggies': 'NMSt',
+      'New Mexico State': 'NMSt',
       'Idaho Vandals': 'Idaho',
       'Idaho': 'Idaho',
       'Vandals': 'Idaho',
-      'Montana Grizzlies': 'Montana',
-      'Montana': 'Montana',
-      'Grizzlies': 'Montana',
-      'Montana State Bobcats': 'MontSt',
-      'Montana State': 'MontSt',
-      'North Dakota State Bison': 'NDSU',
-      'North Dakota State': 'NDSU',
-      'South Dakota State Jackrabbits': 'SDSU',
-      'South Dakota State': 'SDSU',
+      'Montana Grizzlies': 'Mont',
+      'Montana': 'Mont',
+      'Grizzlies': 'Mont',
+      'Montana State Bobcats': 'MonSt',
+      'Montana State': 'MonSt',
+      'North Dakota State Bison': 'NorSt',
+      'North Dakota State': 'NorSt',
+      'South Dakota State Jackrabbits': 'SDkSt',
+      'South Dakota State': 'SDkSt',
       'Northern Iowa Panthers': 'UNI',
       'Northern Iowa': 'UNI',
       'South Dakota Coyotes': 'SD',
@@ -427,24 +379,24 @@ export async function getTeamIdByName(teamName: string): Promise<string | null> 
       'North Dakota': 'UND',
       'Weber State Wildcats': 'WeberSt',
       'Weber State': 'WeberSt',
-      'Eastern Washington Eagles': 'EWU',
-      'Eastern Washington': 'EWU',
+      'Eastern Washington Eagles': 'EW',
+      'Eastern Washington': 'EW',
       'Portland State Vikings': 'PortlandSt',
       'Portland State': 'PortlandSt',
       'Sacramento State Hornets': 'SacSt',
       'Sacramento State': 'SacSt',
-      'Cal Poly Mustangs': 'CalPoly',
-      'Cal Poly': 'CalPoly',
+      'Cal Poly Mustangs': 'CP',
+      'Cal Poly': 'CP',
       'UC Davis Aggies': 'UCDavis',
       'UC Davis': 'UCDavis',
-      'Cal State Fullerton Titans': 'CSFullerton',
-      'Cal State Fullerton': 'CSFullerton',
-      'Titans': 'CSFullerton',
+      'Cal State Fullerton Titans': 'CSUF',
+      'Cal State Fullerton': 'CSUF',
+      'Titans': 'CSUF',
       'Long Beach State 49ers': 'LBSU',
       'Long Beach State': 'LBSU',
-      'UC Irvine Anteaters': 'UCIrvine',
-      'UC Irvine': 'UCIrvine',
-      'Anteaters': 'UCIrvine',
+      'UC Irvine Anteaters': 'UCI',
+      'UC Irvine': 'UCI',
+      'Anteaters': 'UCI',
       'UC Santa Barbara Gauchos': 'UCSB',
       'UC Santa Barbara': 'UCSB',
       'Gauchos': 'UCSB',
@@ -461,7 +413,7 @@ export async function getTeamIdByName(teamName: string): Promise<string | null> 
       'Fresno State': 'FresnoSt',
       'San Jose State Spartans': 'SJSU',
       'San Jose State': 'SJSU',
-      'Lobos': 'NewMex',
+      'Lobos': 'NewMx',
       'Falcons': 'AirForce',
       'Black Knights': 'Army',
     };
@@ -484,11 +436,11 @@ export async function getTeamIdByName(teamName: string): Promise<string | null> 
 }
 
 /**
- * Fallback team data if Google Sheets is unavailable
+ * Fallback team data if local JSON is unavailable
  */
 function getFallbackTeamData(): TeamRefData[] {
   return [
-    // Common tournament teams - CORRECTED MAPPINGS from Google Sheet
+    // Common tournament teams
     { abbr: 'UConn', id: '41' },      // Connecticut Huskies
     { abbr: 'UNC', id: '153' },       // North Carolina Tar Heels  
     { abbr: 'UK', id: '96' },         // Kentucky Wildcats
@@ -497,11 +449,11 @@ function getFallbackTeamData(): TeamRefData[] {
     { abbr: 'Duke', id: '150' },      // Duke Blue Devils
     { abbr: 'Purd', id: '2509' },     // Purdue Boilermakers
     { abbr: 'Hou', id: '248' },       // Houston Cougars
-    { abbr: 'Cre', id: '228' },       // Creighton Bluejays
+    { abbr: 'Cre', id: '156' },       // Creighton Bluejays
     { abbr: 'IoSt', id: '66' },       // Iowa State Cyclones
     { abbr: 'Zona', id: '12' },       // Arizona Wildcats
     { abbr: 'MicSt', id: '127' },     // Michigan State Spartans
-    { abbr: 'Fla', id: '57' },        // Florida Gators
+    { abbr: 'Flo', id: '57' },        // Florida Gators
     { abbr: 'Bama', id: '333' },      // Alabama Crimson Tide
     { abbr: 'NCSt', id: '152' },      // NC State Wolfpack
     { abbr: 'Gonz', id: '2250' },     // Gonzaga Bulldogs
@@ -513,112 +465,19 @@ function getFallbackTeamData(): TeamRefData[] {
     { abbr: 'SoCar', id: '2579' },    // South Carolina Gamecocks
     { abbr: 'Ore', id: '2483' },      // Oregon Ducks
     { abbr: 'Neb', id: '158' },       // Nebraska Cornhuskers
-    { abbr: 'WaSt', id: '2655' },     // Washington State Cougars
+    { abbr: 'WaSt', id: '265' },      // Washington State Cougars
     { abbr: 'StMary', id: '2608' },   // Saint Mary's Gaels
-    { abbr: 'Mary', id: '2608' },      // Saint Mary's Gaels (alternative abbreviation)
-    { abbr: 'StJ', id: '2599' },       // St. John's Red Storm
-    { abbr: 'MeM', id: '235' },        // Memphis Tigers
+    { abbr: 'Mary', id: '2608' },     // Saint Mary's Gaels (alternative abbreviation)
+    { abbr: 'StJ', id: '2599' },      // St. John's Red Storm
+    { abbr: 'MeM', id: '235' },       // Memphis Tigers
     
-    // Missing abbreviations from standings data (from Google Sheet)
-    { abbr: 'JM', id: '256' },         // James Madison Dukes (Row 137)
-    { abbr: 'TA&M', id: '245' },       // Texas A&M Aggies (Row 63)
-    { abbr: 'DRK', id: '2181' },       // Drake Bulldogs (Row 90)
-    { abbr: 'Drk', id: '2181' },       // Drake Bulldogs (alternative case)
-    { abbr: 'FLO', id: '57' },         // Florida Gators
-    { abbr: 'Flo', id: '57' },         // Florida Gators (alternative case)
-    { abbr: 'Texas', id: '251' },      // Texas Longhorns
-    { abbr: 'TTech', id: '2641' },     // Texas Tech Red Raiders
-    { abbr: 'FAU', id: '2229' },       // Florida Atlantic Owls
-    
-    // Teams from Google Sheet
-    { abbr: 'AA', id: '1' },          // Alaska Anchorage Seawolves
-    { abbr: 'Aub', id: '2' },         // Auburn Tigers
-    { abbr: 'UAB', id: '5' },         // UAB Blazers
-    { abbr: 'SAla', id: '6' },        // South Alabama Jaguars
-    { abbr: 'Ark', id: '8' },         // Arkansas Razorbacks
-    { abbr: 'ArizSt', id: '9' },      // Arizona State Sun Devils
-    { abbr: 'Ariz', id: '12' },       // Arizona Wildcats
-    { abbr: 'SDSU', id: '21' },       // San Diego State Aztecs
-    { abbr: 'Stan', id: '24' },       // Stanford Cardinal
-    { abbr: 'UCLA', id: '26' },       // UCLA Bruins
-    { abbr: 'USC', id: '30' },        // USC Trojans
-    { abbr: 'ColoSt', id: '36' },     // Colorado State Rams
-    { abbr: 'Colo', id: '38' },       // Colorado Buffaloes
-    { abbr: 'Cal', id: '25' },        // California Golden Bears
-    { abbr: 'FlaSt', id: '52' },      // Florida State Seminoles
-    { abbr: 'GaTech', id: '59' },     // Georgia Tech Yellow Jackets
-    { abbr: 'Ind', id: '84' },        // Indiana Hoosiers
-    { abbr: 'ND', id: '87' },         // Notre Dame Fighting Irish
-    { abbr: 'LSU', id: '99' },        // LSU Tigers
-    { abbr: 'Ariz', id: '12' },       // Arizona Wildcats
-    { abbr: 'BYU', id: '252' },       // BYU Cougars
-    { abbr: 'Iowa', id: '2294' },     // Iowa Hawkeyes
-    { abbr: 'KSU', id: '2306' },      // Kansas State Wildcats
-    { abbr: 'Miami', id: '2390' },    // Miami Hurricanes
-    { abbr: 'Mich', id: '130' },      // Michigan Wolverines
-    { abbr: 'Minn', id: '135' },      // Minnesota Golden Gophers
-    { abbr: 'Miss', id: '145' },      // Ole Miss Rebels
-    { abbr: 'MissSt', id: '344' },    // Mississippi State Bulldogs
-    { abbr: 'Mizzou', id: '142' },    // Missouri Tigers
-    { abbr: 'Nev', id: '2440' },      // Nevada Wolf Pack
-    { abbr: 'NMex', id: '167' },      // New Mexico Lobos
-    { abbr: 'OhioSt', id: '194' },    // Ohio State Buckeyes
-    { abbr: 'Okla', id: '201' },      // Oklahoma Sooners
-    { abbr: 'OkSt', id: '197' },      // Oklahoma State Cowboys
-    { abbr: 'OreSt', id: '204' },     // Oregon State Beavers
-    { abbr: 'PennSt', id: '213' },    // Penn State Nittany Lions
-    { abbr: 'Pitt', id: '221' },      // Pittsburgh Panthers
-    { abbr: 'Rut', id: '164' },       // Rutgers Scarlet Knights
-    { abbr: 'Syra', id: '183' },      // Syracuse Orange
-    { abbr: 'TCU', id: '2628' },      // TCU Horned Frogs
-    { abbr: 'Tex', id: '251' },       // Texas Longhorns
-    { abbr: 'TexA&M', id: '245' },    // Texas A&M Aggies
-    { abbr: 'Utah', id: '254' },      // Utah Utes
-    { abbr: 'UtahSt', id: '328' },    // Utah State Aggies
-    { abbr: 'Vandy', id: '238' },     // Vanderbilt Commodores
-    { abbr: 'Vill', id: '222' },      // Villanova Wildcats
-    { abbr: 'VT', id: '259' },        // Virginia Tech Hokies
-    { abbr: 'Wash', id: '264' },      // Washington Huskies
-    { abbr: 'WVU', id: '277' },       // West Virginia Mountaineers
-    { abbr: 'Xav', id: '2752' },      // Xavier Musketeers
-    
-    // Missing major teams
-    { abbr: 'UVA', id: '258' },        // Virginia Cavaliers
-    { abbr: 'Maryland', id: '120' },   // Maryland Terrapins
-    { abbr: 'Louisville', id: '97' },  // Louisville Cardinals
-    
-    // Additional teams from Google Sheet
-    { abbr: 'GeoSt', id: '2247' },    // Georgia State Panthers
-    { abbr: 'GCU', id: '2253' },      // Grand Canyon Lopes
-    { abbr: 'Lib', id: '2335' },      // Liberty Flames
-    
-    // Common alternative abbreviations
-    { abbr: 'Conn', id: '41' },       // Connecticut Huskies
-    { abbr: 'NC', id: '153' },        // North Carolina Tar Heels
-    { abbr: 'Kent', id: '96' },       // Kentucky Wildcats
-    { abbr: 'Kansas', id: '2305' },   // Kansas Jayhawks
-    { abbr: 'Tennessee', id: '2633' }, // Tennessee Volunteers
-    { abbr: 'Arizona', id: '12' },    // Arizona Wildcats
-    { abbr: 'Florida', id: '57' },    // Florida Gators
-    { abbr: 'Alabama', id: '333' },   // Alabama Crimson Tide
-    { abbr: 'Auburn', id: '2' },      // Auburn Tigers
-    { abbr: 'Arkansas', id: '8' },    // Arkansas Razorbacks
-    { abbr: 'Houston', id: '248' },   // Houston Cougars
-    { abbr: 'Creighton', id: '228' }, // Creighton Bluejays
-    { abbr: 'Iowa State', id: '66' }, // Iowa State Cyclones
-    { abbr: 'Michigan State', id: '127' }, // Michigan State Spartans
-    { abbr: 'Gonzaga', id: '2250' },  // Gonzaga Bulldogs
-    { abbr: 'Marquette', id: '269' }, // Marquette Golden Eagles
-    { abbr: 'Baylor', id: '239' },    // Baylor Bears
-    { abbr: 'Illinois', id: '356' },  // Illinois Fighting Illini
-    { abbr: 'Clemson', id: '228' },   // Clemson Tigers
-    { abbr: 'Wisconsin', id: '275' }, // Wisconsin Badgers
-    { abbr: 'South Carolina', id: '2579' }, // South Carolina Gamecocks
-    { abbr: 'Oregon', id: '2483' },   // Oregon Ducks
-    { abbr: 'Nebraska', id: '158' },  // Nebraska Cornhuskers
-    { abbr: 'Washington State', id: '2655' }, // Washington State Cougars
-    { abbr: 'Saint Mary\'s', id: '2608' }, // Saint Mary's Gaels
-    { abbr: 'St Mary\'s', id: '2608' }, // Saint Mary's Gaels
-    { abbr: 'St. Mary\'s', id: '2608' } // Saint Mary's Gaels
+    // Missing abbreviations from standings data
+    { abbr: 'JM', id: '256' },        // James Madison Dukes
+    { abbr: 'TA&M', id: '245' },      // Texas A&M Aggies
+    { abbr: 'Drk', id: '2181' },      // Drake Bulldogs
+    { abbr: 'FLO', id: '57' },        // Florida Gators
+    { abbr: 'Texas', id: '251' },     // Texas Longhorns
+    { abbr: 'TTech', id: '2641' },    // Texas Tech Red Raiders
+    { abbr: 'FAU', id: '2226' },      // Florida Atlantic Owls
   ];
 }

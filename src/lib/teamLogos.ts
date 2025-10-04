@@ -2,7 +2,6 @@
 // Optimized for frequent use across the site
 
 import { getTeamIdByAbbr, getTeamIdByName } from './teamRefData';
-import { getCachedLogoUrl, preloadLogos } from './logoCache';
 
 export interface TeamInfo {
   id: string;
@@ -10,60 +9,20 @@ export interface TeamInfo {
   logoUrl: string | null;
 }
 
-// Cache for logo URLs to avoid repeated string concatenation
-const logoUrlCache = new Map<string, string>();
-
-// Pre-computed base URL parts for performance
-const ESPN_BASE_URL = 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/ncaa/500/';
-const ESPN_EXTENSION = '.png';
-
-// Alternative high-quality base URL for better resolution
-const ESPN_HIGH_RES_BASE_URL = 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/ncaa/500/';
-
-// High-resolution base URL for better quality (currently unused but available for future use)
-// const ESPN_HIGH_RES_BASE_URL = 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/ncaa/500/';
-
-/**
- * High-performance function to generate ESPN team logo URLs
- * Uses local cache when available, falls back to ESPN URLs
- * @param teamId - ESPN team ID
- * @param size - Logo size in pixels (default: 30)
- * @returns Local cached URL or ESPN combiner URL for the team logo
- */
-export function getTeamLogoUrl(teamId: string, size: number = 30): string {
-  // Check if we have a locally cached version
-  const cachedUrl = getCachedLogoUrl(teamId, size);
-  if (cachedUrl) {
-    return cachedUrl;
-  }
-  
-  // Create cache key for URL generation
-  const cacheKey = `${teamId}-${size}`;
-  
-  // Return cached URL if available
-  if (logoUrlCache.has(cacheKey)) {
-    return logoUrlCache.get(cacheKey)!;
-  }
-  
-  // Generate new URL with higher quality parameters
-  // For small images, request a much larger size for better quality when scaled down
-  const requestedSize = size <= 40 ? Math.max(size * 5, 200) : size;
-  
-  // Try the highest quality ESPN URL format
-  // Use the standard ESPN teamlogos URL with maximum quality parameters
-  const logoUrl = `${ESPN_BASE_URL}${teamId}${ESPN_EXTENSION}&h=${requestedSize}&w=${requestedSize}&q=100&f=png&transparent=true`;
-  
-  // Debug logging
-  console.log(`🔍 Generated logo URL for teamId "${teamId}", size ${size}, requestedSize ${requestedSize}:`, logoUrl);
-  
-  // Cache the result
-  logoUrlCache.set(cacheKey, logoUrl);
-  
-  return logoUrl;
-}
-
 // Cache for team info to avoid repeated lookups
 const teamInfoCache = new Map<string, TeamInfo>();
+
+/**
+ * High-performance function to generate local team logo URLs
+ * Uses local logo files for better performance and reliability
+ * @param teamId - ESPN team ID
+ * @param size - Logo size in pixels (default: 30) - used for Next.js Image optimization
+ * @returns Local logo URL
+ */
+export function getTeamLogoUrl(teamId: string, size: number = 30): string {
+  // Use local logo files for better performance and reliability
+  return `/logos/teams/${teamId}.png`;
+}
 
 /**
  * High-performance function to get team information including logo URL
@@ -94,11 +53,11 @@ export async function getTeamInfo(teamName: string, size: number = 30): Promise<
     
     if (!teamId) {
       console.warn(`Team logo not found for: "${teamName}". Please add to team reference data.`);
-      // Return a placeholder that will show the team name as text
+      // Return a placeholder that will show the basketball fallback
       const placeholderInfo: TeamInfo = {
         id: 'placeholder',
         name: teamName,
-        logoUrl: null
+        logoUrl: '/images/basketball icon.png'
       };
       teamInfoCache.set(cacheKey, placeholderInfo);
       return placeholderInfo;
@@ -118,11 +77,11 @@ export async function getTeamInfo(teamName: string, size: number = 30): Promise<
     return teamInfo;
   } catch (error) {
     console.error(`Error getting team info for ${teamName}:`, error);
-    // Return a placeholder that will show the team name as text
+    // Return a placeholder that will show the basketball fallback
     const errorInfo: TeamInfo = {
       id: 'placeholder',
       name: teamName,
-      logoUrl: null
+      logoUrl: '/images/basketball icon.png'
     };
     teamInfoCache.set(cacheKey, errorInfo);
     return errorInfo;
@@ -134,7 +93,7 @@ export async function getTeamInfo(teamName: string, size: number = 30): Promise<
  * This is the fastest way to get a logo URL - no async operations needed
  * @param teamId - ESPN team ID
  * @param size - Logo size in pixels (default: 30)
- * @returns ESPN combiner URL for the team logo
+ * @returns Local logo URL
  */
 export function getLogoUrlSync(teamId: string, size: number = 30): string {
   return getTeamLogoUrl(teamId, size);
@@ -144,28 +103,16 @@ export function getLogoUrlSync(teamId: string, size: number = 30): string {
  * Clear all caches - useful for testing or memory management
  */
 export function clearLogoCaches(): void {
-  logoUrlCache.clear();
   teamInfoCache.clear();
 }
 
 /**
  * Get cache statistics for monitoring performance
  */
-export function getCacheStats(): { logoUrlCache: number; teamInfoCache: number } {
+export function getCacheStats(): { teamInfoCache: number } {
   return {
-    logoUrlCache: logoUrlCache.size,
     teamInfoCache: teamInfoCache.size
   };
-}
-
-/**
- * Preload logos for teams used in standings data
- * This will cache logos locally for instant loading
- */
-export async function preloadStandingsLogos(teamIds: string[]): Promise<void> {
-  console.log(`🖼️ Preloading logos for ${teamIds.length} teams`);
-  await preloadLogos(teamIds);
-  console.log(`✅ Logo preload completed`);
 }
 
 export function parseTeamPicks(picksString: string): string[] {
