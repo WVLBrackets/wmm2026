@@ -164,32 +164,36 @@ function parseStandingsCSV(csvText: string): { entries: StandingsEntry[]; quarte
   // Col K (index 10): Final winner (Champion)
   const finalWinner = keyRow[10]?.trim() || '';
   
-  // Extract Column O (Out) - eliminated teams from multiple rows
+  // Extract eliminated teams using new logic: Column O (teams) + Column P (TRUE/FALSE)
   const eliminatedTeams: string[] = [];
   
   // Check rows starting from row 2 until we find a blank cell in Column O
   for (let rowIndex = 1; rowIndex < lines.length; rowIndex++) { // Start from row 2 (0-indexed: 1)
     if (lines[rowIndex]) {
       const row = parseCSVLine(lines[rowIndex]);
-      if (row.length > 14) { // Column O is index 14
-        const outTeam = row[14]?.trim();
-        console.log(`🔍 OUT column row ${rowIndex + 1} raw value: "${outTeam}"`);
+      if (row.length > 15) { // Need both Column O (14) and Column P (15)
+        const teamName = row[14]?.trim(); // Column O: Team name
+        const isEliminated = row[15]?.trim().toUpperCase(); // Column P: TRUE/FALSE
         
-        // If we hit a blank cell, stop parsing
-        if (!outTeam || outTeam === '') {
-          console.log(`🔍 Found blank cell in row ${rowIndex + 1}, stopping OUT column parsing`);
+        console.log(`🔍 Row ${rowIndex + 1}: Team="${teamName}", Eliminated="${isEliminated}"`);
+        
+        // If we hit a blank team name, stop parsing
+        if (!teamName || teamName === '') {
+          console.log(`🔍 Found blank team name in row ${rowIndex + 1}, stopping elimination parsing`);
           break;
         }
         
-        // Split by comma if multiple teams are listed
-        const teams = outTeam.split(',').map(team => team.trim()).filter(team => team !== '');
-        console.log(`🔍 Parsed eliminated teams from row ${rowIndex + 1}: [${teams.join(', ')}]`);
-        eliminatedTeams.push(...teams);
+        // If Column P is TRUE, the team is eliminated
+        if (isEliminated === 'TRUE') {
+          console.log(`🔍 Team "${teamName}" is eliminated (TRUE in Column P)`);
+          eliminatedTeams.push(teamName);
+        } else {
+          console.log(`🔍 Team "${teamName}" is still in (FALSE in Column P)`);
+        }
       }
     }
   }
   console.log(`🔍 Final eliminated teams array: [${eliminatedTeams.join(', ')}]`);
-  console.log(`🔍 OUT column raw value: "${keyRow[14]?.trim() || ''}"`);
   
   // Parse player entries starting from row 3
   for (let i = 2; i < lines.length; i++) {
