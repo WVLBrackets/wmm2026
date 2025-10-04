@@ -42,6 +42,7 @@ export default function DynamicNavigation() {
           siteDescription: 'Annual March Madness Bracket Challenge',
           oldSiteUrl: 'https://warrensmadness.webnode.page/',
           standingsTabs: 2,
+          standingsYear: '2026',
           footerText: '© 2001 Warren\'s March Madness | All rights reserved',
           contactMe: 'warren@example.com',
           prizesActiveForecast: 'Forecast',
