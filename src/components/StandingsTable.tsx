@@ -497,7 +497,9 @@ export default function StandingsTable() {
                 className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {availableDays.map(day => (
-                  <option key={day} value={day}>{day}</option>
+                  <option key={day} value={day}>
+                    {day.replace(/^Day(\d+)$/, 'Day $1')}
+                  </option>
                 ))}
               </select>
               {loading && (
