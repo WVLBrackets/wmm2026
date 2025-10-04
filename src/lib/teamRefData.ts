@@ -6,8 +6,8 @@ export interface TeamRefData {
   id: string;
 }
 
-// Google Sheets configuration (currently using fallback data due to CORS)
-// const TEAM_REF_SHEET_ID = '1qFjvpimsmilkuJT_zOn3IhidkqLpzbX8MRn1cQxjuHw';
+// Google Sheets configuration
+const TEAM_REF_SHEET_ID = '1qFjvpimsmilkuJT_zOn3IhidkqLpzbX8MRn1cQxjuHw';
 
 
 // Cache for team reference data
@@ -30,29 +30,60 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
     return cachedTeamData;
   }
 
-  // Use fallback data for now - Google Sheets has CORS issues
-  console.log('📋 Using fallback team reference data (Google Sheets has CORS issues)');
-  const fallbackStart = performance.now();
-  const fallbackData = getFallbackTeamData();
-  const fallbackEnd = performance.now();
-  console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
-  
-  // Log available team abbreviations for debugging
-  console.log(`📋 Available team abbreviations (${fallbackData.length} total):`, 
-    fallbackData.map(t => t.abbr).sort().join(', '));
-  
-  cachedTeamData = fallbackData;
-  lastFetchTime = now;
-  
-  const totalTime = performance.now() - startTime;
-  console.log(`✅ Team reference data ready in ${totalTime.toFixed(2)}ms`);
-  return fallbackData;
+  // Try to fetch from Google Sheets first
+  try {
+    console.log('📋 Attempting to fetch team reference data from Google Sheets...');
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${TEAM_REF_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=RefData`;
+    console.log(`📋 Fetching from: ${csvUrl}`);
+    
+    const response = await fetch(csvUrl);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const csvText = await response.text();
+    console.log(`📋 Successfully fetched CSV data (${csvText.length} characters)`);
+    
+    const teamData = parseTeamRefCSV(csvText);
+    console.log(`📋 Parsed ${teamData.length} teams from Google Sheets`);
+    
+    // Log available team abbreviations for debugging
+    console.log(`📋 Available team abbreviations (${teamData.length} total):`, 
+      teamData.map(t => t.abbr).sort().join(', '));
+    
+    cachedTeamData = teamData;
+    lastFetchTime = now;
+    
+    const totalTime = performance.now() - startTime;
+    console.log(`✅ Team reference data loaded from Google Sheets in ${totalTime.toFixed(2)}ms`);
+    return teamData;
+    
+  } catch (error) {
+    console.warn('📋 Failed to fetch from Google Sheets, using fallback data:', error);
+    
+    // Use fallback data if Google Sheets fails
+    const fallbackStart = performance.now();
+    const fallbackData = getFallbackTeamData();
+    const fallbackEnd = performance.now();
+    console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
+    
+    // Log available team abbreviations for debugging
+    console.log(`📋 Available team abbreviations (${fallbackData.length} total):`, 
+      fallbackData.map(t => t.abbr).sort().join(', '));
+    
+    cachedTeamData = fallbackData;
+    lastFetchTime = now;
+    
+    const totalTime = performance.now() - startTime;
+    console.log(`✅ Team reference data ready in ${totalTime.toFixed(2)}ms`);
+    return fallbackData;
+  }
 }
 
 /**
- * Parse CSV data into team reference entries (currently unused)
+ * Parse CSV data into team reference entries
  */
-/* function parseTeamRefCSV(csvText: string): TeamRefData[] {
+function parseTeamRefCSV(csvText: string): TeamRefData[] {
   const lines = csvText.split('\n').filter(line => line.trim());
   const teamData: TeamRefData[] = [];
   
@@ -98,7 +129,7 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
   }
   
   return teamData;
-} */
+}
 
 /**
  * Parse a single CSV line, handling quoted fields
