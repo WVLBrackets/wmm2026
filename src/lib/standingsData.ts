@@ -74,7 +74,8 @@ export async function getStandingsData(day: string = 'Day1'): Promise<StandingsD
 
   try {
     // Convert "Day1" to "Day 1", "Day2" to "Day 2", etc.
-    const sheetName = day.replace(/^Day(\d+)$/, 'Day $1');
+    // But don't modify "Final" - it should stay as "Final"
+    const sheetName = day === 'Final' ? 'Final' : day.replace(/^Day(\d+)$/, 'Day $1');
     const encodedSheetName = encodeURIComponent(sheetName);
     const csvUrl = `https://docs.google.com/spreadsheets/d/${STANDINGS_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodedSheetName}`;
     
@@ -276,16 +277,31 @@ export async function getAvailableDays(): Promise<string[]> {
     const numberOfTabs = siteConfig.standingsTabs || 2;
     const days: string[] = [];
     
-    // Generate days based on the number of tabs
-    for (let i = numberOfTabs; i >= 1; i--) {
+    // First, check if "Final" tab exists and add it as the first option
+    try {
+      const finalUrl = `https://docs.google.com/spreadsheets/d/${STANDINGS_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Final`;
+      const finalResponse = await fetch(finalUrl);
+      if (finalResponse.ok) {
+        days.push('Final');
+        console.log('✅ Found "Final" tab - added as first option');
+      }
+    } catch (error) {
+      console.log('ℹ️ "Final" tab not found or not accessible');
+    }
+    
+    // Generate days in descending order (Day 9, Day 8, etc.)
+    // Cap at Day 9 since there's no Day 10
+    const maxDay = Math.min(numberOfTabs, 9);
+    for (let i = maxDay; i >= 1; i--) {
       days.push(`Day${i}`);
     }
     
+    console.log(`📊 Available days: ${days.join(', ')}`);
     return days;
   } catch (error) {
     console.error('Error getting available days:', error);
-    // Fallback to 2 days
-    return ['Day2', 'Day1'];
+    // Fallback to Final + Day 9, Day 8, etc.
+    return ['Final', 'Day9', 'Day8', 'Day7', 'Day6', 'Day5', 'Day4', 'Day3', 'Day2', 'Day1'];
   }
 }
 

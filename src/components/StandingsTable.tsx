@@ -498,7 +498,7 @@ export default function StandingsTable() {
               >
                 {availableDays.map(day => (
                   <option key={day} value={day}>
-                    {day.replace(/^Day(\d+)$/, 'Day $1')}
+                    {day === 'Final' ? 'Final' : day.replace(/^Day(\d+)$/, 'Day $1')}
                   </option>
                 ))}
               </select>
