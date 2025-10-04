@@ -58,6 +58,7 @@ function getFallbackSiteConfig(): SiteConfigData {
     siteDescription: process.env.NEXT_PUBLIC_SITE_DESCRIPTION || 'Annual March Madness Bracket Challenge',
     oldSiteUrl: 'https://warrensmadness.webnode.page/',
     standingsTabs: parseInt(process.env.NEXT_PUBLIC_STANDINGS_TABS || '2'),
+    standingsYear: process.env.NEXT_PUBLIC_STANDINGS_YEAR || '2026',
     footerText: process.env.NEXT_PUBLIC_FOOTER_TEXT || '© 2001 Warren\'s March Madness | All rights reserved',
     contactMe: process.env.NEXT_PUBLIC_CONTACT_ME || 'warren@example.com',
     prizesActiveForecast: process.env.NEXT_PUBLIC_PRIZES_ACTIVE_FORECAST || 'Forecast',

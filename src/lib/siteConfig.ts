@@ -15,6 +15,7 @@ export interface SiteConfigData {
   siteDescription: string;
   oldSiteUrl: string;
   standingsTabs: number;
+  standingsYear: string;
   footerText: string;
   contactMe: string;
   prizesActiveForecast: string;
@@ -80,6 +81,9 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
             break;
           case 'standings_tabs':
             config.standingsTabs = parseInt(value) || 2;
+            break;
+          case 'standings_year':
+            config.standingsYear = value;
             break;
           case 'footer_text':
             config.footerText = value;

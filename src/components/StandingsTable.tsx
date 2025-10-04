@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { getStandingsData, getAvailableDays, getCurrentTournamentYear, StandingsEntry, StandingsData, clearStandingsCache, getQuarterfinalColor, getSemifinalColor, getFinalColor } from '@/lib/standingsData';
 import { getTeamInfo, getLogoUrlSync } from '@/lib/teamLogos';
 import { getTeamRefData } from '@/lib/teamRefData';
+import { getSiteConfig } from '@/config/site';
 import { Trophy, Medal, Search, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
 
@@ -169,6 +170,7 @@ export default function StandingsTable() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [tournamentYear, setTournamentYear] = useState<string>('2025'); // Default fallback
+  const [standingsYear, setStandingsYear] = useState<string>('2026'); // Default fallback
   const [teamCache, setTeamCache] = useState<Map<string, { id: string; name: string }>>(globalTeamCache);
 
   // Function to calculate points back
@@ -201,6 +203,22 @@ export default function StandingsTable() {
       }
     };
     loadTournamentYear();
+  }, []);
+
+  // Load standings year from site config
+  useEffect(() => {
+    const loadStandingsYear = async () => {
+      try {
+        const siteConfig = await getSiteConfig();
+        if (siteConfig.standingsYear) {
+          setStandingsYear(siteConfig.standingsYear);
+        }
+      } catch (error) {
+        console.error('Error loading standings year:', error);
+        // Keep the default fallback value
+      }
+    };
+    loadStandingsYear();
   }, []);
 
   // Load available days on component mount
@@ -327,29 +345,6 @@ export default function StandingsTable() {
     return matchesSearch;
   }) || [];
 
-  const handleRefresh = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // Clear cache to force fresh data
-      clearStandingsCache();
-      const data = await getStandingsData(selectedDay);
-      setStandingsData(data);
-      
-      // Preload team data in background
-      const teamRefData = await getTeamRefData();
-      try {
-        preloadTeamDataWithRef(data, teamRefData);
-      } catch (error) {
-        console.error('Background team preload failed:', error);
-      }
-    } catch (error) {
-      setError('Failed to refresh standings data');
-      console.error('Error refreshing standings:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) return <Trophy className="h-4 w-4 text-yellow-500" />;
@@ -437,7 +432,6 @@ export default function StandingsTable() {
     if (rank === 1) return 'bg-yellow-50 border-yellow-200';
     if (rank === 2) return 'bg-gray-50 border-gray-200';
     if (rank === 3) return 'bg-orange-50 border-orange-200';
-    if (rank <= 10) return 'bg-blue-50 border-blue-200';
     return 'bg-white border-gray-200';
   };
 
@@ -458,12 +452,6 @@ export default function StandingsTable() {
         <div className="text-center text-red-600">
           <p className="text-lg font-semibold mb-2">Error Loading Standings</p>
           <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={handleRefresh}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-          >
-            Try Again
-          </button>
         </div>
       </div>
     );
@@ -475,7 +463,7 @@ export default function StandingsTable() {
       <div className="p-6 border-b border-gray-200">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex items-center gap-4">
-            <h2 className="text-2xl font-bold text-gray-900">{tournamentYear} Standings</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{standingsYear} Standings</h2>
             {/* Day selector moved next to title */}
             <div className="flex items-center gap-2">
               <select
@@ -512,15 +500,6 @@ export default function StandingsTable() {
               />
             </div>
             
-            {/* Refresh button */}
-            <button
-              onClick={handleRefresh}
-              disabled={loading}
-              className="hidden md:flex px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors items-center gap-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
           </div>
         </div>
       </div>
