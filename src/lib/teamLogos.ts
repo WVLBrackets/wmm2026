@@ -91,10 +91,9 @@ export async function getTeamInfo(teamName: string, size: number = 30): Promise<
  * Synchronous function to get logo URL when you already have the team ID
  * This is the fastest way to get a logo URL - no async operations needed
  * @param teamId - ESPN team ID
- * @param size - Logo size in pixels (default: 30)
  * @returns Local logo URL
  */
-export function getLogoUrlSync(teamId: string, size: number = 30): string {
+export function getLogoUrlSync(teamId: string): string {
   return getTeamLogoUrl(teamId);
 }
 

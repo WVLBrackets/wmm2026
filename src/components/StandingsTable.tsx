@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getStandingsData, getAvailableDays, getCurrentTournamentYear, StandingsEntry, StandingsData, clearStandingsCache, getQuarterfinalColor, getSemifinalColor, getFinalColor } from '@/lib/standingsData';
+import { getStandingsData, getAvailableDays, StandingsEntry, StandingsData, getQuarterfinalColor, getSemifinalColor, getFinalColor } from '@/lib/standingsData';
 import { getTeamInfo, getLogoUrlSync } from '@/lib/teamLogos';
 import { getTeamRefData } from '@/lib/teamRefData';
 import { getSiteConfig } from '@/config/site';
@@ -36,7 +36,7 @@ function TeamLogo({
         // Check cache first for instant loading
         if (teamCache && teamCache.has(teamName)) {
           const cachedInfo = teamCache.get(teamName)!;
-          const logoUrl = getLogoUrlSync(cachedInfo.id, size);
+          const logoUrl = getLogoUrlSync(cachedInfo.id);
           setTeamInfo({ ...cachedInfo, logoUrl });
           setLoading(false);
           return;
@@ -169,7 +169,6 @@ export default function StandingsTable() {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [tournamentYear, setTournamentYear] = useState<string>('2025'); // Default fallback
   const [standingsYear, setStandingsYear] = useState<string>('2026'); // Default fallback
   const [teamCache, setTeamCache] = useState<Map<string, { id: string; name: string }>>(globalTeamCache);
 
@@ -189,20 +188,6 @@ export default function StandingsTable() {
   // Initialize logo cache on component mount
   useEffect(() => {
     // Logo cache is now handled automatically by the local file system
-  }, []);
-
-  // Load tournament year from Google Sheets config
-  useEffect(() => {
-    const loadTournamentYear = async () => {
-      try {
-        const year = await getCurrentTournamentYear();
-        setTournamentYear(year);
-      } catch (error) {
-        console.error('Error loading tournament year:', error);
-        // Keep the default fallback value
-      }
-    };
-    loadTournamentYear();
   }, []);
 
   // Load standings year from site config
