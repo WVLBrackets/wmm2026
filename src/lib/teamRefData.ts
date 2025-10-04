@@ -513,6 +513,8 @@ function getFallbackTeamData(): TeamRefData[] {
     { abbr: 'Neb', id: '158' },       // Nebraska Cornhuskers
     { abbr: 'WaSt', id: '2655' },     // Washington State Cougars
     { abbr: 'StMary', id: '2608' },   // Saint Mary's Gaels
+    { abbr: 'Mary', id: '2608' },      // Saint Mary's Gaels (alternative abbreviation)
+    { abbr: 'StJ', id: 'PLACEHOLDER' }, // St. John's Red Storm (NEED ESPN ID FROM GOOGLE SHEET)
     
     // Missing abbreviations from standings data (from Google Sheet)
     { abbr: 'JM', id: '256' },         // James Madison Dukes (Row 137)
