@@ -32,9 +32,17 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
   try {
     // Fetch from local JSON file
     console.log('📋 Fetching team reference data from local JSON file');
-    const response = await fetch(TEAM_MAPPINGS_PATH);
+    
+    // Try to fetch the file with proper headers
+    const response = await fetch(TEAM_MAPPINGS_PATH, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
     
     if (!response.ok) {
+      console.error(`❌ Failed to fetch team mappings: ${response.status} ${response.statusText}`);
       throw new Error(`Failed to fetch team mappings: ${response.status} ${response.statusText}`);
     }
     
@@ -65,18 +73,18 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
     console.log('📋 Falling back to hardcoded team data');
     
     // Use fallback data
-  const fallbackStart = performance.now();
-  const fallbackData = getFallbackTeamData();
-  const fallbackEnd = performance.now();
-  console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
-  
-  cachedTeamData = fallbackData;
-  lastFetchTime = now;
-  
-  const totalTime = performance.now() - startTime;
-  console.log(`✅ Team reference data ready in ${totalTime.toFixed(2)}ms`);
-  return fallbackData;
-}
+    const fallbackStart = performance.now();
+    const fallbackData = getFallbackTeamData();
+    const fallbackEnd = performance.now();
+    console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
+    
+    cachedTeamData = fallbackData;
+    lastFetchTime = now;
+    
+    const totalTime = performance.now() - startTime;
+    console.log(`✅ Team reference data ready in ${totalTime.toFixed(2)}ms`);
+    return fallbackData;
+  }
 }
 
 /**
