@@ -16,10 +16,9 @@ const teamInfoCache = new Map<string, TeamInfo>();
  * High-performance function to generate local team logo URLs
  * Uses local logo files for better performance and reliability
  * @param teamId - ESPN team ID
- * @param size - Logo size in pixels (default: 30) - used for Next.js Image optimization
  * @returns Local logo URL
  */
-export function getTeamLogoUrl(teamId: string, _size: number = 30): string {
+export function getTeamLogoUrl(teamId: string): string {
   // Use local logo files for better performance and reliability
   return `/logos/teams/${teamId}.png`;
 }
@@ -63,7 +62,7 @@ export async function getTeamInfo(teamName: string, size: number = 30): Promise<
       return placeholderInfo;
     }
     
-    const logoUrl = getTeamLogoUrl(teamId, size);
+    const logoUrl = getTeamLogoUrl(teamId);
     
     const teamInfo: TeamInfo = {
       id: teamId,
@@ -96,7 +95,7 @@ export async function getTeamInfo(teamName: string, size: number = 30): Promise<
  * @returns Local logo URL
  */
 export function getLogoUrlSync(teamId: string, size: number = 30): string {
-  return getTeamLogoUrl(teamId, size);
+  return getTeamLogoUrl(teamId);
 }
 
 /**

@@ -92,7 +92,7 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
     
     try {
       // Try to use the imported JSON data
-      const teamData: TeamRefData[] = Object.entries(teamMappingsData).map(([abbr, teamInfo]: [string, any]) => ({
+      const teamData: TeamRefData[] = Object.entries(teamMappingsData).map(([abbr, teamInfo]: [string, { id: string; name: string; logo: string }]) => ({
         abbr,
         id: teamInfo.id,
         name: teamInfo.name
@@ -112,17 +112,17 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
       console.log('📋 Falling back to hardcoded team data');
       
       // Use hardcoded fallback data
-      const fallbackStart = performance.now();
-      const fallbackData = getFallbackTeamData();
-      const fallbackEnd = performance.now();
-      console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
-      
-      cachedTeamData = fallbackData;
-      lastFetchTime = now;
-      
-      const totalTime = performance.now() - startTime;
-      console.log(`✅ Team reference data ready in ${totalTime.toFixed(2)}ms`);
-      return fallbackData;
+  const fallbackStart = performance.now();
+  const fallbackData = getFallbackTeamData();
+  const fallbackEnd = performance.now();
+  console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
+  
+  cachedTeamData = fallbackData;
+  lastFetchTime = now;
+  
+  const totalTime = performance.now() - startTime;
+  console.log(`✅ Team reference data ready in ${totalTime.toFixed(2)}ms`);
+  return fallbackData;
     }
   }
 }
