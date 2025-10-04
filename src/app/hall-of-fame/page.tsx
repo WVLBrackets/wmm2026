@@ -209,84 +209,73 @@ export default async function HallOfFamePage() {
             <h2 className="text-2xl font-bold text-gray-900">Tournament History</h2>
           </div>
           
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {hallOfFameData.map((entry) => {
               const isHiatus = entry.firstPlace.name === 'HIATUS';
               const is2020 = entry.year === '2020';
               const is2016 = entry.year === '2016';
               
               return (
-                <div key={entry.year} className={`rounded-lg border-l-4 ${
+                <div key={entry.year} className={`relative rounded-lg border-l-4 ${
                   isHiatus || is2020 || is2016
                     ? 'bg-gray-100 border-gray-400' 
                     : 'bg-yellow-50 border-yellow-500'
                 }`}>
-                  {/* Main team logo header - fills row with no padding */}
-                  <div className={`flex items-center ${isHiatus || is2020 || is2016 ? 'p-4' : 'p-0'}`}>
+                  {/* Year Tab - Design 3: Integrated left border */}
+                  <div className={`absolute left-0 top-0 bottom-0 w-1 ${
+                    isHiatus || is2020 || is2016
+                      ? 'bg-gray-500' 
+                      : 'bg-yellow-600'
+                  }`}></div>
+                  <div className={`absolute left-2 top-2 px-2 py-1 rounded text-xs font-bold ${
+                    isHiatus || is2020 || is2016
+                      ? 'bg-gray-500 text-white' 
+                      : 'bg-yellow-600 text-white'
+                  }`}>
+                    {is2020 ? `${entry.year} - Tournament Cancelled` :
+                     is2016 ? `${entry.year} - WMM Hiatus` :
+                     isHiatus ? `${entry.year} - Tournament Not Held` :
+                     `${entry.year} - ${entry.totalEntries} entries`}
+                  </div>
+                  {/* Logo in top right corner */}
+                  <div className="absolute top-4 right-4 w-12 h-12 flex items-center justify-center">
                     {is2020 ? (
-                      <div className="flex items-center p-4">
-                        <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center mr-4 bg-gray-400">
-                          <Shield className="h-6 w-6 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-600">
-                            {entry.year} Tournament
-                          </h3>
-                          <p className="text-gray-500 font-medium italic">
-                            Tournament Cancelled
-                          </p>
-                        </div>
+                      <div className="w-12 h-12 rounded-full flex items-center justify-center bg-red-500">
+                        <Shield className="h-6 w-6 text-white" />
                       </div>
                     ) : is2016 ? (
-                      <>
-                        {/* Large team logo for 2016 winner */}
-                        <div className="flex-shrink-0 w-20 h-20 flex items-center justify-center">
-                          <TeamLogo teamName={entry.firstPlace.team} size={80} />
-                        </div>
-                        <div className="flex-grow p-4">
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            {entry.year} Tournament
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            WMM Hiatus
-                          </p>
-                        </div>
-                      </>
+                      <TeamLogo teamName="Villanova" size={48} />
                     ) : isHiatus ? (
-                      <div className="flex items-center p-4">
-                        <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center mr-4 bg-gray-400">
-                          <Shield className="h-6 w-6 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-600">
-                            {entry.year} Tournament
-                          </h3>
-                          <p className="text-gray-500 font-medium italic">
-                            Tournament Not Held
-                          </p>
-                        </div>
+                      <div className="w-12 h-12 rounded-full flex items-center justify-center bg-gray-400">
+                        <Shield className="h-6 w-6 text-white" />
                       </div>
                     ) : (
-                      <>
-                        {/* Large team logo that fills the row */}
-                        <div className="flex-shrink-0 w-20 h-20 flex items-center justify-center">
-                          <TeamLogo teamName={entry.firstPlace.team} size={80} />
-                        </div>
-                        <div className="flex-grow p-4">
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            {entry.year} Champion
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            {entry.totalEntries} entries
-                          </p>
-                        </div>
-                      </>
+                      <TeamLogo teamName={entry.firstPlace.team} size={48} />
+                    )}
+                  </div>
+                  
+                  {/* Content */}
+                  <div className="p-4 pl-6">
+                    {is2020 ? (
+                      <div></div>
+                    ) : is2016 ? (
+                      <p className="text-sm text-gray-600">
+                        WMM Hiatus
+                      </p>
+                    ) : isHiatus ? (
+                      <p className="text-gray-500 font-medium italic">
+                        Tournament Not Held
+                      </p>
+                    ) : (
+                      <p className="text-sm text-gray-600">
+                        {entry.totalEntries} entries
+                      </p>
                     )}
                   </div>
                   
                   {/* Data rows for special cases and normal years */}
                   {is2020 && (
-                    <div className="px-4 pb-4 space-y-2">
+                    <div className="px-4 pb-4 pt-8 space-y-1">
                       {/* Row 2: Global Pandemic */}
                       <div className="flex items-center gap-3">
                         <Shield className="h-5 w-5 text-red-500" />
@@ -296,14 +285,14 @@ export default async function HallOfFamePage() {
                   )}
                   
                   {is2016 && (
-                    <div className="px-4 pb-4 space-y-2">
+                    <div className="px-4 pb-3 space-y-1">
                       {/* No additional rows for 2016 - just the top two lines */}
                     </div>
                   )}
                   
                   {/* Data rows for normal years */}
                   {!isHiatus && !is2020 && !is2016 && (
-                    <div className="px-4 pb-4 space-y-2">
+                    <div className="px-4 pb-3 space-y-1">
                       {/* Row 1: Gold Crown, Player, Points */}
                       <div className="flex items-center gap-3">
                         <Crown className="h-5 w-5 text-yellow-600" />
@@ -377,20 +366,28 @@ export default async function HallOfFamePage() {
                       </div>
                     </div>
                     
-                    <div className="space-y-1">
-                      {finisher.finishes.slice(0, 3).map((finish, finishIndex) => (
-                        <div key={finishIndex} className="flex items-center gap-2 text-xs">
-                          {finish.place === 1 && <Crown className="h-3 w-3 text-yellow-600" />}
-                          {finish.place === 2 && <Trophy className="h-3 w-3 text-gray-400" />}
-                          {finish.place === 3 && <Medal className="h-3 w-3 text-amber-600" />}
-                          <span className="font-medium text-gray-700">{finish.year}</span>
-                        </div>
-                      ))}
-                      {finisher.finishes.length > 3 && (
-                        <div className="text-xs text-gray-500">
-                          +{finisher.finishes.length - 3} more
-                        </div>
-                      )}
+                    <div className="text-xs">
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {finisher.finishes
+                          .sort((a, b) => parseInt(b.year) - parseInt(a.year)) // Sort by year descending (most recent first)
+                          .slice(0, 5) // Show up to 5 finishes
+                          .map((finish, finishIndex) => (
+                            <span key={finishIndex} className="flex items-center gap-1">
+                              {finish.place === 1 && <Crown className="h-3 w-3 text-yellow-600" />}
+                              {finish.place === 2 && <Trophy className="h-3 w-3 text-gray-400" />}
+                              {finish.place === 3 && <Medal className="h-3 w-3 text-amber-600" />}
+                              <span className="font-medium text-gray-700">{finish.year}</span>
+                              {finishIndex < Math.min(finisher.finishes.length, 5) - 1 && (
+                                <span className="text-gray-400 mx-1">-</span>
+                              )}
+                            </span>
+                          ))}
+                        {finisher.finishes.length > 5 && (
+                          <span className="text-gray-500 ml-1">
+                            +{finisher.finishes.length - 5} more
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}

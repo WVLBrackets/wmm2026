@@ -23,14 +23,29 @@ const GOOGLE_SHEET_ID = '1qFjvpimsmilkuJT_zOn3IhidkqLpzbX8MRn1cQxjuHw';
 
 // Function to fetch data from Google Sheets
 export const getHallOfFameData = async (): Promise<HallOfFameEntry[]> => {
-  try {
-    // Use Google Sheets public CSV export
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/export?format=csv&gid=0`;
-    
-    const response = await fetch(csvUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch data: ${response.status}`);
-    }
+  const csvUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/export?format=csv&gid=0`;
+  
+  // Retry logic with exponential backoff
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      console.log(`Attempting to fetch Google Sheets data (attempt ${attempt}/3)...`);
+      
+      // Add timeout and retry logic
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch(csvUrl, {
+        signal: controller.signal,
+        headers: {
+          'Cache-Control': 'no-cache',
+        }
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch data: ${response.status}`);
+      }
     
     const csvText = await response.text();
     const lines = csvText.split('\n');
@@ -66,12 +81,25 @@ export const getHallOfFameData = async (): Promise<HallOfFameEntry[]> => {
       }
     }
     
-    return data;
-  } catch (error) {
-    console.error('Error fetching Google Sheets data:', error);
-    
-    // Fallback to static data if Google Sheets fails
-    return [
+      console.log('Successfully fetched Google Sheets data');
+      return data;
+      
+    } catch (error) {
+      console.error(`Attempt ${attempt} failed:`, error);
+      
+      if (attempt === 3) {
+        console.error('All retry attempts failed, using fallback data');
+        break;
+      }
+      
+      // Wait before retrying (exponential backoff)
+      await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+    }
+  }
+  
+  // If all retries failed, use fallback data
+  console.log('Using fallback Hall of Fame data');
+  return [
       {
         year: "2025",
         firstPlace: {
@@ -158,8 +186,7 @@ export const getHallOfFameData = async (): Promise<HallOfFameEntry[]> => {
         totalEntries: 0
       }
     ];
-  }
-};
+}
 
 // Helper function to parse CSV line with proper handling of quoted fields
 function parseCSVLine(line: string): string[] {
