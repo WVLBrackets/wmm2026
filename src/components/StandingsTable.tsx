@@ -489,10 +489,7 @@ export default function StandingsTable() {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex items-center gap-4">
             <h2 className="text-2xl font-bold text-gray-900">{tournamentYear} Standings</h2>
-          </div>
-          
-          <div className="flex flex-row gap-3 items-center">
-            {/* Day selector */}
+            {/* Day selector moved next to title */}
             <div className="flex items-center gap-2">
               <select
                 value={displayDay}
@@ -510,6 +507,9 @@ export default function StandingsTable() {
                 </div>
               )}
             </div>
+          </div>
+          
+          <div className="flex flex-row gap-3 items-center">
             
             {/* Search */}
             <div className="relative">
