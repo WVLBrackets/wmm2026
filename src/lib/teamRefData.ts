@@ -30,63 +30,25 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
     return cachedTeamData;
   }
 
-  // Try to fetch from Google Sheets via API route
-  try {
-    console.log('📋 Attempting to fetch team reference data from Google Sheets via API...');
-    
-    const response = await fetch('/api/team-mapping', {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      }
-    });
-    
-    console.log(`📋 Response status: ${response.status} ${response.statusText}`);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    
-    const teamData = await response.json();
-    console.log(`📋 Successfully fetched team data (${teamData.length} teams)`);
-    
-    // Log available team abbreviations for debugging
-    console.log(`📋 Available team abbreviations (${teamData.length} total):`, 
-      teamData.map((t: any) => t.abbr).sort().join(', '));
-    
-    cachedTeamData = teamData;
-    lastFetchTime = now;
-    
-    const totalTime = performance.now() - startTime;
-    console.log(`✅ Team reference data loaded from Google Sheets in ${totalTime.toFixed(2)}ms`);
-    return teamData;
-    
-  } catch (error) {
-    console.error('📋 Failed to fetch from Google Sheets:', error);
-    console.error('📋 Error details:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack
-    });
-    
-    // Use fallback data if Google Sheets fails
-    console.log('📋 Using fallback team reference data due to Google Sheets error');
-    const fallbackStart = performance.now();
-    const fallbackData = getFallbackTeamData();
-    const fallbackEnd = performance.now();
-    console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
-    
-    // Log available team abbreviations for debugging
-    console.log(`📋 Available team abbreviations (${fallbackData.length} total):`, 
-      fallbackData.map(t => t.abbr).sort().join(', '));
-    
-    cachedTeamData = fallbackData;
-    lastFetchTime = now;
-    
-    const totalTime = performance.now() - startTime;
-    console.log(`✅ Team reference data ready in ${totalTime.toFixed(2)}ms`);
-    return fallbackData;
-  }
+  // Temporarily use fallback data while debugging API issues
+  console.log('📋 Using fallback team reference data (API debugging)');
+  
+  // Use fallback data
+  const fallbackStart = performance.now();
+  const fallbackData = getFallbackTeamData();
+  const fallbackEnd = performance.now();
+  console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
+  
+  // Log available team abbreviations for debugging
+  console.log(`📋 Available team abbreviations (${fallbackData.length} total):`, 
+    fallbackData.map(t => t.abbr).sort().join(', '));
+  
+  cachedTeamData = fallbackData;
+  lastFetchTime = now;
+  
+  const totalTime = performance.now() - startTime;
+  console.log(`✅ Team reference data ready in ${totalTime.toFixed(2)}ms`);
+  return fallbackData;
 }
 
 /**
