@@ -489,13 +489,6 @@ export default function StandingsTable() {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex items-center gap-4">
             <h2 className="text-2xl font-bold text-gray-900">{tournamentYear} Standings</h2>
-            <Link 
-              href="/standings/previous-years"
-              className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 transition-colors"
-            >
-              <Calendar className="h-4 w-4" />
-              Previous Years
-            </Link>
           </div>
           
           <div className="flex flex-row gap-3 items-center">
@@ -546,21 +539,24 @@ export default function StandingsTable() {
       {/* Standings table */}
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 border border-gray-300">
             <tr>
-              <th className="px-1 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
+              <th className="px-1 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10 border-r border-gray-300">
                 Rank
               </th>
-              <th className="px-1 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{maxWidth: '80px'}}>
-                Player
+              <th className="px-1 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300" style={{maxWidth: '80px'}}>
+                <div className="flex flex-col items-start">
+                  <span>Player</span>
+                  <span className="text-xs font-normal text-gray-400 italic"><span className="text-green-600">$</span> = paid</span>
+                </div>
               </th>
-              <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" style={{width: '50px', minWidth: '50px'}}>
+              <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300" style={{width: '50px', minWidth: '50px'}}>
                 <div className="flex flex-col items-center">
                   <span>Pts</span>
                   <span className="text-xs italic font-normal">back</span>
                 </div>
               </th>
-              <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" style={{width: '100px', minWidth: '100px'}}>
+              <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300" style={{width: '100px', minWidth: '100px'}}>
                 Final Four
               </th>
               <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-18">
@@ -592,26 +588,24 @@ export default function StandingsTable() {
               // Normal data display
               filteredEntries.map((entry, index) => (
               <tr key={`${entry.player}-${index}`} className={`hover:bg-gray-50 transition-colors ${getRankColor(entry.rank)}`}>
-                <td className="px-1 py-2 whitespace-nowrap w-10">
+                <td className="px-1 py-2 whitespace-nowrap w-10 border-r border-gray-300">
                   <div className="flex items-center justify-center">
                     {getRankIcon(entry.rank)}
                   </div>
                 </td>
-                <td className={`px-1 py-1 ${entry.paid ? 'bg-green-50' : ''}`} style={{maxWidth: '80px', minWidth: '80px'}}>
+                <td className={`px-1 py-1 border-r border-gray-300 ${entry.paid ? 'bg-green-50' : ''}`} style={{maxWidth: '80px', minWidth: '80px'}}>
                   <div className="flex flex-col items-start gap-0.5">
-                    <div className="text-xs font-medium text-gray-900 leading-tight break-words" style={{wordBreak: 'break-word', overflowWrap: 'break-word'}}>
+                    <div className="text-xs sm:text-sm md:text-base font-medium text-gray-900 leading-tight break-words" style={{wordBreak: 'break-word', overflowWrap: 'break-word'}}>
                       {entry.player}
                     </div>
                     {entry.paid && (
                       <div className="flex items-center">
-                        <svg className="h-3 w-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
+                        <span className="text-green-600 font-bold text-sm">$</span>
                       </div>
                     )}
                   </div>
                 </td>
-                <td className="px-3 py-2 whitespace-nowrap" style={{width: '50px', minWidth: '50px'}}>
+                <td className="px-3 py-2 whitespace-nowrap border-r border-gray-300" style={{width: '50px', minWidth: '50px'}}>
                   <div className="flex flex-col items-center">
                     <div className="text-lg font-bold text-blue-600">
                       {entry.points}
@@ -621,7 +615,7 @@ export default function StandingsTable() {
                     </div>
                   </div>
                 </td>
-                <td className="px-3 py-2" style={{width: '100px', minWidth: '100px'}}>
+                <td className="px-3 py-2 border-r border-gray-300" style={{width: '100px', minWidth: '100px'}}>
                   {renderFinalFour(entry.finalFour, entry.finals, standingsData)}
                 </td>
                 <td className="px-3 py-2 w-18">
