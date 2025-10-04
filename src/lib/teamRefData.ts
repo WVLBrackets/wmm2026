@@ -517,6 +517,7 @@ function getFallbackTeamData(): TeamRefData[] {
     { abbr: 'StMary', id: '2608' },   // Saint Mary's Gaels
     { abbr: 'Mary', id: '2608' },      // Saint Mary's Gaels (alternative abbreviation)
     { abbr: 'StJ', id: '2599' },       // St. John's Red Storm
+    { abbr: 'MeM', id: '235' },        // Memphis Tigers
     
     // Missing abbreviations from standings data (from Google Sheet)
     { abbr: 'JM', id: '256' },         // James Madison Dukes (Row 137)
