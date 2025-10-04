@@ -30,54 +30,25 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
     return cachedTeamData;
   }
 
-  // Try to fetch from Google Sheets first
-  try {
-    console.log('📋 Attempting to fetch team reference data from Google Sheets...');
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${TEAM_REF_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=RefData`;
-    console.log(`📋 Fetching from: ${csvUrl}`);
-    
-    const response = await fetch(csvUrl);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    
-    const csvText = await response.text();
-    console.log(`📋 Successfully fetched CSV data (${csvText.length} characters)`);
-    
-    const teamData = parseTeamRefCSV(csvText);
-    console.log(`📋 Parsed ${teamData.length} teams from Google Sheets`);
-    
-    // Log available team abbreviations for debugging
-    console.log(`📋 Available team abbreviations (${teamData.length} total):`, 
-      teamData.map(t => t.abbr).sort().join(', '));
-    
-    cachedTeamData = teamData;
-    lastFetchTime = now;
-    
-    const totalTime = performance.now() - startTime;
-    console.log(`✅ Team reference data loaded from Google Sheets in ${totalTime.toFixed(2)}ms`);
-    return teamData;
-    
-  } catch (error) {
-    console.warn('📋 Failed to fetch from Google Sheets, using fallback data:', error);
-    
-    // Use fallback data if Google Sheets fails
-    const fallbackStart = performance.now();
-    const fallbackData = getFallbackTeamData();
-    const fallbackEnd = performance.now();
-    console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
-    
-    // Log available team abbreviations for debugging
-    console.log(`📋 Available team abbreviations (${fallbackData.length} total):`, 
-      fallbackData.map(t => t.abbr).sort().join(', '));
-    
-    cachedTeamData = fallbackData;
-    lastFetchTime = now;
-    
-    const totalTime = performance.now() - startTime;
-    console.log(`✅ Team reference data ready in ${totalTime.toFixed(2)}ms`);
-    return fallbackData;
-  }
+  // Temporarily disable Google Sheets fetch to debug image issues
+  console.log('📋 Using fallback team reference data (Google Sheets disabled for debugging)');
+  
+  // Use fallback data for now
+  const fallbackStart = performance.now();
+  const fallbackData = getFallbackTeamData();
+  const fallbackEnd = performance.now();
+  console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
+  
+  // Log available team abbreviations for debugging
+  console.log(`📋 Available team abbreviations (${fallbackData.length} total):`, 
+    fallbackData.map(t => t.abbr).sort().join(', '));
+  
+  cachedTeamData = fallbackData;
+  lastFetchTime = now;
+  
+  const totalTime = performance.now() - startTime;
+  console.log(`✅ Team reference data ready in ${totalTime.toFixed(2)}ms`);
+  return fallbackData;
 }
 
 /**
