@@ -7,7 +7,7 @@ export interface TeamRefData {
 }
 
 // Google Sheets configuration
-const TEAM_REF_SHEET_ID = '1qFjvpimsmilkuJT_zOn3IhidkqLpzbX8MRn1cQxjuHw';
+const TEAM_REF_SHEET_ID = '1X2J_UsBAnIaxdGQt1nF0DN9llkky1zFcPU_nky01pAI';
 
 
 // Cache for team reference data
