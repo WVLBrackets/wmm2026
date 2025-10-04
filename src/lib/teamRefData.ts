@@ -30,20 +30,14 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
     return cachedTeamData;
   }
 
-  // Try to fetch from Google Sheets using CORS proxy
+  // Try to fetch from Google Sheets via API route
   try {
-    console.log('📋 Attempting to fetch team reference data from Google Sheets...');
+    console.log('📋 Attempting to fetch team reference data from Google Sheets via API...');
     
-    // Use a CORS proxy to access Google Sheets
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${TEAM_REF_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=RefData`;
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(csvUrl)}`;
-    
-    console.log(`📋 Fetching from: ${proxyUrl}`);
-    
-    const response = await fetch(proxyUrl, {
+    const response = await fetch('/api/team-mapping', {
       method: 'GET',
       headers: {
-        'Accept': 'text/csv',
+        'Accept': 'application/json',
       }
     });
     
@@ -53,16 +47,12 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     
-    const csvText = await response.text();
-    console.log(`📋 Successfully fetched CSV data (${csvText.length} characters)`);
-    console.log(`📋 CSV preview:`, csvText.substring(0, 500));
-    
-    const teamData = parseTeamRefCSV(csvText);
-    console.log(`📋 Parsed ${teamData.length} teams from Google Sheets`);
+    const teamData = await response.json();
+    console.log(`📋 Successfully fetched team data (${teamData.length} teams)`);
     
     // Log available team abbreviations for debugging
     console.log(`📋 Available team abbreviations (${teamData.length} total):`, 
-      teamData.map(t => t.abbr).sort().join(', '));
+      teamData.map((t: any) => t.abbr).sort().join(', '));
     
     cachedTeamData = teamData;
     lastFetchTime = now;
