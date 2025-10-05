@@ -72,7 +72,7 @@
   "Marq": { "id": "269", "name": "Marquette", "logo": "/logos/teams/269.png" },
   "Wisc": { "id": "275", "name": "Wisconsin", "logo": "/logos/teams/275.png" },
   "WV": { "id": "277", "name": "West Virginia", "logo": "/logos/teams/277.png" },
-  "Lou": { "id": "309", "name": "Louisville", "logo": "/logos/teams/309.png" },
+  "Lou": { "id": "309", "name": "Louisiana", "logo": "/logos/teams/309.png" },
   "Iona": { "id": "314", "name": "Iona", "logo": "/logos/teams/314.png" },
   "CleSt": { "id": "325", "name": "Cleveland State", "logo": "/logos/teams/325.png" },
   "USt": { "id": "328", "name": "Utah State", "logo": "/logos/teams/328.png" },
@@ -165,5 +165,5 @@
   "Troy": { "id": "2653", "name": "Troy", "logo": "/logos/teams/2653.png" },
   "Wof": { "id": "2747", "name": "Wofford", "logo": "/logos/teams/2747.png" },
   "Bry": { "id": "2803", "name": "Bryant", "logo": "/logos/teams/2803.png" },
-  "UL": { "id": "97", "name": "Louisiana", "logo": "/logos/teams/97.png" }
+  "UL": { "id": "97", "name": "Louisville", "logo": "/logos/teams/97.png" }
 }
