@@ -5,6 +5,26 @@
   --foreground: #171717;
 }
 
+/* Print styles for dedicated print page */
+@media print {
+  /* Hide the header when printing */
+  .hide-on-print {
+    display: none !important;
+  }
+  
+  /* Ensure full page usage */
+  @page {
+    margin: 0;
+    size: A4 landscape;
+  }
+  
+  /* Prevent page breaks */
+  * {
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+  }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

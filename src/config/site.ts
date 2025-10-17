@@ -62,6 +62,8 @@ function getFallbackSiteConfig(): SiteConfigData {
     footerText: process.env.NEXT_PUBLIC_FOOTER_TEXT || '© 2001 Warren\'s March Madness | All rights reserved',
     contactMe: process.env.NEXT_PUBLIC_CONTACT_ME || 'warren@example.com',
     prizesActiveForecast: process.env.NEXT_PUBLIC_PRIZES_ACTIVE_FORECAST || 'Forecast',
+    showPicksDev: process.env.NEXT_PUBLIC_SHOW_PICKS_DEV || 'Yes',
+    showPicksProd: process.env.NEXT_PUBLIC_SHOW_PICKS_PROD || 'No',
   };
 }
 

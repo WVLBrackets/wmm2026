@@ -19,6 +19,8 @@ export interface SiteConfigData {
   footerText: string;
   contactMe: string;
   prizesActiveForecast: string;
+  showPicksDev: string;
+  showPicksProd: string;
 }
 
 // Function to fetch site config from Google Sheets
@@ -93,6 +95,12 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
             break;
           case 'prizes_active_forecast':
             config.prizesActiveForecast = value;
+            break;
+          case 'show_picks_dev':
+            config.showPicksDev = value;
+            break;
+          case 'show_picks_prod':
+            config.showPicksProd = value;
             break;
         }
       }

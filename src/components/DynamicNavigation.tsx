@@ -3,9 +3,10 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { useSession, signOut } from 'next-auth/react';
 import { getSiteConfig } from '@/config/site';
 import { SiteConfigData } from '@/lib/siteConfig';
-import { Home, Trophy, BookOpen, CreditCard, Gift, Star, Menu, X } from 'lucide-react';
+import { Home, Trophy, BookOpen, CreditCard, Gift, Star, Menu, X, Target, User, LogOut } from 'lucide-react';
 import Image from 'next/image';
 
 const navigationItems = [
@@ -17,8 +18,13 @@ const navigationItems = [
   { name: 'Hall of Fame', href: '/hall-of-fame', icon: Star },
 ];
 
-export default function DynamicNavigation() {
+interface DynamicNavigationProps {
+  hideInBracketMode?: boolean;
+}
+
+export default function DynamicNavigation({ hideInBracketMode = false }: DynamicNavigationProps) {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
 
@@ -46,6 +52,8 @@ export default function DynamicNavigation() {
           footerText: '© 2001 Warren\'s March Madness | All rights reserved',
           contactMe: 'warren@example.com',
           prizesActiveForecast: 'Forecast',
+          showPicksDev: 'Yes',
+          showPicksProd: 'No',
         });
       }
     };
@@ -55,6 +63,23 @@ export default function DynamicNavigation() {
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  // Determine if My Picks should be shown based on environment and feature flags
+  const shouldShowMyPicks = () => {
+    if (!siteConfig) return false;
+    
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    if (isDevelopment) {
+      return siteConfig.showPicksDev === 'Yes';
+    } else if (isProduction) {
+      return siteConfig.showPicksProd === 'Yes';
+    }
+    
+    // Default to showing in development if environment is unclear
+    return siteConfig.showPicksDev === 'Yes';
   };
 
   if (!siteConfig) {
@@ -88,6 +113,11 @@ export default function DynamicNavigation() {
     );
   }
 
+  // Hide navigation in bracket mode
+  if (hideInBracketMode) {
+    return null;
+  }
+
   return (
     <nav className="sticky top-0 z-50 bg-white shadow-lg border-b">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -115,7 +145,7 @@ export default function DynamicNavigation() {
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex space-x-8">
+          <div className="hidden lg:flex items-center space-x-8">
             {navigationItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
@@ -135,6 +165,21 @@ export default function DynamicNavigation() {
                 </Link>
               );
             })}
+            
+            {/* My Picks - Far Right (conditional) */}
+            {shouldShowMyPicks() && (
+              <Link
+                href="/bracket"
+                className={`inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium transition-colors ${
+                  pathname === '/bracket'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                }`}
+              >
+                <Target className="h-5 w-5 mr-2" />
+                My Picks
+              </Link>
+            )}
           </div>
 
           {/* Mobile Navigation Icons */}
@@ -158,6 +203,21 @@ export default function DynamicNavigation() {
                 </Link>
               );
             })}
+            
+            {/* My Picks for mobile (conditional) */}
+            {shouldShowMyPicks() && (
+              <Link
+                href="/bracket"
+                className={`p-2 rounded-md transition-colors ${
+                  pathname === '/bracket'
+                    ? 'bg-blue-100 text-blue-600'
+                    : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
+                }`}
+                title="My Picks"
+              >
+                <Target className="h-5 w-5" />
+              </Link>
+            )}
             
             {/* Mobile menu button */}
             <button
@@ -203,6 +263,22 @@ export default function DynamicNavigation() {
                     </Link>
                   );
                 })}
+                
+                {/* My Picks for mobile menu (conditional) */}
+                {shouldShowMyPicks() && (
+                  <Link
+                    href="/bracket"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`flex items-center space-x-3 px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                      pathname === '/bracket'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Target className="h-5 w-5" />
+                    <span>My Picks</span>
+                  </Link>
+                )}
               </div>
             </div>
           </div>
