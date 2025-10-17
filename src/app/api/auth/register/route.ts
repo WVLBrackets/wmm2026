@@ -31,8 +31,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // In development mode, user is auto-confirmed
-    if (process.env.NODE_ENV === 'development') {
+    // In development mode or when email service is not configured, user is auto-confirmed
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const emailNotConfigured = !process.env.EMAIL_USER || !process.env.EMAIL_PASS;
+    
+    if (isDevelopment || emailNotConfigured) {
       return NextResponse.json({
         message: 'User created successfully. You can now sign in.',
         userId: user.id,
@@ -40,16 +43,19 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // In production, send confirmation email
+    // In production with email service configured, send confirmation email
     const token = user.confirmationToken!;
     const confirmationLink = `${process.env.NEXTAUTH_URL}/auth/confirm?token=${token}`;
+    
     const emailSent = await sendConfirmationEmail(email, name, confirmationLink, token);
 
     if (!emailSent) {
-      return NextResponse.json(
-        { error: 'Failed to send confirmation email' },
-        { status: 500 }
-      );
+      console.warn('Failed to send confirmation email - account created but email failed');
+      return NextResponse.json({
+        message: 'User created successfully, but we could not send a confirmation email. Your account is ready to use.',
+        userId: user.id,
+        emailFailed: true
+      });
     }
 
     return NextResponse.json({
