@@ -19,15 +19,15 @@ export default function RegionBracketLayout({
   readOnly = false
 }: RegionBracketLayoutProps) {
   
-  const handleTeamClick = (game: TournamentGame, team: any) => {
+  const handleTeamClick = (game: TournamentGame, team: Record<string, unknown>) => {
     if (game.winner || readOnly) return;
-    onPick(game.id, team.id);
+    onPick(game.id, team.id as string);
   };
 
-  const renderTeam = (team: any, game: TournamentGame, isTeam1: boolean, round: string) => {
+  const renderTeam = (team: Record<string, unknown>, game: TournamentGame, isTeam1: boolean, round: string) => {
     if (!team) return <div className="h-6 bg-gray-100 rounded"></div>;
     
-    const isSelected = picks[game.id] === team.id;
+    const isSelected = picks[game.id] === (team.id as string);
     const isClickable = !game.winner && !readOnly;
     
     // All rounds use same height
@@ -43,9 +43,9 @@ export default function RegionBracketLayout({
         onClick={() => isClickable && handleTeamClick(game, team)}
       >
         <div className="flex items-center space-x-1 flex-1 min-w-0">
-          <span className="text-xs font-bold text-gray-600">#{team.seed}</span>
-          <img src={team.logo} alt={team.name} className="w-3 h-3 flex-shrink-0" />
-          <span className="text-xs font-medium truncate">{team.name}</span>
+          <span className="text-xs font-bold text-gray-600">#{team.seed as number}</span>
+          <img src={team.logo as string} alt={team.name as string} className="w-3 h-3 flex-shrink-0" />
+          <span className="text-xs font-medium truncate">{team.name as string}</span>
         </div>
         {isSelected && (
           <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
@@ -57,8 +57,8 @@ export default function RegionBracketLayout({
   const renderGame = (game: TournamentGame, round: string) => {
     return (
       <div key={game.id} className="border border-gray-300 rounded p-1 space-y-0.5 mb-1">
-        {renderTeam(game.team1, game, true, round)}
-        {renderTeam(game.team2, game, false, round)}
+        {game.team1 && renderTeam(game.team1 as unknown as Record<string, unknown>, game, true, round)}
+        {game.team2 && renderTeam(game.team2 as unknown as Record<string, unknown>, game, false, round)}
       </div>
     );
   };

@@ -74,7 +74,7 @@ export function generateTournamentBracket(tournamentData: TournamentData) {
       gameNumber: 1
     });
 
-    bracket.regions[region.name] = regionGames;
+    (bracket.regions as Record<string, unknown>)[region.name] = regionGames;
   });
 
   // Final Four (2 games)

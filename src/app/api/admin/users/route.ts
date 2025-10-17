@@ -6,7 +6,16 @@ import { InMemoryUserRepository } from '@/lib/repositories/userRepository';
 // Simple admin check - in production, you'd have proper role-based access
 function isAdmin(session: unknown): boolean {
   // For now, check if user email is admin@wmm2026.com
-  return session?.user?.email === 'admin@wmm2026.com';
+  if (!session || typeof session !== 'object' || !('user' in session)) {
+    return false;
+  }
+  
+  const user = (session as { user: unknown }).user;
+  if (!user || typeof user !== 'object' || !('email' in user)) {
+    return false;
+  }
+  
+  return (user as { email: string }).email === 'admin@wmm2026.com';
 }
 
 export async function GET() {

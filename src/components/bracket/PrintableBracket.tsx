@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { TournamentData, TournamentBracket } from '@/types/tournament';
 import { updateBracketWithPicks } from '@/lib/bracketGenerator';
 
@@ -22,7 +23,7 @@ export default function PrintableBracket({
 }: PrintableBracketProps) {
   const updatedBracket = updateBracketWithPicks(bracket, picks, tournamentData);
 
-  const renderTeam = (team: any, isSelected: boolean) => {
+  const renderTeam = (team: Record<string, unknown>, isSelected: boolean) => {
     if (!team) return (
       <div 
         style={{ 
@@ -56,8 +57,8 @@ export default function PrintableBracket({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '1px', flex: 1, minWidth: 0 }}>
-          <span style={{ fontSize: '7px', fontWeight: 'bold', color: '#4b5563' }}>#{team.seed}</span>
-          <span style={{ fontSize: '7px', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{team.name}</span>
+          <span style={{ fontSize: '7px', fontWeight: 'bold', color: '#4b5563' }}>#{team.seed as number}</span>
+          <span style={{ fontSize: '7px', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{team.name as string}</span>
         </div>
         {isSelected && (
           <span style={{ fontSize: '7px', fontWeight: 'bold', color: '#059669' }}>✓</span>
@@ -66,13 +67,13 @@ export default function PrintableBracket({
     );
   };
 
-  const renderGame = (game: any, round: string) => {
-    const isTeam1Selected = picks[game.id] === game.team1?.id;
-    const isTeam2Selected = picks[game.id] === game.team2?.id;
+  const renderGame = (game: Record<string, unknown>, round: string) => {
+    const isTeam1Selected = picks[game.id as string] === (game.team1 as Record<string, unknown>)?.id;
+    const isTeam2Selected = picks[game.id as string] === (game.team2 as Record<string, unknown>)?.id;
 
     return (
       <div 
-        key={game.id} 
+        key={game.id as string} 
         style={{
           border: '1px solid #d1d5db',
           borderRadius: '1px',
@@ -82,9 +83,9 @@ export default function PrintableBracket({
         }}
       >
         <div>
-          {renderTeam(game.team1, isTeam1Selected)}
+          {(game.team1 && renderTeam(game.team1 as unknown as Record<string, unknown>, isTeam1Selected)) as React.ReactNode}
         </div>
-        {renderTeam(game.team2, isTeam2Selected)}
+        {(game.team2 && renderTeam(game.team2 as unknown as Record<string, unknown>, isTeam2Selected)) as React.ReactNode}
       </div>
     );
   };
@@ -100,8 +101,8 @@ export default function PrintableBracket({
     return regionIndex < 2 ? 'left' : 'right';
   };
 
-  const renderRegion = (region: any, regionIndex: number) => {
-    const regionGames = updatedBracket.regions[region.name] || [];
+  const renderRegion = (region: Record<string, unknown>, regionIndex: number) => {
+    const regionGames = updatedBracket.regions[region.name as string] || [];
     const roundOf64Games = regionGames.filter(g => g.round === 'Round of 64');
     const roundOf32Games = regionGames.filter(g => g.round === 'Round of 32');
     const sweet16Games = regionGames.filter(g => g.round === 'Sweet 16');
@@ -110,7 +111,7 @@ export default function PrintableBracket({
     const alignment = getRegionAlignment(regionIndex);
     
     return (
-      <div key={region.name} style={{ 
+      <div key={region.name as string} style={{ 
         display: 'flex', 
         flexDirection: 'row',
         alignItems: 'center',
@@ -133,7 +134,7 @@ export default function PrintableBracket({
             marginRight: '5px',
             whiteSpace: 'nowrap'
           }}>
-            {getRegionDisplayName(regionIndex)} ({region.name})
+            {getRegionDisplayName(regionIndex)} ({region.name as string})
           </div>
         )}
         
@@ -151,7 +152,7 @@ export default function PrintableBracket({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0px' }}>
               {roundOf64Games.map((game) => (
                 <div key={game.id}>
-                  {renderGame(game, 'Round of 64')}
+                  {renderGame(game as unknown as Record<string, unknown>, 'Round of 64')}
                 </div>
               ))}
             </div>
@@ -162,7 +163,7 @@ export default function PrintableBracket({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0px' }}>
               {roundOf32Games.map((game) => (
                 <div key={game.id}>
-                  {renderGame(game, 'Round of 32')}
+                  {renderGame(game as unknown as Record<string, unknown>, 'Round of 32')}
                 </div>
               ))}
             </div>
@@ -173,7 +174,7 @@ export default function PrintableBracket({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0px' }}>
               {sweet16Games.map((game) => (
                 <div key={game.id}>
-                  {renderGame(game, 'Sweet 16')}
+                  {renderGame(game as unknown as Record<string, unknown>, 'Sweet 16')}
                 </div>
               ))}
             </div>
@@ -184,7 +185,7 @@ export default function PrintableBracket({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0px' }}>
               {elite8Games.map((game) => (
                 <div key={game.id}>
-                  {renderGame(game, 'Elite 8')}
+                  {renderGame(game as unknown as Record<string, unknown>, 'Elite 8')}
                 </div>
               ))}
             </div>
@@ -202,7 +203,7 @@ export default function PrintableBracket({
             marginLeft: '5px',
             whiteSpace: 'nowrap'
           }}>
-            {getRegionDisplayName(regionIndex)} ({region.name})
+            {getRegionDisplayName(regionIndex)} ({region.name as string})
           </div>
         )}
       </div>
@@ -248,7 +249,7 @@ export default function PrintableBracket({
                 }}>
                   {index === 0 ? 'Top Left vs Bottom Left' : 'Top Right vs Bottom Right'}
                 </div>
-                {renderGame(game, 'Final Four')}
+                {renderGame(game as unknown as Record<string, unknown>, 'Final Four')}
               </div>
             ))}
           </div>
@@ -264,7 +265,7 @@ export default function PrintableBracket({
             }}>
               Championship
             </div>
-            {renderGame(championshipGame, 'Championship')}
+            {renderGame(championshipGame as unknown as Record<string, unknown>, 'Championship')}
           </div>
         </div>
       </div>
@@ -297,13 +298,13 @@ export default function PrintableBracket({
         width: '100%'
       }}>
         {/* Top Left: East (index 0) */}
-        {renderRegion(tournamentData.regions[0], 0)}
+        {renderRegion(tournamentData.regions[0] as unknown as Record<string, unknown>, 0)}
         {/* Top Right: South (index 2) */}
-        {renderRegion(tournamentData.regions[2], 2)}
+        {renderRegion(tournamentData.regions[2] as unknown as Record<string, unknown>, 2)}
         {/* Bottom Left: West (index 1) */}
-        {renderRegion(tournamentData.regions[1], 1)}
+        {renderRegion(tournamentData.regions[1] as unknown as Record<string, unknown>, 1)}
         {/* Bottom Right: Midwest (index 3) */}
-        {renderRegion(tournamentData.regions[3], 3)}
+        {renderRegion(tournamentData.regions[3] as unknown as Record<string, unknown>, 3)}
       </div>
     </div>
   );

@@ -99,9 +99,11 @@ export async function POST(request: NextRequest) {
 
     // Check if there's already a submitted bracket with this name for this user
     const duplicateNameExists = tournamentBrackets.some(
-      bracket => bracket.playerEmail === body.playerEmail && 
-                 bracket.entryName === body.entryName && 
-                 bracket.status === 'submitted'
+      bracket => bracket && typeof bracket === 'object' && 
+                 'playerEmail' in bracket && 'entryName' in bracket && 'status' in bracket &&
+                 (bracket as { playerEmail: string }).playerEmail === body.playerEmail && 
+                 (bracket as { entryName: string }).entryName === body.entryName && 
+                 (bracket as { status: string }).status === 'submitted'
     );
 
     if (duplicateNameExists) {
@@ -114,17 +116,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if there's an existing in-progress bracket for this user
+    // Check if there's an existing in-progress bracket for this user   
     const existingBracketIndex = tournamentBrackets.findIndex(
-      bracket => bracket.playerEmail === body.playerEmail && bracket.status === 'in_progress'
+      bracket => bracket && typeof bracket === 'object' && 
+                 'playerEmail' in bracket && 'status' in bracket &&
+                 (bracket as { playerEmail: string }).playerEmail === body.playerEmail && 
+                 (bracket as { status: string }).status === 'in_progress'
     );
 
     let tournamentBracket;
     
     if (existingBracketIndex >= 0) {
       // Update existing in-progress bracket to submitted
+      const existingBracket = tournamentBrackets[existingBracketIndex] as Record<string, unknown>;
       tournamentBracket = {
-        ...tournamentBrackets[existingBracketIndex],
+        ...existingBracket,
         entryName: body.entryName,
         tieBreaker: body.tieBreaker,
         submittedAt: new Date().toISOString(),

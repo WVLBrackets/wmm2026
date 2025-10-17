@@ -59,7 +59,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Reload brackets from file to ensure we have the latest data
     await loadBrackets();
 
-    const bracket = tournamentBrackets.find(b => b.id === id);
+    const bracket = tournamentBrackets.find(b => 
+      b && typeof b === 'object' && 'id' in b && (b as { id: string }).id === id
+    );
 
     if (!bracket) {
       return NextResponse.json(
@@ -92,7 +94,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     // Reload brackets from file to ensure we have the latest data
     await loadBrackets();
 
-    const bracketIndex = tournamentBrackets.findIndex(b => b.id === id);
+    const bracketIndex = tournamentBrackets.findIndex(b => 
+      b && typeof b === 'object' && 'id' in b && (b as { id: string }).id === id
+    );
 
     if (bracketIndex === -1) {
       return NextResponse.json(
@@ -102,7 +106,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     // Only allow updating of in-progress brackets
-    if (tournamentBrackets[bracketIndex].status !== 'in_progress') {
+    const currentBracket = tournamentBrackets[bracketIndex] as Record<string, unknown>;
+    if (currentBracket.status !== 'in_progress') {
       return NextResponse.json(
         { success: false, error: 'Only in-progress brackets can be updated' },
         { status: 403 }
@@ -121,8 +126,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     // Update the existing bracket
+    const existingBracket = tournamentBrackets[bracketIndex] as Record<string, unknown>;
     tournamentBrackets[bracketIndex] = {
-      ...tournamentBrackets[bracketIndex],
+      ...existingBracket,
       playerName: body.playerName,
       playerEmail: body.playerEmail,
       entryName: body.entryName,
@@ -158,7 +164,9 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     // Reload brackets from file to ensure we have the latest data
     await loadBrackets();
 
-    const bracketIndex = tournamentBrackets.findIndex(b => b.id === id);
+    const bracketIndex = tournamentBrackets.findIndex(b => 
+      b && typeof b === 'object' && 'id' in b && (b as { id: string }).id === id
+    );
 
     if (bracketIndex === -1) {
       return NextResponse.json(
@@ -168,7 +176,8 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     }
 
     // Only allow deletion of in-progress brackets
-    if (tournamentBrackets[bracketIndex].status !== 'in_progress') {
+    const currentBracket = tournamentBrackets[bracketIndex] as Record<string, unknown>;
+    if (currentBracket.status !== 'in_progress') {
       return NextResponse.json(
         { success: false, error: 'Only in-progress brackets can be deleted' },
         { status: 403 }

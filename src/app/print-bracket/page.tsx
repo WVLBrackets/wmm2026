@@ -5,13 +5,14 @@ import { useBracketMode } from '@/contexts/BracketModeContext';
 import { generate64TeamBracket, updateBracketWithPicks } from '@/lib/bracketGenerator';
 import { loadTournamentData } from '@/lib/tournamentLoader';
 import { getTeamInfo } from '@/lib/teamLogos';
+import { TournamentTeam, TournamentData } from '@/types/tournament';
 import Image from 'next/image';
 
 export default function PrintBracketPage() {
-  const [bracketData, setBracketData] = useState<any>(null);
-  const [bracket, setBracket] = useState<any>(null);
-  const [tournamentData, setTournamentData] = useState<any>(null);
-  const [championTeam, setChampionTeam] = useState<any>(null);
+  const [bracketData, setBracketData] = useState<Record<string, unknown> | null>(null);
+  const [bracket, setBracket] = useState<Record<string, unknown> | null>(null);
+  const [tournamentData, setTournamentData] = useState<Record<string, unknown> | null>(null);
+  const [championTeam, setChampionTeam] = useState<TournamentTeam | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { setInPrintMode } = useBracketMode();
 
@@ -22,7 +23,7 @@ export default function PrintBracketPage() {
       try {
         // Load tournament data first
         const tournamentData = await loadTournamentData('2025');
-        setTournamentData(tournamentData);
+        setTournamentData(tournamentData as unknown as Record<string, unknown>);
         
         const storedBracketData = sessionStorage.getItem('printBracketData');
         if (storedBracketData) {
@@ -32,7 +33,7 @@ export default function PrintBracketPage() {
           // Generate bracket and update with picks
           const generatedBracket = generate64TeamBracket(tournamentData);
           const updatedBracket = updateBracketWithPicks(generatedBracket, parsedData.picks, tournamentData);
-          setBracket(updatedBracket);
+          setBracket(updatedBracket as unknown as Record<string, unknown>);
           
           // Load champion team info
           const championshipPick = parsedData.picks['championship'];
@@ -77,22 +78,28 @@ export default function PrintBracketPage() {
   };
 
   // Helper function to get the winner from a game
-  const getWinnerFromGame = (game: any, pickedWinner: string | null) => {
+  const getWinnerFromGame = (game: Record<string, unknown>, pickedWinner: string | null) => {
     if (!pickedWinner || !game?.team1 || !game?.team2) return null;
-    return pickedWinner === game.team1.id ? game.team1 : game.team2;
+    const team1 = game.team1 as TournamentTeam;
+    const team2 = game.team2 as TournamentTeam;
+    return pickedWinner === team1.id ? team1 : team2;
   };
 
   // Helper function to render Final Four section
   const renderFinalFourSection = () => {
+    if (!bracketData) return null;
+    
     // Get Final Four picks
-    const semifinal1Pick = bracketData.picks['final-four-1'];
-    const semifinal2Pick = bracketData.picks['final-four-2'];
-    const championshipPick = bracketData.picks['championship'];
+    const picks = bracketData.picks as Record<string, string>;
+    const semifinal1Pick = picks['final-four-1'];
+    const semifinal2Pick = picks['final-four-2'];
+    const championshipPick = picks['championship'];
 
     // Get the two finalists (winners of semifinals)
-    const finalist1 = semifinal1Pick ? tournamentData.regions.flatMap(r => r.teams).find(t => t.id === semifinal1Pick) : null;
-    const finalist2 = semifinal2Pick ? tournamentData.regions.flatMap(r => r.teams).find(t => t.id === semifinal2Pick) : null;
-    const champion = championshipPick ? tournamentData.regions.flatMap(r => r.teams).find(t => t.id === championshipPick) : null;
+    const tournament = tournamentData as unknown as TournamentData;
+    const finalist1 = semifinal1Pick && tournament ? tournament.regions.flatMap(r => r.teams).find(t => t.id === semifinal1Pick) : null;
+    const finalist2 = semifinal2Pick && tournament ? tournament.regions.flatMap(r => r.teams).find(t => t.id === semifinal2Pick) : null;
+    const champion = championshipPick && tournament ? tournament.regions.flatMap(r => r.teams).find(t => t.id === championshipPick) : null;
 
     return (
       <div style={{ 
@@ -173,6 +180,11 @@ export default function PrintBracketPage() {
 
   // Helper function to render columns in correct order (left-to-right or right-to-left)
   const renderRegionColumns = (regionKey: string, regionIndex: number) => {
+    if (!tournamentData || !bracket || !bracketData) return null;
+    
+    const tournament = tournamentData as unknown as TournamentData;
+    const bracketDataTyped = bracketData as Record<string, unknown>;
+    const bracketTyped = bracket as Record<string, unknown>;
     const isRightSide = regionIndex >= 2; // Top Right (2) and Bottom Right (3) are right side
     const columnOrder = isRightSide 
       ? ['Final Four', 'Elite 8', 'Sweet 16', 'Round of 32', 'Round of 64']
@@ -183,11 +195,11 @@ export default function PrintBracketPage() {
         return (
           <div key={round} style={{ minWidth: '90px', flex: '1 1 0', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0px', flex: 1 }}>
-              {tournamentData.regions[regionIndex].teams.map((team, teamIndex) => {
+              {tournament.regions[regionIndex].teams.map((team, teamIndex) => {
                 const gameIndex = Math.floor(teamIndex / 2);
                 const isFirstTeam = teamIndex % 2 === 0;
-                const game = bracket.regions[regionKey].find(g => g.round === 'Round of 64' && g.gameNumber === gameIndex + 1);
-                const pickedWinner = game ? bracketData.picks[game.id] : null;
+                const game = (bracketTyped.regions as Record<string, unknown[]>)[regionKey]?.find(g => (g as Record<string, unknown>).round === 'Round of 64' && (g as Record<string, unknown>).gameNumber === gameIndex + 1);
+                const pickedWinner = game ? (bracketDataTyped.picks as Record<string, string>)[(game as Record<string, unknown>).id as string] : null;
                 const isWinner = pickedWinner === team.id;
                 
                 return (
@@ -215,8 +227,8 @@ export default function PrintBracketPage() {
           <div key={round} style={{ minWidth: '90px', flex: '1 1 0', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0px', flex: 1 }}>
               {Array.from({ length: 8 }, (_, gameIndex) => {
-                const roundOf64Game = bracket.regions[regionKey].find(g => g.round === 'Round of 64' && g.gameNumber === gameIndex + 1);
-                const winner = roundOf64Game ? getWinnerFromGame(roundOf64Game, bracketData.picks[roundOf64Game.id]) : null;
+                const roundOf64Game = (bracketTyped.regions as Record<string, unknown[]>)[regionKey]?.find(g => (g as Record<string, unknown>).round === 'Round of 64' && (g as Record<string, unknown>).gameNumber === gameIndex + 1);
+                const winner = roundOf64Game ? getWinnerFromGame(roundOf64Game as Record<string, unknown>, (bracketDataTyped.picks as Record<string, string>)[(roundOf64Game as Record<string, unknown>).id as string]) : null;
                 
                 return (
                   <div key={gameIndex} style={{ 
@@ -254,8 +266,8 @@ export default function PrintBracketPage() {
                     {/* Game 1 */}
                     <div style={{ height: '12%' }}>
                 {(() => {
-                  const roundOf32Game = bracket.regions[regionKey].find(g => g.round === 'Round of 32' && g.gameNumber === 1);
-                  const winner = roundOf32Game ? getWinnerFromGame(roundOf32Game, bracketData.picks[roundOf32Game.id]) : null;
+                  const roundOf32Game = (bracketTyped.regions as Record<string, unknown[]>)[regionKey]?.find(g => (g as Record<string, unknown>).round === 'Round of 32' && (g as Record<string, unknown>).gameNumber === 1);
+                  const winner = roundOf32Game ? getWinnerFromGame(roundOf32Game as Record<string, unknown>, (bracketDataTyped.picks as Record<string, string>)[(roundOf32Game as Record<string, unknown>).id as string]) : null;
                   
                   return (
                     <div style={{ 
@@ -288,8 +300,8 @@ export default function PrintBracketPage() {
                     {/* Game 2 */}
                     <div style={{ height: '12%' }}>
                 {(() => {
-                  const roundOf32Game = bracket.regions[regionKey].find(g => g.round === 'Round of 32' && g.gameNumber === 2);
-                  const winner = roundOf32Game ? getWinnerFromGame(roundOf32Game, bracketData.picks[roundOf32Game.id]) : null;
+                  const roundOf32Game = (bracketTyped.regions as Record<string, unknown[]>)[regionKey]?.find(g => (g as Record<string, unknown>).round === 'Round of 32' && (g as Record<string, unknown>).gameNumber === 2);
+                  const winner = roundOf32Game ? getWinnerFromGame(roundOf32Game as Record<string, unknown>, (bracketDataTyped.picks as Record<string, string>)[(roundOf32Game as Record<string, unknown>).id as string]) : null;
                   
                   return (
                     <div style={{ 
@@ -322,8 +334,8 @@ export default function PrintBracketPage() {
                     {/* Game 3 */}
                     <div style={{ height: '12%' }}>
                 {(() => {
-                  const roundOf32Game = bracket.regions[regionKey].find(g => g.round === 'Round of 32' && g.gameNumber === 3);
-                  const winner = roundOf32Game ? getWinnerFromGame(roundOf32Game, bracketData.picks[roundOf32Game.id]) : null;
+                  const roundOf32Game = (bracketTyped.regions as Record<string, unknown[]>)[regionKey]?.find(g => (g as Record<string, unknown>).round === 'Round of 32' && (g as Record<string, unknown>).gameNumber === 3);
+                  const winner = roundOf32Game ? getWinnerFromGame(roundOf32Game as Record<string, unknown>, (bracketDataTyped.picks as Record<string, string>)[(roundOf32Game as Record<string, unknown>).id as string]) : null;
                   
                   return (
                     <div style={{ 
@@ -356,8 +368,8 @@ export default function PrintBracketPage() {
                     {/* Game 4 */}
                     <div style={{ height: '12%' }}>
                 {(() => {
-                  const roundOf32Game = bracket.regions[regionKey].find(g => g.round === 'Round of 32' && g.gameNumber === 4);
-                  const winner = roundOf32Game ? getWinnerFromGame(roundOf32Game, bracketData.picks[roundOf32Game.id]) : null;
+                  const roundOf32Game = (bracketTyped.regions as Record<string, unknown[]>)[regionKey]?.find(g => (g as Record<string, unknown>).round === 'Round of 32' && (g as Record<string, unknown>).gameNumber === 4);
+                  const winner = roundOf32Game ? getWinnerFromGame(roundOf32Game as Record<string, unknown>, (bracketDataTyped.picks as Record<string, string>)[(roundOf32Game as Record<string, unknown>).id as string]) : null;
                   
                   return (
                     <div style={{ 
@@ -399,8 +411,8 @@ export default function PrintBracketPage() {
                     {/* Game 1 */}
                     <div style={{ height: '24%' }}>
                 {(() => {
-                  const sweet16Game = bracket.regions[regionKey].find(g => g.round === 'Sweet 16' && g.gameNumber === 1);
-                  const winner = sweet16Game ? getWinnerFromGame(sweet16Game, bracketData.picks[sweet16Game.id]) : null;
+                  const sweet16Game = (bracketTyped.regions as Record<string, unknown[]>)[regionKey]?.find(g => (g as Record<string, unknown>).round === 'Sweet 16' && (g as Record<string, unknown>).gameNumber === 1);
+                  const winner = sweet16Game ? getWinnerFromGame(sweet16Game as Record<string, unknown>, (bracketDataTyped.picks as Record<string, string>)[(sweet16Game as Record<string, unknown>).id as string]) : null;
                   
                   return (
                     <div style={{ 
@@ -433,8 +445,8 @@ export default function PrintBracketPage() {
                     {/* Game 2 */}
                     <div style={{ height: '24%' }}>
                 {(() => {
-                  const sweet16Game = bracket.regions[regionKey].find(g => g.round === 'Sweet 16' && g.gameNumber === 2);
-                  const winner = sweet16Game ? getWinnerFromGame(sweet16Game, bracketData.picks[sweet16Game.id]) : null;
+                  const sweet16Game = (bracketTyped.regions as Record<string, unknown[]>)[regionKey]?.find(g => (g as Record<string, unknown>).round === 'Sweet 16' && (g as Record<string, unknown>).gameNumber === 2);
+                  const winner = sweet16Game ? getWinnerFromGame(sweet16Game as Record<string, unknown>, (bracketDataTyped.picks as Record<string, string>)[(sweet16Game as Record<string, unknown>).id as string]) : null;
                   
                   return (
                     <div style={{ 
@@ -476,8 +488,8 @@ export default function PrintBracketPage() {
                     {/* Regional Champion */}
                     <div style={{ height: '24%' }}>
                 {(() => {
-                  const elite8Game = bracket.regions[regionKey].find(g => g.round === 'Elite 8' && g.gameNumber === 1);
-                  const winner = elite8Game ? getWinnerFromGame(elite8Game, bracketData.picks[elite8Game.id]) : null;
+                  const elite8Game = (bracketTyped.regions as Record<string, unknown[]>)[regionKey]?.find(g => (g as Record<string, unknown>).round === 'Elite 8' && (g as Record<string, unknown>).gameNumber === 1);
+                  const winner = elite8Game ? getWinnerFromGame(elite8Game as Record<string, unknown>, (bracketDataTyped.picks as Record<string, string>)[(elite8Game as Record<string, unknown>).id as string]) : null;
                   
                   return (
                     <div style={{ 
@@ -572,12 +584,12 @@ export default function PrintBracketPage() {
         }}>
           {/* Top Row: Entry Name - Champion Logo Seed Name */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '18px', fontWeight: 'bold', color: '#92400e' }}>
-            <span>{bracketData.entryName}</span>
+            <span>{bracketData.entryName as string}</span>
             <span>-</span>
-            {championTeam && championTeam.logoUrl && (
-              <Image 
-                src={championTeam.logoUrl} 
-                alt={`${championTeam.name} logo`} 
+            {championTeam && championTeam.logo && (
+              <Image
+                src={championTeam.logo}
+                alt={`${championTeam.name} logo`}
                 width={24} 
                 height={24} 
                 style={{ objectFit: 'contain' }}
@@ -590,7 +602,7 @@ export default function PrintBracketPage() {
           
           {/* Bottom Row: Tie Breaker */}
           <div style={{ fontSize: '12px', color: '#92400e' }}>
-            Tie Breaker - {bracketData.tieBreaker || 'N/A'}
+            Tie Breaker - {(bracketData.tieBreaker as string) || 'N/A'}
           </div>
         </div>
         

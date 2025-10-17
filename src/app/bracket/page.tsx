@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { TournamentData, TournamentBracket, BracketSubmission } from '@/types/tournament';
@@ -12,7 +12,7 @@ import { useBracketMode } from '@/contexts/BracketModeContext';
 import { Trophy, Users, Calendar, Plus, Eye, LogOut, Save, CheckCircle, ArrowLeft } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 
-export default function BracketPage() {
+function BracketContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -325,7 +325,8 @@ export default function BracketPage() {
       
       if (editingBracket) {
         // Update existing bracket
-        response = await fetch(`/api/tournament-bracket/${editingBracket.id}`, {
+        const bracket = editingBracket as Record<string, unknown>;
+        response = await fetch(`/api/tournament-bracket/${bracket.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -511,5 +512,13 @@ export default function BracketPage() {
         />
       </div>
     </div>
+  );
+}
+
+export default function BracketPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <BracketContent />
+    </Suspense>
   );
 }

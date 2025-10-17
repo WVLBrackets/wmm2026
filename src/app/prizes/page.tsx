@@ -33,6 +33,8 @@ export default function PrizesPage() {
           footerText: '© 2001 Warren\'s March Madness | All rights reserved',
           contactMe: 'warren@example.com',
           prizesActiveForecast: 'Forecast',
+          showPicksDev: 'Yes',
+          showPicksProd: 'No'
         });
       } finally {
         setIsLoading(false);

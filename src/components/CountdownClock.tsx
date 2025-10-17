@@ -42,6 +42,8 @@ export default function CountdownClock() {
           footerText: '© 2001 Warren\'s March Madness | All rights reserved',
           contactMe: 'warren@example.com',
           prizesActiveForecast: 'Forecast',
+          showPicksDev: 'Yes',
+          showPicksProd: 'No'
         });
       }
     };
