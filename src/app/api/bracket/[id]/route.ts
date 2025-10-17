@@ -9,10 +9,11 @@ let brackets: Bracket[] = [];
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const bracket = brackets.find(b => b.id === params.id);
+    const { id } = await params;
+    const bracket = brackets.find(b => b.id === id);
     
     if (!bracket) {
       return NextResponse.json(
@@ -39,11 +40,12 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const updates = await request.json();
-    const bracketIndex = brackets.findIndex(b => b.id === params.id);
+    const bracketIndex = brackets.findIndex(b => b.id === id);
     
     if (bracketIndex === -1) {
       return NextResponse.json(
@@ -56,7 +58,7 @@ export async function PUT(
     brackets[bracketIndex] = {
       ...brackets[bracketIndex],
       ...updates,
-      id: params.id // Ensure ID doesn't change
+      id: id // Ensure ID doesn't change
     };
 
     return NextResponse.json({
@@ -78,10 +80,11 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const bracketIndex = brackets.findIndex(b => b.id === params.id);
+    const { id } = await params;
+    const bracketIndex = brackets.findIndex(b => b.id === id);
     
     if (bracketIndex === -1) {
       return NextResponse.json(

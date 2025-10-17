@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const userRepo = new InMemoryUserRepository();
+    const userRepo = InMemoryUserRepository;
     
     // Find user by email
     const users = await userRepo.listUsers();

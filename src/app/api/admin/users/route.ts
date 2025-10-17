@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const userRepo = new InMemoryUserRepository();
+    const userRepo = InMemoryUserRepository;
     const users = await userRepo.listUsers();
 
     return NextResponse.json({
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
         id: user.id,
         email: user.email,
         name: user.name,
-        isConfirmed: user.isConfirmed,
+        isConfirmed: user.emailConfirmed,
         createdAt: user.id, // Placeholder - would be actual timestamp in DB
       }))
     });
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     const { action, userId, data } = await request.json();
 
-    const userRepo = new InMemoryUserRepository();
+    const userRepo = InMemoryUserRepository;
 
     switch (action) {
       case 'resetPassword':

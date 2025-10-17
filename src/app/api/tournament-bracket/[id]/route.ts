@@ -52,9 +52,9 @@ loadBrackets();
 /**
  * GET /api/tournament-bracket/[id] - Get a specific tournament bracket
  */
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // Reload brackets from file to ensure we have the latest data
     await loadBrackets();
@@ -84,9 +84,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 /**
  * PUT /api/tournament-bracket/[id] - Update a specific tournament bracket
  */
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
 
     // Reload brackets from file to ensure we have the latest data
@@ -151,9 +151,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 /**
  * DELETE /api/tournament-bracket/[id] - Delete a specific tournament bracket
  */
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // Reload brackets from file to ensure we have the latest data
     await loadBrackets();
