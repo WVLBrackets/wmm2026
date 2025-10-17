@@ -4,7 +4,7 @@ import { validateBracketSubmission } from '@/lib/bracketValidation';
 import { generateBracketStructure, calculateBracketPoints, isBracketComplete } from '@/lib/bracketTypes';
 
 // Mock storage - in production, this would be a database
-let brackets: Bracket[] = [];
+const brackets: Bracket[] = [];
 let nextId = 1;
 
 /**

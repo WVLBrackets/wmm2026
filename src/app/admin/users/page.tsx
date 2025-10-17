@@ -57,7 +57,7 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handleAction = async (action: string, userId: string, data?: any) => {
+  const handleAction = async (action: string, userId: string, data?: Record<string, unknown>) => {
     try {
       setActionLoading(userId);
       const response = await fetch('/api/admin/users', {
@@ -75,8 +75,8 @@ export default function AdminUsersPage() {
 
       // Reload users after successful action
       await loadUsers();
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'An error occurred');
     } finally {
       setActionLoading(null);
     }

@@ -20,7 +20,7 @@ export default function BracketPage() {
   
   // View states
   const [currentView, setCurrentView] = useState<'landing' | 'bracket'>('landing');
-  const [editingBracket, setEditingBracket] = useState<any>(null);
+  const [editingBracket, setEditingBracket] = useState<unknown>(null);
   const [isReadOnly, setIsReadOnly] = useState(false);
   
   // Tournament data
@@ -84,8 +84,9 @@ export default function BracketPage() {
       
       if (data.success) {
         // Filter brackets for the current user
-        const userBrackets = data.data.filter((bracket: any) => 
-          bracket.playerEmail === session?.user?.email
+        const userBrackets = data.data.filter((bracket: unknown) => 
+          bracket && typeof bracket === 'object' && 'playerEmail' in bracket && 
+          (bracket as { playerEmail: string }).playerEmail === session?.user?.email
         );
         setSubmittedBrackets(userBrackets);
       } else {
@@ -240,12 +241,13 @@ export default function BracketPage() {
     setBracketResetKey(prev => prev + 1);
   };
 
-  const handleEditBracket = (bracketToEdit: any) => {
+  const handleEditBracket = (bracketToEdit: unknown) => {
     setEditingBracket(bracketToEdit);
-    setPicks(bracketToEdit.picks || {});
-    setEntryName(bracketToEdit.entryName || session?.user?.name || '');
-    setTieBreaker(bracketToEdit.tieBreaker || '');
-    setIsReadOnly(bracketToEdit.status === 'submitted');
+    const bracket = bracketToEdit as Record<string, unknown>;
+    setPicks((bracket.picks as Record<string, string>) || {});
+    setEntryName((bracket.entryName as string) || session?.user?.name || '');
+    setTieBreaker((bracket.tieBreaker as string) || '');
+    setIsReadOnly(bracket.status === 'submitted');
     setCurrentView('bracket');
     setBracketResetKey(prev => prev + 1);
   };
@@ -262,7 +264,7 @@ export default function BracketPage() {
     handleBackToLanding();
   };
 
-  const handleCopyBracket = async (bracketToCopy: any) => {
+  const handleCopyBracket = async (bracketToCopy: unknown) => {
     if (!session?.user?.name || !session?.user?.email) {
       alert('User information not available');
       return;
@@ -270,12 +272,13 @@ export default function BracketPage() {
 
     try {
       // Create a copy with the same entry name (allowed for in-progress brackets)
+      const bracket = bracketToCopy as Record<string, unknown>;
       const copiedBracket = {
         playerName: session.user.name,
         playerEmail: session.user.email,
-        entryName: bracketToCopy.entryName,
-        tieBreaker: bracketToCopy.tieBreaker || '',
-        picks: bracketToCopy.picks || {},
+        entryName: bracket.entryName,
+        tieBreaker: bracket.tieBreaker || '',
+        picks: bracket.picks || {},
         status: 'in_progress'
       };
 

@@ -4,12 +4,12 @@ import { authOptions } from '@/lib/auth';
 import { InMemoryUserRepository } from '@/lib/repositories/userRepository';
 
 // Simple admin check - in production, you'd have proper role-based access
-function isAdmin(session: any): boolean {
+function isAdmin(session: unknown): boolean {
   // For now, check if user email is admin@wmm2026.com
   return session?.user?.email === 'admin@wmm2026.com';
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     

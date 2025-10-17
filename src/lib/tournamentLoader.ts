@@ -21,7 +21,7 @@ export async function loadTournamentData(year: string = '2025'): Promise<Tournam
  */
 export function generateTournamentBracket(tournamentData: TournamentData) {
   const regions = tournamentData.regions;
-  const bracket: any = {
+  const bracket: Record<string, unknown> = {
     regions: {},
     finalFour: [],
     championship: null
@@ -29,7 +29,7 @@ export function generateTournamentBracket(tournamentData: TournamentData) {
 
   // Generate games for each region (16 teams per region)
   regions.forEach(region => {
-    const regionGames: any[] = [];
+    const regionGames: unknown[] = [];
     
     // Round of 64 (8 games)
     for (let i = 0; i < 8; i++) {

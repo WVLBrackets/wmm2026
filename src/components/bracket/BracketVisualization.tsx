@@ -166,7 +166,7 @@ export default function BracketVisualization({
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">
-              {bracket.playerName}'s Bracket
+              {bracket.playerName}&apos;s Bracket
             </h2>
             <p className="text-gray-600">
               Submitted: {new Date(bracket.submittedAt).toLocaleDateString()}

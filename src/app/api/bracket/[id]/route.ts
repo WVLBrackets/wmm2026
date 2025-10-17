@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Bracket } from '@/types/bracket';
 
 // Mock storage - in production, this would be a database
-let brackets: Bracket[] = [];
+const brackets: Bracket[] = [];
 
 /**
  * GET /api/bracket/[id] - Get a specific bracket

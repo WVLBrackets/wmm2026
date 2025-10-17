@@ -8,7 +8,7 @@ const getBracketsFileName = () => `brackets-${environment}.json`;
 const BRACKETS_FILE = path.join(process.cwd(), 'data', getBracketsFileName());
 
 // In-memory storage for development, will be replaced by a database
-let tournamentBrackets: any[] = [];
+let tournamentBrackets: unknown[] = [];
 let nextId = 1;
 
 // Load brackets from file on startup
@@ -18,8 +18,8 @@ async function loadBrackets() {
     const parsed = JSON.parse(data);
     tournamentBrackets = parsed.brackets || [];
     nextId = parsed.nextId || 1;
-  } catch (error: any) {
-    if (error.code === 'ENOENT') {
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
       console.log('Brackets file not found, starting with empty array.');
       tournamentBrackets = [];
       nextId = 1;

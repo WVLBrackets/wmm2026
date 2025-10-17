@@ -16,7 +16,7 @@ const getBracketsFileName = () => {
 const BRACKETS_FILE = path.join(process.cwd(), 'data', getBracketsFileName());
 
 // Initialize storage
-let tournamentBrackets: any[] = [];
+let tournamentBrackets: unknown[] = [];
 let nextId = 1;
 
 // Load brackets from file on startup
@@ -231,7 +231,7 @@ export async function PUT(request: NextRequest) {
 /**
  * GET /api/tournament-bracket - Get all tournament brackets
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Reload brackets from file to ensure we have the latest data
     await loadBrackets();
