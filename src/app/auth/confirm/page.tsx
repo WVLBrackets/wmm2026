@@ -1,25 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { CheckCircle, XCircle } from 'lucide-react';
 
-export default function ConfirmEmailPage() {
+function ConfirmEmailContent() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
-  const [token, setToken] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const token = searchParams?.get('token');
 
   useEffect(() => {
-    // Get token from URL directly
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlToken = urlParams.get('token');
+    console.log('ConfirmEmailContent: token =', token);
+    console.log('ConfirmEmailContent: searchParams =', searchParams?.toString());
     
-    console.log('ConfirmEmailPage: urlToken =', urlToken);
-    console.log('ConfirmEmailPage: window.location.search =', window.location.search);
-    
-    setToken(urlToken);
-    
-    if (!urlToken) {
+    if (!token) {
       setStatus('error');
       setMessage('No confirmation token provided');
       return;
@@ -32,7 +28,7 @@ export default function ConfirmEmailPage() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ token: urlToken }),
+          body: JSON.stringify({ token }),
         });
 
         const data = await response.json();
@@ -51,7 +47,7 @@ export default function ConfirmEmailPage() {
     };
 
     confirmEmail();
-  }, [token]);
+  }, [token, searchParams]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -123,6 +119,14 @@ export default function ConfirmEmailPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ConfirmEmailPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ConfirmEmailContent />
+    </Suspense>
   );
 }
 
