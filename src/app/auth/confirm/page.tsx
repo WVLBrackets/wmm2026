@@ -12,6 +12,9 @@ function ConfirmEmailContent() {
   const token = searchParams?.get('token');
 
   useEffect(() => {
+    console.log('ConfirmEmailContent: token =', token);
+    console.log('ConfirmEmailContent: searchParams =', searchParams?.toString());
+    
     if (!token) {
       setStatus('error');
       setMessage('No confirmation token provided');
