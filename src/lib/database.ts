@@ -78,14 +78,27 @@ export async function getUserById(id: string): Promise<User | null> {
 }
 
 export async function confirmUserEmail(token: string): Promise<boolean> {
-  const tokenRecord = tokens.find(t => t.token === token && t.type === 'confirmation');
+  console.log('Database: confirmUserEmail called with token:', token);
+  console.log('Database: Total tokens in array:', tokens.length);
+  console.log('Database: Tokens:', tokens.map(t => ({ token: t.token.substring(0, 8) + '...', type: t.type, userId: t.userId })));
   
-  if (!tokenRecord || tokenRecord.expires < new Date()) {
+  const tokenRecord = tokens.find(t => t.token === token && t.type === 'confirmation');
+  console.log('Database: Found token record:', tokenRecord ? 'YES' : 'NO');
+  
+  if (!tokenRecord) {
+    console.log('Database: No matching token found');
+    return false;
+  }
+  
+  if (tokenRecord.expires < new Date()) {
+    console.log('Database: Token expired');
     return false;
   }
 
   const user = users.find(u => u.id === tokenRecord.userId);
+  console.log('Database: Found user:', user ? 'YES' : 'NO');
   if (!user) {
+    console.log('Database: No user found for token');
     return false;
   }
 
@@ -97,6 +110,7 @@ export async function confirmUserEmail(token: string): Promise<boolean> {
   // Remove token
   const tokenIndex = tokens.indexOf(tokenRecord);
   tokens.splice(tokenIndex, 1);
+  console.log('Database: Token removed, user confirmed');
 
   return true;
 }

@@ -1,21 +1,25 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { CheckCircle, XCircle, Mail } from 'lucide-react';
+import { CheckCircle, XCircle } from 'lucide-react';
 
-function ConfirmEmailContent() {
+export default function ConfirmEmailPage() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
-  const searchParams = useSearchParams();
-  const token = searchParams?.get('token');
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('ConfirmEmailContent: token =', token);
-    console.log('ConfirmEmailContent: searchParams =', searchParams?.toString());
+    // Get token from URL directly
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlToken = urlParams.get('token');
     
-    if (!token) {
+    console.log('ConfirmEmailPage: urlToken =', urlToken);
+    console.log('ConfirmEmailPage: window.location.search =', window.location.search);
+    
+    setToken(urlToken);
+    
+    if (!urlToken) {
       setStatus('error');
       setMessage('No confirmation token provided');
       return;
@@ -28,7 +32,7 @@ function ConfirmEmailContent() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ token }),
+          body: JSON.stringify({ token: urlToken }),
         });
 
         const data = await response.json();
@@ -119,14 +123,6 @@ function ConfirmEmailContent() {
         </div>
       </div>
     </div>
-  );
-}
-
-export default function ConfirmEmailPage() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <ConfirmEmailContent />
-    </Suspense>
   );
 }
 
