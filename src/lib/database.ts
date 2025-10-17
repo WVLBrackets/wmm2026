@@ -154,13 +154,32 @@ export async function resetPassword(token: string, newPassword: string): Promise
 }
 
 export async function verifyPassword(email: string, password: string): Promise<User | null> {
-  const user = await getUserByEmail(email);
-  if (!user || !user.emailConfirmed) {
+  try {
+    console.log('Database: Looking up user by email:', email);
+    const user = await getUserByEmail(email);
+    if (!user) {
+      console.log('Database: User not found:', email);
+      return null;
+    }
+
+    if (!user.emailConfirmed) {
+      console.log('Database: User email not confirmed:', email);
+      return null;
+    }
+
+    console.log('Database: Comparing password for user:', email);
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) {
+      console.log('Database: Password invalid for user:', email);
+      return null;
+    }
+
+    console.log('Database: Password verified for user:', email);
+    return user;
+  } catch (error) {
+    console.error('Database: Error verifying password:', error);
     return null;
   }
-
-  const isValid = await bcrypt.compare(password, user.password);
-  return isValid ? user : null;
 }
 
 // Clean up expired tokens (call this periodically)
