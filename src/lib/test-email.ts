@@ -1,4 +1,4 @@
-import { sendEmail } from './email';
+import { sendEmail } from './emailService';
 
 // Test function to verify email configuration
 export async function testEmailConfiguration() {

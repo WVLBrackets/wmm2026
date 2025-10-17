@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createUser } from '@/lib/database';
-import { sendConfirmationEmail } from '@/lib/email';
+import { sendConfirmationEmail, emailService } from '@/lib/emailService';
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,11 +31,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // In development mode or when email service is not configured, user is auto-confirmed
+    // In development mode, user is auto-confirmed
     const isDevelopment = process.env.NODE_ENV === 'development';
-    const emailNotConfigured = !process.env.EMAIL_USER || !process.env.EMAIL_PASS;
     
-    if (isDevelopment || emailNotConfigured) {
+    if (isDevelopment) {
       return NextResponse.json({
         message: 'User created successfully. You can now sign in.',
         userId: user.id,
@@ -43,24 +42,33 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // In production with email service configured, send confirmation email
+    // In production, always require email verification
     const token = user.confirmationToken!;
     const confirmationLink = `${process.env.NEXTAUTH_URL}/auth/confirm?token=${token}`;
+    
+    // Check email service status
+    const emailStatus = emailService.getStatus();
+    
+    if (!emailService.isConfigured()) {
+      return NextResponse.json({
+        error: 'Email service is not configured. Please contact the administrator.',
+        emailStatus
+      }, { status: 500 });
+    }
     
     const emailSent = await sendConfirmationEmail(email, name, confirmationLink, token);
 
     if (!emailSent) {
-      console.warn('Failed to send confirmation email - account created but email failed');
       return NextResponse.json({
-        message: 'User created successfully, but we could not send a confirmation email. Your account is ready to use.',
-        userId: user.id,
-        emailFailed: true
-      });
+        error: 'Failed to send confirmation email. Please try again or contact support.',
+        emailStatus
+      }, { status: 500 });
     }
 
     return NextResponse.json({
       message: 'User created successfully. Please check your email to confirm your account.',
       userId: user.id,
+      emailStatus
     });
 
   } catch (error) {

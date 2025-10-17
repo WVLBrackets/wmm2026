@@ -40,26 +40,24 @@ export async function createUser(email: string, name: string, password: string):
   const confirmationToken = crypto.randomBytes(32).toString('hex');
   const confirmationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-  // In development mode or when email service is not configured, auto-confirm emails
+  // Only auto-confirm in development mode
   const isDevelopment = process.env.NODE_ENV === 'development';
-  const emailNotConfigured = !process.env.EMAIL_USER || !process.env.EMAIL_PASS;
-  const shouldAutoConfirm = isDevelopment || emailNotConfigured;
   
   const user: User = {
     id: crypto.randomUUID(),
     email,
     name,
     password: hashedPassword,
-    emailConfirmed: shouldAutoConfirm, // Auto-confirm in development or when email not configured
-    confirmationToken: shouldAutoConfirm ? undefined : confirmationToken,
-    confirmationExpires: shouldAutoConfirm ? undefined : confirmationExpires,
+    emailConfirmed: isDevelopment, // Only auto-confirm in development
+    confirmationToken: isDevelopment ? undefined : confirmationToken,
+    confirmationExpires: isDevelopment ? undefined : confirmationExpires,
     createdAt: new Date(),
   };
 
   users.push(user);
   
-  // Store confirmation token only if email service is configured and not in development mode
-  if (!shouldAutoConfirm) {
+  // Store confirmation token only if not in development mode
+  if (!isDevelopment) {
     tokens.push({
       token: confirmationToken,
       userId: user.id,
