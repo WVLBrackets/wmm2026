@@ -23,8 +23,8 @@ export interface ConfirmationToken {
 
 // In-memory database for demo purposes
 // In production, this would be a real database like PostgreSQL, MongoDB, etc.
-const users: User[] = [];
-const tokens: ConfirmationToken[] = [];
+export const users: User[] = [];
+export const tokens: ConfirmationToken[] = [];
 
 export async function createUser(email: string, name: string, password: string): Promise<User> {
   // Check if user already exists
