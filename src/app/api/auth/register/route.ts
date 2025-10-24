@@ -33,29 +33,14 @@ export async function POST(request: NextRequest) {
 
     // In development mode, user is auto-confirmed
     const isDevelopment = process.env.NODE_ENV === 'development';
-    const isPreview = process.env.VERCEL_ENV === 'preview';
-    const adminEmail = process.env.ADMIN_EMAIL;
-    const isAdminUser = adminEmail && email.toLowerCase() === adminEmail.toLowerCase();
     
-    // Auto-confirm in development OR if admin user in preview
-    if (isDevelopment || (isPreview && isAdminUser)) {
-      // If admin in preview, we need to manually confirm them in the database
-      if (isPreview && isAdminUser && !isDevelopment) {
-        const { sql } = await import('@/lib/databaseAdapter');
-        await sql`
-          UPDATE users 
-          SET email_confirmed = TRUE, confirmation_token = NULL, confirmation_expires = NULL
-          WHERE id = ${user.id}
-        `;
-        // Also delete any confirmation tokens
-        await sql`DELETE FROM tokens WHERE user_id = ${user.id} AND type = 'confirmation'`;
-      }
-      
+    // Auto-confirm ONLY in development
+    if (isDevelopment) {
       return NextResponse.json({
         message: 'User created successfully. You can now sign in.',
         userId: user.id,
         autoConfirmed: true,
-        reason: isDevelopment ? 'development mode' : 'admin user in preview'
+        reason: 'development mode'
       });
     }
 
