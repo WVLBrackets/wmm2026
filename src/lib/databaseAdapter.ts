@@ -4,7 +4,7 @@ import { getCurrentEnvironment } from './databaseConfig';
 // Uses @vercel/postgres for production/preview (Neon)
 // Uses pg for local development (local PostgreSQL)
 
-let sqlAdapter: any = null;
+let sqlAdapter: typeof import('@vercel/postgres').sql | typeof import('./localPostgres').default | null = null;
 
 async function getSqlAdapter() {
   if (!sqlAdapter) {
@@ -24,7 +24,7 @@ async function getSqlAdapter() {
 }
 
 // Export the environment-aware SQL function
-export const sql = async (strings: TemplateStringsArray, ...values: any[]) => {
+export const sql = async (strings: TemplateStringsArray, ...values: unknown[]) => {
   const sqlAdapter = await getSqlAdapter();
   return sqlAdapter(strings, ...values);
 };

@@ -19,7 +19,7 @@ function getPool(): Pool {
 }
 
 // SQL template literal function that mimics @vercel/postgres
-const sql = (strings: TemplateStringsArray, ...values: any[]) => {
+const sql = (strings: TemplateStringsArray, ...values: unknown[]) => {
   const pool = getPool();
   
   // Build the query string by interpolating values directly
