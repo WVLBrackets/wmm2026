@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { confirmUserEmail } from '@/lib/database';
+import { confirmUserEmail } from '@/lib/secureDatabase';
 
 export async function POST(request: NextRequest) {
   try {

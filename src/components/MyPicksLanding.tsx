@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { Trophy, Plus, Edit, Eye, Clock, CheckCircle, LogOut, Trash2, Copy, Printer } from 'lucide-react';
+import { Trophy, Plus, Edit, Eye, Clock, CheckCircle, LogOut, Trash2, Copy, Printer, ShieldCheck } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { TournamentData, TournamentBracket } from '@/types/tournament';
+import Image from 'next/image';
 
 interface Bracket {
   id: string;
@@ -32,6 +33,104 @@ interface MyPicksLandingProps {
 
 export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBracket, onDeleteBracket, onCopyBracket, deletingBracketId, tournamentData, bracket }: MyPicksLandingProps) {
   const { data: session } = useSession();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Check if current user is admin
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (session?.user?.email) {
+        try {
+          const response = await fetch('/api/check-admin');
+          const data = await response.json();
+          setIsAdmin(data.isAdmin);
+        } catch (error) {
+          console.error('Error checking admin status:', error);
+          setIsAdmin(false);
+        }
+      }
+    };
+    checkAdmin();
+  }, [session]);
+
+  // Calculate bracket progress (number of picks out of 63)
+  const calculateProgress = (picks: { [gameId: string]: string }) => {
+    const totalGames = 63;
+    const completedPicks = Object.keys(picks).filter(key => picks[key] && picks[key] !== '').length;
+    return { completed: completedPicks, total: totalGames, percentage: (completedPicks / totalGames) * 100 };
+  };
+
+  // Helper function to find team by ID in tournament data and return the logo
+  const findTeamLogoById = (teamId: string | null): string | null => {
+    if (!teamId || !tournamentData) return null;
+    
+    // Search through all regions to find the team
+    for (const region of tournamentData.regions) {
+      const team = region.teams.find(t => t.id === teamId);
+      if (team) {
+        return team.logo; // Return the logo path directly from team object
+      }
+    }
+    return null;
+  };
+
+  // Get Final Four teams from picks
+  const getFinalFourTeams = (picks: { [gameId: string]: string }) => {
+    // The Final Four consists of the 4 Elite Eight winners who compete in final-four-1 and final-four-2
+    // We need to find the winners of each region's Elite Eight game
+    
+    // Get the team IDs from picks
+    const topLeftId = picks['Top Left-e8-1'] || null;
+    const bottomLeftId = picks['Bottom Left-e8-1'] || null;
+    const topRightId = picks['Top Right-e8-1'] || null;
+    const bottomRightId = picks['Bottom Right-e8-1'] || null;
+    
+    // Get the finalists (winners of Final Four games)
+    const finalist1Id = picks['final-four-1'] || null;
+    const finalist2Id = picks['final-four-2'] || null;
+    
+    // Get the champion (winner of championship game)
+    const championId = picks['championship'] || null;
+    
+    // Convert team IDs to logo paths
+    const finalFour = {
+      topLeft: findTeamLogoById(topLeftId),
+      bottomLeft: findTeamLogoById(bottomLeftId),
+      topRight: findTeamLogoById(topRightId),
+      bottomRight: findTeamLogoById(bottomRightId),
+      finalist1: findTeamLogoById(finalist1Id),
+      finalist2: findTeamLogoById(finalist2Id),
+      champion: findTeamLogoById(championId),
+      // Store IDs to check which teams are finalists
+      finalist1Id,
+      finalist2Id,
+      topLeftId,
+      bottomLeftId,
+      topRightId,
+      bottomRightId
+    };
+
+    return finalFour;
+  };
+
+  // Component to render a Final Four team logo with error handling
+  const FinalFourLogo = ({ logoPath }: { logoPath: string | null }) => {
+    const [imageError, setImageError] = React.useState(false);
+    
+    if (!logoPath || imageError) {
+      return <span className="text-gray-400 text-xs">?</span>;
+    }
+    
+    return (
+      <img 
+        src={logoPath} 
+        alt="Team logo"
+        width={24}
+        height={24}
+        className="object-contain"
+        onError={() => setImageError(true)}
+      />
+    );
+  };
 
   const handleDeleteBracket = (bracketId: string) => {
     onDeleteBracket(bracketId);
@@ -89,11 +188,12 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
     return fullName.split(' ')[0];
   };
 
-  // Calculate submitted brackets count and cost
-  const getSubmittedBracketsInfo = () => {
+  // Calculate submitted and in-progress brackets count
+  const getBracketsInfo = () => {
     const submittedCount = brackets.filter(bracket => bracket.status === 'submitted').length;
+    const inProgressCount = brackets.filter(bracket => bracket.status === 'in_progress').length;
     const totalCost = submittedCount * 5;
-    return { submittedCount, totalCost };
+    return { submittedCount, inProgressCount, totalCost };
   };
 
   return (
@@ -103,18 +203,81 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
             {/* Compact Header */}
             <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">
-                    Welcome Back {getFirstName(session?.user?.name)}
-                  </h1>
-                  {(() => {
-                    const { submittedCount, totalCost } = getSubmittedBracketsInfo();
-                    return (
-                      <p className="text-sm text-gray-600 mt-1">
-                        You have submitted {submittedCount} {submittedCount === 1 ? 'entry' : 'entries'} at a cost of ${totalCost}.
-                      </p>
-                    );
-                  })()}
+                <div className="flex items-center space-x-4">
+                  {/* WMM Logo */}
+                  <div className="flex-shrink-0">
+                    <Image 
+                      src="/images/warrens-march-madness.png" 
+                      alt="Warren's March Madness" 
+                      width={80} 
+                      height={40} 
+                      className="object-contain"
+                    />
+                  </div>
+                  
+                  {/* Welcome text */}
+                  <div>
+                    <h1 className="text-2xl font-bold text-gray-900">
+                      Welcome back {session?.user?.name || 'User'}
+                    </h1>
+                    {(() => {
+                      const { submittedCount, inProgressCount, totalCost } = getBracketsInfo();
+                      
+                      // Case 1: Both counts are 0
+                      if (submittedCount === 0 && inProgressCount === 0) {
+                        return (
+                          <>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Click New Bracket to start your entry
+                            </p>
+                            <p className="text-sm text-gray-600 mt-1">
+                              You can start a new entry and save it for later without submitting it now
+                            </p>
+                          </>
+                        );
+                      }
+                      
+                      // Case 2: Submitted is non-zero and In Progress is zero
+                      if (submittedCount > 0 && inProgressCount === 0) {
+                        return (
+                          <>
+                            <p className="text-sm text-gray-600 mt-1">
+                              <span className="font-semibold">Submitted Count:</span> {submittedCount} - your total cost is ${totalCost} so far
+                            </p>
+                            <p className="text-sm text-gray-600 mt-1">
+                              You can start a new entry and save it for later without submitting it now
+                            </p>
+                          </>
+                        );
+                      }
+                      
+                      // Case 3: Submitted is zero and In Progress is non-zero
+                      if (submittedCount === 0 && inProgressCount > 0) {
+                        return (
+                          <>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Be sure to submit your picks so they can be included in the contest
+                            </p>
+                            <p className="text-sm text-gray-600 mt-1">
+                              <span className="font-semibold">In Progress Count:</span> {inProgressCount} - be sure to &apos;Submit&apos; if you want {inProgressCount === 1 ? 'this entry' : 'these entries'} to count
+                            </p>
+                          </>
+                        );
+                      }
+                      
+                      // Case 4: Both counts are non-zero (default case)
+                      return (
+                        <>
+                          <p className="text-sm text-gray-600 mt-1">
+                            <span className="font-semibold">Submitted Count:</span> {submittedCount} - your total cost is ${totalCost} so far
+                          </p>
+                          <p className="text-sm text-gray-600 mt-1">
+                            <span className="font-semibold">In Progress Count:</span> {inProgressCount} - be sure to &apos;Submit&apos; if you want {inProgressCount === 1 ? 'this entry' : 'these entries'} to count
+                          </p>
+                        </>
+                      );
+                    })()}
+                  </div>
                 </div>
             
             <div className="flex items-center space-x-3">
@@ -126,8 +289,18 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                 <span>New Bracket</span>
               </button>
               
+              {isAdmin && (
+                <button
+                  onClick={() => window.location.href = '/admin'}
+                  className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center space-x-2 cursor-pointer"
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  <span>Admin</span>
+                </button>
+              )}
+              
               <button
-                onClick={() => signOut()}
+                onClick={() => signOut({ callbackUrl: '/auth/signin' })}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
               >
                 <LogOut className="h-4 w-4" />
@@ -152,23 +325,121 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Entry Name
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Bracket ID
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Progress
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      TB
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Final Four
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Champ
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {brackets.map((bracket, index) => (
+                  {brackets.map((bracket, index) => {
+                    const bracketData = bracket as unknown as Record<string, unknown>;
+                    const year = bracketData.year || new Date().getFullYear();
+                    const number = bracketData.bracketNumber || '?';
+                    const progress = calculateProgress(bracket.picks);
+                    const finalFour = getFinalFourTeams(bracket.picks);
+                    
+                    return (
                     <tr key={bracket.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
                           {bracket.entryName || `Bracket #${index + 1}`}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-600">
+                          {year}-{String(number).padStart(6, '0')}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col space-y-1" style={{ minWidth: '150px' }}>
+                          <div className="text-xs text-gray-600">
+                            {progress.completed} / {progress.total} picks
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${progress.percentage}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-center">
+                          <div className={`w-12 h-8 flex items-center justify-center rounded border-2 font-medium text-sm ${
+                            bracket.tieBreaker 
+                              ? 'bg-green-100 border-green-500 text-green-900' 
+                              : 'bg-yellow-100 border-yellow-500'
+                          }`}>
+                            {bracket.tieBreaker || ''}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center space-x-1">
+                          {/* Top Left */}
+                          <div className={`w-8 h-8 flex items-center justify-center bg-gray-100 rounded ${
+                            finalFour.topLeftId && (finalFour.topLeftId === finalFour.finalist1Id || finalFour.topLeftId === finalFour.finalist2Id)
+                              ? 'border-2 border-blue-600'
+                              : 'border border-gray-300'
+                          }`}>
+                            <FinalFourLogo logoPath={finalFour.topLeft} />
+                          </div>
+                          {/* Bottom Left */}
+                          <div className={`w-8 h-8 flex items-center justify-center bg-gray-100 rounded ${
+                            finalFour.bottomLeftId && (finalFour.bottomLeftId === finalFour.finalist1Id || finalFour.bottomLeftId === finalFour.finalist2Id)
+                              ? 'border-2 border-blue-600'
+                              : 'border border-gray-300'
+                          }`}>
+                            <FinalFourLogo logoPath={finalFour.bottomLeft} />
+                          </div>
+                          {/* Top Right */}
+                          <div className={`w-8 h-8 flex items-center justify-center bg-gray-100 rounded ${
+                            finalFour.topRightId && (finalFour.topRightId === finalFour.finalist1Id || finalFour.topRightId === finalFour.finalist2Id)
+                              ? 'border-2 border-blue-600'
+                              : 'border border-gray-300'
+                          }`}>
+                            <FinalFourLogo logoPath={finalFour.topRight} />
+                          </div>
+                          {/* Bottom Right */}
+                          <div className={`w-8 h-8 flex items-center justify-center bg-gray-100 rounded ${
+                            finalFour.bottomRightId && (finalFour.bottomRightId === finalFour.finalist1Id || finalFour.bottomRightId === finalFour.finalist2Id)
+                              ? 'border-2 border-blue-600'
+                              : 'border border-gray-300'
+                          }`}>
+                            <FinalFourLogo logoPath={finalFour.bottomRight} />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-center">
+                          <div className={`w-10 h-10 flex items-center justify-center rounded border-2 ${
+                            finalFour.champion
+                              ? 'bg-green-50 border-green-600'
+                              : 'bg-gray-100 border-gray-300'
+                          }`}>
+                            <FinalFourLogo logoPath={finalFour.champion} />
+                          </div>
                         </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
@@ -233,7 +504,8 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

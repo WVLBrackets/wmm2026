@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getUserByEmail } from '@/lib/database';
+import { getUserByEmail } from '@/lib/secureDatabase';
 
 export async function GET() {
   try {

@@ -1,25 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
-import { getAllUsers } from '@/lib/secureDatabase';
+import { getAllBrackets } from '@/lib/secureDatabase';
 
 /**
- * GET /api/admin/users - Get all users (admin only)
+ * GET /api/admin/brackets - Get all brackets (admin only)
  */
 export async function GET() {
   try {
     // Check if user is admin
     await requireAdmin();
     
-    // Get all users (without passwords)
-    const users = await getAllUsers();
+    // Get all brackets with user information
+    const brackets = await getAllBrackets();
     
     return NextResponse.json({
       success: true,
-      data: users,
-      count: users.length
+      data: brackets,
+      count: brackets.length
     });
   } catch (error) {
-    console.error('Admin users error:', error);
+    console.error('Admin brackets error:', error);
     
     if (error instanceof Error && error.message.includes('Unauthorized')) {
       return NextResponse.json(
@@ -29,7 +29,7 @@ export async function GET() {
     }
     
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch users' },
+      { success: false, error: 'Failed to fetch brackets' },
       { status: 500 }
     );
   }

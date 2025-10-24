@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createUser } from '@/lib/database';
+import { createUser } from '@/lib/secureDatabase';
 
 export async function POST(request: NextRequest) {
   try {

@@ -1,63 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { promises as fs } from 'fs';
-import path from 'path';
-
-// Environment-aware file-based storage for tournament brackets
-const getBracketsFileName = () => {
-  // Priority: ENVIRONMENT env var > NODE_ENV > default to 'development'
-  const environment = process.env.ENVIRONMENT || process.env.NODE_ENV || 'development';
-  
-  // Log the environment being used for debugging
-  console.log(`[Bracket Storage] Using environment: ${environment}`);
-  
-  return `brackets-${environment}.json`;
-};
-
-const BRACKETS_FILE = path.join(process.cwd(), 'data', getBracketsFileName());
-
-// Initialize storage
-let tournamentBrackets: unknown[] = [];
-let nextId = 1;
-
-// Load brackets from file on startup
-async function loadBrackets() {
-  try {
-    const data = await fs.readFile(BRACKETS_FILE, 'utf8');
-    const parsed = JSON.parse(data);
-    tournamentBrackets = parsed.brackets || [];
-    nextId = parsed.nextId || 1;
-  } catch (error) {
-    // File doesn't exist yet, start with empty array
-    tournamentBrackets = [];
-    nextId = 1;
-  }
-}
-
-// Save brackets to file
-async function saveBrackets() {
-  try {
-    // Ensure data directory exists
-    await fs.mkdir(path.dirname(BRACKETS_FILE), { recursive: true });
-    
-    const data = {
-      brackets: tournamentBrackets,
-      nextId: nextId
-    };
-    
-    await fs.writeFile(BRACKETS_FILE, JSON.stringify(data, null, 2));
-  } catch (error) {
-    console.error('Error saving brackets:', error);
-  }
-}
-
-// Load brackets on module initialization
-loadBrackets();
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { 
+  createBracket, 
+  getBracketsByUserId, 
+  updateBracket, 
+  getUserByEmail,
+  getAllBrackets 
+} from '@/lib/secureDatabase';
 
 /**
- * POST /api/tournament-bracket - Create a new tournament bracket
+ * POST /api/tournament-bracket - Create a new tournament bracket (submit)
  */
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     
     // Validate required fields
@@ -68,6 +33,14 @@ export async function POST(request: NextRequest) {
           error: 'Missing required fields: playerName, playerEmail, entryName, and picks are required'
         },
         { status: 400 }
+      );
+    }
+
+    // Ensure the user is only creating brackets for themselves
+    if (body.playerEmail !== session.user.email) {
+      return NextResponse.json(
+        { success: false, error: 'You can only create brackets for your own account' },
+        { status: 403 }
       );
     }
 
@@ -97,13 +70,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if there's already a submitted bracket with this name for this user
-    const duplicateNameExists = tournamentBrackets.some(
-      bracket => bracket && typeof bracket === 'object' && 
-                 'playerEmail' in bracket && 'entryName' in bracket && 'status' in bracket &&
-                 (bracket as { playerEmail: string }).playerEmail === body.playerEmail && 
-                 (bracket as { entryName: string }).entryName === body.entryName && 
-                 (bracket as { status: string }).status === 'submitted'
+    // Get user from database
+    const user = await getUserByEmail(session.user.email);
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // Get all existing brackets for this user
+    const existingBrackets = await getBracketsByUserId(user.id);
+    
+    // Check if there's already a submitted bracket with this name
+    const duplicateNameExists = existingBrackets.some(
+      bracket => bracket.entryName === body.entryName && bracket.status === 'submitted'
     );
 
     if (duplicateNameExists) {
@@ -116,58 +97,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if there's an existing in-progress bracket for this user   
-    const existingBracketIndex = tournamentBrackets.findIndex(
-      bracket => bracket && typeof bracket === 'object' && 
-                 'playerEmail' in bracket && 'status' in bracket &&
-                 (bracket as { playerEmail: string }).playerEmail === body.playerEmail && 
-                 (bracket as { status: string }).status === 'in_progress'
+    // Create new submitted bracket
+    const bracket = await createBracket(
+      user.id,
+      body.entryName,
+      body.tieBreaker,
+      picks
     );
-
-    let tournamentBracket;
     
-    if (existingBracketIndex >= 0) {
-      // Update existing in-progress bracket to submitted
-      const existingBracket = tournamentBrackets[existingBracketIndex] as Record<string, unknown>;
-      tournamentBracket = {
-        ...existingBracket,
-        entryName: body.entryName,
-        tieBreaker: body.tieBreaker,
-        submittedAt: new Date().toISOString(),
-        picks: picks,
-        isComplete: true,
-        isPublic: true,
-        status: 'submitted'
-      };
-      
-      // Update the existing bracket
-      tournamentBrackets[existingBracketIndex] = tournamentBracket;
-    } else {
-      // Create new tournament bracket
-      tournamentBracket = {
-        id: `tournament-bracket-${nextId++}`,
-        playerName: body.playerName,
-        playerEmail: body.playerEmail,
-        entryName: body.entryName,
-        tieBreaker: body.tieBreaker,
-        submittedAt: new Date().toISOString(),
-        picks: picks,
-        totalPoints: 0, // Will be calculated when games are played
-        isComplete: true,
-        isPublic: true,
-        status: 'submitted' // Track bracket status
-      };
-      
-      // Add to storage
-      tournamentBrackets.push(tournamentBracket);
+    // Update status to submitted
+    const updatedBracket = await updateBracket(bracket.id, { status: 'submitted' });
+    
+    if (!updatedBracket) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to submit bracket' },
+        { status: 500 }
+      );
     }
-    
-    // Save to file
-    await saveBrackets();
 
+    // Return bracket in the format expected by the frontend
     return NextResponse.json({
       success: true,
-      data: tournamentBracket,
+      data: {
+        id: updatedBracket.id,
+        playerName: user.name,
+        playerEmail: user.email,
+        entryName: updatedBracket.entryName,
+        tieBreaker: updatedBracket.tieBreaker,
+        submittedAt: updatedBracket.updatedAt.toISOString(),
+        picks: updatedBracket.picks,
+        totalPoints: 0,
+        isComplete: true,
+        isPublic: true,
+        status: updatedBracket.status,
+        bracketNumber: updatedBracket.bracketNumber,
+        year: updatedBracket.year
+      },
       message: 'Tournament bracket submitted successfully'
     });
   } catch (error) {
@@ -184,6 +149,15 @@ export async function POST(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     
     // Validate required fields
@@ -197,31 +171,66 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // For PUT (save in-progress), always create a new bracket
-    // Multiple in-progress brackets can have the same name
-    const bracketData = {
-      id: `tournament-bracket-${nextId++}`,
-      playerName: body.playerName,
-      playerEmail: body.playerEmail,
-      entryName: body.entryName,
-      tieBreaker: body.tieBreaker,
-      lastSaved: new Date().toISOString(),
-      picks: body.picks,
-      totalPoints: 0,
-      isComplete: false,
-      isPublic: false,
-      status: 'in_progress'
-    };
+    // Ensure the user is only saving brackets for themselves
+    if (body.playerEmail !== session.user.email) {
+      return NextResponse.json(
+        { success: false, error: 'You can only save brackets for your own account' },
+        { status: 403 }
+      );
+    }
 
-    // Always create new in-progress bracket
-    tournamentBrackets.push(bracketData);
+    // Get user from database
+    const user = await getUserByEmail(session.user.email);
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // Always create a new in-progress bracket when using PUT without an ID
+    // Users can have multiple in-progress brackets with the same name
+    console.log('Creating new in-progress bracket for user:', user.id, 'with name:', body.entryName);
     
-    // Save to file
-    await saveBrackets();
+    const bracket = await createBracket(
+      user.id,
+      body.entryName,
+      body.tieBreaker,
+      body.picks
+    );
+    
+    console.log('Bracket created with status:', bracket.status);
+    
+    // Set status to in_progress
+    const updatedBracket = await updateBracket(bracket.id, { status: 'in_progress' });
+    
+    console.log('Updated bracket status:', updatedBracket?.status);
+    
+    if (!updatedBracket) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to save bracket' },
+        { status: 500 }
+      );
+    }
 
+    // Return bracket in the format expected by the frontend
     return NextResponse.json({
       success: true,
-      data: bracketData,
+      data: {
+        id: updatedBracket.id,
+        playerName: user.name,
+        playerEmail: user.email,
+        entryName: updatedBracket.entryName,
+        tieBreaker: updatedBracket.tieBreaker,
+        lastSaved: updatedBracket.updatedAt.toISOString(),
+        picks: updatedBracket.picks,
+        totalPoints: 0,
+        isComplete: false,
+        isPublic: false,
+        status: updatedBracket.status,
+        bracketNumber: updatedBracket.bracketNumber,
+        year: updatedBracket.year
+      },
       message: 'Bracket saved successfully'
     });
   } catch (error) {
@@ -233,19 +242,54 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-
 /**
- * GET /api/tournament-bracket - Get all tournament brackets
+ * GET /api/tournament-bracket - Get all tournament brackets for the current user
  */
 export async function GET() {
   try {
-    // Reload brackets from file to ensure we have the latest data
-    await loadBrackets();
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Get user from database
+    const user = await getUserByEmail(session.user.email);
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // Get all brackets for this user
+    const brackets = await getBracketsByUserId(user.id);
+    
+    // Transform to frontend format
+    const formattedBrackets = brackets.map(bracket => ({
+      id: bracket.id,
+      playerName: user.name,
+      playerEmail: user.email,
+      entryName: bracket.entryName,
+      tieBreaker: bracket.tieBreaker,
+      submittedAt: bracket.status === 'submitted' ? bracket.updatedAt.toISOString() : undefined,
+      lastSaved: bracket.status === 'in_progress' ? bracket.updatedAt.toISOString() : undefined,
+      picks: bracket.picks,
+      totalPoints: 0,
+      isComplete: bracket.status === 'submitted',
+      bracketNumber: bracket.bracketNumber,
+      year: bracket.year,
+      isPublic: bracket.status === 'submitted',
+      status: bracket.status
+    }));
     
     return NextResponse.json({
       success: true,
-      data: tournamentBrackets,
-      count: tournamentBrackets.length
+      data: formattedBrackets,
+      count: formattedBrackets.length
     });
   } catch (error) {
     console.error('Error fetching tournament brackets:', error);

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createPasswordResetToken, getUserByEmail } from '@/lib/database';
-import { sendPasswordResetEmail } from '@/lib/emailService';
+import { createPasswordResetToken, getUserByEmail } from '@/lib/secureDatabase';
+import { sendPasswordResetEmail, emailService } from '@/lib/emailService';
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,7 +32,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Send reset email
+    // In development mode, return the token directly so user can reset immediately
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    
+    if (isDevelopment) {
+      return NextResponse.json({
+        message: 'Password reset token generated',
+        resetToken,
+        isDevelopment: true,
+      });
+    }
+
+    // In production, send reset email
     // Use Vercel's dynamic URL or fallback to NEXTAUTH_URL
     const baseUrl = process.env.VERCEL_URL 
       ? `https://${process.env.VERCEL_URL}` 

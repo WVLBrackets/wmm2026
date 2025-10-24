@@ -35,6 +35,8 @@ function BracketContent() {
   const [submittedBrackets, setSubmittedBrackets] = useState<BracketSubmission[]>([]);
   const [bracketResetKey, setBracketResetKey] = useState(0);
   const [deletingBracketId, setDeletingBracketId] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string>('');
+  const [isAdminMode, setIsAdminMode] = useState(false);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -46,6 +48,18 @@ function BracketContent() {
     
     loadTournament();
   }, [status, router]);
+
+  // Check for admin mode and edit parameter
+  useEffect(() => {
+    const editId = searchParams.get('edit');
+    const adminMode = searchParams.get('admin') === 'true';
+    
+    if (editId && adminMode) {
+      setIsAdminMode(true);
+      // Load the bracket to edit with admin mode flag
+      loadBracketForEdit(editId, true);
+    }
+  }, [searchParams]);
 
   // Set bracket mode when view changes
   useEffect(() => {
@@ -94,6 +108,33 @@ function BracketContent() {
       }
     } catch (error) {
       console.error('Error loading submitted brackets:', error);
+    }
+  };
+
+  const loadBracketForEdit = async (bracketId: string, adminMode = false) => {
+    try {
+      // Use admin endpoint if in admin mode
+      const endpoint = adminMode 
+        ? `/api/admin/brackets/${bracketId}`
+        : `/api/tournament-bracket/${bracketId}`;
+      
+      console.log('Loading bracket - Admin mode:', adminMode, 'Endpoint:', endpoint);
+      
+      const response = await fetch(endpoint);
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        const bracketData = data.data as Record<string, unknown>;
+        setEditingBracket(bracketData);
+        setPicks(bracketData.picks as { [gameId: string]: string } || {});
+        setEntryName(bracketData.entryName as string || '');
+        setTieBreaker(bracketData.tieBreaker?.toString() || '');
+        setCurrentView('bracket');
+      } else {
+        console.error('Failed to load bracket:', data.error);
+      }
+    } catch (error) {
+      console.error('Error loading bracket for edit:', error);
     }
   };
 
@@ -187,40 +228,65 @@ function BracketContent() {
 
   const handleSubmitBracket = async () => {
     if (!session?.user?.name || !session?.user?.email) {
-      alert('User information not available');
+      setSubmitError('User information not available');
+      setTimeout(() => setSubmitError(''), 10000);
       return;
     }
 
     try {
       setIsSubmitting(true);
+      setSubmitError(''); // Clear any previous errors
       
       const submission = {
         playerName: session.user.name,
         playerEmail: session.user.email,
         entryName: entryName,
         tieBreaker: tieBreaker,
-        picks
+        picks,
+        status: 'submitted'
       };
 
-      const response = await fetch('/api/tournament-bracket', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(submission),
-      });
+      let response;
+      
+      if (editingBracket) {
+        // Update existing bracket and change status to submitted
+        const bracket = editingBracket as Record<string, unknown>;
+        const endpoint = isAdminMode 
+          ? `/api/admin/brackets/${bracket.id}`
+          : `/api/tournament-bracket/${bracket.id}`;
+        
+        response = await fetch(endpoint, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(submission),
+        });
+      } else {
+        // Create new submitted bracket (not applicable in admin mode)
+        response = await fetch('/api/tournament-bracket', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(submission),
+        });
+      }
 
       const data = await response.json();
       
-          if (data.success) {
-            // Return to landing page without popup
-            handleBackToLanding();
-          } else {
-            alert(`Error: ${data.error}`);
-          }
+      if (data.success) {
+        // Return to landing page without popup
+        handleBackToLanding();
+      } else {
+        // Show error message that fades after 10 seconds
+        setSubmitError(data.error || 'Failed to submit bracket');
+        setTimeout(() => setSubmitError(''), 10000);
+      }
     } catch (error) {
       console.error('Error submitting bracket:', error);
-      alert('Failed to submit bracket. Please try again.');
+      setSubmitError('Failed to submit bracket. Please try again.');
+      setTimeout(() => setSubmitError(''), 10000);
     } finally {
       setIsSubmitting(false);
     }
@@ -253,6 +319,12 @@ function BracketContent() {
   };
 
   const handleBackToLanding = async () => {
+    // If in admin mode, redirect back to admin panel
+    if (isAdminMode) {
+      router.push('/admin');
+      return;
+    }
+    
     setCurrentView('landing');
     setEditingBracket(null);
     setPicks({});
@@ -326,7 +398,11 @@ function BracketContent() {
       if (editingBracket) {
         // Update existing bracket
         const bracket = editingBracket as Record<string, unknown>;
-        response = await fetch(`/api/tournament-bracket/${bracket.id}`, {
+        const endpoint = isAdminMode 
+          ? `/api/admin/brackets/${bracket.id}`
+          : `/api/tournament-bracket/${bracket.id}`;
+        
+        response = await fetch(endpoint, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -334,7 +410,7 @@ function BracketContent() {
           body: JSON.stringify(saveData),
         });
       } else {
-        // Create new bracket
+        // Create new bracket (not applicable in admin mode)
         response = await fetch('/api/tournament-bracket', {
           method: 'PUT',
           headers: {
@@ -509,6 +585,9 @@ function BracketContent() {
           onEntryNameChange={setEntryName}
           onTieBreakerChange={setTieBreaker}
           readOnly={isReadOnly}
+          submitError={submitError}
+          bracketNumber={editingBracket ? (editingBracket as Record<string, unknown>).bracketNumber as number : undefined}
+          year={editingBracket ? (editingBracket as Record<string, unknown>).year as number : undefined}
         />
       </div>
     </div>

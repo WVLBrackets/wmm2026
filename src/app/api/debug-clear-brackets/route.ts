@@ -17,25 +17,21 @@ export async function GET(request: NextRequest) {
   
   const environment = getCurrentEnvironment();
   try {
-    const usersResult = await sql`SELECT COUNT(*) as count FROM users WHERE environment = ${environment}`;
-    const tokensResult = await sql`SELECT COUNT(*) as count FROM tokens WHERE environment = ${environment}`;
     const bracketsResult = await sql`SELECT COUNT(*) as count FROM brackets WHERE environment = ${environment}`;
 
     return NextResponse.json({
       success: true,
-      message: 'Database status',
+      message: 'Brackets count',
       environment,
-      usersCount: parseInt(usersResult.rows[0].count),
-      tokensCount: parseInt(tokensResult.rows[0].count),
       bracketsCount: parseInt(bracketsResult.rows[0].count),
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Database status error:', error);
+    console.error('Brackets status error:', error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to get database status',
+        error: 'Failed to get brackets count',
         details: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
@@ -55,30 +51,27 @@ export async function POST(request: NextRequest) {
   
   const environment = getCurrentEnvironment();
   try {
-    // Delete all data for the current environment
+    // Delete only brackets for the current environment (preserve users!)
     await sql`DELETE FROM admin_actions WHERE environment = ${environment}`;
     await sql`DELETE FROM brackets WHERE environment = ${environment}`;
-    await sql`DELETE FROM tokens WHERE environment = ${environment}`;
-    await sql`DELETE FROM users WHERE environment = ${environment}`;
 
     return NextResponse.json({
       success: true,
-      message: 'Database cleared successfully',
+      message: 'Brackets cleared successfully (users preserved)',
       environment,
-      usersCount: 0,
-      tokensCount: 0,
       bracketsCount: 0,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Database clear error:', error);
+    console.error('Brackets clear error:', error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to clear database',
+        error: 'Failed to clear brackets',
         details: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     );
   }
 }
+
