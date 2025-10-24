@@ -116,7 +116,7 @@ export async function PUT(
       
       // Check if there's already a submitted bracket with this name (excluding current bracket)
       const duplicateNameExists = existingBrackets.some(
-        b => b.id !== params.id && b.entryName === body.entryName && b.status === 'submitted'
+        b => b.id !== id && b.entryName === body.entryName && b.status === 'submitted'
       );
 
       if (duplicateNameExists) {
