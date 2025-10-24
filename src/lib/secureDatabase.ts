@@ -43,7 +43,7 @@ export async function initializeDatabase() {
         confirmation_expires TIMESTAMP,
         reset_token VARCHAR(64),
         reset_expires TIMESTAMP,
-        environment VARCHAR(50) NOT NULL DEFAULT ${environment},
+        environment VARCHAR(50) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(email, environment)
       )
@@ -56,7 +56,7 @@ export async function initializeDatabase() {
         user_id VARCHAR(36) NOT NULL,
         expires TIMESTAMP NOT NULL,
         type VARCHAR(20) NOT NULL,
-        environment VARCHAR(50) NOT NULL DEFAULT ${environment},
+        environment VARCHAR(50) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
@@ -73,7 +73,7 @@ export async function initializeDatabase() {
         status VARCHAR(50) DEFAULT 'draft',
         bracket_number INTEGER NOT NULL,
         year INTEGER NOT NULL,
-        environment VARCHAR(50) NOT NULL DEFAULT ${environment},
+        environment VARCHAR(50) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -90,7 +90,7 @@ export async function initializeDatabase() {
         target_user_id VARCHAR(36),
         target_bracket_id VARCHAR(36),
         details JSONB,
-        environment VARCHAR(50) NOT NULL DEFAULT ${environment},
+        environment VARCHAR(50) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
