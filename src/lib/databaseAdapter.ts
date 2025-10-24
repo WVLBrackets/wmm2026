@@ -1,23 +1,26 @@
 import { getCurrentEnvironment } from './databaseConfig';
+import type { QueryResult } from 'pg';
 
 // Environment-aware database adapter
 // Uses @vercel/postgres for production/preview (Neon)
 // Uses pg for local development (local PostgreSQL)
 
-let sqlAdapter: typeof import('@vercel/postgres').sql | typeof import('./localPostgres').default | null = null;
+type SqlFunction = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<QueryResult>;
 
-async function getSqlAdapter() {
+let sqlAdapter: SqlFunction | null = null;
+
+async function getSqlAdapter(): Promise<SqlFunction> {
   if (!sqlAdapter) {
     const environment = getCurrentEnvironment();
     
     if (environment === 'development') {
       // Use local PostgreSQL for development
       const { sql } = await import('./localPostgres');
-      sqlAdapter = sql;
+      sqlAdapter = sql as SqlFunction;
     } else {
       // Use Vercel Postgres for production/preview (Neon)
       const { sql } = await import('@vercel/postgres');
-      sqlAdapter = sql;
+      sqlAdapter = sql as SqlFunction;
     }
   }
   return sqlAdapter;
