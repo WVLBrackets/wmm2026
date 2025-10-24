@@ -1,4 +1,6 @@
 import { NextAuthOptions } from 'next-auth';
+import type { JWT } from 'next-auth/jwt';
+import type { User, Session } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { verifyPassword } from './secureDatabase';
 
@@ -64,15 +66,15 @@ export const authOptions: NextAuthOptions = {
       // Otherwise, redirect to base URL
       return baseUrl;
     },
-        async jwt({ token, user }: { token: Record<string, unknown>; user: Record<string, unknown> | undefined }) {
+        async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
+        token.id = user.id as string;
       }
       return token;
     },
-        async session({ session, token }: { session: Record<string, unknown>; token: Record<string, unknown> }) {
+        async session({ session, token }) {
       if (token && session.user) {
-        (session.user as { id?: string }).id = token.id as string;
+        session.user.id = token.id as string;
       }
       return session;
     },
