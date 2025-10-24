@@ -33,12 +33,17 @@ export async function POST(request: NextRequest) {
 
     // In development mode, user is auto-confirmed
     const isDevelopment = process.env.NODE_ENV === 'development';
+    const isPreview = process.env.VERCEL_ENV === 'preview';
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const isAdminUser = adminEmail && email.toLowerCase() === adminEmail.toLowerCase();
     
-    if (isDevelopment) {
+    // Auto-confirm in development OR if admin user in preview
+    if (isDevelopment || (isPreview && isAdminUser)) {
       return NextResponse.json({
         message: 'User created successfully. You can now sign in.',
         userId: user.id,
-        autoConfirmed: true
+        autoConfirmed: true,
+        reason: isDevelopment ? 'development mode' : 'admin user in preview'
       });
     }
 
