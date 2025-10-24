@@ -8,9 +8,10 @@ import bcrypt from 'bcryptjs';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email || !(await isAdmin(session.user.email))) {
@@ -19,8 +20,6 @@ export async function POST(
         { status: 403 }
       );
     }
-
-    const { id } = params;
     const { newPassword } = await request.json();
 
     if (!newPassword || newPassword.length < 6) {

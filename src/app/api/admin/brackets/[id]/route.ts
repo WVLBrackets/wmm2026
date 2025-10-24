@@ -6,10 +6,11 @@ import { getBracketById, updateBracket, deleteBracket } from '@/lib/secureDataba
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    console.log('Admin brackets GET endpoint hit for bracket:', params.id);
+    const { id } = await params;
+    console.log('Admin brackets GET endpoint hit for bracket:', id);
     const session = await getServerSession(authOptions);
     console.log('Session user:', session?.user?.email);
     
@@ -23,8 +24,6 @@ export async function GET(
         { status: 403 }
       );
     }
-
-    const { id } = params;
     const bracket = await getBracketById(id);
 
     if (!bracket) {
@@ -49,9 +48,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email || !(await isAdmin(session.user.email))) {
@@ -60,8 +60,6 @@ export async function PUT(
         { status: 403 }
       );
     }
-
-    const { id } = params;
     const body = await request.json();
 
     const updatedBracket = await updateBracket(id, {
@@ -94,9 +92,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email || !(await isAdmin(session.user.email))) {
@@ -105,8 +104,6 @@ export async function DELETE(
         { status: 403 }
       );
     }
-
-    const { id } = params;
     const deleted = await deleteBracket(id);
 
     if (!deleted) {

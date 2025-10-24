@@ -7,9 +7,10 @@ import { getCurrentEnvironment } from '@/lib/databaseConfig';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email || !(await isAdmin(session.user.email))) {
@@ -18,8 +19,6 @@ export async function POST(
         { status: 403 }
       );
     }
-
-    const { id } = params;
     const environment = getCurrentEnvironment();
 
     // Update user to confirmed and clear confirmation tokens
