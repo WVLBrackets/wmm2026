@@ -26,12 +26,12 @@ export function getDatabaseConfig(): DatabaseConfig {
   } else if (vercelEnv === 'preview') {
     // Vercel preview/staging
     environment = 'preview';
-    connectionString = process.env.DATABASE_URL_PREVIEW || '';
+    connectionString = process.env.POSTGRES_URL || '';
     database = `wmm2026_preview_${process.env.VERCEL_GIT_COMMIT_SHA || 'unknown'}`;
   } else {
     // Production
     environment = 'production';
-    connectionString = process.env.DATABASE_URL_PROD || '';
+    connectionString = process.env.POSTGRES_URL || '';
     database = 'wmm2026_prod';
   }
   
