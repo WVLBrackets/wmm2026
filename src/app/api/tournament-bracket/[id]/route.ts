@@ -131,7 +131,7 @@ export async function PUT(
     }
     
     // Update the bracket
-    const updatedBracket = await updateBracket(params.id, {
+    const updatedBracket = await updateBracket(id, {
       entryName: body.entryName,
       tieBreaker: body.tieBreaker,
       picks: body.picks,
