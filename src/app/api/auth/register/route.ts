@@ -39,6 +39,18 @@ export async function POST(request: NextRequest) {
     
     // Auto-confirm in development OR if admin user in preview
     if (isDevelopment || (isPreview && isAdminUser)) {
+      // If admin in preview, we need to manually confirm them in the database
+      if (isPreview && isAdminUser && !isDevelopment) {
+        const { sql } = await import('@/lib/databaseAdapter');
+        await sql`
+          UPDATE users 
+          SET email_confirmed = TRUE, confirmation_token = NULL, confirmation_expires = NULL
+          WHERE id = ${user.id}
+        `;
+        // Also delete any confirmation tokens
+        await sql`DELETE FROM tokens WHERE user_id = ${user.id} AND type = 'confirmation'`;
+      }
+      
       return NextResponse.json({
         message: 'User created successfully. You can now sign in.',
         userId: user.id,
