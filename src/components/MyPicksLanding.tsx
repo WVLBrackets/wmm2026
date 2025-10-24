@@ -354,8 +354,8 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                 <tbody className="bg-white divide-y divide-gray-200">
                   {brackets.map((bracket, index) => {
                     const bracketData = bracket as unknown as Record<string, unknown>;
-                    const year = bracketData.year || new Date().getFullYear();
-                    const number = bracketData.bracketNumber || '?';
+                    const year = (bracketData.year as number) || new Date().getFullYear();
+                    const number = (bracketData.bracketNumber as number) || 0;
                     const progress = calculateProgress(bracket.picks);
                     const finalFour = getFinalFourTeams(bracket.picks);
                     
