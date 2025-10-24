@@ -441,17 +441,17 @@ export async function getBracketsByUserId(userId: string): Promise<Bracket[]> {
   `;
   
   return result.rows.map((row: Record<string, unknown>) => ({
-    id: row.id,
-    userId: row.user_id,
-    entryName: row.entry_name,
-    tieBreaker: row.tie_breaker,
-    picks: row.picks,
-    status: row.status,
-    bracketNumber: row.bracket_number,
-    year: row.year,
-    environment: row.environment,
-    createdAt: new Date(row.created_at),
-    updatedAt: new Date(row.updated_at),
+    id: row.id as string,
+    userId: row.user_id as string,
+    entryName: row.entry_name as string,
+    tieBreaker: row.tie_breaker as number | undefined,
+    picks: row.picks as Record<string, string>,
+    status: row.status as string,
+    bracketNumber: row.bracket_number as number,
+    year: row.year as number,
+    environment: row.environment as string,
+    createdAt: new Date(row.created_at as string),
+    updatedAt: new Date(row.updated_at as string),
   }));
 }
 
