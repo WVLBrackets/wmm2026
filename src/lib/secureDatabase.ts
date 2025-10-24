@@ -537,12 +537,12 @@ export async function getAllUsers(): Promise<Omit<User, 'password'>[]> {
   `;
   
   return result.rows.map((row: Record<string, unknown>) => ({
-    id: row.id,
-    email: row.email,
-    name: row.name,
-    emailConfirmed: row.email_confirmed,
-    createdAt: new Date(row.created_at),
-    environment: row.environment,
+    id: row.id as string,
+    email: row.email as string,
+    name: row.name as string,
+    emailConfirmed: row.email_confirmed as boolean,
+    createdAt: new Date(row.created_at as string),
+    environment: row.environment as string,
   }));
 }
 
@@ -558,18 +558,18 @@ export async function getAllBrackets(): Promise<(Bracket & { userEmail: string; 
   `;
   
   return result.rows.map((row: Record<string, unknown>) => ({
-    id: row.id,
-    userId: row.user_id,
-    entryName: row.entry_name,
-    tieBreaker: row.tie_breaker,
-    picks: row.picks,
-    status: row.status,
-    bracketNumber: row.bracket_number,
-    year: row.year,
-    environment: row.environment,
-    createdAt: new Date(row.created_at),
-    updatedAt: new Date(row.updated_at),
-    userEmail: row.user_email,
-    userName: row.user_name,
+    id: row.id as string,
+    userId: row.user_id as string,
+    entryName: row.entry_name as string,
+    tieBreaker: row.tie_breaker as number | undefined,
+    picks: row.picks as Record<string, string>,
+    status: row.status as string,
+    bracketNumber: row.bracket_number as number,
+    year: row.year as number,
+    environment: row.environment as string,
+    createdAt: new Date(row.created_at as string),
+    updatedAt: new Date(row.updated_at as string),
+    userEmail: row.user_email as string,
+    userName: row.user_name as string,
   }));
 }
