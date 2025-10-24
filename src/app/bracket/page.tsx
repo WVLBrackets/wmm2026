@@ -51,6 +51,8 @@ function BracketContent() {
 
   // Check for admin mode and edit parameter
   useEffect(() => {
+    if (!searchParams) return;
+    
     const editId = searchParams.get('edit');
     const adminMode = searchParams.get('admin') === 'true';
     
