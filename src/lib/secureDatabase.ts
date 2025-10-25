@@ -281,6 +281,7 @@ export async function confirmUserEmail(token: string): Promise<boolean> {
 }
 
 export async function createPasswordResetToken(email: string): Promise<string | null> {
+  const environment = getCurrentEnvironment();
   const user = await getUserByEmail(email);
   if (!user) {
     return null;
@@ -298,8 +299,8 @@ export async function createPasswordResetToken(email: string): Promise<string | 
 
   // Store token in tokens table
   await sql`
-    INSERT INTO tokens (token, user_id, expires, type)
-    VALUES (${resetToken}, ${user.id}, ${resetExpires.toISOString()}, 'reset')
+    INSERT INTO tokens (token, user_id, expires, type, environment)
+    VALUES (${resetToken}, ${user.id}, ${resetExpires.toISOString()}, 'reset', ${environment})
   `;
 
   return resetToken;
