@@ -180,14 +180,17 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
 }
 
 export async function sendConfirmationEmail(to: string, name: string, confirmationLink: string, confirmationCode: string): Promise<boolean> {
-  // Determine environment for email badge
+  // Only show badge for non-production environments
   const environment = process.env.VERCEL_ENV || process.env.NODE_ENV || 'development';
   const isProduction = environment === 'production';
-  const isPreview = environment === 'preview';
+  const showBadge = !isProduction;
   
-  // Environment badge styling
-  const badgeColor = isProduction ? '#28a745' : isPreview ? '#ffc107' : '#6c757d';
-  const badgeText = isProduction ? '🟢 PRODUCTION' : isPreview ? '🟡 PREVIEW/TEST' : '⚪ DEVELOPMENT';
+  // Environment badge (only for Preview/Development)
+  const badgeHtml = showBadge ? `
+    <div style="text-align: center; margin-bottom: 20px;">
+      <span style="background-color: #ffc107; color: #000; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: bold;">🟡 PREVIEW/TEST ENVIRONMENT</span>
+    </div>
+  ` : '';
   
   const html = `
     <!DOCTYPE html>
@@ -198,9 +201,7 @@ export async function sendConfirmationEmail(to: string, name: string, confirmati
     </head>
     <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px;">
-        <div style="text-align: center; margin-bottom: 20px;">
-          <span style="background-color: ${badgeColor}; color: white; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: bold;">${badgeText}</span>
-        </div>
+        ${badgeHtml}
         <h2 style="color: #2c3e50; text-align: center;">Welcome to Warren's March Madness!</h2>
         <p>Hi ${name},</p>
         <p>Thank you for signing up for Warren's March Madness ${process.env.NEXT_PUBLIC_TOURNAMENT_YEAR || '2026'}!</p>
@@ -247,14 +248,17 @@ export async function sendConfirmationEmail(to: string, name: string, confirmati
 }
 
 export async function sendPasswordResetEmail(to: string, name: string, resetLink: string, resetCode: string): Promise<boolean> {
-  // Determine environment for email badge
+  // Only show badge for non-production environments
   const environment = process.env.VERCEL_ENV || process.env.NODE_ENV || 'development';
   const isProduction = environment === 'production';
-  const isPreview = environment === 'preview';
+  const showBadge = !isProduction;
   
-  // Environment badge styling
-  const badgeColor = isProduction ? '#28a745' : isPreview ? '#ffc107' : '#6c757d';
-  const badgeText = isProduction ? '🟢 PRODUCTION' : isPreview ? '🟡 PREVIEW/TEST' : '⚪ DEVELOPMENT';
+  // Environment badge (only for Preview/Development)
+  const badgeHtml = showBadge ? `
+    <div style="text-align: center; margin-bottom: 20px;">
+      <span style="background-color: #ffc107; color: #000; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: bold;">🟡 PREVIEW/TEST ENVIRONMENT</span>
+    </div>
+  ` : '';
   
   const html = `
     <!DOCTYPE html>
@@ -265,9 +269,7 @@ export async function sendPasswordResetEmail(to: string, name: string, resetLink
     </head>
     <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px;">
-        <div style="text-align: center; margin-bottom: 20px;">
-          <span style="background-color: ${badgeColor}; color: white; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: bold;">${badgeText}</span>
-        </div>
+        ${badgeHtml}
         <h2 style="color: #2c3e50; text-align: center;">Password Reset Request</h2>
         <p>Hi ${name},</p>
         <p>We received a request to reset your password for your Warren's March Madness account.</p>
