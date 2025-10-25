@@ -2,6 +2,8 @@ import { sql } from './databaseAdapter';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { getCurrentEnvironment, getDatabaseConfig } from './databaseConfig';
+import { getSiteConfigFromGoogleSheets } from './siteConfig';
+import { FALLBACK_CONFIG } from './fallbackConfig';
 
 export interface User {
   id: string;
@@ -400,7 +402,20 @@ export interface Bracket {
 export async function createBracket(userId: string, entryName: string, tieBreaker?: number, picks: Record<string, string> = {}): Promise<Bracket> {
   const environment = getCurrentEnvironment();
   const bracketId = crypto.randomUUID();
-  const year = new Date().getFullYear();
+  
+  // Get year from site config (tournament_year)
+  let year = new Date().getFullYear(); // Default fallback
+  try {
+    const config = await getSiteConfigFromGoogleSheets();
+    if (config?.tournamentYear) {
+      year = parseInt(config.tournamentYear);
+    }
+  } catch (error) {
+    // Use fallback config if Google Sheets fails
+    if (FALLBACK_CONFIG.tournamentYear) {
+      year = parseInt(FALLBACK_CONFIG.tournamentYear);
+    }
+  }
   
   // Get the next bracket number for this year and environment
   const result = await sql`

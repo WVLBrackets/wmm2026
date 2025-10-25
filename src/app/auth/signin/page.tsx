@@ -1,10 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { signIn, getSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
+import { getSiteConfig } from '@/config/site';
+import { SiteConfigData } from '@/lib/siteConfig';
+import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 
 export default function SignInPage() {
   const [email, setEmail] = useState('');
@@ -12,8 +15,22 @@ export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
   
   const router = useRouter();
+
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const config = await getSiteConfig();
+        setSiteConfig(config);
+      } catch (error) {
+        console.error('Failed to load site config:', error);
+        setSiteConfig(FALLBACK_CONFIG);
+      }
+    };
+    loadConfig();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,11 +165,13 @@ export default function SignInPage() {
             </Link>
           </div>
 
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
-              Demo account: <span className="font-mono">admin@wmm2026.com</span> / <span className="font-mono">password</span>
-            </p>
-          </div>
+          {siteConfig?.signinFooter && (
+            <div className="text-center">
+              <p className="text-sm text-gray-600">
+                {siteConfig.signinFooter}
+              </p>
+            </div>
+          )}
         </form>
       </div>
     </div>

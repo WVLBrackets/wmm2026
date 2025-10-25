@@ -33,6 +33,8 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   welcomeInprogressReminder: 'Be sure to submit your picks so they can be included in the contest',
   welcomeCanStartNew: 'You can start a new entry and save it for later without submitting it now',
   entrySingular: 'this entry',
-  entryPlural: 'these entries'
+  entryPlural: 'these entries',
+  // Sign-in page configuration
+  signinFooter: ''
 };
 

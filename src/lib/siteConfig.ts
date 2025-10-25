@@ -32,6 +32,8 @@ export interface SiteConfigData {
   welcomeCanStartNew: string;
   entrySingular: string;
   entryPlural: string;
+  // Sign-in page configuration
+  signinFooter: string;
 }
 
 // Function to fetch site config from Google Sheets
@@ -142,6 +144,9 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
             break;
           case 'entry_plural':
             config.entryPlural = value;
+            break;
+          case 'signin_footer':
+            config.signinFooter = value;
             break;
         }
       }
