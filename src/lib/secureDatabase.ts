@@ -308,10 +308,12 @@ export async function createPasswordResetToken(email: string): Promise<string | 
 
 export async function resetPassword(token: string, newPassword: string): Promise<boolean> {
   try {
-    // Find valid reset token
+    const environment = getCurrentEnvironment();
+    
+    // Find valid reset token in current environment
     const tokenResult = await sql`
       SELECT * FROM tokens 
-      WHERE token = ${token} AND type = 'reset' AND expires > NOW()
+      WHERE token = ${token} AND type = 'reset' AND expires > NOW() AND environment = ${environment}
     `;
     
     if (tokenResult.rows.length === 0) {
@@ -325,7 +327,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
     await sql`
       UPDATE users 
       SET password = ${hashedPassword}, reset_token = NULL, reset_expires = NULL
-      WHERE id = ${tokenRow.user_id}
+      WHERE id = ${tokenRow.user_id} AND environment = ${environment}
     `;
     
     // Remove token
