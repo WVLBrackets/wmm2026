@@ -46,11 +46,22 @@ export async function POST(request: NextRequest) {
 
     // In production, always require email verification
     const token = user.confirmationToken!;
+    
+    // Debug logging
+    console.log('📧 Registration - Preparing confirmation email');
+    console.log('Token generated:', token ? 'YES' : 'NO');
+    console.log('Token length:', token?.length || 0);
+    console.log('VERCEL_URL:', process.env.VERCEL_URL);
+    console.log('NEXTAUTH_URL:', process.env.NEXTAUTH_URL);
+    
     // Use Vercel's dynamic URL or fallback to NEXTAUTH_URL
     const baseUrl = process.env.VERCEL_URL 
       ? `https://${process.env.VERCEL_URL}` 
       : process.env.NEXTAUTH_URL || 'http://localhost:3000';
     const confirmationLink = `${baseUrl}/auth/confirm?token=${token}`;
+    
+    console.log('Base URL:', baseUrl);
+    console.log('Confirmation link:', confirmationLink);
     
     // Check email service status
     const emailStatus = emailService.getStatus();
