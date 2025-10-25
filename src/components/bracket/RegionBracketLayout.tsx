@@ -24,8 +24,15 @@ export default function RegionBracketLayout({
     onPick(game.id, team.id as string);
   };
 
-  const renderTeam = (team: Record<string, unknown>, game: TournamentGame, isTeam1: boolean, round: string) => {
-    if (!team) return <div className="h-6 bg-gray-100 rounded"></div>;
+  const renderTeam = (team: Record<string, unknown> | undefined, game: TournamentGame, isTeam1: boolean, round: string) => {
+    // Always render a slot, even if no team is assigned yet
+    if (!team) {
+      return (
+        <div className="h-6 bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
+          <span className="text-xs text-gray-400">-</span>
+        </div>
+      );
+    }
     
     const isSelected = picks[game.id] === (team.id as string);
     const isClickable = !game.winner && !readOnly;
@@ -55,10 +62,11 @@ export default function RegionBracketLayout({
   };
 
   const renderGame = (game: TournamentGame, round: string) => {
+    // Always render both team slots, even if teams are not yet determined
     return (
       <div key={game.id} className="border border-gray-300 rounded p-1 space-y-0.5 mb-1">
-        {game.team1 && renderTeam(game.team1 as unknown as Record<string, unknown>, game, true, round)}
-        {game.team2 && renderTeam(game.team2 as unknown as Record<string, unknown>, game, false, round)}
+        {renderTeam(game.team1 as unknown as Record<string, unknown> | undefined, game, true, round)}
+        {renderTeam(game.team2 as unknown as Record<string, unknown> | undefined, game, false, round)}
       </div>
     );
   };

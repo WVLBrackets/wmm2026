@@ -139,10 +139,13 @@ export function updateBracketWithPicks(bracket: TournamentBracket, picks: { [gam
       const game1Winner = picks[roundOf64Games[game1Index]?.id];
       const game2Winner = picks[roundOf64Games[game2Index]?.id];
       
-      if (game1Winner && game2Winner) {
+      // Populate teams individually as they're determined
+      if (game1Winner) {
         const team1 = region.teams.find(t => t.id === game1Winner);
-        const team2 = region.teams.find(t => t.id === game2Winner);
         game.team1 = team1;
+      }
+      if (game2Winner) {
+        const team2 = region.teams.find(t => t.id === game2Winner);
         game.team2 = team2;
       }
     });
@@ -157,10 +160,13 @@ export function updateBracketWithPicks(bracket: TournamentBracket, picks: { [gam
       const game1Winner = picks[roundOf32Games[game1Index]?.id];
       const game2Winner = picks[roundOf32Games[game2Index]?.id];
       
-      if (game1Winner && game2Winner) {
+      // Populate teams individually as they're determined
+      if (game1Winner) {
         const team1 = region.teams.find(t => t.id === game1Winner);
-        const team2 = region.teams.find(t => t.id === game2Winner);
         game.team1 = team1;
+      }
+      if (game2Winner) {
+        const team2 = region.teams.find(t => t.id === game2Winner);
         game.team2 = team2;
       }
     });
@@ -170,10 +176,13 @@ export function updateBracketWithPicks(bracket: TournamentBracket, picks: { [gam
     const sweet16Game1Winner = picks[sweet16Games[0]?.id];
     const sweet16Game2Winner = picks[sweet16Games[1]?.id];
     
-    if (sweet16Game1Winner && sweet16Game2Winner) {
+    // Populate teams individually as they're determined
+    if (sweet16Game1Winner) {
       const team1 = region.teams.find(t => t.id === sweet16Game1Winner);
-      const team2 = region.teams.find(t => t.id === sweet16Game2Winner);
       elite8Game.team1 = team1;
+    }
+    if (sweet16Game2Winner) {
+      const team2 = region.teams.find(t => t.id === sweet16Game2Winner);
       elite8Game.team2 = team2;
     }
   });
@@ -182,44 +191,57 @@ export function updateBracketWithPicks(bracket: TournamentBracket, picks: { [gam
   const elite8Winners = tournamentData.regions.map(region => {
     const elite8Game = updatedBracket.regions[region.position].find((game: TournamentGame) => game.round === 'Elite 8');
     return picks[elite8Game?.id];
-  }).filter(Boolean);
+  });
   
-  if (elite8Winners.length >= 2) {
-    // Final Four Game 1: Top Left vs Bottom Left
-    const topLeftWinner = elite8Winners[0];
-    const bottomLeftWinner = elite8Winners[1];
+  // Final Four Game 1: Top Left vs Bottom Left
+  const topLeftWinner = elite8Winners[0];
+  const bottomLeftWinner = elite8Winners[1];
+  
+  if (topLeftWinner) {
     const topLeftTeam = tournamentData.regions[0].teams.find(t => t.id === topLeftWinner);
+    if (topLeftTeam) {
+      topLeftTeam.region = tournamentData.regions[0].name;
+      updatedBracket.finalFour[0].team1 = topLeftTeam;
+    }
+  }
+  if (bottomLeftWinner) {
     const bottomLeftTeam = tournamentData.regions[1].teams.find(t => t.id === bottomLeftWinner);
-    
-    // Add region property to teams
-    if (topLeftTeam) topLeftTeam.region = tournamentData.regions[0].name;
-    if (bottomLeftTeam) bottomLeftTeam.region = tournamentData.regions[1].name;
-    
-    updatedBracket.finalFour[0].team1 = topLeftTeam;
-    updatedBracket.finalFour[0].team2 = bottomLeftTeam;
-    
-    // Final Four Game 2: Top Right vs Bottom Right
-    const topRightWinner = elite8Winners[2];
-    const bottomRightWinner = elite8Winners[3];
+    if (bottomLeftTeam) {
+      bottomLeftTeam.region = tournamentData.regions[1].name;
+      updatedBracket.finalFour[0].team2 = bottomLeftTeam;
+    }
+  }
+  
+  // Final Four Game 2: Top Right vs Bottom Right
+  const topRightWinner = elite8Winners[2];
+  const bottomRightWinner = elite8Winners[3];
+  
+  if (topRightWinner) {
     const topRightTeam = tournamentData.regions[2].teams.find(t => t.id === topRightWinner);
+    if (topRightTeam) {
+      topRightTeam.region = tournamentData.regions[2].name;
+      updatedBracket.finalFour[1].team1 = topRightTeam;
+    }
+  }
+  if (bottomRightWinner) {
     const bottomRightTeam = tournamentData.regions[3].teams.find(t => t.id === bottomRightWinner);
-    
-    // Add region property to teams
-    if (topRightTeam) topRightTeam.region = tournamentData.regions[2].name;
-    if (bottomRightTeam) bottomRightTeam.region = tournamentData.regions[3].name;
-    
-    updatedBracket.finalFour[1].team1 = topRightTeam;
-    updatedBracket.finalFour[1].team2 = bottomRightTeam;
+    if (bottomRightTeam) {
+      bottomRightTeam.region = tournamentData.regions[3].name;
+      updatedBracket.finalFour[1].team2 = bottomRightTeam;
+    }
   }
   
   // Update Championship based on Final Four winners
   const finalFourGame1Winner = picks[updatedBracket.finalFour[0]?.id];
   const finalFourGame2Winner = picks[updatedBracket.finalFour[1]?.id];
   
-  if (finalFourGame1Winner && finalFourGame2Winner) {
+  // Populate teams individually as they're determined
+  if (finalFourGame1Winner) {
     const team1 = tournamentData.regions.flatMap(r => r.teams).find(t => t.id === finalFourGame1Winner);
-    const team2 = tournamentData.regions.flatMap(r => r.teams).find(t => t.id === finalFourGame2Winner);
     updatedBracket.championship.team1 = team1;
+  }
+  if (finalFourGame2Winner) {
+    const team2 = tournamentData.regions.flatMap(r => r.teams).find(t => t.id === finalFourGame2Winner);
     updatedBracket.championship.team2 = team2;
   }
   

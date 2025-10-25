@@ -360,6 +360,7 @@ export default function AdminPage() {
                   <option value="all">All Statuses</option>
                   <option value="submitted">Submitted</option>
                   <option value="in_progress">In Progress</option>
+                  <option value="deleted">Deleted</option>
                 </select>
               </div>
             </div>
@@ -446,6 +447,7 @@ export default function AdminPage() {
                             >
                               <option value="in_progress">In Progress</option>
                               <option value="submitted">Submitted</option>
+                              <option value="deleted">Deleted</option>
                             </select>
                           ) : (
                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -453,6 +455,8 @@ export default function AdminPage() {
                                 ? 'bg-green-100 text-green-800'
                                 : bracket.status === 'in_progress'
                                 ? 'bg-yellow-100 text-yellow-800'
+                                : bracket.status === 'deleted'
+                                ? 'bg-red-100 text-red-800'
                                 : 'bg-gray-100 text-gray-800'
                             }`}>
                               {bracket.status}

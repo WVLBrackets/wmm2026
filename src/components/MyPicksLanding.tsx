@@ -17,7 +17,7 @@ interface Bracket {
   submittedAt?: string;
   lastSaved?: string;
   picks: { [gameId: string]: string };
-  status: 'in_progress' | 'submitted';
+  status: 'in_progress' | 'submitted' | 'deleted';
   totalPoints?: number;
 }
 
@@ -36,6 +36,9 @@ interface MyPicksLandingProps {
 export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBracket, onDeleteBracket, onCopyBracket, deletingBracketId, tournamentData, bracket, siteConfig }: MyPicksLandingProps) {
   const { data: session } = useSession();
   const [isAdmin, setIsAdmin] = useState(false);
+  
+  // Filter out deleted brackets from user view
+  const visibleBrackets = brackets.filter(b => b.status !== 'deleted');
 
   // Check if current user is admin
   useEffect(() => {
@@ -192,8 +195,8 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
 
   // Calculate submitted and in-progress brackets count
   const getBracketsInfo = () => {
-    const submittedCount = brackets.filter(bracket => bracket.status === 'submitted').length;
-    const inProgressCount = brackets.filter(bracket => bracket.status === 'in_progress').length;
+    const submittedCount = visibleBrackets.filter(bracket => bracket.status === 'submitted').length;
+    const inProgressCount = visibleBrackets.filter(bracket => bracket.status === 'in_progress').length;
     const entryCost = siteConfig?.entryCost || 5;
     const totalCost = submittedCount * entryCost;
     return { submittedCount, inProgressCount, totalCost };
@@ -334,7 +337,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
         {/* Brackets List */}
         <div className="bg-white rounded-lg shadow-lg p-6">
 
-          {brackets.length === 0 ? (
+          {visibleBrackets.length === 0 ? (
             <div className="text-center py-12">
               <Trophy className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No brackets yet</h3>
@@ -347,6 +350,9 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                   <tr>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Entry Name
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Bracket ID
@@ -364,15 +370,45 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                       Champ
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {brackets.map((bracket, index) => {
+                  {[...visibleBrackets].sort((a, b) => {
+                    // First, sort by status: in_progress first, submitted last
+                    if (a.status !== b.status) {
+                      return a.status === 'in_progress' ? -1 : 1;
+                    }
+                    
+                    // For in_progress brackets: sort by progress (least to most), then by bracket ID
+                    if (a.status === 'in_progress') {
+                      const progressA = calculateProgress(a.picks).completed;
+                      const progressB = calculateProgress(b.picks).completed;
+                      
+                      if (progressA !== progressB) {
+                        return progressA - progressB; // Ascending order (least to most)
+                      }
+                      
+                      // If progress is the same, sort by bracket ID (year-number)
+                      const aData = a as unknown as Record<string, unknown>;
+                      const bData = b as unknown as Record<string, unknown>;
+                      const aYear = (aData.year as number) || 0;
+                      const bYear = (bData.year as number) || 0;
+                      const aNumber = (aData.bracketNumber as number) || 0;
+                      const bNumber = (bData.bracketNumber as number) || 0;
+                      
+                      if (aYear !== bYear) {
+                        return aYear - bYear;
+                      }
+                      return aNumber - bNumber;
+                    }
+                    
+                    // For submitted brackets: sort by entry name alphabetically
+                    const nameA = (a.entryName || '').toLowerCase();
+                    const nameB = (b.entryName || '').toLowerCase();
+                    return nameA.localeCompare(nameB);
+                  }).map((bracket, index) => {
                     const bracketData = bracket as unknown as Record<string, unknown>;
                     const year = (bracketData.year as number) || new Date().getFullYear();
                     const number = (bracketData.bracketNumber as number) || 0;
@@ -385,6 +421,12 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                         <div className="text-sm font-medium text-gray-900">
                           {bracket.entryName || `Bracket #${index + 1}`}
                         </div>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(bracket.status)}`}>
+                          {getStatusIcon(bracket.status)}
+                          <span className="ml-1">{getStatusText(bracket.status)}</span>
+                        </span>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-600">
@@ -461,12 +503,6 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                             <FinalFourLogo logoPath={finalFour.champion} />
                           </div>
                         </div>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(bracket.status)}`}>
-                          {getStatusIcon(bracket.status)}
-                          <span className="ml-1">{getStatusText(bracket.status)}</span>
-                        </span>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end space-x-2">

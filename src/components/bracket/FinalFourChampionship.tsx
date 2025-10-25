@@ -28,8 +28,15 @@ export default function FinalFourChampionship({
     onPick(game.id, team.id as string);
   };
 
-  const renderTeam = (team: Record<string, unknown>, game: TournamentGame, isTeam1: boolean) => {
-    if (!team) return <div className="h-6 bg-gray-100 rounded"></div>;
+  const renderTeam = (team: Record<string, unknown> | undefined, game: TournamentGame, isTeam1: boolean) => {
+    // Always render a slot, even if no team is assigned yet
+    if (!team) {
+      return (
+        <div className="h-6 bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
+          <span className="text-xs text-gray-400">-</span>
+        </div>
+      );
+    }
     
     const isSelected = picks[game.id] === (team.id as string);
     const isClickable = !game.winner && !readOnly;
@@ -56,13 +63,14 @@ export default function FinalFourChampionship({
   };
 
       const renderGame = (game: TournamentGame, title: string) => {
+        // Always render both team slots, even if teams are not yet determined
         return (
           <div className="border-2 border-gray-300 rounded-lg p-1 space-y-0.5">
             <div className="text-xs font-semibold text-gray-700 text-center mb-1">
               {title}
             </div>
-            {game.team1 && renderTeam(game.team1 as unknown as Record<string, unknown>, game, true)}
-            {game.team2 && renderTeam(game.team2 as unknown as Record<string, unknown>, game, false)}
+            {renderTeam(game.team1 as unknown as Record<string, unknown> | undefined, game, true)}
+            {renderTeam(game.team2 as unknown as Record<string, unknown> | undefined, game, false)}
           </div>
         );
       };

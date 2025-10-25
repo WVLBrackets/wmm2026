@@ -444,23 +444,50 @@ function BracketContent() {
   };
 
   const handleDeleteBracket = async (bracketId: string) => {
-    if (!confirm('Are you sure you want to delete this bracket? This action cannot be undone.')) {
+    // Find the bracket to check its status
+    const bracketToDelete = submittedBrackets.find(b => b.id === bracketId);
+    
+    // For in_progress brackets, soft delete (change status to 'deleted')
+    // For submitted brackets, hard delete (actual removal)
+    const isInProgress = bracketToDelete && 'status' in bracketToDelete && bracketToDelete.status === 'in_progress';
+    
+    const confirmMessage = isInProgress 
+      ? 'Are you sure you want to delete this in-progress bracket?'
+      : 'Are you sure you want to delete this submitted bracket? This action cannot be undone.';
+    
+    if (!confirm(confirmMessage)) {
       return;
     }
 
     setDeletingBracketId(bracketId);
 
     try {
-      const response = await fetch(`/api/tournament-bracket/${bracketId}`, {
-        method: 'DELETE',
-      });
-      const data = await response.json();
+      if (isInProgress) {
+        // Soft delete: Update status to 'deleted'
+        const response = await fetch(`/api/tournament-bracket/${bracketId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'deleted' }),
+        });
+        const data = await response.json();
 
-      if (data.success) {
-        // Reload brackets to show updated list (no popup)
-        await loadSubmittedBrackets();
+        if (data.success) {
+          await loadSubmittedBrackets();
+        } else {
+          alert(`Error: ${data.error}`);
+        }
       } else {
-        alert(`Error: ${data.error}`);
+        // Hard delete: Actually remove the bracket
+        const response = await fetch(`/api/tournament-bracket/${bracketId}`, {
+          method: 'DELETE',
+        });
+        const data = await response.json();
+
+        if (data.success) {
+          await loadSubmittedBrackets();
+        } else {
+          alert(`Error: ${data.error}`);
+        }
       }
     } catch (error) {
       console.error('Error deleting bracket:', error);
