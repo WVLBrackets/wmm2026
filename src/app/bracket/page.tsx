@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { TournamentData, TournamentBracket, BracketSubmission } from '@/types/tournament';
 import { loadTournamentData, generateTournamentBracket } from '@/lib/tournamentLoader';
 import { generate64TeamBracket } from '@/lib/bracketGenerator';
+import { getSiteConfigFromGoogleSheets, SiteConfigData } from '@/lib/siteConfig';
 import StepByStepBracket from '@/components/bracket/StepByStepBracket';
 import MyPicksLanding from '@/components/MyPicksLanding';
 import { useBracketMode } from '@/contexts/BracketModeContext';
@@ -37,6 +38,7 @@ function BracketContent() {
   const [deletingBracketId, setDeletingBracketId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string>('');
   const [isAdminMode, setIsAdminMode] = useState(false);
+  const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -83,6 +85,10 @@ function BracketContent() {
       
       const bracketData = generate64TeamBracket(data);
       setBracket(bracketData);
+      
+      // Load site config
+      const config = await getSiteConfigFromGoogleSheets();
+      setSiteConfig(config);
       
       // Load user's submitted brackets
       await loadSubmittedBrackets();
@@ -545,6 +551,7 @@ function BracketContent() {
             deletingBracketId={deletingBracketId}
             tournamentData={tournamentData}
             bracket={bracket}
+            siteConfig={siteConfig}
           />
         );
   }

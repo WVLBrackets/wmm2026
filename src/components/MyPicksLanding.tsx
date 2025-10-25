@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { Trophy, Plus, Edit, Eye, Clock, CheckCircle, LogOut, Trash2, Copy, Printer, ShieldCheck } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { TournamentData, TournamentBracket } from '@/types/tournament';
+import { SiteConfigData } from '@/lib/siteConfig';
 import Image from 'next/image';
 
 interface Bracket {
@@ -29,9 +30,10 @@ interface MyPicksLandingProps {
   deletingBracketId?: string | null;
   tournamentData?: TournamentData | null;
   bracket?: TournamentBracket | null;
+  siteConfig?: SiteConfigData | null;
 }
 
-export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBracket, onDeleteBracket, onCopyBracket, deletingBracketId, tournamentData, bracket }: MyPicksLandingProps) {
+export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBracket, onDeleteBracket, onCopyBracket, deletingBracketId, tournamentData, bracket, siteConfig }: MyPicksLandingProps) {
   const { data: session } = useSession();
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -192,7 +194,8 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
   const getBracketsInfo = () => {
     const submittedCount = brackets.filter(bracket => bracket.status === 'submitted').length;
     const inProgressCount = brackets.filter(bracket => bracket.status === 'in_progress').length;
-    const totalCost = submittedCount * 5;
+    const entryCost = siteConfig?.entryCost || 5;
+    const totalCost = submittedCount * entryCost;
     return { submittedCount, inProgressCount, totalCost };
   };
 
@@ -218,20 +221,33 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                   {/* Welcome text */}
                   <div>
                     <h1 className="text-2xl font-bold text-gray-900">
-                      Welcome back {session?.user?.name || 'User'}
+                      {(siteConfig?.welcomeGreeting || 'Welcome back {name}').replace('{name}', session?.user?.name || 'User')}
                     </h1>
                     {(() => {
                       const { submittedCount, inProgressCount, totalCost } = getBracketsInfo();
+                      
+                      // Helper function to replace placeholders
+                      const replacePlaceholders = (text: string) => {
+                        const entryText = inProgressCount === 1 
+                          ? (siteConfig?.entrySingular || 'this entry')
+                          : (siteConfig?.entryPlural || 'these entries');
+                        
+                        return text
+                          .replace('{count}', submittedCount.toString())
+                          .replace('{count}', inProgressCount.toString())
+                          .replace('{cost}', totalCost.toString())
+                          .replace('{entry_text}', entryText);
+                      };
                       
                       // Case 1: Both counts are 0
                       if (submittedCount === 0 && inProgressCount === 0) {
                         return (
                           <>
                             <p className="text-sm text-gray-600 mt-1">
-                              Click New Bracket to start your entry
+                              {siteConfig?.welcomeNoBracketsLine2 || 'Click New Bracket to start your entry'}
                             </p>
                             <p className="text-sm text-gray-600 mt-1">
-                              You can start a new entry and save it for later without submitting it now
+                              {siteConfig?.welcomeNoBracketsLine3 || 'You can start a new entry and save it for later without submitting it now'}
                             </p>
                           </>
                         );
@@ -242,10 +258,10 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                         return (
                           <>
                             <p className="text-sm text-gray-600 mt-1">
-                              <span className="font-semibold">Submitted Count:</span> {submittedCount} - your total cost is ${totalCost} so far
+                              {replacePlaceholders(siteConfig?.welcomeSubmittedText || 'Submitted Count: {count} - your total cost is ${cost} so far')}
                             </p>
                             <p className="text-sm text-gray-600 mt-1">
-                              You can start a new entry and save it for later without submitting it now
+                              {siteConfig?.welcomeCanStartNew || 'You can start a new entry and save it for later without submitting it now'}
                             </p>
                           </>
                         );
@@ -256,10 +272,10 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                         return (
                           <>
                             <p className="text-sm text-gray-600 mt-1">
-                              Be sure to submit your picks so they can be included in the contest
+                              {siteConfig?.welcomeInprogressReminder || 'Be sure to submit your picks so they can be included in the contest'}
                             </p>
                             <p className="text-sm text-gray-600 mt-1">
-                              <span className="font-semibold">In Progress Count:</span> {inProgressCount} - be sure to &apos;Submit&apos; if you want {inProgressCount === 1 ? 'this entry' : 'these entries'} to count
+                              {replacePlaceholders(siteConfig?.welcomeInprogressText || 'In Progress Count: {count} - be sure to \'Submit\' if you want {entry_text} to count')}
                             </p>
                           </>
                         );
@@ -269,10 +285,10 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                       return (
                         <>
                           <p className="text-sm text-gray-600 mt-1">
-                            <span className="font-semibold">Submitted Count:</span> {submittedCount} - your total cost is ${totalCost} so far
+                            {replacePlaceholders(siteConfig?.welcomeSubmittedText || 'Submitted Count: {count} - your total cost is ${cost} so far')}
                           </p>
                           <p className="text-sm text-gray-600 mt-1">
-                            <span className="font-semibold">In Progress Count:</span> {inProgressCount} - be sure to &apos;Submit&apos; if you want {inProgressCount === 1 ? 'this entry' : 'these entries'} to count
+                            {replacePlaceholders(siteConfig?.welcomeInprogressText || 'In Progress Count: {count} - be sure to \'Submit\' if you want {entry_text} to count')}
                           </p>
                         </>
                       );
