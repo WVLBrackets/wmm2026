@@ -34,7 +34,18 @@ export default function PrizesPage() {
           contactMe: 'warren@example.com',
           prizesActiveForecast: 'Forecast',
           showPicksDev: 'Yes',
-          showPicksProd: 'No'
+          showPicksProd: 'No',
+          // Welcome banner defaults
+          welcomeGreeting: 'Welcome back {name}',
+          entryCost: 5,
+          welcomeNoBracketsLine2: 'Click New Bracket to start your entry',
+          welcomeNoBracketsLine3: 'You can start a new entry and save it for later without submitting it now',
+          welcomeSubmittedText: 'Submitted Count: {count} - your total cost is ${cost} so far',
+          welcomeInprogressText: 'In Progress Count: {count} - be sure to \'Submit\' if you want {entry_text} to count',
+          welcomeInprogressReminder: 'Be sure to submit your picks so they can be included in the contest',
+          welcomeCanStartNew: 'You can start a new entry and save it for later without submitting it now',
+          entrySingular: 'this entry',
+          entryPlural: 'these entries'
         });
       } finally {
         setIsLoading(false);
