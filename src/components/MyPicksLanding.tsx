@@ -226,16 +226,20 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                     {(() => {
                       const { submittedCount, inProgressCount, totalCost } = getBracketsInfo();
                       
-                      // Helper function to replace placeholders
-                      const replacePlaceholders = (text: string) => {
+                      // Helper functions to replace placeholders
+                      const replaceSubmittedPlaceholders = (text: string) => {
+                        return text
+                          .replace('{count}', submittedCount.toString())
+                          .replace('{cost}', totalCost.toString());
+                      };
+                      
+                      const replaceInProgressPlaceholders = (text: string) => {
                         const entryText = inProgressCount === 1 
                           ? (siteConfig?.entrySingular || 'this entry')
                           : (siteConfig?.entryPlural || 'these entries');
                         
                         return text
-                          .replace('{count}', submittedCount.toString())
                           .replace('{count}', inProgressCount.toString())
-                          .replace('{cost}', totalCost.toString())
                           .replace('{entry_text}', entryText);
                       };
                       
@@ -258,7 +262,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                         return (
                           <>
                             <p className="text-sm text-gray-600 mt-1">
-                              {replacePlaceholders(siteConfig?.welcomeSubmittedText || 'Submitted Count: {count} - your total cost is ${cost} so far')}
+                              {replaceSubmittedPlaceholders(siteConfig?.welcomeSubmittedText || 'Submitted Count: {count} - your total cost is ${cost} so far')}
                             </p>
                             <p className="text-sm text-gray-600 mt-1">
                               {siteConfig?.welcomeCanStartNew || 'You can start a new entry and save it for later without submitting it now'}
@@ -275,7 +279,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                               {siteConfig?.welcomeInprogressReminder || 'Be sure to submit your picks so they can be included in the contest'}
                             </p>
                             <p className="text-sm text-gray-600 mt-1">
-                              {replacePlaceholders(siteConfig?.welcomeInprogressText || 'In Progress Count: {count} - be sure to \'Submit\' if you want {entry_text} to count')}
+                              {replaceInProgressPlaceholders(siteConfig?.welcomeInprogressText || 'In Progress Count: {count} - be sure to \'Submit\' if you want {entry_text} to count')}
                             </p>
                           </>
                         );
@@ -285,10 +289,10 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                       return (
                         <>
                           <p className="text-sm text-gray-600 mt-1">
-                            {replacePlaceholders(siteConfig?.welcomeSubmittedText || 'Submitted Count: {count} - your total cost is ${cost} so far')}
+                            {replaceSubmittedPlaceholders(siteConfig?.welcomeSubmittedText || 'Submitted Count: {count} - your total cost is ${cost} so far')}
                           </p>
                           <p className="text-sm text-gray-600 mt-1">
-                            {replacePlaceholders(siteConfig?.welcomeInprogressText || 'In Progress Count: {count} - be sure to \'Submit\' if you want {entry_text} to count')}
+                            {replaceInProgressPlaceholders(siteConfig?.welcomeInprogressText || 'In Progress Count: {count} - be sure to \'Submit\' if you want {entry_text} to count')}
                           </p>
                         </>
                       );
