@@ -13,6 +13,11 @@ interface User {
   emailConfirmed: boolean;
   createdAt: string;
   environment: string;
+  bracketCounts?: {
+    submitted: number;
+    inProgress: number;
+    deleted: number;
+  };
 }
 
 interface Bracket {
@@ -150,6 +155,34 @@ export default function AdminPage() {
     setNewPassword('');
     setConfirmPassword('');
     setPasswordError('');
+  };
+
+  const handleDeleteUser = async (userId: string, userName: string, bracketCounts?: { submitted: number; inProgress: number; deleted: number }) => {
+    // Check if user has any brackets
+    if (bracketCounts && (bracketCounts.submitted > 0 || bracketCounts.inProgress > 0 || bracketCounts.deleted > 0)) {
+      alert(`Cannot delete user "${userName}". User has brackets: ${bracketCounts.submitted} submitted, ${bracketCounts.inProgress} in progress, ${bracketCounts.deleted} deleted.`);
+      return;
+    }
+
+    if (confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone.`)) {
+      try {
+        const response = await fetch(`/api/admin/users/${userId}`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          setError(errorData.error || 'Failed to delete user');
+          return;
+        }
+
+        // Reload data after successful deletion
+        await loadData();
+      } catch (error) {
+        console.error('Error deleting user:', error);
+        setError('Failed to delete user');
+      }
+    }
   };
 
   const handleChangePassword = async () => {
@@ -541,6 +574,12 @@ export default function AdminPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Created
                     </th>
+                    <th 
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-help"
+                      title="Bracket counts: Submitted / In Progress / Deleted"
+                    >
+                      Brackets
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
@@ -549,7 +588,7 @@ export default function AdminPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {users.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
                         No users found
                       </td>
                     </tr>
@@ -586,6 +625,14 @@ export default function AdminPage() {
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {new Date(user.createdAt).toLocaleDateString()}
                           </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <span 
+                              title="Submitted / In Progress / Deleted"
+                              className="font-mono"
+                            >
+                              {user.bracketCounts?.submitted ?? 0} / {user.bracketCounts?.inProgress ?? 0} / {user.bracketCounts?.deleted ?? 0}
+                            </span>
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
                             <div className="flex items-center space-x-2">
                               {!user.emailConfirmed && (
@@ -605,6 +652,37 @@ export default function AdminPage() {
                               >
                                 <Key className="h-4 w-4 mr-1" />
                                 Password
+                              </button>
+                              <button
+                                onClick={() => handleDeleteUser(user.id, user.name, user.bracketCounts)}
+                                disabled={
+                                  user.bracketCounts && (
+                                    (user.bracketCounts.submitted > 0) || 
+                                    (user.bracketCounts.inProgress > 0) || 
+                                    (user.bracketCounts.deleted > 0)
+                                  )
+                                }
+                                className={`inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                                  (user.bracketCounts && (
+                                    (user.bracketCounts.submitted > 0) || 
+                                    (user.bracketCounts.inProgress > 0) || 
+                                    (user.bracketCounts.deleted > 0)
+                                  ))
+                                    ? 'bg-gray-400 text-white cursor-not-allowed opacity-50'
+                                    : 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500'
+                                }`}
+                                title={
+                                  (user.bracketCounts && (
+                                    (user.bracketCounts.submitted > 0) || 
+                                    (user.bracketCounts.inProgress > 0) || 
+                                    (user.bracketCounts.deleted > 0)
+                                  ))
+                                    ? 'Cannot delete user with existing brackets'
+                                    : 'Delete User'
+                                }
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Delete
                               </button>
                             </div>
                           </td>
