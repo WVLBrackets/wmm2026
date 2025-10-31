@@ -46,17 +46,37 @@ export default function AdminUsersPage() {
   const loadUsers = async () => {
     try {
       setLoading(true);
+      setError('');
+      console.log('[Admin Users Page] Fetching users...');
+      
       const response = await fetch('/api/admin/users');
+      console.log('[Admin Users Page] Response status:', response.status, response.statusText);
       
       if (!response.ok) {
-        throw new Error('Failed to load users');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('[Admin Users Page] Response error:', errorData);
+        throw new Error(errorData.error || `Failed to load users: ${response.status} ${response.statusText}`);
       }
       
       const data = await response.json();
-      setUsers(data.users || []);
+      console.log('[Admin Users Page] Response data:', {
+        success: data.success,
+        count: data.count,
+        usersLength: data.users?.length,
+        sample: data.users?.slice(0, 2)
+      });
+      
+      if (!data.users) {
+        console.error('[Admin Users Page] No users array in response:', data);
+        throw new Error('Invalid response format: missing users array');
+      }
+      
+      setUsers(data.users);
+      console.log(`[Admin Users Page] Set ${data.users.length} users in state`);
     } catch (error) {
-      setError('Failed to load users');
-      console.error('Load users error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load users';
+      console.error('[Admin Users Page] Load users error:', error);
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
