@@ -1,0 +1,48 @@
+version: 2
+updates:
+  # Enable version updates for npm and Yarn
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      # Check for updates on Mondays at 9:00 AM UTC
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    # Target staging branch for all updates
+    target-branch: "staging"
+    # Create a separate PR for each dependency
+    open-pull-requests-limit: 10
+    # Group related updates to reduce PR noise
+    groups:
+      # Group patch and minor updates for production dependencies
+      production-dependencies:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group patch and minor updates for development dependencies
+      development-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+    # Ignore major version updates (handle manually due to breaking changes)
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    # Commit message customization
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    # Pull request labels
+    labels:
+      - "dependencies"
+      - "automated"
+      - "staging"
+    # Reviewers (optional - uncomment and add if desired)
+    # reviewers:
+    #   - "your-github-username"
+    # Assignees (optional)
+    # assignees:
+    #   - "your-github-username"
+
