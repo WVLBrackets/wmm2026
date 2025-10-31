@@ -63,12 +63,17 @@ export async function initializeDatabase() {
         WHERE table_name = 'users' AND column_name = 'last_login'
       `;
       
+      console.log(`[initializeDatabase] last_login column check: ${columnCheck.rows.length} results`);
+      
       if (columnCheck.rows.length === 0) {
+        console.log('[initializeDatabase] Adding last_login column to users table');
         await sql`ALTER TABLE users ADD COLUMN last_login TIMESTAMP`;
-        console.log('Added last_login column to users table');
+        console.log('[initializeDatabase] Successfully added last_login column to users table');
+      } else {
+        console.log('[initializeDatabase] last_login column already exists');
       }
     } catch (error) {
-      console.log('Error checking/adding last_login column:', error);
+      console.error('[initializeDatabase] Error checking/adding last_login column:', error);
       // Continue anyway - column might exist or table might not exist yet
     }
 
@@ -383,14 +388,17 @@ export async function verifyPassword(email: string, password: string): Promise<U
     // This is a non-critical update, so we don't fail login if it errors
     try {
       const environment = getCurrentEnvironment();
-      await sql`
+      console.log(`[verifyPassword] Updating last_login for user ${user.id} in environment ${environment}`);
+      const updateResult = await sql`
         UPDATE users 
         SET last_login = CURRENT_TIMESTAMP
         WHERE id = ${user.id} AND environment = ${environment}
       `;
+      console.log(`[verifyPassword] last_login update successful, rows affected: ${updateResult.rowCount ?? 0}`);
     } catch (updateError) {
       // Log but don't fail login if last_login update fails
-      console.error('Error updating last_login (non-critical):', updateError);
+      console.error('[verifyPassword] Error updating last_login (non-critical):', updateError);
+      console.error('[verifyPassword] Error details:', updateError instanceof Error ? updateError.message : String(updateError));
     }
 
     return user;
@@ -592,15 +600,21 @@ export async function getAllUsers(): Promise<Omit<User, 'password'>[]> {
       ORDER BY created_at DESC
     `;
     
-    return result.rows.map((row: Record<string, unknown>) => ({
-      id: row.id as string,
-      email: row.email as string,
-      name: row.name as string,
-      emailConfirmed: row.email_confirmed as boolean,
-      createdAt: new Date(row.created_at as string),
-      lastLogin: row.last_login ? new Date(row.last_login as string) : null,
-      environment: row.environment as string,
-    }));
+    const users = result.rows.map((row: Record<string, unknown>) => {
+      const lastLoginValue = row.last_login;
+      console.log(`[getAllUsers] User ${row.email}: last_login raw value:`, lastLoginValue, `type:`, typeof lastLoginValue);
+      return {
+        id: row.id as string,
+        email: row.email as string,
+        name: row.name as string,
+        emailConfirmed: row.email_confirmed as boolean,
+        createdAt: new Date(row.created_at as string),
+        lastLogin: lastLoginValue ? new Date(lastLoginValue as string) : null,
+        environment: row.environment as string,
+      };
+    });
+    console.log(`[getAllUsers] Returning ${users.length} users, last_login values:`, users.map(u => ({ email: u.email, lastLogin: u.lastLogin })));
+    return users;
   } catch (error) {
     // If last_login column doesn't exist yet, try without it
     if (error instanceof Error && error.message.includes('last_login')) {
