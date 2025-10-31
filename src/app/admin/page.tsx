@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Trash2, Edit, Save, X, Users, Trophy, CheckCircle, Key, Edit3 } from 'lucide-react';
+import { Trash2, Edit, Save, X, Users, Trophy, CheckCircle, Key, Edit3, LogOut, Link2 } from 'lucide-react';
 import { useBracketMode } from '@/contexts/BracketModeContext';
 
 interface User {
@@ -323,12 +323,227 @@ export default function AdminPage() {
               <h1 className="text-3xl font-bold text-gray-900">Admin Panel</h1>
               <p className="text-gray-600 mt-1">Manage users and brackets</p>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-600">Logged in as</p>
-              <p className="font-semibold text-gray-900">{session?.user?.email}</p>
+            <div className="flex items-center space-x-4">
+              <div className="text-right">
+                <p className="text-sm text-gray-600">Logged in as</p>
+                <p className="font-semibold text-gray-900">{session?.user?.email}</p>
+              </div>
+              <button
+                onClick={() => setShowEndpoints(!showEndpoints)}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center space-x-2"
+              >
+                <Link2 className="h-4 w-4" />
+                <span>Endpoints</span>
+              </button>
+              <button
+                onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 flex items-center space-x-2"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Logout</span>
+              </button>
             </div>
           </div>
         </div>
+
+        {/* Endpoints Modal */}
+        {showEndpoints && (
+          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-gray-900">API Endpoints</h2>
+              <button
+                onClick={() => setShowEndpoints(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Endpoint
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Method
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Description
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
+                      /api/admin/users
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">GET</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      Get all users with bracket counts and last login info (Admin only)
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <a
+                        href="/api/admin/users"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        Open →
+                      </a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
+                      /api/admin/users/[id]
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">DELETE</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      Delete a user (only if all bracket counts are 0) (Admin only)
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                      Requires ID parameter
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
+                      /api/admin/users/[id]/confirm
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">POST</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      Manually confirm a user's email address (Admin only)
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                      Requires ID parameter
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
+                      /api/admin/users/[id]/change-password
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">POST</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      Change a user's password and auto-confirm their account (Admin only)
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                      Requires ID parameter
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
+                      /api/admin/brackets
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">GET</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      Get all brackets with user information (Admin only)
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <a
+                        href="/api/admin/brackets"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        Open →
+                      </a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
+                      /api/admin/brackets/[id]
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">PUT</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      Update bracket details including ownership (Admin only)
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                      Requires ID parameter
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
+                      /api/admin/users-across-environments
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">GET</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      View users from both preview and production environments (Admin only)
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <a
+                        href="/admin/users-across-environments"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        Open →
+                      </a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
+                      /api/init-database
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">GET/POST</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      Initialize database tables and schema (Admin only)
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <a
+                        href="/api/init-database"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        Open →
+                      </a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
+                      /api/email-status
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">GET/POST</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      Check email service status and send test emails (Admin only)
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <a
+                        href="/api/email-status"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        Open →
+                      </a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
+                      /api/check-admin
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">GET</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      Check if current user is an admin (Public, returns boolean)
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <a
+                        href="/api/check-admin"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        Open →
+                      </a>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="bg-white rounded-lg shadow-lg mb-6">
