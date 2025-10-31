@@ -53,16 +53,15 @@ export default function DynamicNavigation({ hideInBracketMode = false }: Dynamic
     if (!siteConfig) return false;
     
     const isDevelopment = process.env.NODE_ENV === 'development';
-    const isProduction = process.env.NODE_ENV === 'production';
+    const isPreview = process.env.VERCEL_ENV === 'preview';
     
-    if (isDevelopment) {
+    // Use dev flag for both local development and preview/staging deployments
+    if (isDevelopment || isPreview) {
       return siteConfig.showPicksDev === 'Yes';
-    } else if (isProduction) {
-      return siteConfig.showPicksProd === 'Yes';
     }
     
-    // Default to showing in development if environment is unclear
-    return siteConfig.showPicksDev === 'Yes';
+    // Use prod flag for production deployments only
+    return siteConfig.showPicksProd === 'Yes';
   };
 
   if (!siteConfig) {
