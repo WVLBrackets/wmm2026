@@ -182,6 +182,31 @@ export async function initializeDatabase() {
 export async function createUser(email: string, name: string, password: string): Promise<User> {
   const environment = getCurrentEnvironment();
   
+  // Auto-initialize database if tables don't exist
+  try {
+    // Try a simple query to check if users table exists
+    await sql`SELECT 1 FROM users LIMIT 1`;
+  } catch (error) {
+    // If table doesn't exist, initialize the database
+    if (error instanceof Error && (
+      error.message.includes('does not exist') || 
+      error.message.includes('relation') ||
+      (error as { code?: string }).code === '42P01'
+    )) {
+      console.log('[createUser] Database tables not found, initializing database...');
+      try {
+        await initializeDatabase();
+        console.log('[createUser] Database initialized successfully');
+      } catch (initError) {
+        console.error('[createUser] Failed to initialize database:', initError);
+        throw new Error('Database initialization failed. Please contact the administrator.');
+      }
+    } else {
+      // Re-throw if it's a different error
+      throw error;
+    }
+  }
+  
   // Check if user already exists in THIS environment only
   const existingUser = await sql`
     SELECT id FROM users WHERE email = ${email} AND environment = ${environment}
