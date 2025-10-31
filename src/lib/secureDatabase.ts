@@ -17,6 +17,7 @@ export interface User {
   resetExpires?: Date;
   environment: string;
   createdAt: Date;
+  lastLogin?: Date | null;
 }
 
 export interface ConfirmationToken {
