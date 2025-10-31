@@ -53,7 +53,14 @@ export default function DynamicNavigation({ hideInBracketMode = false }: Dynamic
     if (!siteConfig) return false;
     
     const isDevelopment = process.env.NODE_ENV === 'development';
-    const isPreview = process.env.VERCEL_ENV === 'preview';
+    
+    // Detect preview/staging by checking if we're on a Vercel preview URL
+    // Vercel preview URLs follow the pattern: project-name-git-branch-owner-projects.vercel.app
+    // or project-name-git-commit-owner.vercel.app
+    const isPreview = typeof window !== 'undefined' && (
+      window.location.hostname.includes('-git-') || 
+      window.location.hostname.includes('vercel.app') && !window.location.hostname.includes('wmm2026.com')
+    );
     
     // Use dev flag for both local development and preview/staging deployments
     if (isDevelopment || isPreview) {
