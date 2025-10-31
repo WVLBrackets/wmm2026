@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
-import { getAllUsers } from '@/lib/secureDatabase';
+import { getAllUsers, getUserBracketCounts } from '@/lib/secureDatabase';
 
 /**
- * GET /api/admin/users - Get all users (admin only)
+ * GET /api/admin/users - Get all users with bracket counts (admin only)
  */
 export async function GET() {
   try {
@@ -13,10 +13,25 @@ export async function GET() {
     // Get all users (without passwords)
     const users = await getAllUsers();
     
+    // Get bracket counts for each user and map field names
+    const usersWithCounts = await Promise.all(
+      users.map(async (user) => {
+        const bracketCounts = await getUserBracketCounts(user.id);
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          isConfirmed: user.emailConfirmed,
+          createdAt: user.createdAt.toISOString(),
+          bracketCounts,
+        };
+      })
+    );
+    
     return NextResponse.json({
       success: true,
-      data: users,
-      count: users.length
+      users: usersWithCounts,
+      count: usersWithCounts.length
     });
   } catch (error) {
     console.error('Admin users error:', error);

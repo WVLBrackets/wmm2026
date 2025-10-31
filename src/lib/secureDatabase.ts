@@ -591,3 +591,66 @@ export async function getAllBrackets(): Promise<(Bracket & { userEmail: string; 
     userName: row.user_name as string,
   }));
 }
+
+/**
+ * Get bracket counts by status for a specific user
+ * @param userId - The user ID to get bracket counts for
+ * @returns Object with submitted, inProgress, and deleted counts
+ */
+export async function getUserBracketCounts(userId: string): Promise<{
+  submitted: number;
+  inProgress: number;
+  deleted: number;
+}> {
+  const environment = getCurrentEnvironment();
+  
+  const result = await sql`
+    SELECT 
+      COUNT(*) FILTER (WHERE status = 'submitted') as submitted_count,
+      COUNT(*) FILTER (WHERE status = 'in_progress') as in_progress_count,
+      COUNT(*) FILTER (WHERE status = 'deleted') as deleted_count
+    FROM brackets
+    WHERE user_id = ${userId} AND environment = ${environment}
+  `;
+  
+  const row = result.rows[0] as Record<string, unknown>;
+  return {
+    submitted: parseInt(row.submitted_count as string) || 0,
+    inProgress: parseInt(row.in_progress_count as string) || 0,
+    deleted: parseInt(row.deleted_count as string) || 0,
+  };
+}
+
+/**
+ * Delete a user and all associated data
+ * @param userId - The user ID to delete
+ * @returns True if user was deleted, false otherwise
+ */
+export async function deleteUser(userId: string): Promise<boolean> {
+  const environment = getCurrentEnvironment();
+  
+  try {
+    // Check if user has any brackets
+    const bracketCounts = await getUserBracketCounts(userId);
+    if (bracketCounts.submitted > 0 || bracketCounts.inProgress > 0 || bracketCounts.deleted > 0) {
+      throw new Error('Cannot delete user with existing brackets');
+    }
+    
+    // Delete tokens first (foreign key constraint)
+    await sql`
+      DELETE FROM tokens 
+      WHERE user_id = ${userId} AND environment = ${environment}
+    `;
+    
+    // Delete user
+    const result = await sql`
+      DELETE FROM users 
+      WHERE id = ${userId} AND environment = ${environment}
+    `;
+    
+    return (result.rowCount ?? 0) > 0;
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    throw error;
+  }
+}
