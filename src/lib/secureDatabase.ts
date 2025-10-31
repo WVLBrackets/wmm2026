@@ -60,21 +60,41 @@ export async function initializeDatabase() {
       const columnCheck = await sql`
         SELECT column_name 
         FROM information_schema.columns 
-        WHERE table_name = 'users' AND column_name = 'last_login'
+        WHERE table_name = 'users' 
+          AND column_name = 'last_login'
+          AND table_schema = current_schema()
       `;
       
       console.log(`[initializeDatabase] last_login column check: ${columnCheck.rows.length} results`);
       
       if (columnCheck.rows.length === 0) {
         console.log('[initializeDatabase] Adding last_login column to users table');
-        await sql`ALTER TABLE users ADD COLUMN last_login TIMESTAMP`;
+        await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP`;
         console.log('[initializeDatabase] Successfully added last_login column to users table');
       } else {
         console.log('[initializeDatabase] last_login column already exists');
       }
     } catch (error) {
-      console.error('[initializeDatabase] Error checking/adding last_login column:', error);
-      // Continue anyway - column might exist or table might not exist yet
+      // If IF NOT EXISTS is not supported, try without it
+      if (error instanceof Error && error.message.includes('IF NOT EXISTS')) {
+        try {
+          console.log('[initializeDatabase] IF NOT EXISTS not supported, trying direct ALTER TABLE');
+          await sql`ALTER TABLE users ADD COLUMN last_login TIMESTAMP`;
+          console.log('[initializeDatabase] Successfully added last_login column (direct method)');
+        } catch (addError) {
+          // Column might already exist
+          if (addError instanceof Error && (
+            addError.message.includes('already exists') || 
+            addError.message.includes('duplicate column')
+          )) {
+            console.log('[initializeDatabase] last_login column already exists (detected via error)');
+          } else {
+            console.error('[initializeDatabase] Error adding last_login column:', addError);
+          }
+        }
+      } else {
+        console.error('[initializeDatabase] Error checking/adding last_login column:', error);
+      }
     }
 
     // Create tokens table with environment isolation
