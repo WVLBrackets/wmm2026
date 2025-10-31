@@ -380,12 +380,18 @@ export async function verifyPassword(email: string, password: string): Promise<U
     }
 
     // Update last_login timestamp on successful login
-    const environment = getCurrentEnvironment();
-    await sql`
-      UPDATE users 
-      SET last_login = CURRENT_TIMESTAMP
-      WHERE id = ${user.id} AND environment = ${environment}
-    `;
+    // This is a non-critical update, so we don't fail login if it errors
+    try {
+      const environment = getCurrentEnvironment();
+      await sql`
+        UPDATE users 
+        SET last_login = CURRENT_TIMESTAMP
+        WHERE id = ${user.id} AND environment = ${environment}
+      `;
+    } catch (updateError) {
+      // Log but don't fail login if last_login update fails
+      console.error('Error updating last_login (non-critical):', updateError);
+    }
 
     return user;
   } catch (error) {
