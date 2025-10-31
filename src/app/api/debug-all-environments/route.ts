@@ -11,10 +11,37 @@ import { sql } from '@/lib/databaseAdapter';
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
+    const adminEmail = process.env.ADMIN_EMAIL || '';
     
-    if (!session?.user?.email || !(await isAdmin(session.user.email))) {
+    // Provide detailed error information for debugging
+    if (!session?.user?.email) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { 
+          success: false, 
+          error: 'Unauthorized - No session found',
+          debug: {
+            hasSession: !!session,
+            hasUser: !!session?.user,
+            hasEmail: !!session?.user?.email,
+            adminEmail: adminEmail ? `${adminEmail.substring(0, 3)}***` : 'NOT SET'
+          }
+        },
+        { status: 403 }
+      );
+    }
+    
+    const userIsAdmin = await isAdmin(session.user.email);
+    if (!userIsAdmin) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Unauthorized - Not an admin',
+          debug: {
+            userEmail: session.user.email,
+            adminEmail: adminEmail ? `${adminEmail.substring(0, 3)}***` : 'NOT SET',
+            emailMatches: session.user.email.toLowerCase() === adminEmail.toLowerCase()
+          }
+        },
         { status: 403 }
       );
     }
