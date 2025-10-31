@@ -103,7 +103,7 @@ export default function AdminPage() {
         throw new Error('Failed to load data');
       }
       
-      setUsers(usersData.data || []);
+      setUsers(usersData.users || usersData.data || []);
       setBrackets(bracketsData.data || []);
       setFilteredBrackets(bracketsData.data || []);
     } catch (error) {
