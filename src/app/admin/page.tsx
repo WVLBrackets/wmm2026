@@ -56,9 +56,6 @@ export default function AdminPage() {
   const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [passwordError, setPasswordError] = useState<string>('');
   const [showEndpoints, setShowEndpoints] = useState(false);
-  const [selectedUserIdDelete, setSelectedUserIdDelete] = useState<string>('');
-  const [selectedUserIdConfirm, setSelectedUserIdConfirm] = useState<string>('');
-  const [selectedUserIdChangePassword, setSelectedUserIdChangePassword] = useState<string>('');
 
   // Ensure bracket mode is disabled when admin page loads
   useEffect(() => {
@@ -408,48 +405,8 @@ export default function AdminPage() {
                     <td className="px-6 py-4 text-sm text-gray-500">
                       Delete a user (only if all bracket counts are 0) (Admin only)
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="flex items-center space-x-2">
-                        <select
-                          value={selectedUserIdDelete}
-                          onChange={(e) => setSelectedUserIdDelete(e.target.value)}
-                          className="border border-gray-300 rounded px-2 py-1 text-sm"
-                        >
-                          <option value="">Select user...</option>
-                          {users.map((user) => (
-                            <option key={user.id} value={user.id}>
-                              {user.name} ({user.email}) - {user.id}
-                            </option>
-                          ))}
-                        </select>
-                        {selectedUserIdDelete && (
-                          <a
-                            href={`/api/admin/users/${selectedUserIdDelete}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              if (window.confirm('Are you sure you want to DELETE this user? This action cannot be undone.')) {
-                                fetch(`/api/admin/users/${selectedUserIdDelete}`, { method: 'DELETE' })
-                                  .then(res => res.json())
-                                  .then(data => {
-                                    if (data.success) {
-                                      alert('User deleted successfully');
-                                      setSelectedUserIdDelete('');
-                                      loadData();
-                                    } else {
-                                      alert('Error: ' + (data.error || 'Failed to delete user'));
-                                    }
-                                  })
-                                  .catch(err => alert('Error: ' + err.message));
-                              }
-                            }}
-                          >
-                            Execute →
-                          </a>
-                        )}
-                      </div>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                      Requires ID parameter
                     </td>
                   </tr>
                   <tr>
@@ -460,46 +417,8 @@ export default function AdminPage() {
                     <td className="px-6 py-4 text-sm text-gray-500">
                       Manually confirm a user&apos;s email address (Admin only)
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="flex items-center space-x-2">
-                        <select
-                          value={selectedUserIdConfirm}
-                          onChange={(e) => setSelectedUserIdConfirm(e.target.value)}
-                          className="border border-gray-300 rounded px-2 py-1 text-sm"
-                        >
-                          <option value="">Select user...</option>
-                          {users.map((user) => (
-                            <option key={user.id} value={user.id}>
-                              {user.name} ({user.email}) - {user.id}
-                            </option>
-                          ))}
-                        </select>
-                        {selectedUserIdConfirm && (
-                          <a
-                            href={`/api/admin/users/${selectedUserIdConfirm}/confirm`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              fetch(`/api/admin/users/${selectedUserIdConfirm}/confirm`, { method: 'POST' })
-                                .then(res => res.json())
-                                .then(data => {
-                                  if (data.success) {
-                                    alert('User confirmed successfully');
-                                    setSelectedUserIdConfirm('');
-                                    loadData();
-                                  } else {
-                                    alert('Error: ' + (data.error || 'Failed to confirm user'));
-                                  }
-                                })
-                                .catch(err => alert('Error: ' + err.message));
-                            }}
-                          >
-                            Execute →
-                          </a>
-                        )}
-                      </div>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                      Requires ID parameter
                     </td>
                   </tr>
                   <tr>
@@ -510,55 +429,8 @@ export default function AdminPage() {
                     <td className="px-6 py-4 text-sm text-gray-500">
                       Change a user&apos;s password and auto-confirm their account (Admin only)
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="flex items-center space-x-2">
-                        <select
-                          value={selectedUserIdChangePassword}
-                          onChange={(e) => setSelectedUserIdChangePassword(e.target.value)}
-                          className="border border-gray-300 rounded px-2 py-1 text-sm"
-                        >
-                          <option value="">Select user...</option>
-                          {users.map((user) => (
-                            <option key={user.id} value={user.id}>
-                              {user.name} ({user.email}) - {user.id}
-                            </option>
-                          ))}
-                        </select>
-                        {selectedUserIdChangePassword && (
-                          <a
-                            href={`/api/admin/users/${selectedUserIdChangePassword}/change-password`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              const newPassword = prompt('Enter new password (min 6 characters):');
-                              if (newPassword && newPassword.length >= 6) {
-                                fetch(`/api/admin/users/${selectedUserIdChangePassword}/change-password`, {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ newPassword })
-                                })
-                                  .then(res => res.json())
-                                  .then(data => {
-                                    if (data.success) {
-                                      alert('Password changed successfully');
-                                      setSelectedUserIdChangePassword('');
-                                      loadData();
-                                    } else {
-                                      alert('Error: ' + (data.error || 'Failed to change password'));
-                                    }
-                                  })
-                                  .catch(err => alert('Error: ' + err.message));
-                              } else if (newPassword !== null) {
-                                alert('Password must be at least 6 characters');
-                              }
-                            }}
-                          >
-                            Execute →
-                          </a>
-                        )}
-                      </div>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                      Requires ID parameter
                     </td>
                   </tr>
                   <tr>
