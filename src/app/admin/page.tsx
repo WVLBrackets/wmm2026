@@ -55,6 +55,7 @@ export default function AdminPage() {
   const [newPassword, setNewPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [passwordError, setPasswordError] = useState<string>('');
+  const [showEndpoints, setShowEndpoints] = useState(false);
 
   // Ensure bracket mode is disabled when admin page loads
   useEffect(() => {
