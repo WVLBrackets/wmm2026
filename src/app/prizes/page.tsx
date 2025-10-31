@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { getSiteConfig } from '@/config/site';
 import { SiteConfigData } from '@/lib/siteConfig';
+import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 import { Gift, Trophy, Medal, Crown, AlertCircle } from 'lucide-react';
 
 export default function PrizesPage() {
@@ -16,24 +17,8 @@ export default function PrizesPage() {
         setSiteConfig(config);
       } catch (error) {
         console.error('Error loading site config:', error);
-        // Use fallback values
-        setSiteConfig({
-          tournamentYear: '2026',
-          lastYearWinner: 'Randy Phillips (Randy Line Sports)',
-          lastYearChampionship: 2025,
-          tournamentStartDate: '2026-03-18T12:00:00-05:00',
-          tournamentStartTime: '12:00 PM EST',
-          numberOfPlayers: 0,
-          totalPrizeAmount: 0,
-          siteName: "Warren's March Madness",
-          siteDescription: 'Annual March Madness Bracket Challenge',
-          oldSiteUrl: 'https://warrensmadness.webnode.page/',
-          standingsTabs: 2,
-          standingsYear: '2026',
-          footerText: '© 2001 Warren\'s March Madness | All rights reserved',
-          contactMe: 'warren@example.com',
-          prizesActiveForecast: 'Forecast',
-        });
+        // Use centralized fallback config
+        setSiteConfig(FALLBACK_CONFIG);
       } finally {
         setIsLoading(false);
       }

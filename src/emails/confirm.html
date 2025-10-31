@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Confirm Your Account</title>
+    <style>
+      body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+      .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+      .header { background: linear-gradient(135deg, #2563eb 0%, #9333ea 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+      .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+      .code { background: #e0f2fe; border: 2px solid #38bdf8; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; color: #0ea5e9; margin: 20px 0; border-radius: 5px; }
+      .button { display: inline-block; background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+      .footer { text-align: center; margin-top: 30px; color: #6b7280; font-size: 14px; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🏀 {{siteName}}</h1>
+        <p>Welcome to the tournament!</p>
+      </div>
+      <div class="content">
+        <h2>Confirm Your Account</h2>
+        <p>Hi {{name}},</p>
+        <p>Thank you for signing up for {{siteName}}! To complete your registration, please confirm your email address.</p>
+        <p><strong>Your confirmation code is:</strong></p>
+        <div class="code">{{code}}</div>
+        <p>You can either:</p>
+        <ul>
+          <li>Enter this code on the confirmation page</li>
+          <li>Or click the button below to confirm automatically</li>
+        </ul>
+        <div style="text-align: center;">
+          <a href="{{link}}" class="button">Confirm My Account</a>
+        </div>
+        <p><strong>This code expires in 24 hours.</strong></p>
+        <p>If you didn't create an account with us, please ignore this email.</p>
+      </div>
+      <div class="footer">
+        <p>{{siteName}} {{year}}</p>
+        <p>Good luck with your brackets!</p>
+      </div>
+    </div>
+  </body>
+  </html>
+
+
+

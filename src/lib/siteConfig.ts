@@ -19,6 +19,21 @@ export interface SiteConfigData {
   footerText: string;
   contactMe: string;
   prizesActiveForecast: string;
+  showPicksDev: string;
+  showPicksProd: string;
+  // Welcome banner configuration
+  welcomeGreeting: string;
+  entryCost: number;
+  welcomeNoBracketsLine2: string;
+  welcomeNoBracketsLine3: string;
+  welcomeSubmittedText: string;
+  welcomeInprogressText: string;
+  welcomeInprogressReminder: string;
+  welcomeCanStartNew: string;
+  entrySingular: string;
+  entryPlural: string;
+  // Sign-in page configuration
+  signinFooter: string;
 }
 
 // Function to fetch site config from Google Sheets
@@ -93,6 +108,45 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
             break;
           case 'prizes_active_forecast':
             config.prizesActiveForecast = value;
+            break;
+          case 'show_picks_dev':
+            config.showPicksDev = value;
+            break;
+          case 'show_picks_prod':
+            config.showPicksProd = value;
+            break;
+          case 'welcome_greeting':
+            config.welcomeGreeting = value;
+            break;
+          case 'entry_cost':
+            config.entryCost = parseInt(value) || 5;
+            break;
+          case 'welcome_no_brackets_line2':
+            config.welcomeNoBracketsLine2 = value;
+            break;
+          case 'welcome_no_brackets_line3':
+            config.welcomeNoBracketsLine3 = value;
+            break;
+          case 'welcome_submitted_text':
+            config.welcomeSubmittedText = value;
+            break;
+          case 'welcome_inprogress_text':
+            config.welcomeInprogressText = value;
+            break;
+          case 'welcome_inprogress_reminder':
+            config.welcomeInprogressReminder = value;
+            break;
+          case 'welcome_can_start_new':
+            config.welcomeCanStartNew = value;
+            break;
+          case 'entry_singular':
+            config.entrySingular = value;
+            break;
+          case 'entry_plural':
+            config.entryPlural = value;
+            break;
+          case 'signin_footer':
+            config.signinFooter = value;
             break;
         }
       }

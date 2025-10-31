@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { siteConfig } from "@/config/site";
-import DynamicNavigation from "@/components/DynamicNavigation";
+import NavigationWrapper from "@/components/NavigationWrapper";
 import Footer from "@/components/Footer";
+import SessionProvider from "@/components/SessionProvider";
+import { BracketModeProvider } from "@/contexts/BracketModeContext";
 
 export const metadata: Metadata = {
   title: siteConfig.siteName,
@@ -35,11 +37,15 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/basketball-favicon.png" />
       </head>
       <body className="font-sans antialiased" suppressHydrationWarning={true}>
-        <DynamicNavigation />
-        <main>
-          {children}
-        </main>
-        <Footer />
+        <SessionProvider>
+          <BracketModeProvider>
+            <NavigationWrapper />
+            <main>
+              {children}
+            </main>
+            <Footer />
+          </BracketModeProvider>
+        </SessionProvider>
       </body>
     </html>
   );
