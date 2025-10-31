@@ -651,24 +651,22 @@ export default function AdminPage() {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            <div className="flex items-center space-x-2">
+                            <div className="flex items-center space-x-1">
                               {!user.emailConfirmed && (
                                 <button
                                   onClick={() => handleConfirmUser(user.id)}
-                                  className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                                  className="p-1.5 rounded border border-transparent bg-green-600 hover:bg-green-700 text-white focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-500 transition-colors"
                                   title="Manually confirm this user"
                                 >
-                                  <CheckCircle className="h-4 w-4 mr-1" />
-                                  Confirm
+                                  <CheckCircle className="h-4 w-4" />
                                 </button>
                               )}
                               <button
                                 onClick={() => handleOpenPasswordChange(user.id)}
-                                className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                className="p-1.5 rounded border border-transparent bg-blue-600 hover:bg-blue-700 text-white focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 transition-colors"
                                 title="Change user password"
                               >
-                                <Key className="h-4 w-4 mr-1" />
-                                Password
+                                <Key className="h-4 w-4" />
                               </button>
                               <button
                                 onClick={() => handleDeleteUser(user.id, user.name, user.bracketCounts)}
@@ -679,7 +677,7 @@ export default function AdminPage() {
                                     (user.bracketCounts.deleted > 0)
                                   )
                                 }
-                                className={`inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                                className={`p-1.5 rounded border border-transparent focus:outline-none focus:ring-2 focus:ring-offset-1 transition-colors ${
                                   (user.bracketCounts && (
                                     (user.bracketCounts.submitted > 0) || 
                                     (user.bracketCounts.inProgress > 0) || 
@@ -698,8 +696,7 @@ export default function AdminPage() {
                                     : 'Delete User'
                                 }
                               >
-                                <Trash2 className="h-4 w-4 mr-1" />
-                                Delete
+                                <Trash2 className="h-4 w-4" />
                               </button>
                             </div>
                           </td>
