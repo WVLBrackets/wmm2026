@@ -44,10 +44,26 @@ export async function POST(request: NextRequest) {
     }
 
     // In production, send reset email
-    // Use Vercel's dynamic URL or fallback to NEXTAUTH_URL
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    // Determine base URL based on environment
+    // In production, use NEXTAUTH_URL (production domain)
+    // In preview, use VERCEL_URL (preview deployment URL)
+    // In development, use localhost
+    const vercelEnv = process.env.VERCEL_ENV;
+    let baseUrl: string;
+    
+    if (vercelEnv === 'production') {
+      // Production: Use NEXTAUTH_URL which should be the production domain
+      baseUrl = process.env.NEXTAUTH_URL || 'https://wmm2026.vercel.app';
+    } else if (vercelEnv === 'preview') {
+      // Preview: Use VERCEL_URL for the specific preview deployment
+      baseUrl = process.env.VERCEL_URL 
+        ? `https://${process.env.VERCEL_URL}` 
+        : process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    } else {
+      // Development: Use localhost or NEXTAUTH_URL
+      baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    }
+    
     const resetLink = `${baseUrl}/auth/reset-password?token=${resetToken}`;
     // Our email templating builds the link from the provided code, so pass the token as the code
     const emailSent = await sendPasswordResetEmail(email, user.name, resetLink, resetToken);

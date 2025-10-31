@@ -64,10 +64,29 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
     
-    // Use Vercel's dynamic URL or fallback to NEXTAUTH_URL
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    // Determine base URL based on environment
+    // In production, use NEXTAUTH_URL (production domain)
+    // In preview, use VERCEL_URL (preview deployment URL)
+    // In development, use localhost
+    const vercelEnv = process.env.VERCEL_ENV;
+    let baseUrl: string;
+    
+    if (vercelEnv === 'production') {
+      // Production: Use NEXTAUTH_URL which should be the production domain
+      baseUrl = process.env.NEXTAUTH_URL || 'https://wmm2026.vercel.app';
+      console.log(`[Register] Using production URL: ${baseUrl}`);
+    } else if (vercelEnv === 'preview') {
+      // Preview: Use VERCEL_URL for the specific preview deployment
+      baseUrl = process.env.VERCEL_URL 
+        ? `https://${process.env.VERCEL_URL}` 
+        : process.env.NEXTAUTH_URL || 'http://localhost:3000';
+      console.log(`[Register] Using preview URL: ${baseUrl}`);
+    } else {
+      // Development: Use localhost or NEXTAUTH_URL
+      baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+      console.log(`[Register] Using development URL: ${baseUrl}`);
+    }
+    
     const confirmationLink = `${baseUrl}/auth/confirm?token=${token}`;
     
     // Check email service status
