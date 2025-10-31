@@ -22,13 +22,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Create user (this will generate a confirmation token)
-    const user = await createUser(email, name, password);
-    
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User already exists with this email' },
-        { status: 409 }
-      );
+    let user;
+    try {
+      user = await createUser(email, name, password);
+      console.log(`[Register] User created successfully: ${user.id} for email: ${email}`);
+    } catch (createError) {
+      console.error('[Register] Error creating user:', createError);
+      
+      // Check if user already exists
+      if (createError instanceof Error && createError.message.includes('already exists')) {
+        return NextResponse.json(
+          { error: 'User already exists with this email' },
+          { status: 409 }
+        );
+      }
+      
+      // Re-throw other errors to be caught by outer catch
+      throw createError;
     }
 
     // In development mode, user is auto-confirmed
@@ -45,7 +55,14 @@ export async function POST(request: NextRequest) {
     }
 
     // In production, always require email verification
-    const token = user.confirmationToken!;
+    const token = user.confirmationToken;
+    
+    if (!token) {
+      console.error('Registration error: No confirmation token generated for user', user.id);
+      return NextResponse.json({
+        error: 'Failed to generate confirmation token. Please try again.',
+      }, { status: 500 });
+    }
     
     // Use Vercel's dynamic URL or fallback to NEXTAUTH_URL
     const baseUrl = process.env.VERCEL_URL 
@@ -57,12 +74,14 @@ export async function POST(request: NextRequest) {
     const emailStatus = emailService.getStatus();
     
     if (!emailService.isConfigured()) {
+      console.error('Registration error: Email service not configured');
       return NextResponse.json({
         error: 'Email service is not configured. Please contact the administrator.',
         emailStatus
       }, { status: 500 });
     }
     
+    console.log(`[Register] Sending confirmation email to ${email} with token ${token.substring(0, 10)}...`);
     const emailSent = await sendConfirmationEmail(email, name, confirmationLink, token);
 
     if (!emailSent) {
