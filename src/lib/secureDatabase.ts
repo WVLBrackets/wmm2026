@@ -53,14 +53,22 @@ export async function initializeDatabase() {
     `;
 
     // Add last_login column if it doesn't exist (for existing databases)
+    // PostgreSQL doesn't support IF NOT EXISTS for ALTER TABLE ADD COLUMN
+    // So we check first, then add if needed
     try {
-      await sql`ALTER TABLE users ADD COLUMN last_login TIMESTAMP`;
-      console.log('Added last_login column to users table');
-    } catch (error) {
-      // Column might already exist, ignore the error
-      if (error instanceof Error && !error.message.includes('already exists') && !error.message.includes('duplicate column')) {
-        console.log('last_login column might already exist:', error);
+      const columnCheck = await sql`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'users' AND column_name = 'last_login'
+      `;
+      
+      if (columnCheck.rows.length === 0) {
+        await sql`ALTER TABLE users ADD COLUMN last_login TIMESTAMP`;
+        console.log('Added last_login column to users table');
       }
+    } catch (error) {
+      console.log('Error checking/adding last_login column:', error);
+      // Continue anyway - column might exist or table might not exist yet
     }
 
     // Create tokens table with environment isolation
