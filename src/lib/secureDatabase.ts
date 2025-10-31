@@ -409,6 +409,39 @@ export async function verifyPassword(email: string, password: string): Promise<U
     try {
       const environment = getCurrentEnvironment();
       console.log(`[verifyPassword] Updating last_login for user ${user.id} in environment ${environment}`);
+      
+      // First check if column exists, create it if needed
+      try {
+        const columnCheck = await sql`
+          SELECT column_name 
+          FROM information_schema.columns 
+          WHERE table_name = 'users' 
+            AND column_name = 'last_login'
+            AND table_schema = current_schema()
+        `;
+        
+        if (columnCheck.rows.length === 0) {
+          console.log('[verifyPassword] last_login column not found, creating it...');
+          try {
+            await sql`ALTER TABLE users ADD COLUMN last_login TIMESTAMP`;
+            console.log('[verifyPassword] Successfully created last_login column');
+          } catch (addError) {
+            // Column might have been created by another request, try the update anyway
+            if (addError instanceof Error && (
+              !addError.message.includes('already exists') && 
+              !addError.message.includes('duplicate column')
+            )) {
+              console.error('[verifyPassword] Error creating last_login column:', addError);
+              throw addError;
+            }
+          }
+        }
+      } catch (checkError) {
+        console.error('[verifyPassword] Error checking for last_login column:', checkError);
+        // Continue anyway, try the update - might work if column exists
+      }
+      
+      // Now try the update
       const updateResult = await sql`
         UPDATE users 
         SET last_login = CURRENT_TIMESTAMP
