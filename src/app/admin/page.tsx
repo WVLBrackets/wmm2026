@@ -414,7 +414,7 @@ export default function AdminPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">POST</td>
                     <td className="px-6 py-4 text-sm text-gray-500">
-                      Manually confirm a user's email address (Admin only)
+                      Manually confirm a user&apos;s email address (Admin only)
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                       Requires ID parameter
@@ -426,7 +426,7 @@ export default function AdminPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">POST</td>
                     <td className="px-6 py-4 text-sm text-gray-500">
-                      Change a user's password and auto-confirm their account (Admin only)
+                      Change a user&apos;s password and auto-confirm their account (Admin only)
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                       Requires ID parameter
