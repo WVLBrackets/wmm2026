@@ -1,7 +1,23 @@
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { isAdmin } from '@/lib/adminAuth';
 import { emailService } from '@/lib/emailService';
 
 export async function GET() {
+  try {
+    // Require admin authentication
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.email || !(await isAdmin(session.user.email))) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Unauthorized - Admin access required'
+        },
+        { status: 403 }
+      );
+    }
   try {
     const status = emailService.getStatus();
     
@@ -28,6 +44,19 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    // Require admin authentication
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.email || !(await isAdmin(session.user.email))) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Unauthorized - Admin access required'
+        },
+        { status: 403 }
+      );
+    }
+    
     const { to, subject, message } = await request.json();
     
     if (!to || !subject || !message) {
