@@ -32,14 +32,15 @@ export async function GET() {
       users.map(async (user) => {
         try {
           const bracketCounts = await getUserBracketCounts(user.id);
-          return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            isConfirmed: user.emailConfirmed,
-            createdAt: user.createdAt.toISOString(),
-            bracketCounts,
-          };
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          isConfirmed: user.emailConfirmed,
+          createdAt: user.createdAt.toISOString(),
+          lastLogin: user.lastLogin?.toISOString() || null,
+          bracketCounts,
+        };
         } catch (error) {
           console.error(`[Admin Users API] Error getting bracket counts for user ${user.id}:`, error);
           // Return user without bracket counts if query fails
@@ -49,6 +50,7 @@ export async function GET() {
             name: user.name,
             isConfirmed: user.emailConfirmed,
             createdAt: user.createdAt.toISOString(),
+            lastLogin: user.lastLogin?.toISOString() || null,
             bracketCounts: { submitted: 0, inProgress: 0, deleted: 0 },
           };
         }

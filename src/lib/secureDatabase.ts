@@ -47,9 +47,21 @@ export async function initializeDatabase() {
         reset_expires TIMESTAMP,
         environment VARCHAR(50) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_login TIMESTAMP,
         UNIQUE(email, environment)
       )
     `;
+
+    // Add last_login column if it doesn't exist (for existing databases)
+    try {
+      await sql`ALTER TABLE users ADD COLUMN last_login TIMESTAMP`;
+      console.log('Added last_login column to users table');
+    } catch (error) {
+      // Column might already exist, ignore the error
+      if (error instanceof Error && !error.message.includes('already exists') && !error.message.includes('duplicate column')) {
+        console.log('last_login column might already exist:', error);
+      }
+    }
 
     // Create tokens table with environment isolation
     await sql`
@@ -358,6 +370,14 @@ export async function verifyPassword(email: string, password: string): Promise<U
       return null;
     }
 
+    // Update last_login timestamp on successful login
+    const environment = getCurrentEnvironment();
+    await sql`
+      UPDATE users 
+      SET last_login = CURRENT_TIMESTAMP
+      WHERE id = ${user.id} AND environment = ${environment}
+    `;
+
     return user;
   } catch (error) {
     console.error('Error verifying password:', error);
@@ -550,7 +570,7 @@ export async function getAllUsers(): Promise<Omit<User, 'password'>[]> {
   const environment = getCurrentEnvironment();
   
   const result = await sql`
-    SELECT id, email, name, email_confirmed, created_at, environment
+    SELECT id, email, name, email_confirmed, created_at, last_login, environment
     FROM users 
     WHERE environment = ${environment}
     ORDER BY created_at DESC
@@ -562,6 +582,7 @@ export async function getAllUsers(): Promise<Omit<User, 'password'>[]> {
     name: row.name as string,
     emailConfirmed: row.email_confirmed as boolean,
     createdAt: new Date(row.created_at as string),
+    lastLogin: row.last_login ? new Date(row.last_login as string) : null,
     environment: row.environment as string,
   }));
 }
