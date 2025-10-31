@@ -67,6 +67,7 @@ export async function PUT(
       tieBreaker: body.tieBreaker,
       picks: body.picks,
       status: body.status,
+      userId: body.userId,
     });
 
     if (!updatedBracket) {

@@ -225,7 +225,8 @@ export default function AdminPage() {
     setEditForm({
       entryName: bracket.entryName,
       tieBreaker: bracket.tieBreaker,
-      status: bracket.status
+      status: bracket.status,
+      userId: bracket.userId,
     });
   };
 
@@ -442,8 +443,24 @@ export default function AdminPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{bracket.userName}</div>
-                          <div className="text-sm text-gray-500">{bracket.userEmail}</div>
+                          {editingBracket === bracket.id ? (
+                            <select
+                              value={editForm.userId || ''}
+                              onChange={(e) => setEditForm({ ...editForm, userId: e.target.value })}
+                              className="border border-gray-300 rounded px-2 py-1 text-sm w-full"
+                            >
+                              {users.map((user) => (
+                                <option key={user.id} value={user.id}>
+                                  {user.name} ({user.email})
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <>
+                              <div className="text-sm font-medium text-gray-900">{bracket.userName}</div>
+                              <div className="text-sm text-gray-500">{bracket.userEmail}</div>
+                            </>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {editingBracket === bracket.id ? (

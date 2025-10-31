@@ -501,7 +501,7 @@ export async function getBracketById(bracketId: string): Promise<Bracket | null>
   };
 }
 
-export async function updateBracket(bracketId: string, updates: Partial<Pick<Bracket, 'entryName' | 'tieBreaker' | 'picks' | 'status'>>): Promise<Bracket | null> {
+export async function updateBracket(bracketId: string, updates: Partial<Pick<Bracket, 'entryName' | 'tieBreaker' | 'picks' | 'status' | 'userId'>>): Promise<Bracket | null> {
   const environment = getCurrentEnvironment();
   
   // Get the current bracket first
@@ -515,6 +515,7 @@ export async function updateBracket(bracketId: string, updates: Partial<Pick<Bra
   const tieBreaker = updates.tieBreaker ?? currentBracket.tieBreaker;
   const picks = updates.picks ?? currentBracket.picks;
   const status = updates.status ?? currentBracket.status;
+  const userId = updates.userId ?? currentBracket.userId;
   
   // Update the bracket
   await sql`
@@ -524,6 +525,7 @@ export async function updateBracket(bracketId: string, updates: Partial<Pick<Bra
       tie_breaker = ${tieBreaker || null},
       picks = ${JSON.stringify(picks)},
       status = ${status},
+      user_id = ${userId},
       updated_at = CURRENT_TIMESTAMP
     WHERE id = ${bracketId} AND environment = ${environment}
   `;
