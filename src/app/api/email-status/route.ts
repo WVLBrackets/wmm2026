@@ -18,7 +18,7 @@ export async function GET() {
         { status: 403 }
       );
     }
-  try {
+    
     const status = emailService.getStatus();
     
     return NextResponse.json({
