@@ -38,7 +38,7 @@ export async function GET() {
           name: user.name,
           isConfirmed: user.emailConfirmed,
           createdAt: user.createdAt.toISOString(),
-          lastLogin: user.lastLogin?.toISOString() || null,
+          lastLogin: user.lastLogin instanceof Date ? user.lastLogin.toISOString() : null,
           bracketCounts,
         };
         } catch (error) {
@@ -50,7 +50,7 @@ export async function GET() {
             name: user.name,
             isConfirmed: user.emailConfirmed,
             createdAt: user.createdAt.toISOString(),
-            lastLogin: user.lastLogin?.toISOString() || null,
+            lastLogin: user.lastLogin instanceof Date ? user.lastLogin.toISOString() : null,
             bracketCounts: { submitted: 0, inProgress: 0, deleted: 0 },
           };
         }

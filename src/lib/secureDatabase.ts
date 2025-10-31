@@ -578,22 +578,46 @@ export async function deleteBracket(bracketId: string): Promise<boolean> {
 export async function getAllUsers(): Promise<Omit<User, 'password'>[]> {
   const environment = getCurrentEnvironment();
   
-  const result = await sql`
-    SELECT id, email, name, email_confirmed, created_at, last_login, environment
-    FROM users 
-    WHERE environment = ${environment}
-    ORDER BY created_at DESC
-  `;
-  
-  return result.rows.map((row: Record<string, unknown>) => ({
-    id: row.id as string,
-    email: row.email as string,
-    name: row.name as string,
-    emailConfirmed: row.email_confirmed as boolean,
-    createdAt: new Date(row.created_at as string),
-    lastLogin: row.last_login ? new Date(row.last_login as string) : null,
-    environment: row.environment as string,
-  }));
+  try {
+    const result = await sql`
+      SELECT id, email, name, email_confirmed, created_at, last_login, environment
+      FROM users 
+      WHERE environment = ${environment}
+      ORDER BY created_at DESC
+    `;
+    
+    return result.rows.map((row: Record<string, unknown>) => ({
+      id: row.id as string,
+      email: row.email as string,
+      name: row.name as string,
+      emailConfirmed: row.email_confirmed as boolean,
+      createdAt: new Date(row.created_at as string),
+      lastLogin: row.last_login ? new Date(row.last_login as string) : null,
+      environment: row.environment as string,
+    }));
+  } catch (error) {
+    // If last_login column doesn't exist yet, try without it
+    if (error instanceof Error && error.message.includes('last_login')) {
+      console.log('[getAllUsers] last_login column not found, fetching without it');
+      const result = await sql`
+        SELECT id, email, name, email_confirmed, created_at, environment
+        FROM users 
+        WHERE environment = ${environment}
+        ORDER BY created_at DESC
+      `;
+      
+      return result.rows.map((row: Record<string, unknown>) => ({
+        id: row.id as string,
+        email: row.email as string,
+        name: row.name as string,
+        emailConfirmed: row.email_confirmed as boolean,
+        createdAt: new Date(row.created_at as string),
+        lastLogin: null,
+        environment: row.environment as string,
+      }));
+    }
+    throw error;
+  }
 }
 
 export async function getAllBrackets(): Promise<(Bracket & { userEmail: string; userName: string })[]> {
