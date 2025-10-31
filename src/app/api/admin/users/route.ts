@@ -16,15 +16,28 @@ export async function GET() {
     // Get bracket counts for each user and map field names
     const usersWithCounts = await Promise.all(
       users.map(async (user) => {
-        const bracketCounts = await getUserBracketCounts(user.id);
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          isConfirmed: user.emailConfirmed,
-          createdAt: user.createdAt.toISOString(),
-          bracketCounts,
-        };
+        try {
+          const bracketCounts = await getUserBracketCounts(user.id);
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            isConfirmed: user.emailConfirmed,
+            createdAt: user.createdAt.toISOString(),
+            bracketCounts,
+          };
+        } catch (error) {
+          console.error(`Error getting bracket counts for user ${user.id}:`, error);
+          // Return user without bracket counts if query fails
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            isConfirmed: user.emailConfirmed,
+            createdAt: user.createdAt.toISOString(),
+            bracketCounts: { submitted: 0, inProgress: 0, deleted: 0 },
+          };
+        }
       })
     );
     

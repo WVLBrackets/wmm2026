@@ -604,20 +604,21 @@ export async function getUserBracketCounts(userId: string): Promise<{
 }> {
   const environment = getCurrentEnvironment();
   
+  // Use SUM with CASE instead of FILTER for better compatibility
   const result = await sql`
     SELECT 
-      COUNT(*) FILTER (WHERE status = 'submitted') as submitted_count,
-      COUNT(*) FILTER (WHERE status = 'in_progress') as in_progress_count,
-      COUNT(*) FILTER (WHERE status = 'deleted') as deleted_count
+      SUM(CASE WHEN status = 'submitted' THEN 1 ELSE 0 END) as submitted_count,
+      SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress_count,
+      SUM(CASE WHEN status = 'deleted' THEN 1 ELSE 0 END) as deleted_count
     FROM brackets
     WHERE user_id = ${userId} AND environment = ${environment}
   `;
   
   const row = result.rows[0] as Record<string, unknown>;
   return {
-    submitted: parseInt(row.submitted_count as string) || 0,
-    inProgress: parseInt(row.in_progress_count as string) || 0,
-    deleted: parseInt(row.deleted_count as string) || 0,
+    submitted: Number(row.submitted_count) || 0,
+    inProgress: Number(row.in_progress_count) || 0,
+    deleted: Number(row.deleted_count) || 0,
   };
 }
 
