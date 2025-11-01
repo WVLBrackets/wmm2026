@@ -1,5 +1,5 @@
 import { getCurrentEnvironment } from './databaseConfig';
-import type { QueryResult } from 'pg';
+import type { QueryResult, Pool } from 'pg';
 
 /**
  * SQL function type for team data operations
@@ -7,7 +7,7 @@ import type { QueryResult } from 'pg';
 type SqlFunction = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<QueryResult>;
 
 let teamDataSqlAdapter: SqlFunction | null = null;
-let teamDataPool: any = null;
+let teamDataPool: Pool | null = null;
 
 /**
  * Get SQL adapter for team reference data
@@ -43,6 +43,10 @@ async function getTeamDataSqlAdapter(): Promise<SqlFunction> {
       
       // Create SQL function that uses parameterized queries
       teamDataSqlAdapter = async (strings: TemplateStringsArray, ...values: unknown[]) => {
+        if (!teamDataPool) {
+          throw new Error('Team data pool not initialized');
+        }
+        
         // Build query with parameterized placeholders ($1, $2, etc.)
         let query = strings[0];
         for (let i = 0; i < values.length; i++) {

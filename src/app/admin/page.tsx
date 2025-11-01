@@ -83,6 +83,7 @@ export default function AdminPage() {
     setIsDevelopment(hostname === 'localhost' || hostname === '127.0.0.1');
     
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, router]);
 
   useEffect(() => {
@@ -105,8 +106,7 @@ export default function AdminPage() {
     if (activeTab === 'data') {
       loadTeamData();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadData = async () => {
     try {
