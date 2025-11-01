@@ -63,7 +63,7 @@ export default function AdminPage() {
   const [newTeamData, setNewTeamData] = useState<{ key: string; id: string; name: string; mascot?: string; logo: string }>({ key: '', id: '', name: '', mascot: '', logo: '' });
   const [teamDataError, setTeamDataError] = useState('');
   const [teamFilters, setTeamFilters] = useState<{ key: string; id: string; name: string; mascot: string; logo: string }>({ key: '', id: '', name: '', mascot: '', logo: '' });
-  const [teamSortColumn, setTeamSortColumn] = useState<'name' | 'key' | 'id' | null>('name');
+  const [teamSortColumn, setTeamSortColumn] = useState<'name' | 'mascot' | 'key' | 'id' | null>('name');
   const [teamSortOrder, setTeamSortOrder] = useState<'asc' | 'desc'>('asc');
   const [duplicateCheck, setDuplicateCheck] = useState<{ hasDuplicates: boolean; duplicateIds: string[] }>({ hasDuplicates: false, duplicateIds: [] });
   const [isDevelopment, setIsDevelopment] = useState(false);
