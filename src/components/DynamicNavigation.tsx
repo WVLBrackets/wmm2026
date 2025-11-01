@@ -7,7 +7,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { getSiteConfig } from '@/config/site';
 import { SiteConfigData } from '@/lib/siteConfig';
 import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
-import { Home, Trophy, BookOpen, CreditCard, Gift, Star, Menu, X, Target, User, LogOut, Shield } from 'lucide-react';
+import { Home, Trophy, BookOpen, CreditCard, Gift, Star, Menu, X, Vote, User, LogOut, Shield } from 'lucide-react';
 import Image from 'next/image';
 
 const navigationItems = [
@@ -185,7 +185,7 @@ export default function DynamicNavigation({ hideInBracketMode = false }: Dynamic
                     : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                 }`}
               >
-                <Target className="h-5 w-5 mr-2" />
+                <Vote className="h-5 w-5 mr-2" />
                 My Picks
               </Link>
             )}
@@ -299,7 +299,7 @@ export default function DynamicNavigation({ hideInBracketMode = false }: Dynamic
                         : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
                     }`}
                   >
-                    <Target className="h-5 w-5" />
+                    <Vote className="h-5 w-5" />
                     <span>My Picks</span>
                   </Link>
                 )}
