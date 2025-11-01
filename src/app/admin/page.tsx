@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Trash2, Edit, Save, X, Users, Trophy, CheckCircle, Key, Edit3, LogOut, Link2, Database, Plus } from 'lucide-react';
+import { Trash2, Edit, Save, X, Users, Trophy, CheckCircle, Key, Edit3, LogOut, Link2, Table, Plus } from 'lucide-react';
 import { useBracketMode } from '@/contexts/BracketModeContext';
 
 interface User {
@@ -739,8 +739,8 @@ export default function AdminPage() {
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                <Database className="w-5 h-5" />
-                <span>Data ({Object.keys(teamData).length})</span>
+                <Table className="w-5 h-5" />
+                <span>Team Data ({Object.keys(teamData).length})</span>
               </button>
             </nav>
           </div>
