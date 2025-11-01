@@ -71,22 +71,6 @@ export default function AdminPage() {
   }, [setInBracketMode]);
 
   const loadDataRef = useRef<(() => Promise<void>) | undefined>(undefined);
-  loadDataRef.current = loadData;
-
-  useEffect(() => {
-    if (status === 'loading') return;
-    
-    if (status === 'unauthenticated') {
-      router.push('/auth/signin');
-      return;
-    }
-    
-    // Check if we're in development (hide Team Data tab)
-    const hostname = window.location.hostname;
-    setIsDevelopment(hostname === 'localhost' || hostname === '127.0.0.1');
-    
-    loadDataRef.current?.();
-  }, [status, router]);
 
   useEffect(() => {
     // Filter brackets when filters change
@@ -104,14 +88,6 @@ export default function AdminPage() {
   }, [brackets, filterUser, filterStatus]);
 
   const loadTeamDataRef = useRef<(() => Promise<void>) | undefined>(undefined);
-  loadTeamDataRef.current = loadTeamData;
-
-  useEffect(() => {
-    // Load team data when Data tab is active
-    if (activeTab === 'data') {
-      loadTeamDataRef.current?.();
-    }
-  }, [activeTab]);
 
   const loadData = async () => {
     try {
@@ -156,12 +132,39 @@ export default function AdminPage() {
         throw new Error(data.error || 'Failed to load team data');
       }
       
-      setTeamData(data.data || {});
+      // Type assertion for team data from API
+      setTeamData((data.data as Record<string, { id: string; name: string; logo: string }>) || {});
     } catch (error) {
       console.error('Error loading team data:', error);
       setTeamDataError('Failed to load team data');
     }
   };
+
+  // Assign functions to refs after they're declared
+  loadDataRef.current = loadData;
+  loadTeamDataRef.current = loadTeamData;
+
+  useEffect(() => {
+    if (status === 'loading') return;
+    
+    if (status === 'unauthenticated') {
+      router.push('/auth/signin');
+      return;
+    }
+    
+    // Check if we're in development (hide Team Data tab)
+    const hostname = window.location.hostname;
+    setIsDevelopment(hostname === 'localhost' || hostname === '127.0.0.1');
+    
+    loadDataRef.current?.();
+  }, [status, router]);
+
+  useEffect(() => {
+    // Load team data when Data tab is active
+    if (activeTab === 'data') {
+      loadTeamDataRef.current?.();
+    }
+  }, [activeTab]);
 
   const handleEditTeam = (key: string) => {
     const team = teamData[key];

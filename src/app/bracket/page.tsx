@@ -41,18 +41,6 @@ function BracketContent() {
   const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
 
   const loadTournamentRef = useRef<(() => Promise<void>) | undefined>(undefined);
-  loadTournamentRef.current = loadTournament;
-
-  useEffect(() => {
-    if (status === 'loading') return;
-    
-    if (status === 'unauthenticated') {
-      router.push('/auth/signin');
-      return;
-    }
-    
-    loadTournamentRef.current?.();
-  }, [status, router]);
 
   // Check for admin mode and edit parameter
   useEffect(() => {
@@ -80,6 +68,7 @@ function BracketContent() {
     }
   }, [session?.user?.name, entryName]);
 
+  // Assign function to ref after it's declared
   const loadTournament = async () => {
     try {
       setIsLoading(true);
@@ -101,6 +90,20 @@ function BracketContent() {
       setIsLoading(false);
     }
   };
+
+  // Assign function to ref after it's declared
+  loadTournamentRef.current = loadTournament;
+
+  useEffect(() => {
+    if (status === 'loading') return;
+    
+    if (status === 'unauthenticated') {
+      router.push('/auth/signin');
+      return;
+    }
+    
+    loadTournamentRef.current?.();
+  }, [status, router]);
 
   const loadSubmittedBrackets = async () => {
     try {
