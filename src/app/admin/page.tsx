@@ -57,17 +57,18 @@ export default function AdminPage() {
   const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [passwordError, setPasswordError] = useState<string>('');
   const [showEndpoints, setShowEndpoints] = useState(false);
-  const [teamData, setTeamData] = useState<Record<string, { id: string; name: string; mascot?: string; logo: string }>>({});
+  const [teamData, setTeamData] = useState<Record<string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }>>({});
   const [editingTeam, setEditingTeam] = useState<string | null>(null);
-  const [editingTeamData, setEditingTeamData] = useState<{ key: string; id: string; name: string; mascot?: string; logo: string } | null>(null);
+  const [editingTeamData, setEditingTeamData] = useState<{ key: string; id: string; name: string; mascot?: string; logo: string; active?: boolean } | null>(null);
   const [isAddingTeam, setIsAddingTeam] = useState(false);
-  const [newTeamData, setNewTeamData] = useState<{ key: string; id: string; name: string; mascot?: string; logo: string }>({ key: '', id: '', name: '', mascot: '', logo: '' });
+  const [newTeamData, setNewTeamData] = useState<{ key: string; id: string; name: string; mascot?: string; logo: string; active?: boolean }>({ key: '', id: '', name: '', mascot: '', logo: '', active: true });
   const [teamDataError, setTeamDataError] = useState('');
   const [teamFilters, setTeamFilters] = useState<{ key: string; id: string; name: string; mascot: string; logo: string }>({ key: '', id: '', name: '', mascot: '', logo: '' });
   const [teamSortColumn, setTeamSortColumn] = useState<'name' | 'mascot' | 'key' | 'id' | null>('name');
   const [teamSortOrder, setTeamSortOrder] = useState<'asc' | 'desc'>('asc');
   const [duplicateCheck, setDuplicateCheck] = useState<{ hasDuplicates: boolean; duplicateIds: string[] }>({ hasDuplicates: false, duplicateIds: [] });
   const [isDevelopment, setIsDevelopment] = useState(false);
+  const [teamActiveFilter, setTeamActiveFilter] = useState<'all' | 'active' | 'inactive'>('active');
 
   // Ensure bracket mode is disabled when admin page loads
   useEffect(() => {
@@ -135,7 +136,20 @@ export default function AdminPage() {
     try {
       setTeamDataError('');
       setIsLoading(true);
-      const response = await fetch('/api/admin/team-data');
+      
+      // Build URL with active filter
+      let url = '/api/admin/team-data';
+      if (teamActiveFilter === 'active') {
+        url += '?activeOnly=true';
+      } else if (teamActiveFilter === 'inactive') {
+        // For inactive, we need all teams and filter client-side
+        url += '';
+      } else {
+        // 'all' - get all teams
+        url += '';
+      }
+      
+      const response = await fetch(url);
       const data = await response.json();
       
       if (!response.ok) {
@@ -144,12 +158,25 @@ export default function AdminPage() {
       }
       
       // Type assertion for team data from API
-      const loadedData = (data.data as Record<string, { id: string; name: string; logo: string }>) || {};
-      setTeamData(loadedData);
+      const loadedData = (data.data as Record<string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }>) || {};
+      
+      // Filter by active status if needed
+      let filteredData = loadedData;
+      if (teamActiveFilter === 'inactive') {
+        filteredData = Object.fromEntries(
+          Object.entries(loadedData).filter(([_, team]) => !team.active)
+        );
+      } else if (teamActiveFilter === 'active') {
+        filteredData = Object.fromEntries(
+          Object.entries(loadedData).filter(([_, team]) => team.active !== false)
+        );
+      }
+      
+      setTeamData(filteredData);
       setTeamDataError(''); // Clear any previous errors
       
       // Run duplicate check after loading data
-      checkForDuplicates(loadedData);
+      checkForDuplicates(filteredData);
     } catch (error) {
       console.error('Error loading team data:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to load team data';
@@ -270,6 +297,13 @@ export default function AdminPage() {
     }
   }, [activeTab]);
 
+  // Reload team data when filter changes
+  useEffect(() => {
+    if (activeTab === 'data' && loadTeamDataRef.current) {
+      loadTeamDataRef.current();
+    }
+  }, [teamActiveFilter, activeTab]);
+
   const handleEditTeam = (key: string) => {
     const team = teamData[key];
     setEditingTeam(key);
@@ -279,6 +313,7 @@ export default function AdminPage() {
       name: team.name,
       mascot: team.mascot,
       logo: team.logo,
+      active: team.active ?? false,
     });
   };
 
@@ -318,6 +353,7 @@ export default function AdminPage() {
         name: editingTeamData.name,
         mascot: editingTeamData.mascot || undefined,
         logo: editingTeamData.logo,
+        active: editingTeamData.active ?? false,
       };
 
       const response = await fetch('/api/admin/team-data', {
@@ -374,12 +410,12 @@ export default function AdminPage() {
 
   const handleAddTeam = () => {
     setIsAddingTeam(true);
-    setNewTeamData({ key: '', id: '', name: '', mascot: '', logo: '' });
+    setNewTeamData({ key: '', id: '', name: '', mascot: '', logo: '', active: true });
   };
 
   const handleCancelAddTeam = () => {
     setIsAddingTeam(false);
-    setNewTeamData({ key: '', id: '', name: '', mascot: '', logo: '' });
+    setNewTeamData({ key: '', id: '', name: '', mascot: '', logo: '', active: true });
   };
 
   const handleSaveNewTeam = async () => {
@@ -405,6 +441,7 @@ export default function AdminPage() {
           name: newTeamData.name,
           mascot: newTeamData.mascot || undefined,
           logo: newTeamData.logo,
+          active: newTeamData.active ?? true,
         },
       };
 
@@ -423,7 +460,7 @@ export default function AdminPage() {
       // Reload team data to get sorted version
       await loadTeamData();
       setIsAddingTeam(false);
-      setNewTeamData({ key: '', id: '', name: '', logo: '' });
+      setNewTeamData({ key: '', id: '', name: '', mascot: '', logo: '', active: true });
       
       // Duplicate check will run in loadTeamData
     } catch (error) {
@@ -452,6 +489,35 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Error exporting team data:', error);
       setTeamDataError(error instanceof Error ? error.message : 'Failed to export team data');
+    }
+  };
+
+  const handleToggleActive = async (key: string, currentActive: boolean) => {
+    try {
+      setTeamDataError('');
+      
+      const response = await fetch('/api/admin/team-data', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          key,
+          active: !currentActive,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to update team active status');
+      }
+
+      // Reload team data
+      await loadTeamData();
+    } catch (error) {
+      console.error('Error toggling team active status:', error);
+      setTeamDataError(error instanceof Error ? error.message : 'Failed to toggle team active status');
     }
   };
 
@@ -1383,35 +1449,72 @@ export default function AdminPage() {
       {/* Data Tab */}
       {activeTab === 'data' && (
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-xl font-bold text-gray-900">Team Reference Data</h2>
-            <div className="flex items-center space-x-3">
-              {!isAddingTeam && (
-                <>
-                  <button
-                    onClick={() => router.push('/admin/tournament-builder')}
-                    className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>New Bracket</span>
-                  </button>
-                  <button
-                    onClick={handleExportTeamData}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                    title="Export team data to JSON file for git commit"
-                  >
-                    <Download className="h-4 w-4" />
-                    <span>Export JSON</span>
-                  </button>
-                  <button
-                    onClick={handleAddTeam}
-                    className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>Add Team</span>
-                  </button>
-                </>
-              )}
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Team Reference Data</h2>
+              <div className="flex items-center space-x-3">
+                {!isAddingTeam && (
+                  <>
+                    <button
+                      onClick={() => router.push('/admin/tournament-builder')}
+                      className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>New Bracket</span>
+                    </button>
+                    <button
+                      onClick={handleExportTeamData}
+                      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                      title="Export team data to JSON file for git commit"
+                    >
+                      <Download className="h-4 w-4" />
+                      <span>Export JSON</span>
+                    </button>
+                    <button
+                      onClick={handleAddTeam}
+                      className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Add Team</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+            
+            {/* Active Filter Toggles */}
+            <div className="flex items-center space-x-2 mb-4">
+              <span className="text-sm font-medium text-gray-700">Show:</span>
+              <button
+                onClick={() => setTeamActiveFilter('active')}
+                className={`px-3 py-1 text-sm rounded ${
+                  teamActiveFilter === 'active'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Active
+              </button>
+              <button
+                onClick={() => setTeamActiveFilter('inactive')}
+                className={`px-3 py-1 text-sm rounded ${
+                  teamActiveFilter === 'inactive'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Inactive
+              </button>
+              <button
+                onClick={() => setTeamActiveFilter('all')}
+                className={`px-3 py-1 text-sm rounded ${
+                  teamActiveFilter === 'all'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                All
+              </button>
             </div>
           </div>
 
@@ -1485,6 +1588,17 @@ export default function AdminPage() {
                     className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                     placeholder="e.g., /logos/teams/41.png"
                   />
+                </div>
+                <div>
+                  <label className="flex items-center space-x-2 mt-6">
+                    <input
+                      type="checkbox"
+                      checked={newTeamData.active ?? true}
+                      onChange={(e) => setNewTeamData({ ...newTeamData, active: e.target.checked })}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Active</span>
+                  </label>
                 </div>
               </div>
               <div className="mt-4 flex justify-end space-x-3">
@@ -1591,6 +1705,9 @@ export default function AdminPage() {
                     Logo
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                    Active
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                     Actions
                   </th>
                 </tr>
@@ -1651,7 +1768,7 @@ export default function AdminPage() {
                <tbody className="bg-white divide-y divide-gray-200">
                  {teamDataError ? (
                    <tr>
-                     <td colSpan={7} className="px-6 py-4 text-center">
+                     <td colSpan={8} className="px-6 py-4 text-center">
                        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
                          <p className="text-sm font-medium text-red-800">Error loading team data</p>
                          <p className="text-sm text-red-700 mt-1">{teamDataError}</p>
@@ -1666,13 +1783,13 @@ export default function AdminPage() {
                    </tr>
                  ) : Object.keys(teamData).length === 0 && isLoading ? (
                    <tr>
-                     <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                     <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
                        Loading team data...
                      </td>
                    </tr>
                  ) : Object.keys(teamData).length === 0 ? (
                    <tr>
-                     <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                     <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
                        No team data found. Click &quot;Add Team&quot; to add your first team.
                      </td>
                    </tr>
@@ -1783,6 +1900,16 @@ export default function AdminPage() {
                             )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
+                            <label className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                checked={editingTeamData?.active ?? false}
+                                onChange={(e) => setEditingTeamData({ ...editingTeamData!, active: e.target.checked })}
+                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                              />
+                            </label>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center space-x-2">
                               <button
                                 onClick={handleSaveTeam}
@@ -1831,6 +1958,17 @@ export default function AdminPage() {
                             ) : (
                               <span className="text-gray-400 text-xs">No logo</span>
                             )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <label className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                checked={team.active ?? false}
+                                onChange={() => handleToggleActive(key, team.active ?? false)}
+                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                              />
+                              <span className="text-sm text-gray-700">{team.active ? 'Active' : 'Inactive'}</span>
+                            </label>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center gap-2">

@@ -82,8 +82,8 @@ export default function TournamentBuilderPage() {
       try {
         setIsLoading(true);
         
-        // Load teams from team data API
-        const teamsResponse = await fetch('/api/admin/team-data');
+        // Load teams from team data API (only active teams)
+        const teamsResponse = await fetch('/api/admin/team-data?activeOnly=true');
         const teamsData = await teamsResponse.json();
         if (teamsData.success) {
           setTeams(teamsData.data || {});

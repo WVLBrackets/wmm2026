@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/lib/adminAuth';
-import { getAllTeamReferenceData, syncTeamDataFromJSON, updateTeamReferenceData, deleteTeamReferenceData, initializeTeamDataTable } from '@/lib/secureDatabase';
+import { getAllTeamReferenceData, syncTeamDataFromJSON, updateTeamReferenceData, deleteTeamReferenceData, initializeTeamDataTable, updateTeamActiveStatus } from '@/lib/secureDatabase';
 
 /**
  * GET /api/admin/team-data - Get all team reference data
+ * Query params: activeOnly (boolean) - if true, only return active teams
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
@@ -24,8 +25,12 @@ export async function GET() {
     // Sync from JSON only in development (staging/prod use database directly)
     await syncTeamDataFromJSON();
 
+    // Check for activeOnly query parameter
+    const { searchParams } = new URL(request.url);
+    const activeOnly = searchParams.get('activeOnly') === 'true';
+
     // Read from database
-    const teamData = await getAllTeamReferenceData();
+    const teamData = await getAllTeamReferenceData(activeOnly);
 
     return NextResponse.json({
       success: true,
@@ -71,7 +76,7 @@ export async function PUT(request: NextRequest) {
     await initializeTeamDataTable();
 
     // Type assertion for team data
-    const teamsTyped = teams as Record<string, { id: string; name: string; mascot?: string; logo: string }>;
+    const teamsTyped = teams as Record<string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }>;
 
     // Sort teams by ID (numeric)
     const sortedTeams = Object.fromEntries(
@@ -142,6 +147,52 @@ export async function DELETE(request: NextRequest) {
       { 
         success: false, 
         error: error instanceof Error ? error.message : 'Failed to delete team' 
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * PATCH /api/admin/team-data - Update a team's active status
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.email || !(await isAdmin(session.user.email))) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const { key, active } = body;
+
+    if (!key || typeof active !== 'boolean') {
+      return NextResponse.json(
+        { success: false, error: 'Key and active status are required' },
+        { status: 400 }
+      );
+    }
+
+    // Ensure team_reference_data table exists
+    await initializeTeamDataTable();
+
+    // Update active status
+    await updateTeamActiveStatus(key, active);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Team active status updated successfully',
+    });
+  } catch (error) {
+    console.error('Error updating team active status:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to update team active status' 
       },
       { status: 500 }
     );

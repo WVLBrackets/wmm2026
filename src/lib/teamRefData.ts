@@ -37,16 +37,19 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
   if (typeof window === 'undefined') {
     try {
       const { getAllTeamReferenceData } = await import('@/lib/secureDatabase');
-      const dbTeams = await getAllTeamReferenceData();
+      // Only get active teams for public-facing calls
+      const dbTeams = await getAllTeamReferenceData(true);
       
       if (Object.keys(dbTeams).length > 0) {
-        const teamData: TeamRefData[] = Object.entries(dbTeams).map(([abbr, teamInfo]) => ({
-          abbr,
-          id: teamInfo.id,
-          name: teamInfo.name
-        }));
+        const teamData: TeamRefData[] = Object.entries(dbTeams)
+          .filter(([_, teamInfo]) => teamInfo.active !== false)
+          .map(([abbr, teamInfo]) => ({
+            abbr,
+            id: teamInfo.id,
+            name: teamInfo.name
+          }));
         
-        console.log(`📋 Loaded ${teamData.length} teams from database`);
+        console.log(`📋 Loaded ${teamData.length} active teams from database`);
         
         cachedTeamData = teamData;
         lastFetchTime = now;

@@ -547,6 +547,17 @@ async function syncTeamsFromESPN(
         continue;
       }
 
+      // Skip if team name is "ESPN" - indicates blank/invalid page
+      if (espnTeamName.trim().toUpperCase() === 'ESPN') {
+        reports.push({
+          id: idString,
+          action: 'not_found',
+          message: 'Skipped: ESPN page found (no team exists for this ID)'
+        });
+        console.log(`  ⏭️  Skipped: ESPN page found (no team exists for ID ${idString})\n`);
+        continue;
+      }
+
       // Extract mascot from ESPN page
       const espnMascot = extractMascotFromHTML(html, espnTeamName);
       

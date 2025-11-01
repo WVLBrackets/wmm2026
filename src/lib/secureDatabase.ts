@@ -831,23 +831,36 @@ export async function deleteUser(userId: string): Promise<boolean> {
 /**
  * Get all team reference data from database
  * Uses production database connection (shared between staging and prod)
+ * @param activeOnly - If true, only returns active teams
  */
-export async function getAllTeamReferenceData(): Promise<Record<string, { id: string; name: string; mascot?: string; logo: string }>> {
+export async function getAllTeamReferenceData(activeOnly: boolean = false): Promise<Record<string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }>> {
   try {
     const { teamDataSql } = await import('./teamDataConnection');
-    const result = await teamDataSql`
-      SELECT key, id, name, mascot, logo
-      FROM team_reference_data
-      ORDER BY CAST(id AS INTEGER)
-    `;
+    let result;
     
-    const teams: Record<string, { id: string; name: string; mascot?: string; logo: string }> = {};
+    if (activeOnly) {
+      result = await teamDataSql`
+        SELECT key, id, name, mascot, logo, COALESCE(active, false) as active
+        FROM team_reference_data
+        WHERE COALESCE(active, false) = true
+        ORDER BY CAST(id AS INTEGER)
+      `;
+    } else {
+      result = await teamDataSql`
+        SELECT key, id, name, mascot, logo, COALESCE(active, false) as active
+        FROM team_reference_data
+        ORDER BY CAST(id AS INTEGER)
+      `;
+    }
+    
+    const teams: Record<string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }> = {};
     for (const row of result.rows) {
       teams[row.key as string] = {
         id: row.id as string,
         name: row.name as string,
         mascot: (row.mascot as string) || undefined,
         logo: (row.logo as string) || '',
+        active: (row.active as boolean) ?? false,
       };
     }
     
@@ -869,7 +882,7 @@ export async function getAllTeamReferenceData(): Promise<Record<string, { id: st
  * Update team reference data (replace all teams)
  * Uses production database connection (shared between staging and prod)
  */
-export async function updateTeamReferenceData(teams: Record<string, { id: string; name: string; mascot?: string; logo: string }>): Promise<void> {
+export async function updateTeamReferenceData(teams: Record<string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }>): Promise<void> {
   try {
     const { teamDataSql } = await import('./teamDataConnection');
     
@@ -882,20 +895,42 @@ export async function updateTeamReferenceData(teams: Record<string, { id: string
     const entries = Object.entries(teams);
     if (entries.length > 0) {
       for (const [key, team] of entries) {
+        // Determine active status: if not specified, use non-numerical abbreviation logic
+        const isActive = team.active ?? (!/^[0-9]+$/.test(key));
+        
         await teamDataSql`
-          INSERT INTO team_reference_data (key, id, name, mascot, logo, updated_at)
-          VALUES (${key}, ${team.id}, ${team.name}, ${team.mascot || null}, ${team.logo || null}, CURRENT_TIMESTAMP)
+          INSERT INTO team_reference_data (key, id, name, mascot, logo, active, updated_at)
+          VALUES (${key}, ${team.id}, ${team.name}, ${team.mascot || null}, ${team.logo || null}, ${isActive}, CURRENT_TIMESTAMP)
           ON CONFLICT (key) DO UPDATE
           SET id = EXCLUDED.id,
               name = EXCLUDED.name,
               mascot = EXCLUDED.mascot,
               logo = EXCLUDED.logo,
+              active = EXCLUDED.active,
               updated_at = CURRENT_TIMESTAMP
         `;
       }
     }
   } catch (error) {
     console.error('Error updating team reference data:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update a single team's active status
+ */
+export async function updateTeamActiveStatus(key: string, active: boolean): Promise<void> {
+  try {
+    const { teamDataSql } = await import('./teamDataConnection');
+    
+    await teamDataSql`
+      UPDATE team_reference_data
+      SET active = ${active}, updated_at = CURRENT_TIMESTAMP
+      WHERE key = ${key}
+    `;
+  } catch (error) {
+    console.error('Error updating team active status:', error);
     throw error;
   }
 }
@@ -963,6 +998,41 @@ export async function initializeTeamDataTable(): Promise<void> {
         console.log('[initializeTeamDataTable] mascot column already exists');
       } else {
         console.error('[initializeTeamDataTable] Error checking/adding mascot column:', mascotError);
+      }
+    }
+
+    // Add active column if it doesn't exist (safe migration for existing databases)
+    try {
+      const activeColumnCheck = await teamDataSql`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'team_reference_data' 
+          AND column_name = 'active'
+          AND table_schema = current_schema()
+      `;
+      
+      if (activeColumnCheck.rows.length === 0) {
+        console.log('[initializeTeamDataTable] Adding active column to team_reference_data table');
+        await teamDataSql`ALTER TABLE team_reference_data ADD COLUMN active BOOLEAN DEFAULT false`;
+        console.log('[initializeTeamDataTable] Successfully added active column');
+        
+        // Set initial active status based on abbreviation (non-numerical = active)
+        await teamDataSql`
+          UPDATE team_reference_data 
+          SET active = true 
+          WHERE key !~ '^[0-9]+$'
+        `;
+        console.log('[initializeTeamDataTable] Set initial active status for teams');
+      }
+    } catch (activeError) {
+      // Column might already exist or there's an issue, but don't fail initialization
+      if (activeError instanceof Error && (
+        activeError.message.includes('already exists') || 
+        activeError.message.includes('duplicate column')
+      )) {
+        console.log('[initializeTeamDataTable] active column already exists');
+      } else {
+        console.error('[initializeTeamDataTable] Error checking/adding active column:', activeError);
       }
     }
     
