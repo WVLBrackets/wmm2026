@@ -239,7 +239,7 @@ export default function DynamicNavigation({ hideInBracketMode = false }: Dynamic
                 }`}
                 title="My Picks"
               >
-                <Target className="h-5 w-5" />
+                <Vote className="h-5 w-5" />
               </Link>
             )}
             
