@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Trash2, Edit, Save, X, Users, Trophy, CheckCircle, Key, Edit3, LogOut, Link2 } from 'lucide-react';
+import { Trash2, Edit, Save, X, Users, Trophy, CheckCircle, Key, Edit3, LogOut, Link2, Database, Plus } from 'lucide-react';
 import { useBracketMode } from '@/contexts/BracketModeContext';
 
 interface User {
@@ -46,7 +46,7 @@ export default function AdminPage() {
   const [filteredBrackets, setFilteredBrackets] = useState<Bracket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'brackets' | 'users'>('brackets');
+  const [activeTab, setActiveTab] = useState<'brackets' | 'users' | 'data'>('brackets');
   const [editingBracket, setEditingBracket] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Bracket>>({});
   const [filterUser, setFilterUser] = useState<string>('all');
@@ -56,6 +56,12 @@ export default function AdminPage() {
   const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [passwordError, setPasswordError] = useState<string>('');
   const [showEndpoints, setShowEndpoints] = useState(false);
+  const [teamData, setTeamData] = useState<Record<string, { id: string; name: string; logo: string }>>({});
+  const [editingTeam, setEditingTeam] = useState<string | null>(null);
+  const [editingTeamData, setEditingTeamData] = useState<{ key: string; id: string; name: string; logo: string } | null>(null);
+  const [isAddingTeam, setIsAddingTeam] = useState(false);
+  const [newTeamData, setNewTeamData] = useState<{ key: string; id: string; name: string; logo: string }>({ key: '', id: '', name: '', logo: '' });
+  const [teamDataError, setTeamDataError] = useState('');
 
   // Ensure bracket mode is disabled when admin page loads
   useEffect(() => {
@@ -88,6 +94,14 @@ export default function AdminPage() {
     setFilteredBrackets(filtered);
   }, [brackets, filterUser, filterStatus]);
 
+  useEffect(() => {
+    // Load team data when Data tab is active
+    if (activeTab === 'data') {
+      loadTeamData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
   const loadData = async () => {
     try {
       setIsLoading(true);
@@ -118,6 +132,150 @@ export default function AdminPage() {
       setError('Failed to load admin data');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadTeamData = async () => {
+    try {
+      setTeamDataError('');
+      const response = await fetch('/api/admin/team-data');
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to load team data');
+      }
+      
+      setTeamData(data.data || {});
+    } catch (error) {
+      console.error('Error loading team data:', error);
+      setTeamDataError('Failed to load team data');
+    }
+  };
+
+  const handleEditTeam = (key: string) => {
+    const team = teamData[key];
+    setEditingTeam(key);
+    setEditingTeamData({
+      key,
+      id: team.id,
+      name: team.name,
+      logo: team.logo,
+    });
+  };
+
+  const handleCancelEditTeam = () => {
+    setEditingTeam(null);
+    setEditingTeamData(null);
+  };
+
+  const handleSaveTeam = async () => {
+    if (!editingTeam || !editingTeamData) return;
+
+    setTeamDataError('');
+
+    // Validate
+    if (!editingTeamData.key || !editingTeamData.id || !editingTeamData.name) {
+      setTeamDataError('Key, ID, and Name are required');
+      return;
+    }
+
+    // Check if new key conflicts with existing team (unless it's the same team)
+    if (editingTeam !== editingTeamData.key && teamData[editingTeamData.key]) {
+      setTeamDataError('Team with this key already exists');
+      return;
+    }
+
+    try {
+      const updatedTeamData = { ...teamData };
+      
+      // If key changed, remove old entry
+      if (editingTeam !== editingTeamData.key) {
+        delete updatedTeamData[editingTeam];
+      }
+      
+      // Update/add the team
+      updatedTeamData[editingTeamData.key] = {
+        id: editingTeamData.id,
+        name: editingTeamData.name,
+        logo: editingTeamData.logo,
+      };
+
+      const response = await fetch('/api/admin/team-data', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teams: updatedTeamData }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to save team data');
+      }
+
+      // Reload team data to get sorted version
+      await loadTeamData();
+      setEditingTeam(null);
+      setEditingTeamData(null);
+    } catch (error) {
+      console.error('Error saving team data:', error);
+      setTeamDataError(error instanceof Error ? error.message : 'Failed to save team data');
+    }
+  };
+
+  const handleAddTeam = () => {
+    setIsAddingTeam(true);
+    setNewTeamData({ key: '', id: '', name: '', logo: '' });
+  };
+
+  const handleCancelAddTeam = () => {
+    setIsAddingTeam(false);
+    setNewTeamData({ key: '', id: '', name: '', logo: '' });
+  };
+
+  const handleSaveNewTeam = async () => {
+    setTeamDataError('');
+
+    // Validate
+    if (!newTeamData.key || !newTeamData.id || !newTeamData.name) {
+      setTeamDataError('Key, ID, and Name are required');
+      return;
+    }
+
+    // Check if key already exists
+    if (teamData[newTeamData.key]) {
+      setTeamDataError('Team with this key already exists');
+      return;
+    }
+
+    try {
+      const updatedTeamData = {
+        ...teamData,
+        [newTeamData.key]: {
+          id: newTeamData.id,
+          name: newTeamData.name,
+          logo: newTeamData.logo,
+        },
+      };
+
+      const response = await fetch('/api/admin/team-data', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teams: updatedTeamData }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to save team data');
+      }
+
+      // Reload team data to get sorted version
+      await loadTeamData();
+      setIsAddingTeam(false);
+      setNewTeamData({ key: '', id: '', name: '', logo: '' });
+    } catch (error) {
+      console.error('Error saving new team:', error);
+      setTeamDataError(error instanceof Error ? error.message : 'Failed to save new team');
     }
   };
 
@@ -572,6 +730,17 @@ export default function AdminPage() {
                 <Users className="w-5 h-5" />
                 <span>Users ({users.length})</span>
               </button>
+              <button
+                onClick={() => setActiveTab('data')}
+                className={`flex items-center space-x-2 px-6 py-4 border-b-2 font-medium text-sm ${
+                  activeTab === 'data'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Database className="w-5 h-5" />
+                <span>Data ({Object.keys(teamData).length})</span>
+              </button>
             </nav>
           </div>
         </div>
@@ -1009,6 +1178,218 @@ export default function AdminPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Data Tab */}
+      {activeTab === 'data' && (
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-xl font-bold text-gray-900">Team Reference Data</h2>
+            {!isAddingTeam && (
+              <button
+                onClick={handleAddTeam}
+                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Team</span>
+              </button>
+            )}
+          </div>
+
+          {teamDataError && (
+            <div className="mb-4 bg-red-50 border-l-4 border-red-500 p-4 rounded">
+              <p className="text-sm text-red-800">{teamDataError}</p>
+            </div>
+          )}
+
+          {/* Add Team Form */}
+          {isAddingTeam && (
+            <div className="mb-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Team</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Key (Abbreviation) *
+                  </label>
+                  <input
+                    type="text"
+                    value={newTeamData.key}
+                    onChange={(e) => setNewTeamData({ ...newTeamData, key: e.target.value })}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                    placeholder="e.g., UConn"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    ID *
+                  </label>
+                  <input
+                    type="text"
+                    value={newTeamData.id}
+                    onChange={(e) => setNewTeamData({ ...newTeamData, id: e.target.value })}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                    placeholder="e.g., 41"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={newTeamData.name}
+                    onChange={(e) => setNewTeamData({ ...newTeamData, name: e.target.value })}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                    placeholder="e.g., Connecticut"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Logo Path
+                  </label>
+                  <input
+                    type="text"
+                    value={newTeamData.logo}
+                    onChange={(e) => setNewTeamData({ ...newTeamData, logo: e.target.value })}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                    placeholder="e.g., /logos/teams/41.png"
+                  />
+                </div>
+              </div>
+              <div className="mt-4 flex justify-end space-x-3">
+                <button
+                  onClick={handleCancelAddTeam}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveNewTeam}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Team Data Table */}
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Key
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    ID
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Logo
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {Object.keys(teamData).length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                      {teamDataError ? 'Error loading team data' : 'Loading team data...'}
+                    </td>
+                  </tr>
+                ) : (
+                  Object.entries(teamData).map(([key, team]) => (
+                    <tr key={key}>
+                      {editingTeam === key ? (
+                        <>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <input
+                              type="text"
+                              value={editingTeamData?.key || ''}
+                              onChange={(e) => setEditingTeamData({ ...editingTeamData!, key: e.target.value })}
+                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                            />
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <input
+                              type="text"
+                              value={editingTeamData?.id || ''}
+                              onChange={(e) => setEditingTeamData({ ...editingTeamData!, id: e.target.value })}
+                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                            />
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <input
+                              type="text"
+                              value={editingTeamData?.name || ''}
+                              onChange={(e) => setEditingTeamData({ ...editingTeamData!, name: e.target.value })}
+                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                            />
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <input
+                              type="text"
+                              value={editingTeamData?.logo || ''}
+                              onChange={(e) => setEditingTeamData({ ...editingTeamData!, logo: e.target.value })}
+                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                            />
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={handleSaveTeam}
+                                className="text-green-600 hover:text-green-900"
+                                title="Save"
+                              >
+                                <Save className="w-5 h-5" />
+                              </button>
+                              <button
+                                onClick={handleCancelEditTeam}
+                                className="text-gray-600 hover:text-gray-900"
+                                title="Cancel"
+                              >
+                                <X className="w-5 h-5" />
+                              </button>
+                            </div>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {key}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {team.id}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {team.name}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {team.logo || '-'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <button
+                              onClick={() => handleEditTeam(key)}
+                              className="text-blue-600 hover:text-blue-900"
+                              title="Edit"
+                            >
+                              <Edit className="w-5 h-5" />
+                            </button>
+                          </td>
+                        </>
+                      )}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
