@@ -64,11 +64,14 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Type assertion for team data
+    const teamsTyped = teams as Record<string, { id: string; name: string; logo: string }>;
+
     // Sort teams by ID (numeric)
     const sortedTeams = Object.fromEntries(
-      Object.entries(teams).sort((a, b) => {
-        const idA = parseInt((a[1] as { id: string }).id) || 0;
-        const idB = parseInt((b[1] as { id: string }).id) || 0;
+      Object.entries(teamsTyped).sort((a, b) => {
+        const idA = parseInt(a[1].id) || 0;
+        const idB = parseInt(b[1].id) || 0;
         return idA - idB;
       })
     );
