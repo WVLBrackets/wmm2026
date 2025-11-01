@@ -51,6 +51,70 @@ interface SyncResult {
 }
 
 /**
+ * Download logo image from ESPN CDN
+ */
+async function downloadTeamLogo(teamId: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const logoUrl = `https://a.espncdn.com/combiner/i?img=/i/teamlogos/ncaa/500/${teamId}.png`;
+    const parsedUrl = new URL(logoUrl);
+    
+    const options = {
+      hostname: parsedUrl.hostname,
+      path: parsedUrl.pathname + parsedUrl.search,
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    };
+
+    const client = parsedUrl.protocol === 'https:' ? https : http;
+    
+    const req = client.request(options, (res) => {
+      // Check if we got a valid image (200 OK and content-type is image)
+      if (res.statusCode !== 200 || !res.headers['content-type']?.startsWith('image/')) {
+        res.resume(); // Consume response to free up memory
+        resolve(false);
+        return;
+      }
+
+      // Ensure directory exists
+      const logoDir = path.join(process.cwd(), 'public', 'logos', 'teams');
+      if (!fs.existsSync(logoDir)) {
+        fs.mkdirSync(logoDir, { recursive: true });
+      }
+
+      const filePath = path.join(logoDir, `${teamId}.png`);
+      const fileStream = fs.createWriteStream(filePath);
+      
+      res.pipe(fileStream);
+      
+      fileStream.on('finish', () => {
+        fileStream.close();
+        resolve(true);
+      });
+      
+      fileStream.on('error', (err) => {
+        fs.unlink(filePath, () => {}); // Delete the file on error
+        console.error(`  ⚠️  Error saving logo: ${err.message}`);
+        resolve(false);
+      });
+    });
+
+    req.on('error', (error) => {
+      console.error(`  ⚠️  Error downloading logo: ${error.message}`);
+      resolve(false);
+    });
+
+    req.setTimeout(10000, () => {
+      req.destroy();
+      resolve(false);
+    });
+
+    req.end();
+  });
+}
+
+/**
  * Fetch HTML from ESPN team page
  */
 async function fetchESPNTeamPage(teamId: number): Promise<{ html: string; statusCode: number } | null> {
@@ -619,11 +683,25 @@ async function syncTeamsFromESPN(
       } else {
         // Team doesn't exist in database - create it
         const abbreviation = idString; // Use ID as abbreviation as specified
+        const logoPath = `/logos/teams/${idString}.png`;
+        
+        // Download logo if in update mode
+        let logoDownloaded = false;
+        if (updateMode) {
+          console.log(`  📥 Downloading logo for ID ${idString}...`);
+          logoDownloaded = await downloadTeamLogo(teamId);
+          if (logoDownloaded) {
+            console.log(`  ✓ Logo downloaded to ${logoPath}`);
+          } else {
+            console.log(`  ⚠️  Logo download failed (may not exist for this team)`);
+          }
+        }
+        
         const newTeam: TeamRecord = {
           id: idString,
           name: schoolName, // Use school name, not full display name
           mascot: mascot || undefined,
-          logo: '' // Logo path will be empty for now
+          logo: logoPath // Set logo path to /logos/teams/{id}.png
         };
 
         reports.push({
@@ -639,6 +717,7 @@ async function syncTeamsFromESPN(
         } else {
           console.log(`      School: ${schoolName} (mascot not detected)`);
         }
+        console.log(`      Logo path: ${logoPath}`);
         
         if (updateMode) {
           existingTeams[abbreviation] = newTeam;
