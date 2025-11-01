@@ -19,6 +19,7 @@ interface Bracket {
   picks: { [gameId: string]: string };
   status: 'in_progress' | 'submitted' | 'deleted';
   totalPoints?: number;
+  year?: number;
 }
 
 interface MyPicksLandingProps {
@@ -37,8 +38,14 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
   const { data: session } = useSession();
   const [isAdmin, setIsAdmin] = useState(false);
   
-  // Filter out deleted brackets from user view
-  const visibleBrackets = brackets.filter(b => b.status !== 'deleted');
+  // Get tournament year from config or tournament data
+  const tournamentYear = siteConfig?.tournamentYear ? parseInt(siteConfig.tournamentYear) : (tournamentData?.year ? parseInt(tournamentData.year) : new Date().getFullYear());
+  
+  // Filter out deleted brackets and filter by tournament year
+  const visibleBrackets = brackets.filter(b => 
+    b.status !== 'deleted' && 
+    (b.year === tournamentYear || (!b.year && tournamentYear === new Date().getFullYear()))
+  );
 
   // Check if current user is admin
   useEffect(() => {
