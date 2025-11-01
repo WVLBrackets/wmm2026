@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, X } from 'lucide-react';
 import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
+import { TournamentRegion } from '@/types/tournament';
 
 interface Team {
   id: string;
@@ -193,7 +194,7 @@ export default function TournamentBuilderPage() {
 
       // Map tournament regions to component regions
       if (tournamentData.regions && Array.isArray(tournamentData.regions)) {
-        const mappedRegions: Region[] = tournamentData.regions.map((region: any) => {
+        const mappedRegions: Region[] = tournamentData.regions.map((region: TournamentRegion) => {
           // Create teams array with 16 slots, mapping from tournament data
           const regionTeams: RegionTeam[] = Array(16).fill(null).map((_, i) => {
             const team = region.teams && region.teams[i];
