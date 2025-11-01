@@ -1588,26 +1588,33 @@ export default function AdminPage() {
                       return keyMatch && idMatch && nameMatch && logoMatch;
                     })
                     .sort((a, b) => {
-                      let compareA: string;
-                      let compareB: string;
-                      
                       if (teamSortColumn === 'name') {
-                        compareA = a[1].name.toLowerCase();
-                        compareB = b[1].name.toLowerCase();
+                        const compareA = a[1].name.toLowerCase();
+                        const compareB = b[1].name.toLowerCase();
+                        if (teamSortOrder === 'asc') {
+                          return compareA.localeCompare(compareB);
+                        } else {
+                          return compareB.localeCompare(compareA);
+                        }
                       } else if (teamSortColumn === 'key') {
-                        compareA = a[0].toLowerCase();
-                        compareB = b[0].toLowerCase();
+                        const compareA = a[0].toLowerCase();
+                        const compareB = b[0].toLowerCase();
+                        if (teamSortOrder === 'asc') {
+                          return compareA.localeCompare(compareB);
+                        } else {
+                          return compareB.localeCompare(compareA);
+                        }
                       } else if (teamSortColumn === 'id') {
-                        compareA = a[1].id.toLowerCase();
-                        compareB = b[1].id.toLowerCase();
+                        // Sort ID as numeric
+                        const numA = parseInt(a[1].id) || 0;
+                        const numB = parseInt(b[1].id) || 0;
+                        if (teamSortOrder === 'asc') {
+                          return numA - numB;
+                        } else {
+                          return numB - numA;
+                        }
                       } else {
                         return 0;
-                      }
-                      
-                      if (teamSortOrder === 'asc') {
-                        return compareA.localeCompare(compareB);
-                      } else {
-                        return compareB.localeCompare(compareA);
                       }
                     })
                     .map(([key, team]) => (
