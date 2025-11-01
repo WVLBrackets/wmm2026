@@ -113,18 +113,6 @@ export default function TournamentBuilderPage() {
     setRegions(updated);
   };
 
-  const updateRegionPosition = (regionIndex: number, position: string) => {
-    // Check if position is already used by another region
-    const isUsed = regions.some((r, i) => i !== regionIndex && r.position === position);
-    if (isUsed) {
-      alert(`Position "${position}" is already assigned to another region.`);
-      return;
-    }
-    
-    const updated = [...regions];
-    updated[regionIndex].position = position;
-    setRegions(updated);
-  };
 
   const updateTeam = (regionIndex: number, seedIndex: number, teamKey: string) => {
     if (!teamKey || !teams[teamKey]) return;
@@ -173,11 +161,6 @@ export default function TournamentBuilderPage() {
         validationErrors.push(`Region ${regionIndex + 1}: Duplicate region name "${region.name}"`);
       }
 
-      // Check for duplicate positions
-      const duplicatePosition = regions.some((r, i) => i !== regionIndex && r.position === region.position);
-      if (duplicatePosition) {
-        validationErrors.push(`Region ${regionIndex + 1}: Duplicate position "${region.position}"`);
-      }
 
       // Check all 16 teams are filled
       const emptySlots = region.teams.filter(t => !t.id || !t.name).length;
@@ -379,86 +362,138 @@ export default function TournamentBuilderPage() {
           </div>
         </div>
 
-        {/* Regions */}
-        <div className="space-y-6">
-          {regions.map((region, regionIndex) => (
-            <div key={regionIndex} className="bg-white rounded-lg shadow-lg p-6">
-              <div className="mb-4 flex items-center space-x-4">
-                <div className="flex-1">
+        {/* Regions - Side by Side */}
+        <div className="grid grid-cols-4 gap-4">
+          {regions.map((region, regionIndex) => {
+            // Bracket matchup pairs: (1,16), (8,9), (5,12), (4,13), (6,11), (3,14), (7,10), (2,15)
+            const matchupPairs = [
+              [0, 15],   // 1 vs 16
+              [7, 8],    // 8 vs 9
+              [4, 11],   // 5 vs 12
+              [3, 12],   // 4 vs 13
+              [5, 10],   // 6 vs 11
+              [2, 13],   // 3 vs 14
+              [6, 9],    // 7 vs 10
+              [1, 14],   // 2 vs 15
+            ];
+
+            return (
+              <div key={regionIndex} className="bg-white rounded-lg shadow-lg p-4">
+                <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Region Name *
+                    {region.position} Region *
                   </label>
                   <input
                     type="text"
                     value={region.name}
                     onChange={(e) => updateRegionName(regionIndex, e.target.value)}
-                    placeholder="East, West, South, Midwest, etc."
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                    placeholder="East, West, etc."
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                   />
                 </div>
-                <div className="w-48">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Position *
-                  </label>
-                  <select
-                    value={region.position}
-                    onChange={(e) => updateRegionPosition(regionIndex, e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                  >
-                    {positionOptions.map(pos => (
-                      <option key={pos} value={pos}>{pos}</option>
-                    ))}
-                  </select>
+
+                {/* Bracket Matchups */}
+                <div className="space-y-2">
+                  {matchupPairs.map((pair, pairIndex) => {
+                    const team1Index = pair[0];
+                    const team2Index = pair[1];
+                    const team1 = region.teams[team1Index];
+                    const team2 = region.teams[team2Index];
+
+                    return (
+                      <div key={pairIndex} className="border border-gray-200 rounded-lg p-2">
+                        {/* Team 1 */}
+                        <div className="mb-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-semibold text-gray-600">Seed {team1.seed}</span>
+                            {team1.id && (
+                              <button
+                                onClick={() => clearTeam(regionIndex, team1Index)}
+                                className="text-red-600 hover:text-red-800"
+                                title="Clear"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                          <select
+                            value={team1.id || ''}
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                updateTeam(regionIndex, team1Index, e.target.value);
+                              } else {
+                                clearTeam(regionIndex, team1Index);
+                              }
+                            }}
+                            className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
+                          >
+                            <option value="">Select...</option>
+                            {teamList.map(([key, teamData]) => (
+                              <option key={key} value={key}>
+                                {teamData.name}
+                              </option>
+                            ))}
+                          </select>
+                          {team1.name && (
+                            <div className="mt-1 flex items-center space-x-1">
+                              {team1.logo && (
+                                <img src={team1.logo} alt={team1.name} className="w-4 h-4 object-contain" />
+                              )}
+                              <span className="text-xs text-gray-600 truncate">{team1.name}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="text-center text-xs text-gray-400 mb-1">vs</div>
+
+                        {/* Team 2 */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-semibold text-gray-600">Seed {team2.seed}</span>
+                            {team2.id && (
+                              <button
+                                onClick={() => clearTeam(regionIndex, team2Index)}
+                                className="text-red-600 hover:text-red-800"
+                                title="Clear"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                          <select
+                            value={team2.id || ''}
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                updateTeam(regionIndex, team2Index, e.target.value);
+                              } else {
+                                clearTeam(regionIndex, team2Index);
+                              }
+                            }}
+                            className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
+                          >
+                            <option value="">Select...</option>
+                            {teamList.map(([key, teamData]) => (
+                              <option key={key} value={key}>
+                                {teamData.name}
+                              </option>
+                            ))}
+                          </select>
+                          {team2.name && (
+                            <div className="mt-1 flex items-center space-x-1">
+                              {team2.logo && (
+                                <img src={team2.logo} alt={team2.name} className="w-4 h-4 object-contain" />
+                              )}
+                              <span className="text-xs text-gray-600 truncate">{team2.name}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-
-              {/* Teams Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {region.teams.map((team, seedIndex) => (
-                  <div key={seedIndex} className="border border-gray-200 rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-semibold text-gray-700">Seed {team.seed}</span>
-                      {team.id && (
-                        <button
-                          onClick={() => clearTeam(regionIndex, seedIndex)}
-                          className="text-red-600 hover:text-red-800"
-                          title="Clear"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                    <select
-                      value={team.id || ''}
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          updateTeam(regionIndex, seedIndex, e.target.value);
-                        } else {
-                          clearTeam(regionIndex, seedIndex);
-                        }
-                      }}
-                      className="w-full border border-gray-300 rounded-lg px-2 py-1 text-sm"
-                    >
-                      <option value="">Select Team...</option>
-                      {teamList.map(([key, teamData]) => (
-                        <option key={key} value={key}>
-                          {teamData.name}
-                        </option>
-                      ))}
-                    </select>
-                    {team.name && (
-                      <div className="mt-2 flex items-center space-x-2">
-                        {team.logo && (
-                          <img src={team.logo} alt={team.name} className="w-6 h-6 object-contain" />
-                        )}
-                        <span className="text-xs text-gray-600">{team.name}</span>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Save Button */}
