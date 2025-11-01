@@ -898,6 +898,33 @@ export async function updateTeamReferenceData(teams: Record<string, { id: string
 }
 
 /**
+ * Initialize team_reference_data table in production database
+ * This is called before any team data operations
+ */
+export async function initializeTeamDataTable(): Promise<void> {
+  try {
+    const { teamDataSql } = await import('./teamDataConnection');
+    await teamDataSql`
+      CREATE TABLE IF NOT EXISTS team_reference_data (
+        key VARCHAR(50) PRIMARY KEY,
+        id VARCHAR(20) NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        logo VARCHAR(500),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+    
+    await teamDataSql`CREATE INDEX IF NOT EXISTS idx_team_ref_id ON team_reference_data(id)`;
+    console.log('[initializeTeamDataTable] Team reference data table initialized');
+  } catch (error) {
+    console.error('[initializeTeamDataTable] Error initializing team data table:', error);
+    // Don't throw - allow function to continue even if table creation fails
+    // (might already exist)
+  }
+}
+
+/**
  * Sync team data from JSON file to database (only runs in development)
  * In staging/prod, team data is managed in the production database via Admin Panel
  */

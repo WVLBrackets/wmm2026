@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/lib/adminAuth';
-import { getAllTeamReferenceData, syncTeamDataFromJSON, updateTeamReferenceData } from '@/lib/secureDatabase';
+import { getAllTeamReferenceData, syncTeamDataFromJSON, updateTeamReferenceData, initializeTeamDataTable } from '@/lib/secureDatabase';
 
 /**
  * GET /api/admin/team-data - Get all team reference data
@@ -17,6 +17,9 @@ export async function GET() {
         { status: 403 }
       );
     }
+
+    // Ensure team_reference_data table exists
+    await initializeTeamDataTable();
 
     // Sync from JSON only in development (staging/prod use database directly)
     await syncTeamDataFromJSON();
@@ -63,6 +66,9 @@ export async function PUT(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Ensure team_reference_data table exists
+    await initializeTeamDataTable();
 
     // Type assertion for team data
     const teamsTyped = teams as Record<string, { id: string; name: string; logo: string }>;

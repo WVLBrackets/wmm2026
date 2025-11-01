@@ -125,18 +125,25 @@ export default function AdminPage() {
   const loadTeamData = async () => {
     try {
       setTeamDataError('');
+      setIsLoading(true);
       const response = await fetch('/api/admin/team-data');
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to load team data');
+        const errorMessage = data.error || 'Failed to load team data';
+        throw new Error(errorMessage);
       }
       
       // Type assertion for team data from API
       setTeamData((data.data as Record<string, { id: string; name: string; logo: string }>) || {});
+      setTeamDataError(''); // Clear any previous errors
     } catch (error) {
       console.error('Error loading team data:', error);
-      setTeamDataError('Failed to load team data');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load team data';
+      setTeamDataError(errorMessage);
+      setTeamData({}); // Clear team data on error
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -1395,14 +1402,35 @@ export default function AdminPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {Object.keys(teamData).length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
-                      {teamDataError ? 'Error loading team data' : 'Loading team data...'}
-                    </td>
-                  </tr>
-                ) : (
+               <tbody className="bg-white divide-y divide-gray-200">
+                 {teamDataError ? (
+                   <tr>
+                     <td colSpan={6} className="px-6 py-4 text-center">
+                       <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
+                         <p className="text-sm font-medium text-red-800">Error loading team data</p>
+                         <p className="text-sm text-red-700 mt-1">{teamDataError}</p>
+                         <button
+                           onClick={loadTeamData}
+                           className="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                         >
+                           Retry
+                         </button>
+                       </div>
+                     </td>
+                   </tr>
+                 ) : Object.keys(teamData).length === 0 && isLoading ? (
+                   <tr>
+                     <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                       Loading team data...
+                     </td>
+                   </tr>
+                 ) : Object.keys(teamData).length === 0 ? (
+                   <tr>
+                     <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                       No team data found. Click "Add Team" to add your first team.
+                     </td>
+                   </tr>
+                 ) : (
                   Object.entries(teamData)
                     .filter(([key, team]) => {
                       const keyMatch = !teamFilters.key || key.toLowerCase().includes(teamFilters.key.toLowerCase());
