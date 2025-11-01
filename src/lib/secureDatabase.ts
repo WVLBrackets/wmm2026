@@ -925,18 +925,11 @@ export async function initializeTeamDataTable(): Promise<void> {
 }
 
 /**
- * Sync team data from JSON file to database (only runs in development)
- * In staging/prod, team data is managed in the production database via Admin Panel
+ * Sync team data from JSON file to database
+ * This runs when the database is empty, regardless of environment
+ * In staging/prod, once data exists, it's managed via Admin Panel
  */
 export async function syncTeamDataFromJSON(): Promise<void> {
-  const environment = getCurrentEnvironment();
-  
-  // Only sync from JSON in development environment
-  // In staging/prod, team data is managed directly in the database
-  if (environment !== 'development') {
-    return;
-  }
-  
   try {
     const { teamDataSql } = await import('./teamDataConnection');
     
@@ -950,6 +943,9 @@ export async function syncTeamDataFromJSON(): Promise<void> {
       console.log('[syncTeamDataFromJSON] Team data already exists in database, skipping sync');
       return;
     }
+    
+    // Database is empty, try to sync from JSON file
+    console.log('[syncTeamDataFromJSON] Database is empty, attempting to sync from JSON file');
     
     // Try to read from JSON file and import
     const fs = await import('fs/promises');
