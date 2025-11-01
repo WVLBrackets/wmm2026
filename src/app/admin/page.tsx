@@ -1528,14 +1528,14 @@ export default function AdminPage() {
                         </>
                       ) : (
                         <>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {team.name}
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                             {key}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {team.id}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {team.name}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {team.logo || '-'}
