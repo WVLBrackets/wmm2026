@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Trash2, Edit, Save, X, Users, Trophy, CheckCircle, Key, Edit3, LogOut, Link2, Table, Plus, Download } from 'lucide-react';
+import { Trash2, Edit, Save, X, Users, Trophy, CheckCircle, Key, Edit3, LogOut, Link2, Table, Plus, Download, AlertCircle } from 'lucide-react';
 import { useBracketMode } from '@/contexts/BracketModeContext';
 
 interface User {
@@ -63,7 +63,9 @@ export default function AdminPage() {
   const [newTeamData, setNewTeamData] = useState<{ key: string; id: string; name: string; logo: string }>({ key: '', id: '', name: '', logo: '' });
   const [teamDataError, setTeamDataError] = useState('');
   const [teamFilters, setTeamFilters] = useState<{ key: string; id: string; name: string; logo: string }>({ key: '', id: '', name: '', logo: '' });
+  const [teamSortColumn, setTeamSortColumn] = useState<'name' | 'key' | 'id' | null>('name');
   const [teamSortOrder, setTeamSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [duplicateCheck, setDuplicateCheck] = useState<{ hasDuplicates: boolean; duplicateIds: string[] }>({ hasDuplicates: false, duplicateIds: [] });
   const [isDevelopment, setIsDevelopment] = useState(false);
 
   // Ensure bracket mode is disabled when admin page loads
@@ -238,6 +240,8 @@ export default function AdminPage() {
       await loadTeamData();
       setEditingTeam(null);
       setEditingTeamData(null);
+      
+      // Duplicate check will run in loadTeamData
     } catch (error) {
       console.error('Error saving team data:', error);
       setTeamDataError(error instanceof Error ? error.message : 'Failed to save team data');
@@ -295,6 +299,8 @@ export default function AdminPage() {
       await loadTeamData();
       setIsAddingTeam(false);
       setNewTeamData({ key: '', id: '', name: '', logo: '' });
+      
+      // Duplicate check will run in loadTeamData
     } catch (error) {
       console.error('Error saving new team:', error);
       setTeamDataError(error instanceof Error ? error.message : 'Failed to save new team');
