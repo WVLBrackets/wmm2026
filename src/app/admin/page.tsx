@@ -1427,7 +1427,7 @@ export default function AdminPage() {
                  ) : Object.keys(teamData).length === 0 ? (
                    <tr>
                      <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
-                       No team data found. Click "Add Team" to add your first team.
+                       No team data found. Click &quot;Add Team&quot; to add your first team.
                      </td>
                    </tr>
                  ) : (
