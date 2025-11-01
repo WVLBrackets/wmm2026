@@ -493,6 +493,16 @@ export default function AdminPage() {
   };
 
   const handleToggleActive = async (key: string, currentActive: boolean) => {
+    // Optimistically update the UI immediately
+    const newActiveStatus = !currentActive;
+    setTeamData(prev => {
+      const updated = { ...prev };
+      if (updated[key]) {
+        updated[key] = { ...updated[key], active: newActiveStatus };
+      }
+      return updated;
+    });
+
     try {
       setTeamDataError('');
       
@@ -503,18 +513,31 @@ export default function AdminPage() {
         },
         body: JSON.stringify({
           key,
-          active: !currentActive,
+          active: newActiveStatus,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok || !data.success) {
+        // Revert the optimistic update on error
+        setTeamData(prev => {
+          const updated = { ...prev };
+          if (updated[key]) {
+            updated[key] = { ...updated[key], active: currentActive };
+          }
+          return updated;
+        });
         throw new Error(data.error || 'Failed to update team active status');
       }
 
-      // Reload team data
-      await loadTeamData();
+      // If we're filtering by active status, the team may disappear/appear
+      // Let the existing filter logic handle it based on teamActiveFilter
+      // Re-run duplicate check on updated data
+      setTeamData(prev => {
+        checkForDuplicates(prev);
+        return prev;
+      });
     } catch (error) {
       console.error('Error toggling team active status:', error);
       setTeamDataError(error instanceof Error ? error.message : 'Failed to toggle team active status');
