@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Trash2, Edit, Save, X, Users, Trophy, CheckCircle, Key, Edit3, LogOut, Link2, Table, Plus, Download } from 'lucide-react';
@@ -70,6 +70,9 @@ export default function AdminPage() {
     setInBracketMode(false);
   }, [setInBracketMode]);
 
+  const loadDataRef = useRef<() => Promise<void>>();
+  loadDataRef.current = loadData;
+
   useEffect(() => {
     if (status === 'loading') return;
     
@@ -82,8 +85,7 @@ export default function AdminPage() {
     const hostname = window.location.hostname;
     setIsDevelopment(hostname === 'localhost' || hostname === '127.0.0.1');
     
-    loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadDataRef.current?.();
   }, [status, router]);
 
   useEffect(() => {
@@ -101,12 +103,15 @@ export default function AdminPage() {
     setFilteredBrackets(filtered);
   }, [brackets, filterUser, filterStatus]);
 
+  const loadTeamDataRef = useRef<() => Promise<void>>();
+  loadTeamDataRef.current = loadTeamData;
+
   useEffect(() => {
     // Load team data when Data tab is active
     if (activeTab === 'data') {
-      loadTeamData();
+      loadTeamDataRef.current?.();
     }
-  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const loadData = async () => {
     try {

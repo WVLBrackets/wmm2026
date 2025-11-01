@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { TournamentData, TournamentBracket, BracketSubmission } from '@/types/tournament';
@@ -40,6 +40,9 @@ function BracketContent() {
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
 
+  const loadTournamentRef = useRef<() => Promise<void>>();
+  loadTournamentRef.current = loadTournament;
+
   useEffect(() => {
     if (status === 'loading') return;
     
@@ -48,7 +51,7 @@ function BracketContent() {
       return;
     }
     
-    loadTournament();
+    loadTournamentRef.current?.();
   }, [status, router]);
 
   // Check for admin mode and edit parameter
