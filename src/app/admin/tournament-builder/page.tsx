@@ -185,18 +185,37 @@ export default function TournamentBuilderPage() {
         setStartDate(tournamentData.metadata.startDate);
       }
 
+      // Create a map of team ID to team key for quick lookup
+      const teamIdToKeyMap = new Map<string, string>();
+      Object.entries(teams).forEach(([key, teamData]) => {
+        teamIdToKeyMap.set(teamData.id, key);
+      });
+
       // Map tournament regions to component regions
       if (tournamentData.regions && Array.isArray(tournamentData.regions)) {
         const mappedRegions: Region[] = tournamentData.regions.map((region: any) => {
           // Create teams array with 16 slots, mapping from tournament data
-          const teams: RegionTeam[] = Array(16).fill(null).map((_, i) => {
+          const regionTeams: RegionTeam[] = Array(16).fill(null).map((_, i) => {
             const team = region.teams && region.teams[i];
-            if (team) {
+            if (team && team.id) {
+              // Find the team key from the ID to get the most up-to-date team data
+              const teamKey = teamIdToKeyMap.get(team.id);
+              // If we found a matching team in our teams record, use its data
+              if (teamKey && teams[teamKey]) {
+                const teamData = teams[teamKey];
+                return {
+                  id: teamData.id,
+                  name: teamData.name,
+                  seed: team.seed || (i + 1),
+                  logo: teamData.logo || `/logos/teams/${team.id}.png`,
+                };
+              }
+              // Fallback: use data from tournament file directly
               return {
-                id: team.id || '',
+                id: team.id,
                 name: team.name || '',
                 seed: team.seed || (i + 1),
-                logo: team.logo || `/logos/teams/${team.id || ''}.png`,
+                logo: team.logo || `/logos/teams/${team.id}.png`,
               };
             }
             return {
@@ -210,7 +229,7 @@ export default function TournamentBuilderPage() {
           return {
             name: region.name || '',
             position: region.position || '',
-            teams: teams,
+            teams: regionTeams,
           };
         });
 
@@ -541,7 +560,12 @@ export default function TournamentBuilderPage() {
                             )}
                           </div>
                           <select
-                            value={team1.id || ''}
+                            value={(() => {
+                              // Find team key that matches team1.id
+                              if (!team1.id) return '';
+                              const teamEntry = teamList.find(([key, teamData]) => teamData.id === team1.id);
+                              return teamEntry ? teamEntry[0] : '';
+                            })()}
                             onChange={(e) => {
                               if (e.target.value) {
                                 updateTeam(regionIndex, team1Index, e.target.value);
@@ -585,7 +609,12 @@ export default function TournamentBuilderPage() {
                             )}
                           </div>
                           <select
-                            value={team2.id || ''}
+                            value={(() => {
+                              // Find team key that matches team2.id
+                              if (!team2.id) return '';
+                              const teamEntry = teamList.find(([key, teamData]) => teamData.id === team2.id);
+                              return teamEntry ? teamEntry[0] : '';
+                            })()}
                             onChange={(e) => {
                               if (e.target.value) {
                                 updateTeam(regionIndex, team2Index, e.target.value);
