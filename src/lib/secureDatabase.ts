@@ -901,6 +901,24 @@ export async function updateTeamReferenceData(teams: Record<string, { id: string
 }
 
 /**
+ * Delete a team from team reference data by key
+ * Uses production database connection (shared between staging and prod)
+ */
+export async function deleteTeamReferenceData(key: string): Promise<void> {
+  try {
+    const { teamDataSql } = await import('./teamDataConnection');
+    
+    await teamDataSql`
+      DELETE FROM team_reference_data
+      WHERE key = ${key}
+    `;
+  } catch (error) {
+    console.error('Error deleting team reference data:', error);
+    throw error;
+  }
+}
+
+/**
  * Initialize team_reference_data table in production database
  * This is called before any team data operations
  */

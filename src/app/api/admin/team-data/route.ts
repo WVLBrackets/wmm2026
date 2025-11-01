@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/lib/adminAuth';
-import { getAllTeamReferenceData, syncTeamDataFromJSON, updateTeamReferenceData, initializeTeamDataTable } from '@/lib/secureDatabase';
+import { getAllTeamReferenceData, syncTeamDataFromJSON, updateTeamReferenceData, deleteTeamReferenceData, initializeTeamDataTable } from '@/lib/secureDatabase';
 
 /**
  * GET /api/admin/team-data - Get all team reference data
@@ -96,6 +96,52 @@ export async function PUT(request: NextRequest) {
       { 
         success: false, 
         error: error instanceof Error ? error.message : 'Failed to update team data' 
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/admin/team-data - Delete a team by key
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.email || !(await isAdmin(session.user.email))) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 403 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const key = searchParams.get('key');
+
+    if (!key) {
+      return NextResponse.json(
+        { success: false, error: 'Team key is required' },
+        { status: 400 }
+      );
+    }
+
+    // Ensure team_reference_data table exists
+    await initializeTeamDataTable();
+
+    // Delete the team
+    await deleteTeamReferenceData(key);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Team deleted successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting team:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to delete team' 
       },
       { status: 500 }
     );

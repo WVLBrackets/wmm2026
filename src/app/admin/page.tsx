@@ -338,6 +338,34 @@ export default function AdminPage() {
     }
   };
 
+  const handleDeleteTeam = async (key: string) => {
+    if (!confirm(`Are you sure you want to delete team "${teamData[key]?.name || key}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setTeamDataError('');
+
+    try {
+      const response = await fetch(`/api/admin/team-data?key=${encodeURIComponent(key)}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete team');
+      }
+
+      // Reload team data
+      await loadTeamData();
+      
+      // Duplicate check will run in loadTeamData
+    } catch (error) {
+      console.error('Error deleting team:', error);
+      setTeamDataError(error instanceof Error ? error.message : 'Failed to delete team');
+    }
+  };
+
   const handleAddTeam = () => {
     setIsAddingTeam(true);
     setNewTeamData({ key: '', id: '', name: '', mascot: '', logo: '' });
@@ -1772,13 +1800,22 @@ export default function AdminPage() {
                             )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <button
-                              onClick={() => handleEditTeam(key)}
-                              className="text-blue-600 hover:text-blue-900"
-                              title="Edit"
-                            >
-                              <Edit className="w-5 h-5" />
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleEditTeam(key)}
+                                className="text-blue-600 hover:text-blue-900"
+                                title="Edit"
+                              >
+                                <Edit className="w-5 h-5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteTeam(key)}
+                                className="text-red-600 hover:text-red-900"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-5 h-5" />
+                              </button>
+                            </div>
                           </td>
                         </>
                       )}
