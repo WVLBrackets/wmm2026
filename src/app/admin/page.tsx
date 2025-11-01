@@ -63,6 +63,7 @@ export default function AdminPage() {
   const [newTeamData, setNewTeamData] = useState<{ key: string; id: string; name: string; logo: string }>({ key: '', id: '', name: '', logo: '' });
   const [teamDataError, setTeamDataError] = useState('');
   const [teamFilters, setTeamFilters] = useState<{ key: string; id: string; name: string; logo: string }>({ key: '', id: '', name: '', logo: '' });
+  const [teamSortOrder, setTeamSortOrder] = useState<'asc' | 'desc'>('asc');
   const [isDevelopment, setIsDevelopment] = useState(false);
 
   // Ensure bracket mode is disabled when admin page loads
@@ -1338,14 +1339,22 @@ export default function AdminPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50 sticky top-0 z-10">
                 <tr>
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
+                    onClick={() => setTeamSortOrder(teamSortOrder === 'asc' ? 'desc' : 'asc')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Team</span>
+                      <span className="text-gray-400">
+                        {teamSortOrder === 'asc' ? '↑' : '↓'}
+                      </span>
+                    </div>
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
-                    Key
+                    Abbreviation
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                     ID
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
-                    Name
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                     Logo Path
@@ -1361,9 +1370,18 @@ export default function AdminPage() {
                   <th className="px-6 py-2 bg-gray-100">
                     <input
                       type="text"
+                      value={teamFilters.name}
+                      onChange={(e) => setTeamFilters({ ...teamFilters, name: e.target.value })}
+                      placeholder="Filter Team..."
+                      className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
+                    />
+                  </th>
+                  <th className="px-6 py-2 bg-gray-100">
+                    <input
+                      type="text"
                       value={teamFilters.key}
                       onChange={(e) => setTeamFilters({ ...teamFilters, key: e.target.value })}
-                      placeholder="Filter Key..."
+                      placeholder="Filter Abbreviation..."
                       className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
                     />
                   </th>
@@ -1373,15 +1391,6 @@ export default function AdminPage() {
                       value={teamFilters.id}
                       onChange={(e) => setTeamFilters({ ...teamFilters, id: e.target.value })}
                       placeholder="Filter ID..."
-                      className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
-                    />
-                  </th>
-                  <th className="px-6 py-2 bg-gray-100">
-                    <input
-                      type="text"
-                      value={teamFilters.name}
-                      onChange={(e) => setTeamFilters({ ...teamFilters, name: e.target.value })}
-                      placeholder="Filter Name..."
                       className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
                     />
                   </th>
@@ -1439,10 +1448,27 @@ export default function AdminPage() {
                       const logoMatch = !teamFilters.logo || (team.logo && team.logo.toLowerCase().includes(teamFilters.logo.toLowerCase()));
                       return keyMatch && idMatch && nameMatch && logoMatch;
                     })
+                    .sort((a, b) => {
+                      const nameA = a[1].name.toLowerCase();
+                      const nameB = b[1].name.toLowerCase();
+                      if (teamSortOrder === 'asc') {
+                        return nameA.localeCompare(nameB);
+                      } else {
+                        return nameB.localeCompare(nameA);
+                      }
+                    })
                     .map(([key, team]) => (
                     <tr key={key}>
                       {editingTeam === key ? (
                         <>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <input
+                              type="text"
+                              value={editingTeamData?.name || ''}
+                              onChange={(e) => setEditingTeamData({ ...editingTeamData!, name: e.target.value })}
+                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                            />
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <input
                               type="text"
@@ -1456,14 +1482,6 @@ export default function AdminPage() {
                               type="text"
                               value={editingTeamData?.id || ''}
                               onChange={(e) => setEditingTeamData({ ...editingTeamData!, id: e.target.value })}
-                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
-                            />
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <input
-                              type="text"
-                              value={editingTeamData?.name || ''}
-                              onChange={(e) => setEditingTeamData({ ...editingTeamData!, name: e.target.value })}
                               className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
                             />
                           </td>
