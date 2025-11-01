@@ -72,15 +72,18 @@ function BracketContent() {
   const loadTournament = async () => {
     try {
       setIsLoading(true);
-      const data = await loadTournamentData('2025');
+      
+      // Load site config first to get tournament year
+      const config = await getSiteConfigFromGoogleSheets();
+      setSiteConfig(config);
+      
+      // Use tournament year from config (fallback to '2025' if not available)
+      const tournamentYear = config?.tournamentYear || '2025';
+      const data = await loadTournamentData(tournamentYear);
       setTournamentData(data);
       
       const bracketData = generate64TeamBracket(data);
       setBracket(bracketData);
-      
-      // Load site config
-      const config = await getSiteConfigFromGoogleSheets();
-      setSiteConfig(config);
       
       // Load user's submitted brackets
       await loadSubmittedBrackets();
