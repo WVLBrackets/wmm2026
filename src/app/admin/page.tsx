@@ -713,6 +713,52 @@ export default function AdminPage() {
     }
   };
 
+  const handleDeleteAllFiltered = async () => {
+    if (filteredBrackets.length === 0) {
+      return;
+    }
+
+    const confirmMessage = `Are you sure you want to delete ${filteredBrackets.length} bracket(s)?\n\nThis action cannot be undone.`;
+    
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError('');
+      
+      // Delete all filtered brackets
+      const deletePromises = filteredBrackets.map(bracket => 
+        fetch(`/api/admin/brackets/${bracket.id}`, {
+          method: 'DELETE',
+        })
+      );
+
+      const results = await Promise.all(deletePromises);
+      const dataResults = await Promise.all(results.map(r => r.json()));
+      
+      // Check for any failures
+      const failures = dataResults.filter(d => !d.success);
+      
+      if (failures.length > 0) {
+        alert(`Failed to delete ${failures.length} bracket(s). ${dataResults.length - failures.length} bracket(s) deleted successfully.`);
+      }
+
+      // Reload data
+      await loadData();
+      
+      if (failures.length === 0) {
+        alert(`Successfully deleted ${filteredBrackets.length} bracket(s).`);
+      }
+    } catch (error) {
+      console.error('Error deleting filtered brackets:', error);
+      alert('Failed to delete brackets. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
@@ -974,17 +1020,6 @@ export default function AdminPage() {
           <div className="border-b border-gray-200">
             <nav className="flex -mb-px">
               <button
-                onClick={() => setActiveTab('brackets')}
-                className={`flex items-center space-x-2 px-6 py-4 border-b-2 font-medium text-sm ${
-                  activeTab === 'brackets'
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <Trophy className="w-5 h-5" />
-                <span>Brackets ({brackets.length})</span>
-              </button>
-              <button
                 onClick={() => setActiveTab('users')}
                 className={`flex items-center space-x-2 px-6 py-4 border-b-2 font-medium text-sm ${
                   activeTab === 'users'
@@ -994,6 +1029,17 @@ export default function AdminPage() {
               >
                 <Users className="w-5 h-5" />
                 <span>Users ({users.length})</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('brackets')}
+                className={`flex items-center space-x-2 px-6 py-4 border-b-2 font-medium text-sm ${
+                  activeTab === 'brackets'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Trophy className="w-5 h-5" />
+                <span>Brackets ({brackets.length})</span>
               </button>
               {!isDevelopment && (
                 <button
@@ -1069,6 +1115,22 @@ export default function AdminPage() {
                       </option>
                     ))}
                 </select>
+              </div>
+              
+              <div className="ml-auto">
+                <button
+                  onClick={handleDeleteAllFiltered}
+                  disabled={filteredBrackets.length === 0}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                    filteredBrackets.length === 0
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-red-600 text-white hover:bg-red-700'
+                  }`}
+                  title={filteredBrackets.length === 0 ? 'No brackets to delete' : `Delete ${filteredBrackets.length} filtered bracket(s)`}
+                >
+                  <Trash2 className="w-4 h-4 inline mr-2" />
+                  Delete All Filtered ({filteredBrackets.length})
+                </button>
               </div>
             </div>
 

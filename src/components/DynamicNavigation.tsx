@@ -7,7 +7,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { getSiteConfig } from '@/config/site';
 import { SiteConfigData } from '@/lib/siteConfig';
 import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
-import { Home, Trophy, BookOpen, CreditCard, Gift, Star, Menu, X, Target, User, LogOut } from 'lucide-react';
+import { Home, Trophy, BookOpen, CreditCard, Gift, Star, Menu, X, Target, User, LogOut, Shield } from 'lucide-react';
 import Image from 'next/image';
 
 const navigationItems = [
@@ -43,6 +43,23 @@ export default function DynamicNavigation({ hideInBracketMode = false }: Dynamic
 
     loadConfig();
   }, []);
+
+  // Check if current user is admin
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (session?.user?.email) {
+        try {
+          const response = await fetch('/api/check-admin');
+          const data = await response.json();
+          setIsAdmin(data.isAdmin || false);
+        } catch (error) {
+          console.error('Error checking admin status:', error);
+          setIsAdmin(false);
+        }
+      }
+    };
+    checkAdmin();
+  }, [session]);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -171,6 +188,21 @@ export default function DynamicNavigation({ hideInBracketMode = false }: Dynamic
                 My Picks
               </Link>
             )}
+            
+            {/* Admin - Far Right (admin only) */}
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className={`inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium transition-colors ${
+                  pathname === '/admin'
+                    ? 'border-purple-600 text-purple-600'
+                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                }`}
+              >
+                <Shield className="h-5 w-5 mr-2" />
+                Admin
+              </Link>
+            )}
           </div>
 
           {/* Mobile Navigation Icons */}
@@ -268,6 +300,22 @@ export default function DynamicNavigation({ hideInBracketMode = false }: Dynamic
                   >
                     <Target className="h-5 w-5" />
                     <span>My Picks</span>
+                  </Link>
+                )}
+                
+                {/* Admin for mobile menu (admin only) */}
+                {isAdmin && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`flex items-center space-x-3 px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                      pathname === '/admin'
+                        ? 'bg-purple-100 text-purple-700'
+                        : 'text-gray-600 hover:text-purple-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Shield className="h-5 w-5" />
+                    <span>Admin</span>
                   </Link>
                 )}
               </div>
