@@ -471,13 +471,39 @@ export default function AdminPage() {
 
   const handleExportTeamData = async () => {
     try {
-      const response = await fetch('/api/admin/team-data/export');
-      
-      if (!response.ok) {
-        throw new Error('Failed to export team data');
-      }
+      // Filter team data based on current view filters
+      const filteredTeams = Object.entries(teamData)
+        .filter(([key, team]) => {
+          // Apply active filter
+          if (teamActiveFilter === 'active') {
+            if (!(team.active ?? false)) return false;
+          } else if (teamActiveFilter === 'inactive') {
+            if (team.active ?? false) return false;
+          }
+          // else 'all' - no active filter
 
-      const blob = await response.blob();
+          // Apply text filters (same logic as table display)
+          const keyMatch = !teamFilters.key || key.toLowerCase().includes(teamFilters.key.toLowerCase());
+          const idMatch = !teamFilters.id || team.id.toLowerCase().includes(teamFilters.id.toLowerCase());
+          const nameMatch = !teamFilters.name || team.name.toLowerCase().includes(teamFilters.name.toLowerCase());
+          const mascotMatch = !teamFilters.mascot || (team.mascot && team.mascot.toLowerCase().includes(teamFilters.mascot.toLowerCase()));
+          
+          return keyMatch && idMatch && nameMatch && mascotMatch;
+        })
+        .reduce((acc, [key, team]) => {
+          acc[key] = {
+            id: team.id,
+            name: team.name,
+            mascot: team.mascot || undefined,
+            logo: team.logo,
+            active: team.active ?? undefined,
+          };
+          return acc;
+        }, {} as Record<string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }>);
+
+      // Create JSON blob from filtered data
+      const jsonString = JSON.stringify(filteredTeams, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -1663,18 +1689,6 @@ export default function AdminPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Logo Path
-                  </label>
-                  <input
-                    type="text"
-                    value={newTeamData.logo}
-                    onChange={(e) => setNewTeamData({ ...newTeamData, logo: e.target.value })}
-                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                    placeholder="e.g., /logos/teams/41.png"
-                  />
-                </div>
-                <div>
                   <label className="flex items-center space-x-2 mt-6">
                     <input
                       type="checkbox"
@@ -1728,11 +1742,11 @@ export default function AdminPage() {
 
           {/* Team Data Table */}
           <div className="overflow-auto max-h-[calc(100vh-400px)]">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="w-full divide-y divide-gray-200">
               <thead className="bg-gray-50 sticky top-0 z-10">
                 <tr>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
+                    className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('name')}
                   >
                     <div className="flex items-center space-x-1">
@@ -1745,7 +1759,7 @@ export default function AdminPage() {
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
+                    className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('mascot')}
                   >
                     <div className="flex items-center space-x-1">
@@ -1758,7 +1772,7 @@ export default function AdminPage() {
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
+                    className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('key')}
                   >
                     <div className="flex items-center space-x-1">
@@ -1771,7 +1785,7 @@ export default function AdminPage() {
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
+                    className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('id')}
                   >
                     <div className="flex items-center space-x-1">
@@ -1783,21 +1797,18 @@ export default function AdminPage() {
                       )}
                     </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
-                    Logo Path
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                     Logo
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                     Active
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                     Actions
                   </th>
                 </tr>
                 <tr className="bg-gray-100 sticky top-[48px] z-10">
-                  <th className="px-6 py-2 bg-gray-100">
+                  <th className="px-3 py-2 bg-gray-100">
                     <input
                       type="text"
                       value={teamFilters.name}
@@ -1806,7 +1817,7 @@ export default function AdminPage() {
                       className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
                     />
                   </th>
-                  <th className="px-6 py-2 bg-gray-100">
+                  <th className="px-3 py-2 bg-gray-100">
                     <input
                       type="text"
                       value={teamFilters.mascot}
@@ -1815,7 +1826,7 @@ export default function AdminPage() {
                       className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
                     />
                   </th>
-                  <th className="px-6 py-2 bg-gray-100">
+                  <th className="px-3 py-2 bg-gray-100">
                     <input
                       type="text"
                       value={teamFilters.key}
@@ -1824,7 +1835,7 @@ export default function AdminPage() {
                       className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
                     />
                   </th>
-                  <th className="px-6 py-2 bg-gray-100">
+                  <th className="px-3 py-2 bg-gray-100">
                     <input
                       type="text"
                       value={teamFilters.id}
@@ -1833,22 +1844,13 @@ export default function AdminPage() {
                       className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
                     />
                   </th>
-                  <th className="px-6 py-2 bg-gray-100">
-                    <input
-                      type="text"
-                      value={teamFilters.logo}
-                      onChange={(e) => setTeamFilters({ ...teamFilters, logo: e.target.value })}
-                      placeholder="Filter Logo Path..."
-                      className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
-                    />
-                  </th>
-                  <th className="px-6 py-2 bg-gray-100">
+                  <th className="px-3 py-2 bg-gray-100">
                     {/* Empty cell for logo image column filter */}
                   </th>
-                  <th className="px-6 py-2 bg-gray-100">
+                  <th className="px-3 py-2 bg-gray-100">
                     {/* Empty cell for active column filter */}
                   </th>
-                  <th className="px-6 py-2 bg-gray-100">
+                  <th className="px-3 py-2 bg-gray-100">
                     {/* Empty cell for actions column filter */}
                   </th>
                 </tr>
@@ -1856,7 +1858,7 @@ export default function AdminPage() {
                <tbody className="bg-white divide-y divide-gray-200">
                  {teamDataError ? (
                    <tr>
-                     <td colSpan={8} className="px-6 py-4 text-center">
+                     <td colSpan={7} className="px-3 py-4 text-center">
                        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
                          <p className="text-sm font-medium text-red-800">Error loading team data</p>
                          <p className="text-sm text-red-700 mt-1">{teamDataError}</p>
@@ -1871,13 +1873,13 @@ export default function AdminPage() {
                    </tr>
                  ) : Object.keys(teamData).length === 0 && isLoading ? (
                    <tr>
-                     <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                     <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
                        Loading team data...
                      </td>
                    </tr>
                  ) : Object.keys(teamData).length === 0 ? (
                    <tr>
-                     <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                     <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
                        No team data found. Click &quot;Add Team&quot; to add your first team.
                      </td>
                    </tr>
@@ -1888,8 +1890,7 @@ export default function AdminPage() {
                       const idMatch = !teamFilters.id || team.id.toLowerCase().includes(teamFilters.id.toLowerCase());
                       const nameMatch = !teamFilters.name || team.name.toLowerCase().includes(teamFilters.name.toLowerCase());
                       const mascotMatch = !teamFilters.mascot || (team.mascot && team.mascot.toLowerCase().includes(teamFilters.mascot.toLowerCase()));
-                      const logoMatch = !teamFilters.logo || (team.logo && team.logo.toLowerCase().includes(teamFilters.logo.toLowerCase()));
-                      return keyMatch && idMatch && nameMatch && mascotMatch && logoMatch;
+                      return keyMatch && idMatch && nameMatch && mascotMatch;
                     })
                     .sort((a, b) => {
                       if (teamSortColumn === 'name') {
@@ -1933,7 +1934,7 @@ export default function AdminPage() {
                     <tr key={key}>
                       {editingTeam === key ? (
                         <>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 py-4 whitespace-nowrap">
                             <input
                               type="text"
                               value={editingTeamData?.name || ''}
@@ -1941,7 +1942,7 @@ export default function AdminPage() {
                               className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
                             />
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 py-4 whitespace-nowrap">
                             <input
                               type="text"
                               value={editingTeamData?.mascot || ''}
@@ -1949,7 +1950,7 @@ export default function AdminPage() {
                               className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
                             />
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 py-4 whitespace-nowrap">
                             <input
                               type="text"
                               value={editingTeamData?.key || ''}
@@ -1957,7 +1958,7 @@ export default function AdminPage() {
                               className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
                             />
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 py-4 whitespace-nowrap">
                             <input
                               type="text"
                               value={editingTeamData?.id || ''}
@@ -1965,15 +1966,7 @@ export default function AdminPage() {
                               className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
                             />
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <input
-                              type="text"
-                              value={editingTeamData?.logo || ''}
-                              onChange={(e) => setEditingTeamData({ ...editingTeamData!, logo: e.target.value })}
-                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
-                            />
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 py-4 whitespace-nowrap">
                             {editingTeamData?.logo ? (
                               <img
                                 src={editingTeamData.logo}
@@ -1987,7 +1980,7 @@ export default function AdminPage() {
                               <span className="text-gray-400 text-xs">No logo</span>
                             )}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 py-4 whitespace-nowrap">
                             <label className="flex items-center space-x-2">
                               <input
                                 type="checkbox"
@@ -1997,7 +1990,7 @@ export default function AdminPage() {
                               />
                             </label>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 py-4 whitespace-nowrap">
                             <div className="flex items-center space-x-2">
                               <button
                                 onClick={handleSaveTeam}
@@ -2018,22 +2011,19 @@ export default function AdminPage() {
                         </>
                       ) : (
                         <>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
                             {team.name}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
                             {team.mascot || <span className="text-gray-400">—</span>}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                             {key}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
                             {team.id}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {team.logo || '-'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 py-4 whitespace-nowrap">
                             {team.logo ? (
                               <img
                                 src={team.logo}
@@ -2047,7 +2037,7 @@ export default function AdminPage() {
                               <span className="text-gray-400 text-xs">No logo</span>
                             )}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 py-4 whitespace-nowrap">
                             <label className="flex items-center space-x-2">
                               <input
                                 type="checkbox"
@@ -2058,7 +2048,7 @@ export default function AdminPage() {
                               <span className="text-sm text-gray-700">{team.active ? 'Active' : 'Inactive'}</span>
                             </label>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 py-4 whitespace-nowrap">
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => handleEditTeam(key)}
