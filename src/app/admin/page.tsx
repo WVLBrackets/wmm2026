@@ -227,7 +227,7 @@ export default function AdminPage() {
   /**
    * Handle column sorting
    */
-  const handleSort = (column: 'name' | 'key' | 'id') => {
+  const handleSort = (column: 'name' | 'mascot' | 'key' | 'id') => {
     if (teamSortColumn === column) {
       // Same column, toggle order
       setTeamSortOrder(teamSortOrder === 'asc' ? 'desc' : 'asc');
@@ -1476,7 +1476,7 @@ export default function AdminPage() {
                     onClick={() => handleSort('name')}
                   >
                     <div className="flex items-center space-x-1">
-                      <span>Team</span>
+                      <span>School</span>
                       {teamSortColumn === 'name' && (
                         <span className="text-gray-400">
                           {teamSortOrder === 'asc' ? '↑' : '↓'}
@@ -1484,8 +1484,18 @@ export default function AdminPage() {
                       )}
                     </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
-                    Mascot
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort('mascot')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Mascot</span>
+                      {teamSortColumn === 'mascot' && (
+                        <span className="text-gray-400">
+                          {teamSortOrder === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
                   </th>
                   <th 
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
@@ -1505,7 +1515,7 @@ export default function AdminPage() {
                     onClick={() => handleSort('id')}
                   >
                     <div className="flex items-center space-x-1">
-                      <span>ID</span>
+                      <span>Index</span>
                       {teamSortColumn === 'id' && (
                         <span className="text-gray-400">
                           {teamSortOrder === 'asc' ? '↑' : '↓'}
@@ -1623,6 +1633,14 @@ export default function AdminPage() {
                           return compareA.localeCompare(compareB);
                         } else {
                           return compareB.localeCompare(compareA);
+                        }
+                      } else if (teamSortColumn === 'mascot') {
+                        const mascotA = (a[1].mascot || '').toLowerCase();
+                        const mascotB = (b[1].mascot || '').toLowerCase();
+                        if (teamSortOrder === 'asc') {
+                          return mascotA.localeCompare(mascotB);
+                        } else {
+                          return mascotB.localeCompare(mascotA);
                         }
                       } else if (teamSortColumn === 'key') {
                         const compareA = a[0].toLowerCase();
