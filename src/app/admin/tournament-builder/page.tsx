@@ -43,6 +43,8 @@ export default function TournamentBuilderPage() {
   const [startDate, setStartDate] = useState<string>('');
   const [errors, setErrors] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [availableTournaments, setAvailableTournaments] = useState<string[]>([]);
+  const [selectedTournamentFile, setSelectedTournamentFile] = useState<string>('');
 
   const positionOptions = ['Top Left', 'Bottom Left', 'Top Right', 'Bottom Right'];
 
@@ -84,6 +86,13 @@ export default function TournamentBuilderPage() {
         const teamsData = await teamsResponse.json();
         if (teamsData.success) {
           setTeams(teamsData.data || {});
+        }
+
+        // Load available tournament files
+        const tournamentFilesResponse = await fetch('/api/admin/tournament-files');
+        const tournamentFilesData = await tournamentFilesResponse.json();
+        if (tournamentFilesData.success && tournamentFilesData.files) {
+          setAvailableTournaments(tournamentFilesData.files);
         }
 
         // Load config to get default year
@@ -137,6 +146,93 @@ export default function TournamentBuilderPage() {
       logo: '',
     };
     setRegions(updated);
+  };
+
+  const handleLoadTournament = async (filename: string) => {
+    if (!filename) {
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      
+      // Extract year from filename (tournament-yyyy.json)
+      const yearMatch = filename.match(/tournament-(\d{4})\.json/);
+      if (yearMatch) {
+        setYear(yearMatch[1]);
+      }
+
+      // Load the tournament JSON file
+      const response = await fetch(`/data/${filename}`);
+      if (!response.ok) {
+        throw new Error(`Failed to load tournament file: ${response.statusText}`);
+      }
+
+      const tournamentData = await response.json();
+
+      // Update tournament name
+      if (tournamentData.name) {
+        setTournamentName(tournamentData.name);
+      }
+
+      // Update final four location
+      if (tournamentData.finalFour?.location) {
+        setFinalFourLocation(tournamentData.finalFour.location);
+      }
+
+      // Update start date
+      if (tournamentData.metadata?.startDate) {
+        setStartDate(tournamentData.metadata.startDate);
+      }
+
+      // Map tournament regions to component regions
+      if (tournamentData.regions && Array.isArray(tournamentData.regions)) {
+        const mappedRegions: Region[] = tournamentData.regions.map((region: any) => {
+          // Create teams array with 16 slots, mapping from tournament data
+          const teams: RegionTeam[] = Array(16).fill(null).map((_, i) => {
+            const team = region.teams && region.teams[i];
+            if (team) {
+              return {
+                id: team.id || '',
+                name: team.name || '',
+                seed: team.seed || (i + 1),
+                logo: team.logo || `/logos/teams/${team.id || ''}.png`,
+              };
+            }
+            return {
+              id: '',
+              name: '',
+              seed: i + 1,
+              logo: '',
+            };
+          });
+
+          return {
+            name: region.name || '',
+            position: region.position || '',
+            teams: teams,
+          };
+        });
+
+        // Ensure we have 4 regions (fill with empty if needed)
+        while (mappedRegions.length < 4) {
+          mappedRegions.push({
+            name: '',
+            position: positionOptions[mappedRegions.length] || 'Top Left',
+            teams: Array(16).fill(null).map((_, i) => ({ id: '', name: '', seed: i + 1, logo: '' })),
+          });
+        }
+
+        setRegions(mappedRegions.slice(0, 4));
+      }
+
+      setSelectedTournamentFile(filename);
+    } catch (error) {
+      console.error('Error loading tournament:', error);
+      setErrors([`Failed to load tournament file: ${error instanceof Error ? error.message : 'Unknown error'}`]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const validate = (): boolean => {
@@ -311,6 +407,34 @@ export default function TournamentBuilderPage() {
         {/* Tournament Info */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4">Tournament Information</h2>
+          
+          {/* Load Existing Tournament */}
+          <div className="mb-4 pb-4 border-b border-gray-200">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Load from Existing Tournament (Optional)
+            </label>
+            <select
+              value={selectedTournamentFile}
+              onChange={(e) => {
+                setSelectedTournamentFile(e.target.value);
+                if (e.target.value) {
+                  handleLoadTournament(e.target.value);
+                }
+              }}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+            >
+              <option value="">-- Select a tournament file to load --</option>
+              {availableTournaments.map(filename => (
+                <option key={filename} value={filename}>
+                  {filename}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-500">
+              Select an existing tournament file to use as a starting point. Region names and teams will be populated.
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
