@@ -138,8 +138,12 @@ export default function AdminPage() {
       }
       
       // Type assertion for team data from API
-      setTeamData((data.data as Record<string, { id: string; name: string; logo: string }>) || {});
+      const loadedData = (data.data as Record<string, { id: string; name: string; logo: string }>) || {};
+      setTeamData(loadedData);
       setTeamDataError(''); // Clear any previous errors
+      
+      // Run duplicate check after loading data
+      checkForDuplicates(loadedData);
     } catch (error) {
       console.error('Error loading team data:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to load team data';
@@ -147,6 +151,90 @@ export default function AdminPage() {
       setTeamData({}); // Clear team data on error
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  /**
+   * Check for duplicate values in Team (name), Abbreviation (key), and ID columns
+   */
+  const checkForDuplicates = (data: Record<string, { id: string; name: string; logo: string }>) => {
+    const nameCounts: Record<string, string[]> = {};
+    const keyCounts: Record<string, string[]> = {};
+    const idCounts: Record<string, string[]> = {};
+    const duplicateIds: Set<string> = new Set();
+
+    // Count occurrences of each value
+    Object.entries(data).forEach(([key, team]) => {
+      // Check for duplicate names
+      if (team.name) {
+        const nameKey = team.name.toLowerCase();
+        if (!nameCounts[nameKey]) {
+          nameCounts[nameKey] = [];
+        }
+        nameCounts[nameKey].push(key);
+      }
+
+      // Check for duplicate keys
+      if (key) {
+        const keyLower = key.toLowerCase();
+        if (!keyCounts[keyLower]) {
+          keyCounts[keyLower] = [];
+        }
+        keyCounts[keyLower].push(key);
+      }
+
+      // Check for duplicate IDs
+      if (team.id) {
+        const idKey = team.id.toLowerCase();
+        if (!idCounts[idKey]) {
+          idCounts[idKey] = [];
+        }
+        idCounts[idKey].push(key);
+      }
+    });
+
+    // Find duplicates (values that appear more than once)
+    Object.entries(nameCounts).forEach(([name, keys]) => {
+      if (keys.length > 1) {
+        keys.forEach(k => duplicateIds.add(k));
+      }
+    });
+
+    Object.entries(keyCounts).forEach(([key, keys]) => {
+      if (keys.length > 1) {
+        keys.forEach(k => duplicateIds.add(k));
+      }
+    });
+
+    Object.entries(idCounts).forEach(([id, keys]) => {
+      if (keys.length > 1) {
+        keys.forEach(k => duplicateIds.add(k));
+      }
+    });
+
+    // Get the IDs of teams with duplicates
+    const duplicateIdList = Array.from(duplicateIds).map(key => {
+      const team = data[key];
+      return team ? team.id : key;
+    });
+
+    setDuplicateCheck({
+      hasDuplicates: duplicateIds.size > 0,
+      duplicateIds: duplicateIdList
+    });
+  };
+
+  /**
+   * Handle column sorting
+   */
+  const handleSort = (column: 'name' | 'key' | 'id') => {
+    if (teamSortColumn === column) {
+      // Same column, toggle order
+      setTeamSortOrder(teamSortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New column, default to ascending
+      setTeamSortColumn(column);
+      setTeamSortOrder('asc');
     }
   };
 
@@ -1340,6 +1428,29 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* Duplicate Check Indicator */}
+          <div className="mb-4 bg-white rounded-lg shadow p-4">
+            <div className="flex items-center space-x-2">
+              <span className="font-medium text-gray-700">Duplicate Check:</span>
+              {duplicateCheck.hasDuplicates ? (
+                <>
+                  <AlertCircle className="h-5 w-5 text-red-600" />
+                  <span className="text-red-600 font-semibold">Failed</span>
+                  {duplicateCheck.duplicateIds.length > 0 && (
+                    <span className="text-sm text-red-600 ml-2">
+                      (Duplicate IDs: {duplicateCheck.duplicateIds.join(', ')})
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <span className="text-green-600 font-semibold">Passed</span>
+                </>
+              )}
+            </div>
+          </div>
+
           {/* Team Data Table */}
           <div className="overflow-auto max-h-[calc(100vh-400px)]">
             <table className="min-w-full divide-y divide-gray-200">
@@ -1347,20 +1458,42 @@ export default function AdminPage() {
                 <tr>
                   <th 
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
-                    onClick={() => setTeamSortOrder(teamSortOrder === 'asc' ? 'desc' : 'asc')}
+                    onClick={() => handleSort('name')}
                   >
                     <div className="flex items-center space-x-1">
                       <span>Team</span>
-                      <span className="text-gray-400">
-                        {teamSortOrder === 'asc' ? '↑' : '↓'}
-                      </span>
+                      {teamSortColumn === 'name' && (
+                        <span className="text-gray-400">
+                          {teamSortOrder === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
                     </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
-                    Abbreviation
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort('key')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Abbreviation</span>
+                      {teamSortColumn === 'key' && (
+                        <span className="text-gray-400">
+                          {teamSortOrder === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
-                    ID
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort('id')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>ID</span>
+                      {teamSortColumn === 'id' && (
+                        <span className="text-gray-400">
+                          {teamSortOrder === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                     Logo Path
@@ -1455,12 +1588,26 @@ export default function AdminPage() {
                       return keyMatch && idMatch && nameMatch && logoMatch;
                     })
                     .sort((a, b) => {
-                      const nameA = a[1].name.toLowerCase();
-                      const nameB = b[1].name.toLowerCase();
-                      if (teamSortOrder === 'asc') {
-                        return nameA.localeCompare(nameB);
+                      let compareA: string;
+                      let compareB: string;
+                      
+                      if (teamSortColumn === 'name') {
+                        compareA = a[1].name.toLowerCase();
+                        compareB = b[1].name.toLowerCase();
+                      } else if (teamSortColumn === 'key') {
+                        compareA = a[0].toLowerCase();
+                        compareB = b[0].toLowerCase();
+                      } else if (teamSortColumn === 'id') {
+                        compareA = a[1].id.toLowerCase();
+                        compareB = b[1].id.toLowerCase();
                       } else {
-                        return nameB.localeCompare(nameA);
+                        return 0;
+                      }
+                      
+                      if (teamSortOrder === 'asc') {
+                        return compareA.localeCompare(compareB);
+                      } else {
+                        return compareB.localeCompare(compareA);
                       }
                     })
                     .map(([key, team]) => (
