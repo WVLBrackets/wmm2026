@@ -71,7 +71,7 @@ export async function PUT(request: NextRequest) {
     await initializeTeamDataTable();
 
     // Type assertion for team data
-    const teamsTyped = teams as Record<string, { id: string; name: string; logo: string }>;
+    const teamsTyped = teams as Record<string, { id: string; name: string; mascot?: string; logo: string }>;
 
     // Sort teams by ID (numeric)
     const sortedTeams = Object.fromEntries(

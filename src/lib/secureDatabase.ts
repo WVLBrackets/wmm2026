@@ -152,6 +152,7 @@ export async function initializeDatabase() {
         key VARCHAR(50) PRIMARY KEY,
         id VARCHAR(20) NOT NULL,
         name VARCHAR(255) NOT NULL,
+        mascot VARCHAR(255),
         logo VARCHAR(500),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -831,20 +832,21 @@ export async function deleteUser(userId: string): Promise<boolean> {
  * Get all team reference data from database
  * Uses production database connection (shared between staging and prod)
  */
-export async function getAllTeamReferenceData(): Promise<Record<string, { id: string; name: string; logo: string }>> {
+export async function getAllTeamReferenceData(): Promise<Record<string, { id: string; name: string; mascot?: string; logo: string }>> {
   try {
     const { teamDataSql } = await import('./teamDataConnection');
     const result = await teamDataSql`
-      SELECT key, id, name, logo
+      SELECT key, id, name, mascot, logo
       FROM team_reference_data
       ORDER BY CAST(id AS INTEGER)
     `;
     
-    const teams: Record<string, { id: string; name: string; logo: string }> = {};
+    const teams: Record<string, { id: string; name: string; mascot?: string; logo: string }> = {};
     for (const row of result.rows) {
       teams[row.key as string] = {
         id: row.id as string,
         name: row.name as string,
+        mascot: (row.mascot as string) || undefined,
         logo: (row.logo as string) || '',
       };
     }
@@ -867,7 +869,7 @@ export async function getAllTeamReferenceData(): Promise<Record<string, { id: st
  * Update team reference data (replace all teams)
  * Uses production database connection (shared between staging and prod)
  */
-export async function updateTeamReferenceData(teams: Record<string, { id: string; name: string; logo: string }>): Promise<void> {
+export async function updateTeamReferenceData(teams: Record<string, { id: string; name: string; mascot?: string; logo: string }>): Promise<void> {
   try {
     const { teamDataSql } = await import('./teamDataConnection');
     
@@ -881,11 +883,12 @@ export async function updateTeamReferenceData(teams: Record<string, { id: string
     if (entries.length > 0) {
       for (const [key, team] of entries) {
         await teamDataSql`
-          INSERT INTO team_reference_data (key, id, name, logo, updated_at)
-          VALUES (${key}, ${team.id}, ${team.name}, ${team.logo || null}, CURRENT_TIMESTAMP)
+          INSERT INTO team_reference_data (key, id, name, mascot, logo, updated_at)
+          VALUES (${key}, ${team.id}, ${team.name}, ${team.mascot || null}, ${team.logo || null}, CURRENT_TIMESTAMP)
           ON CONFLICT (key) DO UPDATE
           SET id = EXCLUDED.id,
               name = EXCLUDED.name,
+              mascot = EXCLUDED.mascot,
               logo = EXCLUDED.logo,
               updated_at = CURRENT_TIMESTAMP
         `;
@@ -909,6 +912,7 @@ export async function initializeTeamDataTable(): Promise<void> {
         key VARCHAR(50) PRIMARY KEY,
         id VARCHAR(20) NOT NULL,
         name VARCHAR(255) NOT NULL,
+        mascot VARCHAR(255),
         logo VARCHAR(500),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -916,6 +920,34 @@ export async function initializeTeamDataTable(): Promise<void> {
     `;
     
     await teamDataSql`CREATE INDEX IF NOT EXISTS idx_team_ref_id ON team_reference_data(id)`;
+    
+    // Add mascot column if it doesn't exist (safe migration for existing databases)
+    try {
+      const columnCheck = await teamDataSql`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'team_reference_data' 
+          AND column_name = 'mascot'
+          AND table_schema = current_schema()
+      `;
+      
+      if (columnCheck.rows.length === 0) {
+        console.log('[initializeTeamDataTable] Adding mascot column to team_reference_data table');
+        await teamDataSql`ALTER TABLE team_reference_data ADD COLUMN mascot VARCHAR(255)`;
+        console.log('[initializeTeamDataTable] Successfully added mascot column');
+      }
+    } catch (mascotError) {
+      // Column might already exist or there's an issue, but don't fail initialization
+      if (mascotError instanceof Error && (
+        mascotError.message.includes('already exists') || 
+        mascotError.message.includes('duplicate column')
+      )) {
+        console.log('[initializeTeamDataTable] mascot column already exists');
+      } else {
+        console.error('[initializeTeamDataTable] Error checking/adding mascot column:', mascotError);
+      }
+    }
+    
     console.log('[initializeTeamDataTable] Team reference data table initialized');
   } catch (error) {
     console.error('[initializeTeamDataTable] Error initializing team data table:', error);

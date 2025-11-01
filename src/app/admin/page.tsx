@@ -56,13 +56,13 @@ export default function AdminPage() {
   const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [passwordError, setPasswordError] = useState<string>('');
   const [showEndpoints, setShowEndpoints] = useState(false);
-  const [teamData, setTeamData] = useState<Record<string, { id: string; name: string; logo: string }>>({});
+  const [teamData, setTeamData] = useState<Record<string, { id: string; name: string; mascot?: string; logo: string }>>({});
   const [editingTeam, setEditingTeam] = useState<string | null>(null);
-  const [editingTeamData, setEditingTeamData] = useState<{ key: string; id: string; name: string; logo: string } | null>(null);
+  const [editingTeamData, setEditingTeamData] = useState<{ key: string; id: string; name: string; mascot?: string; logo: string } | null>(null);
   const [isAddingTeam, setIsAddingTeam] = useState(false);
-  const [newTeamData, setNewTeamData] = useState<{ key: string; id: string; name: string; logo: string }>({ key: '', id: '', name: '', logo: '' });
+  const [newTeamData, setNewTeamData] = useState<{ key: string; id: string; name: string; mascot?: string; logo: string }>({ key: '', id: '', name: '', mascot: '', logo: '' });
   const [teamDataError, setTeamDataError] = useState('');
-  const [teamFilters, setTeamFilters] = useState<{ key: string; id: string; name: string; logo: string }>({ key: '', id: '', name: '', logo: '' });
+  const [teamFilters, setTeamFilters] = useState<{ key: string; id: string; name: string; mascot: string; logo: string }>({ key: '', id: '', name: '', mascot: '', logo: '' });
   const [teamSortColumn, setTeamSortColumn] = useState<'name' | 'key' | 'id' | null>('name');
   const [teamSortOrder, setTeamSortOrder] = useState<'asc' | 'desc'>('asc');
   const [duplicateCheck, setDuplicateCheck] = useState<{ hasDuplicates: boolean; duplicateIds: string[] }>({ hasDuplicates: false, duplicateIds: [] });
@@ -271,6 +271,7 @@ export default function AdminPage() {
       key,
       id: team.id,
       name: team.name,
+      mascot: team.mascot,
       logo: team.logo,
     });
   };
@@ -309,6 +310,7 @@ export default function AdminPage() {
       updatedTeamData[editingTeamData.key] = {
         id: editingTeamData.id,
         name: editingTeamData.name,
+        mascot: editingTeamData.mascot || undefined,
         logo: editingTeamData.logo,
       };
 
@@ -338,12 +340,12 @@ export default function AdminPage() {
 
   const handleAddTeam = () => {
     setIsAddingTeam(true);
-    setNewTeamData({ key: '', id: '', name: '', logo: '' });
+    setNewTeamData({ key: '', id: '', name: '', mascot: '', logo: '' });
   };
 
   const handleCancelAddTeam = () => {
     setIsAddingTeam(false);
-    setNewTeamData({ key: '', id: '', name: '', logo: '' });
+    setNewTeamData({ key: '', id: '', name: '', mascot: '', logo: '' });
   };
 
   const handleSaveNewTeam = async () => {
@@ -367,6 +369,7 @@ export default function AdminPage() {
         [newTeamData.key]: {
           id: newTeamData.id,
           name: newTeamData.name,
+          mascot: newTeamData.mascot || undefined,
           logo: newTeamData.logo,
         },
       };
@@ -1400,6 +1403,18 @@ export default function AdminPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Mascot
+                  </label>
+                  <input
+                    type="text"
+                    value={newTeamData.mascot || ''}
+                    onChange={(e) => setNewTeamData({ ...newTeamData, mascot: e.target.value })}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                    placeholder="e.g., Huskies"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Logo Path
                   </label>
                   <input
@@ -1469,6 +1484,9 @@ export default function AdminPage() {
                       )}
                     </div>
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                    Mascot
+                  </th>
                   <th 
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('key')}
@@ -1518,6 +1536,15 @@ export default function AdminPage() {
                   <th className="px-6 py-2 bg-gray-100">
                     <input
                       type="text"
+                      value={teamFilters.mascot}
+                      onChange={(e) => setTeamFilters({ ...teamFilters, mascot: e.target.value })}
+                      placeholder="Filter Mascot..."
+                      className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
+                    />
+                  </th>
+                  <th className="px-6 py-2 bg-gray-100">
+                    <input
+                      type="text"
                       value={teamFilters.key}
                       onChange={(e) => setTeamFilters({ ...teamFilters, key: e.target.value })}
                       placeholder="Filter Abbreviation..."
@@ -1553,7 +1580,7 @@ export default function AdminPage() {
                <tbody className="bg-white divide-y divide-gray-200">
                  {teamDataError ? (
                    <tr>
-                     <td colSpan={6} className="px-6 py-4 text-center">
+                     <td colSpan={7} className="px-6 py-4 text-center">
                        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
                          <p className="text-sm font-medium text-red-800">Error loading team data</p>
                          <p className="text-sm text-red-700 mt-1">{teamDataError}</p>
@@ -1568,13 +1595,13 @@ export default function AdminPage() {
                    </tr>
                  ) : Object.keys(teamData).length === 0 && isLoading ? (
                    <tr>
-                     <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                     <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
                        Loading team data...
                      </td>
                    </tr>
                  ) : Object.keys(teamData).length === 0 ? (
                    <tr>
-                     <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                     <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
                        No team data found. Click &quot;Add Team&quot; to add your first team.
                      </td>
                    </tr>
@@ -1584,8 +1611,9 @@ export default function AdminPage() {
                       const keyMatch = !teamFilters.key || key.toLowerCase().includes(teamFilters.key.toLowerCase());
                       const idMatch = !teamFilters.id || team.id.toLowerCase().includes(teamFilters.id.toLowerCase());
                       const nameMatch = !teamFilters.name || team.name.toLowerCase().includes(teamFilters.name.toLowerCase());
+                      const mascotMatch = !teamFilters.mascot || (team.mascot && team.mascot.toLowerCase().includes(teamFilters.mascot.toLowerCase()));
                       const logoMatch = !teamFilters.logo || (team.logo && team.logo.toLowerCase().includes(teamFilters.logo.toLowerCase()));
-                      return keyMatch && idMatch && nameMatch && logoMatch;
+                      return keyMatch && idMatch && nameMatch && mascotMatch && logoMatch;
                     })
                     .sort((a, b) => {
                       if (teamSortColumn === 'name') {
@@ -1626,6 +1654,14 @@ export default function AdminPage() {
                               type="text"
                               value={editingTeamData?.name || ''}
                               onChange={(e) => setEditingTeamData({ ...editingTeamData!, name: e.target.value })}
+                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                            />
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <input
+                              type="text"
+                              value={editingTeamData?.mascot || ''}
+                              onChange={(e) => setEditingTeamData({ ...editingTeamData!, mascot: e.target.value })}
                               className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
                             />
                           </td>
@@ -1690,6 +1726,9 @@ export default function AdminPage() {
                         <>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {team.name}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {team.mascot || <span className="text-gray-400">—</span>}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                             {key}
