@@ -143,6 +143,23 @@ export async function initializeDatabase() {
       )
     `;
 
+    // Create team_reference_data table for managing team data
+    await sql`
+      CREATE TABLE IF NOT EXISTS team_reference_data (
+        key VARCHAR(50) NOT NULL,
+        id VARCHAR(20) NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        logo VARCHAR(500),
+        environment VARCHAR(50) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (key, environment)
+      )
+    `;
+    
+    await sql`CREATE INDEX IF NOT EXISTS idx_team_ref_env ON team_reference_data(environment)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_team_ref_id ON team_reference_data(id)`;
+
     // Create environment-specific indexes for performance
     await sql`CREATE INDEX IF NOT EXISTS idx_users_email_env ON users(email, environment)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_users_environment ON users(environment)`;
@@ -807,5 +824,117 @@ export async function deleteUser(userId: string): Promise<boolean> {
   } catch (error) {
     console.error('Error deleting user:', error);
     throw error;
+  }
+}
+
+/**
+ * Get all team reference data from database
+ */
+export async function getAllTeamReferenceData(): Promise<Record<string, { id: string; name: string; logo: string }>> {
+  const environment = getCurrentEnvironment();
+  
+  try {
+    const result = await sql`
+      SELECT key, id, name, logo
+      FROM team_reference_data
+      WHERE environment = ${environment}
+      ORDER BY CAST(id AS INTEGER)
+    `;
+    
+    const teams: Record<string, { id: string; name: string; logo: string }> = {};
+    for (const row of result.rows) {
+      teams[row.key as string] = {
+        id: row.id as string,
+        name: row.name as string,
+        logo: (row.logo as string) || '',
+      };
+    }
+    
+    return teams;
+  } catch (error) {
+    console.error('Error getting team reference data:', error);
+    // If table doesn't exist, return empty object
+    if (error instanceof Error && (
+      error.message.includes('does not exist') || 
+      error.message.includes('relation')
+    )) {
+      return {};
+    }
+    throw error;
+  }
+}
+
+/**
+ * Update team reference data (replace all teams for environment)
+ */
+export async function updateTeamReferenceData(teams: Record<string, { id: string; name: string; logo: string }>): Promise<void> {
+  const environment = getCurrentEnvironment();
+  
+  try {
+    // Delete all existing teams for this environment
+    await sql`
+      DELETE FROM team_reference_data
+      WHERE environment = ${environment}
+    `;
+    
+    // Insert all teams
+    const entries = Object.entries(teams);
+    if (entries.length > 0) {
+      for (const [key, team] of entries) {
+        await sql`
+          INSERT INTO team_reference_data (key, id, name, logo, environment, updated_at)
+          VALUES (${key}, ${team.id}, ${team.name}, ${team.logo || null}, ${environment}, CURRENT_TIMESTAMP)
+          ON CONFLICT (key, environment) DO UPDATE
+          SET id = EXCLUDED.id,
+              name = EXCLUDED.name,
+              logo = EXCLUDED.logo,
+              updated_at = CURRENT_TIMESTAMP
+        `;
+      }
+    }
+  } catch (error) {
+    console.error('Error updating team reference data:', error);
+    throw error;
+  }
+}
+
+/**
+ * Sync team data from JSON file to database (one-time migration)
+ */
+export async function syncTeamDataFromJSON(): Promise<void> {
+  const environment = getCurrentEnvironment();
+  
+  try {
+    // Check if we already have data in the database
+    const existingCount = await sql`
+      SELECT COUNT(*) as count
+      FROM team_reference_data
+      WHERE environment = ${environment}
+    `;
+    
+    if ((existingCount.rows[0]?.count as number) > 0) {
+      console.log('[syncTeamDataFromJSON] Team data already exists in database, skipping sync');
+      return;
+    }
+    
+    // Try to read from JSON file and import
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    const filePath = path.join(process.cwd(), 'public', 'data', 'team-mappings.json');
+    
+    try {
+      const fileContents = await fs.readFile(filePath, 'utf8');
+      const teamData = JSON.parse(fileContents);
+      
+      // Import all teams
+      await updateTeamReferenceData(teamData);
+      console.log('[syncTeamDataFromJSON] Successfully synced team data from JSON to database');
+    } catch (fileError) {
+      console.error('[syncTeamDataFromJSON] Could not read JSON file:', fileError);
+      // Continue - database will be empty but functional
+    }
+  } catch (error) {
+    console.error('[syncTeamDataFromJSON] Error syncing team data:', error);
+    // Don't throw - allow function to continue even if sync fails
   }
 }

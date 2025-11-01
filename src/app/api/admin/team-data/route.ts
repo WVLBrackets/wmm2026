@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/lib/adminAuth';
-import { promises as fs } from 'fs';
-import path from 'path';
+import { getAllTeamReferenceData, syncTeamDataFromJSON, updateTeamReferenceData } from '@/lib/secureDatabase';
 
 /**
  * GET /api/admin/team-data - Get all team reference data
@@ -19,10 +18,11 @@ export async function GET() {
       );
     }
 
-    // Read the team-mappings.json file
-    const filePath = path.join(process.cwd(), 'public', 'data', 'team-mappings.json');
-    const fileContents = await fs.readFile(filePath, 'utf8');
-    const teamData = JSON.parse(fileContents);
+    // Try to sync from JSON on first load (if database is empty)
+    await syncTeamDataFromJSON();
+
+    // Read from database
+    const teamData = await getAllTeamReferenceData();
 
     return NextResponse.json({
       success: true,
@@ -31,7 +31,10 @@ export async function GET() {
   } catch (error) {
     console.error('Error reading team data:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to read team data' },
+      { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to read team data' 
+      },
       { status: 500 }
     );
   }
@@ -70,9 +73,8 @@ export async function PUT(request: NextRequest) {
       })
     );
 
-    // Write the sorted data back to the file
-    const filePath = path.join(process.cwd(), 'public', 'data', 'team-mappings.json');
-    await fs.writeFile(filePath, JSON.stringify(sortedTeams, null, 2), 'utf8');
+    // Update in database
+    await updateTeamReferenceData(sortedTeams);
 
     return NextResponse.json({
       success: true,
@@ -82,7 +84,10 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     console.error('Error updating team data:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to update team data' },
+      { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to update team data' 
+      },
       { status: 500 }
     );
   }
