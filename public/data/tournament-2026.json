@@ -1,0 +1,106 @@
+{
+  "year": "2026",
+  "name": "Warren's March Madness",
+  "regions": [
+    {
+      "name": "East",
+      "position": "Top Left",
+      "teams": [
+        { "id": "41", "name": "Connecticut", "seed": 1, "logo": "/logos/teams/41.png" },
+        { "id": "256", "name": "James Madison", "seed": 16, "logo": "/logos/teams/256.png" },
+        { "id": "153", "name": "North Carolina", "seed": 8, "logo": "/logos/teams/153.png" },
+        { "id": "213", "name": "Penn State", "seed": 9, "logo": "/logos/teams/213.png" },
+        { "id": "239", "name": "Baylor", "seed": 5, "logo": "/logos/teams/239.png" },
+        { "id": "2803", "name": "Bryant", "seed": 12, "logo": "/logos/teams/2803.png" },
+        { "id": "356", "name": "Illinois", "seed": 4, "logo": "/logos/teams/356.png" },
+        { "id": "2142", "name": "Colgate", "seed": 13, "logo": "/logos/teams/2142.png" },
+        { "id": "221", "name": "Pittsburgh", "seed": 6, "logo": "/logos/teams/221.png" },
+        { "id": "282", "name": "Indiana State", "seed": 11, "logo": "/logos/teams/282.png" },
+        { "id": "269", "name": "Marquette", "seed": 3, "logo": "/logos/teams/269.png" },
+        { "id": "231", "name": "Furman", "seed": 14, "logo": "/logos/teams/231.png" },
+        { "id": "2390", "name": "Miami", "seed": 7, "logo": "/logos/teams/2390.png" },
+        { "id": "300", "name": "UC Irvine", "seed": 10, "logo": "/logos/teams/300.png" },
+        { "id": "96", "name": "Kentucky", "seed": 2, "logo": "/logos/teams/96.png" },
+        { "id": "299", "name": "Long Beach State", "seed": 15, "logo": "/logos/teams/299.png" }
+              ]
+    },
+    {
+      "name": "West",
+      "position": "Bottom Left",
+      "teams": [
+        { "id": "150", "name": "Duke", "seed": 1, "logo": "/logos/teams/150.png" },
+        { "id": "2450", "name": "North Dakota State", "seed": 16, "logo": "/logos/teams/2450.png" },
+        { "id": "2509", "name": "Purdue", "seed": 8, "logo": "/logos/teams/2509.png" },
+        { "id": "328", "name": "Utah State", "seed": 9, "logo": "/logos/teams/328.png" },
+        { "id": "2250", "name": "Gonzaga", "seed": 5, "logo": "/logos/teams/2250.png" },
+        { "id": "68", "name": "Boise State", "seed": 12, "logo": "/logos/teams/68.png" },
+        { "id": "12", "name": "Arizona", "seed": 4, "logo": "/logos/teams/12.png" },
+        { "id": "2546", "name": "Southeast Missouri State", "seed": 13, "logo": "/logos/teams/2546.png" },
+        { "id": "333", "name": "Alabama", "seed": 6, "logo": "/logos/teams/333.png" },
+        { "id": "232", "name": "Charleston Southern", "seed": 11, "logo": "/logos/teams/232.png" },
+        { "id": "2483", "name": "Oregon", "seed": 3, "logo": "/logos/teams/2483.png" },
+        { "id": "2344", "name": "Long Beach State", "seed": 14, "logo": "/logos/teams/2344.png" },
+        { "id": "239", "name": "Baylor", "seed": 7, "logo": "/logos/teams/239.png" },
+        { "id": "98", "name": "Western Kentucky", "seed": 10, "logo": "/logos/teams/98.png" },
+        { "id": "41", "name": "Connecticut", "seed": 2, "logo": "/logos/teams/41.png" },
+        { "id": "2737", "name": "Winthrop", "seed": 15, "logo": "/logos/teams/2737.png" }
+      ]
+    },
+    {
+      "name": "South",
+      "position": "Top Right",
+      "teams": [
+        { "id": "66", "name": "Iowa State", "seed": 1, "logo": "/logos/teams/66.png" },
+        { "id": "357", "name": "Texas A&M-Corpus Christi", "seed": 16, "logo": "/logos/teams/357.png" },
+        { "id": "333", "name": "Alabama", "seed": 8, "logo": "/logos/teams/333.png" },
+        { "id": "2390", "name": "Miami", "seed": 9, "logo": "/logos/teams/2390.png" },
+        { "id": "127", "name": "Michigan State", "seed": 5, "logo": "/logos/teams/127.png" },
+        { "id": "2579", "name": "South Carolina", "seed": 12, "logo": "/logos/teams/2579.png" },
+        { "id": "57", "name": "Florida", "seed": 4, "logo": "/logos/teams/57.png" },
+        { "id": "2413", "name": "Morehead State", "seed": 13, "logo": "/logos/teams/2413.png" },
+        { "id": "222", "name": "Villanova", "seed": 6, "logo": "/logos/teams/222.png" },
+        { "id": "325", "name": "Cleveland State", "seed": 11, "logo": "/logos/teams/325.png" },
+        { "id": "12", "name": "Arizona", "seed": 3, "logo": "/logos/teams/12.png" },
+        { "id": "288", "name": "Lipscomb", "seed": 14, "logo": "/logos/teams/288.png" },
+        { "id": "239", "name": "Baylor", "seed": 7, "logo": "/logos/teams/239.png" },
+        { "id": "58", "name": "South Florida", "seed": 10, "logo": "/logos/teams/58.png" },
+        { "id": "2633", "name": "Tennessee", "seed": 2, "logo": "/logos/teams/2633.png" },
+        { "id": "256", "name": "James Madison", "seed": 15, "logo": "/logos/teams/256.png" }
+      ]
+    },
+    {
+      "name": "Midwest",
+      "position": "Bottom Right",
+      "teams": [
+        { "id": "248", "name": "Houston", "seed": 1, "logo": "/logos/teams/248.png" },
+        { "id": "2450", "name": "North Dakota State", "seed": 16, "logo": "/logos/teams/2450.png" },
+        { "id": "152", "name": "NC State", "seed": 8, "logo": "/logos/teams/152.png" },
+        { "id": "61", "name": "Georgia", "seed": 9, "logo": "/logos/teams/61.png" },
+        { "id": "2250", "name": "Gonzaga", "seed": 5, "logo": "/logos/teams/2250.png" },
+        { "id": "2473", "name": "Oakland", "seed": 12, "logo": "/logos/teams/2473.png" },
+        { "id": "269", "name": "Marquette", "seed": 4, "logo": "/logos/teams/269.png" },
+        { "id": "2670", "name": "VCU", "seed": 13, "logo": "/logos/teams/2670.png" },
+        { "id": "201", "name": "Oklahoma", "seed": 6, "logo": "/logos/teams/201.png" },
+        { "id": "245", "name": "Texas A&M", "seed": 11, "logo": "/logos/teams/245.png" },
+        { "id": "356", "name": "Illinois", "seed": 3, "logo": "/logos/teams/356.png" },
+        { "id": "338", "name": "Kennesaw State", "seed": 14, "logo": "/logos/teams/338.png" },
+        { "id": "251", "name": "Texas", "seed": 7, "logo": "/logos/teams/251.png" },
+        { "id": "94", "name": "Northern Kentucky", "seed": 10, "logo": "/logos/teams/94.png" },
+        { "id": "2509", "name": "Purdue", "seed": 2, "logo": "/logos/teams/2509.png" },
+        { "id": "2640", "name": "Texas Southern", "seed": 15, "logo": "/logos/teams/2640.png" }
+      ]
+    }
+  ],
+  "finalFour": { "location": "TBD" },
+  "metadata": {
+    "startDate": "2025-03-20",
+    "scoring": [
+      { "round": "Round of 64", "points": 1 },
+      { "round": "Round of 32", "points": 2 },
+      { "round": "Sweet 16", "points": 4 },
+      { "round": "Elite 8", "points": 8 },
+      { "round": "Final Four", "points": 16 },
+      { "round": "Championship", "points": 32 }
+    ]
+  }
+}
