@@ -37,10 +37,10 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@types/xlsx": "^0.0.35",
+    "@types/xlsx": "^0.0.36",
     "dotenv": "^17.2.3",
     "eslint": "^9",
-    "eslint-config-next": "15.5.3",
+    "eslint-config-next": "15.5.6",
     "tailwindcss": "^4",
     "tsx": "^4.20.6",
     "typescript": "^5"
