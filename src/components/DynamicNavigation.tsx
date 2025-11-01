@@ -28,6 +28,7 @@ export default function DynamicNavigation({ hideInBracketMode = false }: Dynamic
   const { data: session } = useSession();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const loadConfig = async () => {
