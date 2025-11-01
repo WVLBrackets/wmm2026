@@ -18,7 +18,7 @@ export async function GET() {
       );
     }
 
-    // Try to sync from JSON on first load (if database is empty)
+    // Sync from JSON only in development (staging/prod use database directly)
     await syncTeamDataFromJSON();
 
     // Read from database

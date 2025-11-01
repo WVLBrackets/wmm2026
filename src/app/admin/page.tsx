@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Trash2, Edit, Save, X, Users, Trophy, CheckCircle, Key, Edit3, LogOut, Link2, Table, Plus } from 'lucide-react';
+import { Trash2, Edit, Save, X, Users, Trophy, CheckCircle, Key, Edit3, LogOut, Link2, Table, Plus, Download } from 'lucide-react';
 import { useBracketMode } from '@/contexts/BracketModeContext';
 
 interface User {
@@ -63,6 +63,7 @@ export default function AdminPage() {
   const [newTeamData, setNewTeamData] = useState<{ key: string; id: string; name: string; logo: string }>({ key: '', id: '', name: '', logo: '' });
   const [teamDataError, setTeamDataError] = useState('');
   const [teamFilters, setTeamFilters] = useState<{ key: string; id: string; name: string; logo: string }>({ key: '', id: '', name: '', logo: '' });
+  const [isDevelopment, setIsDevelopment] = useState(false);
 
   // Ensure bracket mode is disabled when admin page loads
   useEffect(() => {
@@ -76,6 +77,10 @@ export default function AdminPage() {
       router.push('/auth/signin');
       return;
     }
+    
+    // Check if we're in development (hide Team Data tab)
+    const hostname = window.location.hostname;
+    setIsDevelopment(hostname === 'localhost' || hostname === '127.0.0.1');
     
     loadData();
   }, [status, router]);
@@ -277,6 +282,29 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Error saving new team:', error);
       setTeamDataError(error instanceof Error ? error.message : 'Failed to save new team');
+    }
+  };
+
+  const handleExportTeamData = async () => {
+    try {
+      const response = await fetch('/api/admin/team-data/export');
+      
+      if (!response.ok) {
+        throw new Error('Failed to export team data');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'team-mappings.json';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error exporting team data:', error);
+      setTeamDataError(error instanceof Error ? error.message : 'Failed to export team data');
     }
   };
 
@@ -731,17 +759,19 @@ export default function AdminPage() {
                 <Users className="w-5 h-5" />
                 <span>Users ({users.length})</span>
               </button>
-              <button
-                onClick={() => setActiveTab('data')}
-                className={`flex items-center space-x-2 px-6 py-4 border-b-2 font-medium text-sm ${
-                  activeTab === 'data'
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <Table className="w-5 h-5" />
-                <span>Team Data ({Object.keys(teamData).length})</span>
-              </button>
+              {!isDevelopment && (
+                <button
+                  onClick={() => setActiveTab('data')}
+                  className={`flex items-center space-x-2 px-6 py-4 border-b-2 font-medium text-sm ${
+                    activeTab === 'data'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <Table className="w-5 h-5" />
+                  <span>Team Data ({Object.keys(teamData).length})</span>
+                </button>
+              )}
             </nav>
           </div>
         </div>
@@ -1188,15 +1218,27 @@ export default function AdminPage() {
         <div className="bg-white rounded-lg shadow-lg p-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-xl font-bold text-gray-900">Team Reference Data</h2>
-            {!isAddingTeam && (
-              <button
-                onClick={handleAddTeam}
-                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-              >
-                <Plus className="h-4 w-4" />
-                <span>Add Team</span>
-              </button>
-            )}
+            <div className="flex items-center space-x-3">
+              {!isAddingTeam && (
+                <>
+                  <button
+                    onClick={handleExportTeamData}
+                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    title="Export team data to JSON file for git commit"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>Export JSON</span>
+                  </button>
+                  <button
+                    onClick={handleAddTeam}
+                    className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Add Team</span>
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
           {teamDataError && (

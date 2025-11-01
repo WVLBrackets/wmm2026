@@ -144,21 +144,21 @@ export async function initializeDatabase() {
     `;
 
     // Create team_reference_data table for managing team data
-    await sql`
+    // Note: This table is created in PROD database and accessed by both staging and prod
+    // No environment column needed since all environments share the same data
+    const { teamDataSql } = await import('./teamDataConnection');
+    await teamDataSql`
       CREATE TABLE IF NOT EXISTS team_reference_data (
-        key VARCHAR(50) NOT NULL,
+        key VARCHAR(50) PRIMARY KEY,
         id VARCHAR(20) NOT NULL,
         name VARCHAR(255) NOT NULL,
         logo VARCHAR(500),
-        environment VARCHAR(50) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (key, environment)
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
     
-    await sql`CREATE INDEX IF NOT EXISTS idx_team_ref_env ON team_reference_data(environment)`;
-    await sql`CREATE INDEX IF NOT EXISTS idx_team_ref_id ON team_reference_data(id)`;
+    await teamDataSql`CREATE INDEX IF NOT EXISTS idx_team_ref_id ON team_reference_data(id)`;
 
     // Create environment-specific indexes for performance
     await sql`CREATE INDEX IF NOT EXISTS idx_users_email_env ON users(email, environment)`;
@@ -829,15 +829,14 @@ export async function deleteUser(userId: string): Promise<boolean> {
 
 /**
  * Get all team reference data from database
+ * Uses production database connection (shared between staging and prod)
  */
 export async function getAllTeamReferenceData(): Promise<Record<string, { id: string; name: string; logo: string }>> {
-  const environment = getCurrentEnvironment();
-  
   try {
-    const result = await sql`
+    const { teamDataSql } = await import('./teamDataConnection');
+    const result = await teamDataSql`
       SELECT key, id, name, logo
       FROM team_reference_data
-      WHERE environment = ${environment}
       ORDER BY CAST(id AS INTEGER)
     `;
     
@@ -865,26 +864,26 @@ export async function getAllTeamReferenceData(): Promise<Record<string, { id: st
 }
 
 /**
- * Update team reference data (replace all teams for environment)
+ * Update team reference data (replace all teams)
+ * Uses production database connection (shared between staging and prod)
  */
 export async function updateTeamReferenceData(teams: Record<string, { id: string; name: string; logo: string }>): Promise<void> {
-  const environment = getCurrentEnvironment();
-  
   try {
-    // Delete all existing teams for this environment
-    await sql`
+    const { teamDataSql } = await import('./teamDataConnection');
+    
+    // Delete all existing teams (no environment filter needed)
+    await teamDataSql`
       DELETE FROM team_reference_data
-      WHERE environment = ${environment}
     `;
     
     // Insert all teams
     const entries = Object.entries(teams);
     if (entries.length > 0) {
       for (const [key, team] of entries) {
-        await sql`
-          INSERT INTO team_reference_data (key, id, name, logo, environment, updated_at)
-          VALUES (${key}, ${team.id}, ${team.name}, ${team.logo || null}, ${environment}, CURRENT_TIMESTAMP)
-          ON CONFLICT (key, environment) DO UPDATE
+        await teamDataSql`
+          INSERT INTO team_reference_data (key, id, name, logo, updated_at)
+          VALUES (${key}, ${team.id}, ${team.name}, ${team.logo || null}, CURRENT_TIMESTAMP)
+          ON CONFLICT (key) DO UPDATE
           SET id = EXCLUDED.id,
               name = EXCLUDED.name,
               logo = EXCLUDED.logo,
@@ -899,17 +898,25 @@ export async function updateTeamReferenceData(teams: Record<string, { id: string
 }
 
 /**
- * Sync team data from JSON file to database (one-time migration)
+ * Sync team data from JSON file to database (only runs in development)
+ * In staging/prod, team data is managed in the production database via Admin Panel
  */
 export async function syncTeamDataFromJSON(): Promise<void> {
   const environment = getCurrentEnvironment();
   
+  // Only sync from JSON in development environment
+  // In staging/prod, team data is managed directly in the database
+  if (environment !== 'development') {
+    return;
+  }
+  
   try {
+    const { teamDataSql } = await import('./teamDataConnection');
+    
     // Check if we already have data in the database
-    const existingCount = await sql`
+    const existingCount = await teamDataSql`
       SELECT COUNT(*) as count
       FROM team_reference_data
-      WHERE environment = ${environment}
     `;
     
     if ((existingCount.rows[0]?.count as number) > 0) {
