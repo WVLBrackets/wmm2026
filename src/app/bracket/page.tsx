@@ -40,7 +40,7 @@ function BracketContent() {
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
 
-  const loadTournamentRef = useRef<() => Promise<void>>();
+  const loadTournamentRef = useRef<(() => Promise<void>) | undefined>(undefined);
   loadTournamentRef.current = loadTournament;
 
   useEffect(() => {

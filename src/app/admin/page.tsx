@@ -70,7 +70,7 @@ export default function AdminPage() {
     setInBracketMode(false);
   }, [setInBracketMode]);
 
-  const loadDataRef = useRef<() => Promise<void>>();
+  const loadDataRef = useRef<(() => Promise<void>) | undefined>(undefined);
   loadDataRef.current = loadData;
 
   useEffect(() => {
@@ -103,7 +103,7 @@ export default function AdminPage() {
     setFilteredBrackets(filtered);
   }, [brackets, filterUser, filterStatus]);
 
-  const loadTeamDataRef = useRef<() => Promise<void>>();
+  const loadTeamDataRef = useRef<(() => Promise<void>) | undefined>(undefined);
   loadTeamDataRef.current = loadTeamData;
 
   useEffect(() => {
