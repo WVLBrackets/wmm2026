@@ -7,7 +7,7 @@
       "position": "Top Left",
       "teams": [
         { "id": "41", "name": "Connecticut", "seed": 1, "logo": "/logos/teams/41.png" },
-        { "id": "299", "name": "Long Beach State", "seed": 16, "logo": "/logos/teams/299.png" },
+        { "id": "256", "name": "James Madison", "seed": 16, "logo": "/logos/teams/256.png" },
         { "id": "153", "name": "North Carolina", "seed": 8, "logo": "/logos/teams/153.png" },
         { "id": "213", "name": "Penn State", "seed": 9, "logo": "/logos/teams/213.png" },
         { "id": "239", "name": "Baylor", "seed": 5, "logo": "/logos/teams/239.png" },
@@ -21,8 +21,8 @@
         { "id": "2390", "name": "Miami", "seed": 7, "logo": "/logos/teams/2390.png" },
         { "id": "300", "name": "UC Irvine", "seed": 10, "logo": "/logos/teams/300.png" },
         { "id": "96", "name": "Kentucky", "seed": 2, "logo": "/logos/teams/96.png" },
-        { "id": "256", "name": "James Madison", "seed": 15, "logo": "/logos/teams/256.png" }
-      ]
+        { "id": "299", "name": "Long Beach State", "seed": 15, "logo": "/logos/teams/299.png" }
+              ]
     },
     {
       "name": "West",
