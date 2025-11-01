@@ -486,6 +486,11 @@ async function syncTeamsFromESPN(
       // Extract mascot from ESPN page
       const espnMascot = extractMascotFromHTML(html, espnTeamName);
       
+      // Debug output for mascot extraction
+      if (espnMascot) {
+        console.log(`  📋 Extracted mascot: "${espnMascot}"`);
+      }
+      
       // Split team name and mascot if needed
       // ESPN typically provides "School Name Mascot" format
       // We'll try to split it intelligently, but keep the full name if we can't determine
@@ -552,13 +557,17 @@ async function syncTeamsFromESPN(
           console.log(`  ✅ Match: ${existingTeam.name}`);
           if (mascot && mascot !== existingTeam.mascot) {
             console.log(`      Mascot update: "${existingTeam.mascot || '(none)'}" -> "${mascot}"`);
+            if (updateMode) {
+              // Update mascot if it changed
+              existingTeams[teamKey] = { ...existingTeam, mascot: mascot || undefined };
+            }
+          } else if (!existingTeam.mascot && mascot) {
+            console.log(`      Adding mascot: "${mascot}"`);
+            if (updateMode) {
+              existingTeams[teamKey] = { ...existingTeam, mascot: mascot };
+            }
           }
           console.log('');
-          
-          if (updateMode && mascot !== existingTeam.mascot) {
-            // Update mascot if it changed
-            existingTeams[teamKey] = { ...existingTeam, mascot: mascot || undefined };
-          }
         } else {
           // Names don't match - append ERROR
           const updatedName = existingTeam.name.includes(' ERROR') 
@@ -574,13 +583,18 @@ async function syncTeamsFromESPN(
           });
           
           console.log(`  ⚠️  Mismatch:`);
-          console.log(`      DB:    ${existingTeam.name}`);
-          console.log(`      ESPN:  ${espnTeamName} (School: ${schoolName}${mascot ? `, Mascot: ${mascot}` : ''})`);
+          console.log(`      DB:    ${existingTeam.name}${existingTeam.mascot ? ` (${existingTeam.mascot})` : ''}`);
+          console.log(`      ESPN:  ${espnTeamName}`);
+          console.log(`      Parsed: School="${schoolName}"${mascot ? `, Mascot="${mascot}"` : ', Mascot=not detected'}`);
           
           if (updateMode) {
-            // Update the team name with ERROR appended, and update mascot
-            existingTeams[teamKey] = { ...existingTeam, name: updatedName, mascot: mascot || undefined };
-            console.log(`  ✓ Updated: ${updatedName}${mascot ? ` (mascot: ${mascot})` : ''}\n`);
+            // Update the team name with ERROR appended, and update mascot if provided
+            existingTeams[teamKey] = { 
+              ...existingTeam, 
+              name: updatedName, 
+              mascot: mascot || existingTeam.mascot || undefined 
+            };
+            console.log(`  ✓ Updated: ${updatedName}${mascot ? ` (mascot: ${mascot})` : existingTeam.mascot ? ` (mascot: ${existingTeam.mascot})` : ''}\n`);
           } else {
             console.log(`  (Report only - not updated)\n`);
           }
@@ -603,6 +617,11 @@ async function syncTeamsFromESPN(
         });
 
         console.log(`  ✨ New team found: ${espnTeamName} (ID: ${idString})`);
+        if (mascot) {
+          console.log(`      School: ${schoolName}, Mascot: ${mascot}`);
+        } else {
+          console.log(`      School: ${schoolName} (mascot not detected)`);
+        }
         
         if (updateMode) {
           existingTeams[abbreviation] = newTeam;
