@@ -491,15 +491,32 @@ async function syncTeamsFromESPN(
         console.log(`  📋 Extracted mascot: "${espnMascot}"`);
       }
       
-      // Split team name and mascot if needed
+      // Split team name and mascot
       // ESPN typically provides "School Name Mascot" format
-      // We'll try to split it intelligently, but keep the full name if we can't determine
       let schoolName = espnTeamName;
       let mascot = espnMascot;
       
-      // If we don't have a separate mascot but the name contains typical mascot patterns
-      if (!mascot) {
-        // Try to extract mascot from the name (common pattern: "School Location Mascot")
+      // If we extracted a mascot, remove it from the school name
+      if (mascot) {
+        // Remove the mascot from the end of the team name
+        const mascotRegex = new RegExp(`\\s+${mascot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+        schoolName = espnTeamName.replace(mascotRegex, '').trim();
+        
+        // If removal didn't work (mascot might be multi-word or not at the end), try manual splitting
+        if (schoolName === espnTeamName) {
+          const nameParts = espnTeamName.trim().split(/\s+/);
+          const mascotParts = mascot.trim().split(/\s+/);
+          
+          // Check if the last N words match the mascot
+          if (nameParts.length >= mascotParts.length) {
+            const lastNWords = nameParts.slice(-mascotParts.length).join(' ');
+            if (lastNWords.toLowerCase() === mascot.toLowerCase()) {
+              schoolName = nameParts.slice(0, -mascotParts.length).join(' ');
+            }
+          }
+        }
+      } else {
+        // No mascot extracted, try to infer it from the name structure
         const nameParts = espnTeamName.trim().split(/\s+/);
         if (nameParts.length >= 3) {
           // Likely format: "Alaska Anchorage Seawolves" -> "Alaska Anchorage" / "Seawolves"
