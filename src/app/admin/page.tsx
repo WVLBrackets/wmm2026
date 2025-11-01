@@ -1784,7 +1784,10 @@ export default function AdminPage() {
                     {/* Empty cell for logo image column filter */}
                   </th>
                   <th className="px-6 py-2 bg-gray-100">
-                    {/* Empty cell for actions column */}
+                    {/* Empty cell for active column filter */}
+                  </th>
+                  <th className="px-6 py-2 bg-gray-100">
+                    {/* Empty cell for actions column filter */}
                   </th>
                 </tr>
               </thead>
