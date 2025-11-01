@@ -51,6 +51,7 @@ export default function AdminPage() {
   const [editForm, setEditForm] = useState<Partial<Bracket>>({});
   const [filterUser, setFilterUser] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterYear, setFilterYear] = useState<string>('all');
   const [changingPasswordUserId, setChangingPasswordUserId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
@@ -87,8 +88,13 @@ export default function AdminPage() {
       filtered = filtered.filter(b => b.status === filterStatus);
     }
     
+    if (filterYear !== 'all') {
+      const yearNum = parseInt(filterYear);
+      filtered = filtered.filter(b => b.year === yearNum);
+    }
+    
     setFilteredBrackets(filtered);
-  }, [brackets, filterUser, filterStatus]);
+  }, [brackets, filterUser, filterStatus, filterYear]);
 
   const loadTeamDataRef = useRef<(() => Promise<void>) | undefined>(undefined);
 
@@ -953,6 +959,26 @@ export default function AdminPage() {
                   <option value="submitted">Submitted</option>
                   <option value="in_progress">In Progress</option>
                   <option value="deleted">Deleted</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Filter by Year
+                </label>
+                <select
+                  value={filterYear}
+                  onChange={(e) => setFilterYear(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                >
+                  <option value="all">All Years</option>
+                  {Array.from(new Set(brackets.map(b => b.year).filter(y => y !== undefined && y !== null)))
+                    .sort((a, b) => (b || 0) - (a || 0))
+                    .map(year => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
                 </select>
               </div>
             </div>
