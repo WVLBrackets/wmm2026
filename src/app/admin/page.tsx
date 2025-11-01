@@ -62,6 +62,7 @@ export default function AdminPage() {
   const [isAddingTeam, setIsAddingTeam] = useState(false);
   const [newTeamData, setNewTeamData] = useState<{ key: string; id: string; name: string; logo: string }>({ key: '', id: '', name: '', logo: '' });
   const [teamDataError, setTeamDataError] = useState('');
+  const [teamFilters, setTeamFilters] = useState<{ key: string; id: string; name: string; logo: string }>({ key: '', id: '', name: '', logo: '' });
 
   // Ensure bracket mode is disabled when admin page loads
   useEffect(() => {
@@ -1276,36 +1277,91 @@ export default function AdminPage() {
           )}
 
           {/* Team Data Table */}
-          <div className="overflow-x-auto">
+          <div className="overflow-auto max-h-[calc(100vh-400px)]">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 sticky top-0 z-10">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                     Key
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                     ID
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                     Name
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                    Logo Path
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                     Logo
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                     Actions
+                  </th>
+                </tr>
+                <tr className="bg-gray-100 sticky top-[48px] z-10">
+                  <th className="px-6 py-2 bg-gray-100">
+                    <input
+                      type="text"
+                      value={teamFilters.key}
+                      onChange={(e) => setTeamFilters({ ...teamFilters, key: e.target.value })}
+                      placeholder="Filter Key..."
+                      className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
+                    />
+                  </th>
+                  <th className="px-6 py-2 bg-gray-100">
+                    <input
+                      type="text"
+                      value={teamFilters.id}
+                      onChange={(e) => setTeamFilters({ ...teamFilters, id: e.target.value })}
+                      placeholder="Filter ID..."
+                      className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
+                    />
+                  </th>
+                  <th className="px-6 py-2 bg-gray-100">
+                    <input
+                      type="text"
+                      value={teamFilters.name}
+                      onChange={(e) => setTeamFilters({ ...teamFilters, name: e.target.value })}
+                      placeholder="Filter Name..."
+                      className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
+                    />
+                  </th>
+                  <th className="px-6 py-2 bg-gray-100">
+                    <input
+                      type="text"
+                      value={teamFilters.logo}
+                      onChange={(e) => setTeamFilters({ ...teamFilters, logo: e.target.value })}
+                      placeholder="Filter Logo Path..."
+                      className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
+                    />
+                  </th>
+                  <th className="px-6 py-2 bg-gray-100">
+                    {/* Empty cell for logo image column filter */}
+                  </th>
+                  <th className="px-6 py-2 bg-gray-100">
+                    {/* Empty cell for actions column */}
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {Object.keys(teamData).length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
                       {teamDataError ? 'Error loading team data' : 'Loading team data...'}
                     </td>
                   </tr>
                 ) : (
-                  Object.entries(teamData).map(([key, team]) => (
+                  Object.entries(teamData)
+                    .filter(([key, team]) => {
+                      const keyMatch = !teamFilters.key || key.toLowerCase().includes(teamFilters.key.toLowerCase());
+                      const idMatch = !teamFilters.id || team.id.toLowerCase().includes(teamFilters.id.toLowerCase());
+                      const nameMatch = !teamFilters.name || team.name.toLowerCase().includes(teamFilters.name.toLowerCase());
+                      const logoMatch = !teamFilters.logo || (team.logo && team.logo.toLowerCase().includes(teamFilters.logo.toLowerCase()));
+                      return keyMatch && idMatch && nameMatch && logoMatch;
+                    })
+                    .map(([key, team]) => (
                     <tr key={key}>
                       {editingTeam === key ? (
                         <>
@@ -1342,6 +1398,20 @@ export default function AdminPage() {
                             />
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
+                            {editingTeamData?.logo ? (
+                              <img
+                                src={editingTeamData.logo}
+                                alt="Preview"
+                                className="h-8 w-8 object-contain"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <span className="text-gray-400 text-xs">No logo</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center space-x-2">
                               <button
                                 onClick={handleSaveTeam}
@@ -1373,6 +1443,20 @@ export default function AdminPage() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {team.logo || '-'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {team.logo ? (
+                              <img
+                                src={team.logo}
+                                alt={team.name}
+                                className="h-8 w-8 object-contain"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <span className="text-gray-400 text-xs">No logo</span>
+                            )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <button
