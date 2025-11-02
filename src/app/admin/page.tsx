@@ -164,9 +164,18 @@ export default function AdminPage() {
       let filteredData = loadedData;
       if (teamActiveFilter === 'inactive') {
         // Filter to show only teams where active is explicitly false
-        filteredData = Object.fromEntries(
-          Object.entries(loadedData).filter(([_, team]) => team.active === false)
-        );
+        // Debug: Log what we're filtering
+        const allEntries = Object.entries(loadedData);
+        const inactiveEntries = allEntries.filter(([_, team]) => {
+          const isInactive = team.active === false;
+          if (!isInactive && team.active !== true) {
+            // Log teams that might have undefined/null active status
+            console.log('Team with non-boolean active:', team.name, 'active:', team.active);
+          }
+          return isInactive;
+        });
+        console.log(`[Inactive Filter] Total teams: ${allEntries.length}, Inactive teams: ${inactiveEntries.length}`);
+        filteredData = Object.fromEntries(inactiveEntries);
       } else if (teamActiveFilter === 'active') {
         // Filter to show only teams where active is true (or undefined/null which should be treated as active)
         filteredData = Object.fromEntries(
@@ -175,6 +184,7 @@ export default function AdminPage() {
       }
       // 'all' filter doesn't need client-side filtering - show everything from API
       
+      console.log(`[Team Data] Filter: ${teamActiveFilter}, Teams loaded: ${Object.keys(loadedData).length}, Teams filtered: ${Object.keys(filteredData).length}`);
       setTeamData(filteredData);
       setTeamDataError(''); // Clear any previous errors
       
