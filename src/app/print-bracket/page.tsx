@@ -651,56 +651,93 @@ export default function PrintBracketPage() {
           flexDirection: 'column',
           gap: '10px'
         }}>
-          {/* Top Row - Top Left and Top Right Regions */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            {/* East Region */}
-            <div style={{ border: '1px solid #e5e7eb', borderRadius: '4px', background: '#f9fafb', padding: '3px', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ textAlign: 'center', padding: '2px 0', fontSize: '10px', fontWeight: 'bold', color: '#374151', borderBottom: '1px solid #d1d5db', marginBottom: '2px' }}>
-                East
-              </div>
-              <div style={{ display: 'flex', gap: '0px' }}>
-                {renderRegionColumns('Top Left', 0)}
-              </div>
-            </div>
+          {/* Helper function to get region name by position */}
+          {(() => {
+            const tournament = tournamentData as unknown as TournamentData;
+            if (!tournament?.regions) return null;
             
-            {/* South Region */}
-            <div style={{ border: '1px solid #e5e7eb', borderRadius: '4px', background: '#f9fafb', padding: '3px', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ textAlign: 'center', padding: '2px 0', fontSize: '10px', fontWeight: 'bold', color: '#374151', borderBottom: '1px solid #d1d5db', marginBottom: '2px' }}>
-                South
-              </div>
-              <div style={{ display: 'flex', gap: '0px' }}>
-                {renderRegionColumns('Top Right', 2)}
-              </div>
-            </div>
-          </div>
-          
-          {/* Final Four Section - Middle */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {renderFinalFourSection()}
-          </div>
-          
-          {/* Bottom Row - Bottom Left and Bottom Right Regions */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            {/* West Region */}
-            <div style={{ border: '1px solid #e5e7eb', borderRadius: '4px', background: '#f9fafb', padding: '3px', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ textAlign: 'center', padding: '2px 0', fontSize: '10px', fontWeight: 'bold', color: '#374151', borderBottom: '1px solid #d1d5db', marginBottom: '2px' }}>
-                West
-              </div>
-              <div style={{ display: 'flex', gap: '0px' }}>
-                {renderRegionColumns('Bottom Left', 1)}
-              </div>
-            </div>
+            const getRegionNameByPosition = (position: string): string => {
+              const region = tournament.regions.find(r => r.position === position);
+              return region?.name || position;
+            };
             
-            {/* Midwest Region */}
-            <div style={{ border: '1px solid #e5e7eb', borderRadius: '4px', background: '#f9fafb', padding: '3px', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ textAlign: 'center', padding: '2px 0', fontSize: '10px', fontWeight: 'bold', color: '#374151', borderBottom: '1px solid #d1d5db', marginBottom: '2px' }}>
-                Midwest
-              </div>
-              <div style={{ display: 'flex', gap: '0px' }}>
-                {renderRegionColumns('Bottom Right', 3)}
-              </div>
-            </div>
-          </div>
+            const topLeftRegionName = getRegionNameByPosition('Top Left');
+            const topRightRegionName = getRegionNameByPosition('Top Right');
+            const bottomLeftRegionName = getRegionNameByPosition('Bottom Left');
+            const bottomRightRegionName = getRegionNameByPosition('Bottom Right');
+            
+            // Find region indices by position (fallback to index if position not found)
+            const getRegionIndexByPosition = (position: string): number => {
+              const index = tournament.regions.findIndex(r => r.position === position);
+              if (index !== -1) return index;
+              // Fallback: map position to expected index
+              if (position === 'Top Left') return 0;
+              if (position === 'Bottom Left') return 1;
+              if (position === 'Top Right') return 2;
+              if (position === 'Bottom Right') return 3;
+              return 0;
+            };
+            
+            const topLeftIndex = getRegionIndexByPosition('Top Left');
+            const topRightIndex = getRegionIndexByPosition('Top Right');
+            const bottomLeftIndex = getRegionIndexByPosition('Bottom Left');
+            const bottomRightIndex = getRegionIndexByPosition('Bottom Right');
+            
+            return (
+              <>
+                {/* Top Row - Top Left and Top Right Regions */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  {/* Top Left Region */}
+                  <div style={{ border: '1px solid #e5e7eb', borderRadius: '4px', background: '#f9fafb', padding: '3px', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ textAlign: 'center', padding: '2px 0', fontSize: '10px', fontWeight: 'bold', color: '#374151', borderBottom: '1px solid #d1d5db', marginBottom: '2px' }}>
+                      {topLeftRegionName}
+                    </div>
+                    <div style={{ display: 'flex', gap: '0px' }}>
+                      {renderRegionColumns('Top Left', topLeftIndex)}
+                    </div>
+                  </div>
+                  
+                  {/* Top Right Region */}
+                  <div style={{ border: '1px solid #e5e7eb', borderRadius: '4px', background: '#f9fafb', padding: '3px', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ textAlign: 'center', padding: '2px 0', fontSize: '10px', fontWeight: 'bold', color: '#374151', borderBottom: '1px solid #d1d5db', marginBottom: '2px' }}>
+                      {topRightRegionName}
+                    </div>
+                    <div style={{ display: 'flex', gap: '0px' }}>
+                      {renderRegionColumns('Top Right', topRightIndex)}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Final Four Section - Middle */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {renderFinalFourSection()}
+                </div>
+                
+                {/* Bottom Row - Bottom Left and Bottom Right Regions */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  {/* Bottom Left Region */}
+                  <div style={{ border: '1px solid #e5e7eb', borderRadius: '4px', background: '#f9fafb', padding: '3px', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ textAlign: 'center', padding: '2px 0', fontSize: '10px', fontWeight: 'bold', color: '#374151', borderBottom: '1px solid #d1d5db', marginBottom: '2px' }}>
+                      {bottomLeftRegionName}
+                    </div>
+                    <div style={{ display: 'flex', gap: '0px' }}>
+                      {renderRegionColumns('Bottom Left', bottomLeftIndex)}
+                    </div>
+                  </div>
+                  
+                  {/* Bottom Right Region */}
+                  <div style={{ border: '1px solid #e5e7eb', borderRadius: '4px', background: '#f9fafb', padding: '3px', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ textAlign: 'center', padding: '2px 0', fontSize: '10px', fontWeight: 'bold', color: '#374151', borderBottom: '1px solid #d1d5db', marginBottom: '2px' }}>
+                      {bottomRightRegionName}
+                    </div>
+                    <div style={{ display: 'flex', gap: '0px' }}>
+                      {renderRegionColumns('Bottom Right', bottomRightIndex)}
+                    </div>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
         </div>
       </div>
 
