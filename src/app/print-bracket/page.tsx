@@ -218,7 +218,7 @@ export default function PrintBracketPage() {
   };
 
   // Helper function to render columns in correct order (left-to-right or right-to-left)
-  const renderRegionColumns = (regionKey: string, regionIndex: number) => {
+  const renderRegionColumns = (regionKey: string, regionIndex: number, regionName?: string) => {
     if (!tournamentData || !bracket || !bracketData) return null;
     
     const tournament = tournamentData as unknown as TournamentData;
@@ -233,6 +233,12 @@ export default function PrintBracketPage() {
       if (round === 'Round of 64') {
         return (
           <div key={round} style={{ minWidth: '90px', flex: '1 1 0', display: 'flex', flexDirection: 'column' }}>
+            {/* Region Name - above first round games */}
+            {regionName && (
+              <div style={{ textAlign: 'center', padding: '4px 0', fontSize: '14px', fontWeight: 'bold', color: '#374151', marginBottom: '4px' }}>
+                {regionName}
+              </div>
+            )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0px', flex: 1 }}>
               {tournament.regions[regionIndex].teams.map((team, teamIndex) => {
                 const gameIndex = Math.floor(teamIndex / 2);
@@ -799,49 +805,41 @@ export default function PrintBracketPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   {/* Top Left Region */}
                   <div style={{ padding: '3px', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ textAlign: 'center', padding: '2px 0', fontSize: '10px', fontWeight: 'bold', color: '#374151', marginBottom: '2px' }}>
-                      {topLeftRegionName}
-                    </div>
                     <div style={{ display: 'flex', gap: '0px' }}>
-                      {renderRegionColumns('Top Left', topLeftIndex)}
+                      {renderRegionColumns('Top Left', topLeftIndex, topLeftRegionName)}
                     </div>
                   </div>
                   
                   {/* Top Right Region */}
                   <div style={{ padding: '3px', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ textAlign: 'center', padding: '2px 0', fontSize: '10px', fontWeight: 'bold', color: '#374151', marginBottom: '2px' }}>
-                      {topRightRegionName}
-                    </div>
                     <div style={{ display: 'flex', gap: '0px' }}>
-                      {renderRegionColumns('Top Right', topRightIndex)}
+                      {renderRegionColumns('Top Right', topRightIndex, topRightRegionName)}
                     </div>
                   </div>
                 </div>
                 
                 {/* Final Four Section - Middle */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                   {renderFinalFourSection()}
+                  {/* Tie Breaker */}
+                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#374151', textAlign: 'center' }}>
+                    Tie Breaker - {(bracketData?.tieBreaker as string) || 'N/A'}
+                  </div>
                 </div>
                 
                 {/* Bottom Row - Bottom Left and Bottom Right Regions */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   {/* Bottom Left Region */}
                   <div style={{ padding: '3px', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ textAlign: 'center', padding: '2px 0', fontSize: '10px', fontWeight: 'bold', color: '#374151', marginBottom: '2px' }}>
-                      {bottomLeftRegionName}
-                    </div>
                     <div style={{ display: 'flex', gap: '0px' }}>
-                      {renderRegionColumns('Bottom Left', bottomLeftIndex)}
+                      {renderRegionColumns('Bottom Left', bottomLeftIndex, bottomLeftRegionName)}
                     </div>
                   </div>
                   
                   {/* Bottom Right Region */}
                   <div style={{ padding: '3px', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ textAlign: 'center', padding: '2px 0', fontSize: '10px', fontWeight: 'bold', color: '#374151', marginBottom: '2px' }}>
-                      {bottomRightRegionName}
-                    </div>
                     <div style={{ display: 'flex', gap: '0px' }}>
-                      {renderRegionColumns('Bottom Right', bottomRightIndex)}
+                      {renderRegionColumns('Bottom Right', bottomRightIndex, bottomRightRegionName)}
                     </div>
                   </div>
                 </div>
