@@ -1479,86 +1479,9 @@ export default function AdminPage() {
             </div>
           </div>
         )}
-      </div>
 
-      {/* Password Change Modal */}
-      {changingPasswordUserId && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
-          <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Change User Password</h3>
-                <button
-                  onClick={handleCancelPasswordChange}
-                  className="text-gray-400 hover:text-gray-500"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                    New Password
-                  </label>
-                  <input
-                    type="password"
-                    id="newPassword"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter new password (min 6 characters)"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                    Confirm Password
-                  </label>
-                  <input
-                    type="password"
-                    id="confirmPassword"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Confirm new password"
-                  />
-                </div>
-
-                {passwordError && (
-                  <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded">
-                    <p className="text-sm text-red-800">{passwordError}</p>
-                  </div>
-                )}
-
-                <div className="bg-yellow-50 border-l-4 border-yellow-500 p-3 rounded">
-                  <p className="text-sm text-yellow-800">
-                    This will change the user&apos;s password, confirm their account, and allow them to login immediately.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end space-x-3">
-                <button
-                  onClick={handleCancelPasswordChange}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleChangePassword}
-                  className="px-4 py-2 bg-blue-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Change Password
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Data Tab */}
-      {activeTab === 'data' && (
+        {/* Data Tab */}
+        {activeTab === 'data' && (
         <div className="bg-white rounded-lg shadow-lg p-6">
           <div className="mb-4">
             <div className="flex items-center justify-between mb-4">
