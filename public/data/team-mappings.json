@@ -1,0 +1,1220 @@
+{
+  "2005": {
+    "id": "2005",
+    "name": "Air Force",
+    "mascot": "Falcons",
+    "logo": "/logos/teams/2005.png",
+    "active": true
+  },
+  "AA": {
+    "id": "1",
+    "name": "Alaska Anchorage",
+    "mascot": "Seawolves",
+    "logo": "/logos/teams/1.png",
+    "active": true
+  },
+  "Aub": {
+    "id": "2",
+    "name": "Auburn",
+    "mascot": "Tigers",
+    "logo": "/logos/teams/2.png",
+    "active": true
+  },
+  "UAB": {
+    "id": "5",
+    "name": "UAB",
+    "mascot": "Blazers",
+    "logo": "/logos/teams/5.png",
+    "active": true
+  },
+  "SAla": {
+    "id": "6",
+    "name": "South Alabama",
+    "mascot": "Jaguars",
+    "logo": "/logos/teams/6.png",
+    "active": true
+  },
+  "Amh": {
+    "id": "7",
+    "name": "Amherst",
+    "mascot": "Mammoths",
+    "logo": "/logos/teams/7.png",
+    "active": true
+  },
+  "Ark": {
+    "id": "8",
+    "name": "Arkansas",
+    "mascot": "Razorbacks",
+    "logo": "/logos/teams/8.png",
+    "active": true
+  },
+  "AzSt": {
+    "id": "9",
+    "name": "Arizona State",
+    "mascot": "Sun Devils",
+    "logo": "/logos/teams/9.png",
+    "active": true
+  },
+  "CM": {
+    "id": "11",
+    "name": "Colorado Mesa",
+    "mascot": "Mavericks",
+    "logo": "/logos/teams/11.png",
+    "active": true
+  },
+  "Az": {
+    "id": "12",
+    "name": "Arizona",
+    "mascot": "Wildcats",
+    "logo": "/logos/teams/12.png",
+    "active": true
+  },
+  "CP": {
+    "id": "13",
+    "name": "Cal Poly",
+    "mascot": "Mustangs",
+    "logo": "/logos/teams/13.png",
+    "active": true
+  },
+  "SacSt": {
+    "id": "16",
+    "name": "Sacramento State",
+    "mascot": "Hornets",
+    "logo": "/logos/teams/16.png",
+    "active": true
+  },
+  "CMS": {
+    "id": "17",
+    "name": "Claremont Mudd Scripps",
+    "mascot": "Stags",
+    "logo": "/logos/teams/17.png",
+    "active": true
+  },
+  "SDSU": {
+    "id": "21",
+    "name": "San Diego State",
+    "mascot": "Aztecs",
+    "logo": "/logos/teams/21.png",
+    "active": true
+  },
+  "SJSt": {
+    "id": "23",
+    "name": "San José State",
+    "mascot": "Spartans",
+    "logo": "/logos/teams/23.png",
+    "active": true
+  },
+  "Stan": {
+    "id": "24",
+    "name": "Stanford",
+    "mascot": "Cardinal",
+    "logo": "/logos/teams/24.png",
+    "active": true
+  },
+  "Cal": {
+    "id": "25",
+    "name": "California",
+    "mascot": "Golden Bears",
+    "logo": "/logos/teams/25.png",
+    "active": true
+  },
+  "UCLA": {
+    "id": "26",
+    "name": "UCLA",
+    "mascot": "Bruins",
+    "logo": "/logos/teams/26.png",
+    "active": true
+  },
+  "UCRi": {
+    "id": "27",
+    "name": "UC Riverside",
+    "mascot": "Highlanders",
+    "logo": "/logos/teams/27.png",
+    "active": true
+  },
+  "UCSD": {
+    "id": "28",
+    "name": "UC San Diego",
+    "mascot": "Tritons",
+    "logo": "/logos/teams/28.png",
+    "active": true
+  },
+  "USC": {
+    "id": "30",
+    "name": "USC",
+    "mascot": "Trojans",
+    "logo": "/logos/teams/30.png",
+    "active": true
+  },
+  "ColSt": {
+    "id": "36",
+    "name": "Colorado State",
+    "mascot": "Rams",
+    "logo": "/logos/teams/36.png",
+    "active": true
+  },
+  "Colo": {
+    "id": "38",
+    "name": "Colorado",
+    "mascot": "Buffaloes",
+    "logo": "/logos/teams/38.png",
+    "active": true
+  },
+  "UConn": {
+    "id": "41",
+    "name": "Connecticut",
+    "mascot": "Huskies",
+    "logo": "/logos/teams/41.png",
+    "active": true
+  },
+  "Hart": {
+    "id": "42",
+    "name": "Hartford",
+    "mascot": "Hawks",
+    "logo": "/logos/teams/42.png",
+    "active": true
+  },
+  "Yale": {
+    "id": "43",
+    "name": "Yale",
+    "mascot": "Bulldogs",
+    "logo": "/logos/teams/43.png",
+    "active": true
+  },
+  "Amer": {
+    "id": "44",
+    "name": "American",
+    "mascot": "Eagles",
+    "logo": "/logos/teams/44.png",
+    "active": true
+  },
+  "Gtwn": {
+    "id": "46",
+    "name": "Georgetown",
+    "mascot": "Hoyas",
+    "logo": "/logos/teams/46.png",
+    "active": true
+  },
+  "Hwrd": {
+    "id": "47",
+    "name": "Howard",
+    "mascot": "Bison",
+    "logo": "/logos/teams/47.png",
+    "active": true
+  },
+  "Del": {
+    "id": "48",
+    "name": "Delaware",
+    "mascot": "Blue Hens",
+    "logo": "/logos/teams/48.png",
+    "active": true
+  },
+  "FSU": {
+    "id": "52",
+    "name": "Florida State",
+    "mascot": "Seminoles",
+    "logo": "/logos/teams/52.png",
+    "active": true
+  },
+  "JaxSt": {
+    "id": "55",
+    "name": "Jacksonville State",
+    "mascot": "Gamecocks",
+    "logo": "/logos/teams/55.png",
+    "active": true
+  },
+  "Stet": {
+    "id": "56",
+    "name": "Stetson",
+    "mascot": "Hatters",
+    "logo": "/logos/teams/56.png",
+    "active": true
+  },
+  "Flo": {
+    "id": "57",
+    "name": "Florida",
+    "mascot": "Gators",
+    "logo": "/logos/teams/57.png",
+    "active": true
+  },
+  "SFla": {
+    "id": "58",
+    "name": "South Florida",
+    "mascot": "Bulls",
+    "logo": "/logos/teams/58.png",
+    "active": true
+  },
+  "GT": {
+    "id": "59",
+    "name": "Georgia Tech",
+    "mascot": "Yellow Jackets",
+    "logo": "/logos/teams/59.png",
+    "active": true
+  },
+  "UGA": {
+    "id": "61",
+    "name": "Georgia",
+    "mascot": "Bulldogs",
+    "logo": "/logos/teams/61.png",
+    "active": true
+  },
+  "IoSt": {
+    "id": "66",
+    "name": "Iowa State",
+    "mascot": "Cyclones",
+    "logo": "/logos/teams/66.png",
+    "active": true
+  },
+  "Boise": {
+    "id": "68",
+    "name": "Boise State",
+    "mascot": "Broncos",
+    "logo": "/logos/teams/68.png",
+    "active": true
+  },
+  "NW": {
+    "id": "77",
+    "name": "Northwestern",
+    "mascot": "Wildcats",
+    "logo": "/logos/teams/77.png",
+    "active": true
+  },
+  "Ind": {
+    "id": "84",
+    "name": "Indiana",
+    "mascot": "Hoosiers",
+    "logo": "/logos/teams/84.png",
+    "active": true
+  },
+  "MurSt": {
+    "id": "93",
+    "name": "Murray State",
+    "mascot": "Racers",
+    "logo": "/logos/teams/93.png",
+    "active": true
+  },
+  "NK": {
+    "id": "94",
+    "name": "Northern Kentucky",
+    "mascot": "Norse",
+    "logo": "/logos/teams/94.png",
+    "active": true
+  },
+  "UK": {
+    "id": "96",
+    "name": "Kentucky",
+    "mascot": "Wildcats",
+    "logo": "/logos/teams/96.png",
+    "active": true
+  },
+  "UL": {
+    "id": "97",
+    "name": "Louisville",
+    "mascot": "Cardinals",
+    "logo": "/logos/teams/97.png",
+    "active": true
+  },
+  "WKy": {
+    "id": "98",
+    "name": "Western Kentucky",
+    "mascot": "Hilltoppers",
+    "logo": "/logos/teams/98.png",
+    "active": true
+  },
+  "LSU": {
+    "id": "99",
+    "name": "LSU",
+    "mascot": "Tigers",
+    "logo": "/logos/teams/99.png",
+    "active": true
+  },
+  "MSM": {
+    "id": "116",
+    "name": "Mount St. Mary's",
+    "mascot": "Mountaineers",
+    "logo": "/logos/teams/116.png",
+    "active": true
+  },
+  "Mary": {
+    "id": "120",
+    "name": "Maryland",
+    "mascot": "Terrapins",
+    "logo": "/logos/teams/120.png",
+    "active": true
+  },
+  "MicSt": {
+    "id": "127",
+    "name": "Michigan State",
+    "mascot": "Spartans",
+    "logo": "/logos/teams/127.png",
+    "active": true
+  },
+  "Mich": {
+    "id": "130",
+    "name": "Michigan",
+    "mascot": "Wolverines",
+    "logo": "/logos/teams/130.png",
+    "active": true
+  },
+  "Mizz": {
+    "id": "142",
+    "name": "Missouri",
+    "mascot": "Tigers",
+    "logo": "/logos/teams/142.png",
+    "active": true
+  },
+  "OM": {
+    "id": "145",
+    "name": "Ole Miss",
+    "mascot": "Rebels",
+    "logo": "/logos/teams/145.png",
+    "active": true
+  },
+  "MonSt": {
+    "id": "147",
+    "name": "Montana State",
+    "mascot": "Bobcats",
+    "logo": "/logos/teams/147.png",
+    "active": true
+  },
+  "Mont": {
+    "id": "149",
+    "name": "Montana",
+    "mascot": "Grizzlies",
+    "logo": "/logos/teams/149.png",
+    "active": true
+  },
+  "Duke": {
+    "id": "150",
+    "name": "Duke",
+    "mascot": "Blue Devils",
+    "logo": "/logos/teams/150.png",
+    "active": true
+  },
+  "NCSt": {
+    "id": "152",
+    "name": "NC State",
+    "mascot": "Wolfpack",
+    "logo": "/logos/teams/152.png",
+    "active": true
+  },
+  "UNC": {
+    "id": "153",
+    "name": "North Carolina",
+    "mascot": "Tar Heels",
+    "logo": "/logos/teams/153.png",
+    "active": true
+  },
+  "WF": {
+    "id": "154",
+    "name": "Wake Forest",
+    "mascot": "Demon Deacons",
+    "logo": "/logos/teams/154.png",
+    "active": true
+  },
+  "Cre": {
+    "id": "156",
+    "name": "Creighton",
+    "mascot": "Bluejays",
+    "logo": "/logos/teams/156.png",
+    "active": true
+  },
+  "Neb": {
+    "id": "158",
+    "name": "Nebraska",
+    "mascot": "Cornhuskers",
+    "logo": "/logos/teams/158.png",
+    "active": true
+  },
+  "FDU": {
+    "id": "161",
+    "name": "Fairleigh Dickinson",
+    "mascot": "Knights",
+    "logo": "/logos/teams/161.png",
+    "active": true
+  },
+  "Prin": {
+    "id": "163",
+    "name": "Princeton",
+    "mascot": "Tigers",
+    "logo": "/logos/teams/163.png",
+    "active": true
+  },
+  "Rut": {
+    "id": "164",
+    "name": "Rutgers",
+    "mascot": "Scarlet Knights",
+    "logo": "/logos/teams/164.png",
+    "active": true
+  },
+  "NMSt": {
+    "id": "166",
+    "name": "New Mexico State",
+    "mascot": "Aggies",
+    "logo": "/logos/teams/166.png",
+    "active": true
+  },
+  "NewMx": {
+    "id": "167",
+    "name": "New Mexico",
+    "mascot": "Lobos",
+    "logo": "/logos/teams/167.png",
+    "active": true
+  },
+  "StBon": {
+    "id": "179",
+    "name": "St. Bonaventure",
+    "mascot": "Bonnies",
+    "logo": "/logos/teams/179.png",
+    "active": true
+  },
+  "Syr": {
+    "id": "183",
+    "name": "Syracuse",
+    "mascot": "Orange",
+    "logo": "/logos/teams/183.png",
+    "active": true
+  },
+  "OhSt": {
+    "id": "194",
+    "name": "Ohio State",
+    "mascot": "Buckeyes",
+    "logo": "/logos/teams/194.png",
+    "active": true
+  },
+  "Ohio": {
+    "id": "195",
+    "name": "Ohio",
+    "mascot": "Bobcats",
+    "logo": "/logos/teams/195.png",
+    "active": true
+  },
+  "OkSt": {
+    "id": "197",
+    "name": "Oklahoma State",
+    "mascot": "Cowboys",
+    "logo": "/logos/teams/197.png",
+    "active": true
+  },
+  "Orob": {
+    "id": "198",
+    "name": "Oral Roberts",
+    "mascot": "Golden Eagles",
+    "logo": "/logos/teams/198.png",
+    "active": true
+  },
+  "OU": {
+    "id": "201",
+    "name": "Oklahoma",
+    "mascot": "Sooners",
+    "logo": "/logos/teams/201.png",
+    "active": true
+  },
+  "OrSt": {
+    "id": "204",
+    "name": "Oregon State",
+    "mascot": "Beavers",
+    "logo": "/logos/teams/204.png",
+    "active": true
+  },
+  "PSU": {
+    "id": "213",
+    "name": "Penn State",
+    "mascot": "Nittany Lions",
+    "logo": "/logos/teams/213.png",
+    "active": true
+  },
+  "Pitt": {
+    "id": "221",
+    "name": "Pittsburgh",
+    "mascot": "Panthers",
+    "logo": "/logos/teams/221.png",
+    "active": true
+  },
+  "Nova": {
+    "id": "222",
+    "name": "Villanova",
+    "mascot": "Wildcats",
+    "logo": "/logos/teams/222.png",
+    "active": true
+  },
+  "Clem": {
+    "id": "228",
+    "name": "Clemson",
+    "mascot": "Tigers",
+    "logo": "/logos/teams/228.png",
+    "active": true
+  },
+  "CSo": {
+    "id": "232",
+    "name": "Charleston Southern ERROR",
+    "mascot": "Cougars",
+    "logo": "/logos/teams/232.png",
+    "active": true
+  },
+  "Mem": {
+    "id": "235",
+    "name": "Memphis",
+    "mascot": "Tigers",
+    "logo": "/logos/teams/235.png",
+    "active": true
+  },
+  "Chat": {
+    "id": "236",
+    "name": "Chattanooga",
+    "mascot": "Mocs",
+    "logo": "/logos/teams/236.png",
+    "active": true
+  },
+  "Vandy": {
+    "id": "238",
+    "name": "Vanderbilt",
+    "mascot": "Commodores",
+    "logo": "/logos/teams/238.png",
+    "active": true
+  },
+  "Bylr": {
+    "id": "239",
+    "name": "Baylor",
+    "mascot": "Bears",
+    "logo": "/logos/teams/239.png",
+    "active": true
+  },
+  "TA&M": {
+    "id": "245",
+    "name": "Texas A&M",
+    "mascot": "Aggies",
+    "logo": "/logos/teams/245.png",
+    "active": true
+  },
+  "Hou": {
+    "id": "248",
+    "name": "Houston",
+    "mascot": "Cougars",
+    "logo": "/logos/teams/248.png",
+    "active": true
+  },
+  "UNT": {
+    "id": "249",
+    "name": "North Texas",
+    "mascot": "Mean Green",
+    "logo": "/logos/teams/249.png",
+    "active": true
+  },
+  "Texas": {
+    "id": "251",
+    "name": "Texas",
+    "mascot": "Longhorns",
+    "logo": "/logos/teams/251.png",
+    "active": true
+  },
+  "BYU": {
+    "id": "252",
+    "name": "BYU",
+    "mascot": "Cougars",
+    "logo": "/logos/teams/252.png",
+    "active": true
+  },
+  "SUtah": {
+    "id": "253",
+    "name": "Southern Utah",
+    "mascot": "Thunderbirds",
+    "logo": "/logos/teams/253.png",
+    "active": true
+  },
+  "JM": {
+    "id": "256",
+    "name": "James Madison",
+    "mascot": "Dukes",
+    "logo": "/logos/teams/256.png",
+    "active": true
+  },
+  "Rich": {
+    "id": "257",
+    "name": "Richmond",
+    "mascot": "Spiders",
+    "logo": "/logos/teams/257.png",
+    "active": true
+  },
+  "UVA": {
+    "id": "258",
+    "name": "Virginia",
+    "mascot": "Cavaliers",
+    "logo": "/logos/teams/258.png",
+    "active": true
+  },
+  "VT": {
+    "id": "259",
+    "name": "Virginia Tech",
+    "mascot": "Hokies",
+    "logo": "/logos/teams/259.png",
+    "active": true
+  },
+  "Ver": {
+    "id": "261",
+    "name": "Vermont",
+    "mascot": "Catamounts",
+    "logo": "/logos/teams/261.png",
+    "active": true
+  },
+  "WaSt": {
+    "id": "265",
+    "name": "Washington State",
+    "mascot": "Cougars",
+    "logo": "/logos/teams/265.png",
+    "active": true
+  },
+  "Marq": {
+    "id": "269",
+    "name": "Marquette",
+    "mascot": "Golden Eagles",
+    "logo": "/logos/teams/269.png",
+    "active": true
+  },
+  "Wisc": {
+    "id": "275",
+    "name": "Wisconsin",
+    "mascot": "Badgers",
+    "logo": "/logos/teams/275.png",
+    "active": true
+  },
+  "WV": {
+    "id": "277",
+    "name": "West Virginia",
+    "mascot": "Mountaineers",
+    "logo": "/logos/teams/277.png",
+    "active": true
+  },
+  "InSt": {
+    "id": "282",
+    "name": "Indiana State",
+    "mascot": "Sycamores",
+    "logo": "/logos/teams/282.png",
+    "active": true
+  },
+  "Lip": {
+    "id": "288",
+    "name": "Lipscomb",
+    "mascot": "Bisons",
+    "logo": "/logos/teams/288.png",
+    "active": true
+  },
+  "LBSU": {
+    "id": "299",
+    "name": "Long Beach State",
+    "mascot": "Beach",
+    "logo": "/logos/teams/299.png",
+    "active": true
+  },
+  "UCI": {
+    "id": "300",
+    "name": "UC Irvine",
+    "mascot": "Anteaters",
+    "logo": "/logos/teams/300.png",
+    "active": true
+  },
+  "Lou": {
+    "id": "309",
+    "name": "Louisiana",
+    "mascot": "Ragin' Cajuns",
+    "logo": "/logos/teams/309.png",
+    "active": true
+  },
+  "Iona": {
+    "id": "314",
+    "name": "Iona",
+    "mascot": "Gaels",
+    "logo": "/logos/teams/314.png",
+    "active": true
+  },
+  "CleSt": {
+    "id": "325",
+    "name": "Cleveland State",
+    "mascot": "Vikings",
+    "logo": "/logos/teams/325.png",
+    "active": true
+  },
+  "USt": {
+    "id": "328",
+    "name": "Utah State",
+    "mascot": "Aggies",
+    "logo": "/logos/teams/328.png",
+    "active": true
+  },
+  "EW": {
+    "id": "331",
+    "name": "Eastern Washington",
+    "mascot": "Eagles",
+    "logo": "/logos/teams/331.png",
+    "active": true
+  },
+  "Bama": {
+    "id": "333",
+    "name": "Alabama",
+    "mascot": "Crimson Tide",
+    "logo": "/logos/teams/333.png",
+    "active": true
+  },
+  "Knsw": {
+    "id": "338",
+    "name": "Kennesaw State",
+    "mascot": "Owls",
+    "logo": "/logos/teams/338.png",
+    "active": true
+  },
+  "MsSt": {
+    "id": "344",
+    "name": "Mississippi State",
+    "mascot": "Bulldogs",
+    "logo": "/logos/teams/344.png",
+    "active": true
+  },
+  "UNCW": {
+    "id": "350",
+    "name": "UNC Wilmington",
+    "mascot": "Seahawks",
+    "logo": "/logos/teams/350.png",
+    "active": true
+  },
+  "Ill": {
+    "id": "356",
+    "name": "Illinois",
+    "mascot": "Fighting Illini",
+    "logo": "/logos/teams/356.png",
+    "active": true
+  },
+  "TAMCC": {
+    "id": "357",
+    "name": "Texas A&M-Corpus Christi",
+    "mascot": "Islanders",
+    "logo": "/logos/teams/357.png",
+    "active": true
+  },
+  "AbC": {
+    "id": "2000",
+    "name": "Abilene Christian",
+    "mascot": "Wildcats",
+    "logo": "/logos/teams/2000.png",
+    "active": true
+  },
+  "Akron": {
+    "id": "2006",
+    "name": "Akron",
+    "mascot": "Zips",
+    "logo": "/logos/teams/2006.png",
+    "active": true
+  },
+  "AlSt": {
+    "id": "2011",
+    "name": "Alabama State",
+    "mascot": "Hornets",
+    "logo": "/logos/teams/2011.png",
+    "active": true
+  },
+  "Colg": {
+    "id": "2142",
+    "name": "Colgate",
+    "mascot": "Raiders",
+    "logo": "/logos/teams/2142.png",
+    "active": true
+  },
+  "David": {
+    "id": "2166",
+    "name": "Davidson",
+    "mascot": "Wildcats",
+    "logo": "/logos/teams/2166.png",
+    "active": true
+  },
+  "Day": {
+    "id": "2168",
+    "name": "Dayton",
+    "mascot": "Flyers",
+    "logo": "/logos/teams/2168.png",
+    "active": true
+  },
+  "Drk": {
+    "id": "2181",
+    "name": "Drake",
+    "mascot": "Bulldogs",
+    "logo": "/logos/teams/2181.png",
+    "active": true
+  },
+  "Drex": {
+    "id": "2182",
+    "name": "Drexel",
+    "mascot": "Dragons",
+    "logo": "/logos/teams/2182.png",
+    "active": true
+  },
+  "Duq": {
+    "id": "2184",
+    "name": "Duquesne",
+    "mascot": "Dukes",
+    "logo": "/logos/teams/2184.png",
+    "active": true
+  },
+  "FAU": {
+    "id": "2226",
+    "name": "Florida Atlantic",
+    "mascot": "Owls",
+    "logo": "/logos/teams/2226.png",
+    "active": true
+  },
+  "CSUF": {
+    "id": "2239",
+    "name": "Cal State Fullerton",
+    "mascot": "Titans",
+    "logo": "/logos/teams/2239.png",
+    "active": true
+  },
+  "GeoSt": {
+    "id": "2247",
+    "name": "Georgia State",
+    "mascot": "Panthers",
+    "logo": "/logos/teams/2247.png",
+    "active": true
+  },
+  "Gonz": {
+    "id": "2250",
+    "name": "Gonzaga",
+    "mascot": "Bulldogs",
+    "logo": "/logos/teams/2250.png",
+    "active": true
+  },
+  "GCU": {
+    "id": "2253",
+    "name": "Grand Canyon",
+    "mascot": "Lopes",
+    "logo": "/logos/teams/2253.png",
+    "active": true
+  },
+  "High": {
+    "id": "2272",
+    "name": "High Point",
+    "mascot": "Panthers",
+    "logo": "/logos/teams/2272.png",
+    "active": true
+  },
+  "Iowa": {
+    "id": "2294",
+    "name": "Iowa",
+    "mascot": "Hawkeyes",
+    "logo": "/logos/teams/2294.png",
+    "active": true
+  },
+  "KU": {
+    "id": "2305",
+    "name": "Kansas",
+    "mascot": "Jayhawks",
+    "logo": "/logos/teams/2305.png",
+    "active": true
+  },
+  "KSt": {
+    "id": "2306",
+    "name": "Kansas State",
+    "mascot": "Wildcats",
+    "logo": "/logos/teams/2306.png",
+    "active": true
+  },
+  "Kent": {
+    "id": "2309",
+    "name": "Kent State",
+    "mascot": "Golden Flashes",
+    "logo": "/logos/teams/2309.png",
+    "active": true
+  },
+  "Lib": {
+    "id": "2335",
+    "name": "Liberty",
+    "mascot": "Flames",
+    "logo": "/logos/teams/2335.png",
+    "active": true
+  },
+  "Long": {
+    "id": "2344",
+    "name": "Longwood",
+    "mascot": "Lancers",
+    "logo": "/logos/teams/2344.png",
+    "active": true
+  },
+  "LoyC": {
+    "id": "2350",
+    "name": "Loyola Chicago",
+    "mascot": "Ramblers",
+    "logo": "/logos/teams/2350.png",
+    "active": true
+  },
+  "McN": {
+    "id": "2377",
+    "name": "McNeese State",
+    "mascot": "Cowboys",
+    "logo": "/logos/teams/2377.png",
+    "active": true
+  },
+  "Miami": {
+    "id": "2390",
+    "name": "Miami",
+    "mascot": "Hurricanes",
+    "logo": "/logos/teams/2390.png",
+    "active": true
+  },
+  "MorSt": {
+    "id": "2413",
+    "name": "Morehead State",
+    "mascot": "Eagles",
+    "logo": "/logos/teams/2413.png",
+    "active": true
+  },
+  "UNCA": {
+    "id": "2427",
+    "name": "UNC Asheville",
+    "mascot": "Bulldogs",
+    "logo": "/logos/teams/2427.png",
+    "active": true
+  },
+  "UNCG": {
+    "id": "2430",
+    "name": "UNC Greensboro",
+    "mascot": "Spartans",
+    "logo": "/logos/teams/2430.png",
+    "active": true
+  },
+  "Oma": {
+    "id": "2437",
+    "name": "Omaha",
+    "mascot": "Mavericks",
+    "logo": "/logos/teams/2437.png",
+    "active": true
+  },
+  "Nev": {
+    "id": "2440",
+    "name": "Nevada",
+    "mascot": "Wolf Pack",
+    "logo": "/logos/teams/2440.png",
+    "active": true
+  },
+  "NorSt": {
+    "id": "2450",
+    "name": "North Dakota State ERROR",
+    "mascot": "Spartans",
+    "logo": "/logos/teams/2450.png",
+    "active": true
+  },
+  "Oak": {
+    "id": "2473",
+    "name": "Oakland",
+    "mascot": "Golden Grizzlies",
+    "logo": "/logos/teams/2473.png",
+    "active": true
+  },
+  "Ore": {
+    "id": "2483",
+    "name": "Oregon",
+    "mascot": "Ducks",
+    "logo": "/logos/teams/2483.png",
+    "active": true
+  },
+  "Prov": {
+    "id": "2507",
+    "name": "Providence",
+    "mascot": "Friars",
+    "logo": "/logos/teams/2507.png",
+    "active": true
+  },
+  "Purd": {
+    "id": "2509",
+    "name": "Purdue",
+    "mascot": "Boilermakers",
+    "logo": "/logos/teams/2509.png",
+    "active": true
+  },
+  "RM": {
+    "id": "2523",
+    "name": "Robert Morris",
+    "mascot": "Colonials",
+    "logo": "/logos/teams/2523.png",
+    "active": true
+  },
+  "Sam": {
+    "id": "2535",
+    "name": "Sam Houston ERROR",
+    "mascot": "Bulldogs",
+    "logo": "/logos/teams/2535.png",
+    "active": true
+  },
+  "SF": {
+    "id": "2539",
+    "name": "San Francisco",
+    "mascot": "Dons",
+    "logo": "/logos/teams/2539.png",
+    "active": true
+  },
+  "UCSB": {
+    "id": "2540",
+    "name": "UC Santa Barbara",
+    "mascot": "Gauchos",
+    "logo": "/logos/teams/2540.png",
+    "active": true
+  },
+  "SEMO": {
+    "id": "2546",
+    "name": "Southeast Missouri State",
+    "mascot": "Redhawks",
+    "logo": "/logos/teams/2546.png",
+    "active": true
+  },
+  "Seton": {
+    "id": "2550",
+    "name": "Seton Hall",
+    "mascot": "Pirates",
+    "logo": "/logos/teams/2550.png",
+    "active": true
+  },
+  "SIUE": {
+    "id": "2565",
+    "name": "SIU Edwardsville",
+    "mascot": "Cougars",
+    "logo": "/logos/teams/2565.png",
+    "active": true
+  },
+  "SMU": {
+    "id": "2567",
+    "name": "SMU",
+    "mascot": "Mustangs",
+    "logo": "/logos/teams/2567.png",
+    "active": true
+  },
+  "SDkSt": {
+    "id": "2571",
+    "name": "South Dakota State",
+    "mascot": "Jackrabbits",
+    "logo": "/logos/teams/2571.png",
+    "active": true
+  },
+  "SoCar": {
+    "id": "2579",
+    "name": "South Carolina",
+    "mascot": "Gamecocks",
+    "logo": "/logos/teams/2579.png",
+    "active": true
+  },
+  "StFr": {
+    "id": "2598",
+    "name": "Saint Francis",
+    "mascot": "Red Flash",
+    "logo": "/logos/teams/2598.png",
+    "active": true
+  },
+  "StJ": {
+    "id": "2599",
+    "name": "St. John's",
+    "mascot": "Red Storm",
+    "logo": "/logos/teams/2599.png",
+    "active": true
+  },
+  "StMary": {
+    "id": "2608",
+    "name": "Saint Mary's",
+    "mascot": "Gaels",
+    "logo": "/logos/teams/2608.png",
+    "active": true
+  },
+  "StPtr": {
+    "id": "2612",
+    "name": "Saint Peter's",
+    "mascot": "Peacocks",
+    "logo": "/logos/teams/2612.png",
+    "active": true
+  },
+  "TCU": {
+    "id": "2628",
+    "name": "TCU",
+    "mascot": "Horned Frogs",
+    "logo": "/logos/teams/2628.png",
+    "active": true
+  },
+  "Tenn": {
+    "id": "2633",
+    "name": "Tennessee",
+    "mascot": "Volunteers",
+    "logo": "/logos/teams/2633.png",
+    "active": true
+  },
+  "TexSo": {
+    "id": "2640",
+    "name": "Texas Southern",
+    "mascot": "Tigers",
+    "logo": "/logos/teams/2640.png",
+    "active": true
+  },
+  "TTech": {
+    "id": "2641",
+    "name": "Texas Tech",
+    "mascot": "Red Raiders",
+    "logo": "/logos/teams/2641.png",
+    "active": true
+  },
+  "Tol": {
+    "id": "2649",
+    "name": "Toledo",
+    "mascot": "Rockets",
+    "logo": "/logos/teams/2649.png",
+    "active": true
+  },
+  "Troy": {
+    "id": "2653",
+    "name": "Troy",
+    "mascot": "Trojans",
+    "logo": "/logos/teams/2653.png",
+    "active": true
+  },
+  "VCU": {
+    "id": "2670",
+    "name": "VCU",
+    "mascot": "Rams",
+    "logo": "/logos/teams/2670.png",
+    "active": true
+  },
+  "Wag": {
+    "id": "2681",
+    "name": "Wagner",
+    "mascot": "Seahawks",
+    "logo": "/logos/teams/2681.png",
+    "active": true
+  },
+  "Winth": {
+    "id": "2737",
+    "name": "Winthrop",
+    "mascot": "Eagles",
+    "logo": "/logos/teams/2737.png",
+    "active": true
+  },
+  "Wof": {
+    "id": "2747",
+    "name": "Wofford",
+    "mascot": "Terriers",
+    "logo": "/logos/teams/2747.png",
+    "active": true
+  },
+  "Xav": {
+    "id": "2752",
+    "name": "Xavier",
+    "mascot": "Musketeers",
+    "logo": "/logos/teams/2752.png",
+    "active": true
+  },
+  "Grmb": {
+    "id": "2755",
+    "name": "Grambling",
+    "mascot": "Tigers",
+    "logo": "/logos/teams/2755.png",
+    "active": true
+  },
+  "Bry": {
+    "id": "2803",
+    "name": "Bryant",
+    "mascot": "Bulldogs",
+    "logo": "/logos/teams/2803.png",
+    "active": true
+  }
+}
