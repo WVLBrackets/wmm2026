@@ -109,21 +109,41 @@ export async function PUT(
 
     const body = await request.json();
     
-    // If changing status to submitted, check for duplicate names
+    // If changing status to submitted, check for duplicate names within the same year
     if (body.status === 'submitted') {
       const { getBracketsByUserId } = await import('@/lib/secureDatabase');
+      const { getSiteConfigFromGoogleSheets } = await import('@/lib/siteConfig');
+      const { FALLBACK_CONFIG } = await import('@/lib/fallbackConfig');
+      
+      // Get tournament year from config (same logic as createBracket)
+      let tournamentYear = new Date().getFullYear(); // Default fallback
+      try {
+        const config = await getSiteConfigFromGoogleSheets();
+        if (config?.tournamentYear) {
+          tournamentYear = parseInt(config.tournamentYear);
+        }
+      } catch (error) {
+        // Use fallback config if Google Sheets fails
+        if (FALLBACK_CONFIG.tournamentYear) {
+          tournamentYear = parseInt(FALLBACK_CONFIG.tournamentYear);
+        }
+      }
+
       const existingBrackets = await getBracketsByUserId(user.id);
       
-      // Check if there's already a submitted bracket with this name (excluding current bracket)
+      // Check if there's already a submitted bracket with this name for the same year (excluding current bracket)
       const duplicateNameExists = existingBrackets.some(
-        b => b.id !== id && b.entryName === body.entryName && b.status === 'submitted'
+        b => b.id !== id && 
+             b.entryName === body.entryName && 
+             b.status === 'submitted' &&
+             b.year === tournamentYear
       );
 
       if (duplicateNameExists) {
         return NextResponse.json(
           { 
             success: false, 
-            error: `A submitted bracket with the name "${body.entryName}" already exists. Please choose a different name.`
+            error: `A submitted bracket with the name "${body.entryName}" already exists for ${tournamentYear}. Please choose a different name.`
           },
           { status: 400 }
         );

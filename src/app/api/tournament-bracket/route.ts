@@ -80,19 +80,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get tournament year from config (same logic as createBracket)
+    let tournamentYear = new Date().getFullYear(); // Default fallback
+    try {
+      const config = await getSiteConfigFromGoogleSheets();
+      if (config?.tournamentYear) {
+        tournamentYear = parseInt(config.tournamentYear);
+      }
+    } catch (error) {
+      // Use fallback config if Google Sheets fails
+      const { FALLBACK_CONFIG } = await import('@/lib/fallbackConfig');
+      if (FALLBACK_CONFIG.tournamentYear) {
+        tournamentYear = parseInt(FALLBACK_CONFIG.tournamentYear);
+      }
+    }
+
     // Get all existing brackets for this user
     const existingBrackets = await getBracketsByUserId(user.id);
     
-    // Check if there's already a submitted bracket with this name
+    // Check if there's already a submitted bracket with this name for the same year
     const duplicateNameExists = existingBrackets.some(
-      bracket => bracket.entryName === body.entryName && bracket.status === 'submitted'
+      bracket => bracket.entryName === body.entryName && 
+                 bracket.status === 'submitted' && 
+                 bracket.year === tournamentYear
     );
 
     if (duplicateNameExists) {
       return NextResponse.json(
         { 
           success: false, 
-          error: `A submitted bracket with the name "${body.entryName}" already exists. Please choose a different name.`
+          error: `A submitted bracket with the name "${body.entryName}" already exists for ${tournamentYear}. Please choose a different name.`
         },
         { status: 400 }
       );
