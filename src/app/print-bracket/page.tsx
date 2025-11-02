@@ -140,7 +140,7 @@ export default function PrintBracketPage() {
         minHeight: '30px'
       }}>
         {/* Finalist 1 */}
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', paddingRight: '10px' }}>
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', paddingRight: '8px' }}>
           <div style={{
             fontSize: '14px',
             display: 'flex',
@@ -174,13 +174,14 @@ export default function PrintBracketPage() {
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'center',
-          minWidth: '60px'
+          minWidth: '60px',
+          flexShrink: 0
         }}>
           <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#374151' }}>VS</div>
         </div>
 
         {/* Finalist 2 */}
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', paddingLeft: '10px' }}>
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', paddingLeft: '8px' }}>
           <div style={{
             fontSize: '14px',
             display: 'flex',
