@@ -687,7 +687,7 @@ export default function PrintBracketPage() {
         fontSize: '20px'
       }}>
         {/* Left: Warren's March Madness + Year */}
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', alignItems: 'center', paddingLeft: '20px' }}>
           <span>Warren&apos;s March Madness {siteConfig?.tournamentYear || ''}</span>
         </div>
         
@@ -696,12 +696,11 @@ export default function PrintBracketPage() {
           <span>{bracketData?.entryName as string || ''}</span>
         </div>
         
-        {/* Right: Your Champ: Seed Team Mascot Logo */}
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '6px' }}>
-          <span>Your Champ:</span>
+        {/* Right: Champ: Team Mascot Logo */}
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '6px', paddingRight: '20px' }}>
+          <span>Champ:</span>
           {championTeam && (
             <>
-              <span>#{championTeam.seed}</span>
               <span>{championTeam.name}</span>
               {championMascot && <span>{championMascot}</span>}
               {championTeam.logo && (
