@@ -130,16 +130,15 @@ export default function PrintBracketPage() {
             minHeight: '30px',
             width: '50%',
             display: 'flex',
-            flexDirection: 'column',
+            flexDirection: 'row',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'flex-end',
+            gap: '4px'
           }}>
             {finalist1 ? (
               <>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '4px' }}>
-                  <span style={{ fontWeight: 'bold', marginRight: '4px' }}>#{finalist1.seed}</span>
-                  <span>{finalist1.name}</span>
-                </div>
+                <span style={{ fontWeight: 'bold' }}>#{finalist1.seed}</span>
+                <span>{finalist1.name}</span>
                 {finalist1.logo && (
                   <Image
                     src={finalist1.logo}
@@ -160,7 +159,8 @@ export default function PrintBracketPage() {
         <div style={{ 
           display: 'flex', 
           alignItems: 'center', 
-          justifyContent: 'center'
+          justifyContent: 'center',
+          minWidth: '60px'
         }}>
           <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#374151' }}>VS</div>
         </div>
@@ -176,16 +176,13 @@ export default function PrintBracketPage() {
             minHeight: '30px',
             width: '50%',
             display: 'flex',
-            flexDirection: 'column',
+            flexDirection: 'row',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'flex-start',
+            gap: '4px'
           }}>
             {finalist2 ? (
               <>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '4px' }}>
-                  <span style={{ fontWeight: 'bold', marginRight: '4px' }}>#{finalist2.seed}</span>
-                  <span>{finalist2.name}</span>
-                </div>
                 {finalist2.logo && (
                   <Image
                     src={finalist2.logo}
@@ -195,6 +192,8 @@ export default function PrintBracketPage() {
                     style={{ objectFit: 'contain', flexShrink: 0 }}
                   />
                 )}
+                <span style={{ fontWeight: 'bold' }}>#{finalist2.seed}</span>
+                <span>{finalist2.name}</span>
               </>
             ) : (
               <span style={{ color: '#9ca3af' }}>Finalist 2</span>
