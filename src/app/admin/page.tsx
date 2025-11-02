@@ -1696,8 +1696,15 @@ export default function AdminPage() {
               </div>
               {!isAddingTeam && (
                 <div className="flex flex-col space-y-2">
-                  {/* Row 1: Bulk actions and Add Team */}
+                  {/* Row 1: Add Team and bulk actions */}
                   <div className="flex items-center space-x-2">
+                    <button
+                      onClick={handleAddTeam}
+                      className="flex items-center space-x-1 px-3 py-1.5 text-sm bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Add Team</span>
+                    </button>
                     <button
                       onClick={handleDeleteFilteredTeams}
                       disabled={getFilteredTeams().length === 0}
@@ -1724,13 +1731,6 @@ export default function AdminPage() {
                     >
                       <PowerOff className="h-4 w-4" />
                       <span>Deactivate</span>
-                    </button>
-                    <button
-                      onClick={handleAddTeam}
-                      className="flex items-center space-x-1 px-3 py-1.5 text-sm bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span>Add Team</span>
                     </button>
                   </div>
                   {/* Row 2: Tournament and Export actions */}
