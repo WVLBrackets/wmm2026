@@ -318,18 +318,26 @@ export default function TournamentBuilderPage() {
 
     setIsSaving(true);
     try {
+      // Define the matchup order for teams (same as displayed on screen)
+      // Order: 1, 16, 8, 9, 5, 12, 4, 13, 6, 11, 3, 14, 7, 10, 2, 15
+      // Corresponds to array indices: 0, 15, 7, 8, 4, 11, 3, 12, 5, 10, 2, 13, 6, 9, 1, 14
+      const matchupOrder = [0, 15, 7, 8, 4, 11, 3, 12, 5, 10, 2, 13, 6, 9, 1, 14];
+      
       const tournamentData = {
         year: year,
         name: tournamentName,
         regions: regions.map(region => ({
           name: region.name,
           position: region.position,
-          teams: region.teams.map(team => ({
-            id: team.id,
-            name: team.name,
-            seed: team.seed,
-            logo: team.logo,
-          })),
+          teams: matchupOrder.map(index => {
+            const team = region.teams[index];
+            return {
+              id: team.id,
+              name: team.name,
+              seed: team.seed,
+              logo: team.logo,
+            };
+          }),
         })),
         finalFour: {
           location: finalFourLocation,
