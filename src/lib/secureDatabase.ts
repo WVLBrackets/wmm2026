@@ -143,6 +143,24 @@ export async function initializeDatabase() {
       )
     `;
 
+    // Create team_reference_data table for managing team data
+    // Note: This table is created in PROD database and accessed by both staging and prod
+    // No environment column needed since all environments share the same data
+    const { teamDataSql } = await import('./teamDataConnection');
+    await teamDataSql`
+      CREATE TABLE IF NOT EXISTS team_reference_data (
+        key VARCHAR(50) PRIMARY KEY,
+        id VARCHAR(20) NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        mascot VARCHAR(255),
+        logo VARCHAR(500),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+    
+    await teamDataSql`CREATE INDEX IF NOT EXISTS idx_team_ref_id ON team_reference_data(id)`;
+
     // Create environment-specific indexes for performance
     await sql`CREATE INDEX IF NOT EXISTS idx_users_email_env ON users(email, environment)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_users_environment ON users(environment)`;
@@ -807,5 +825,266 @@ export async function deleteUser(userId: string): Promise<boolean> {
   } catch (error) {
     console.error('Error deleting user:', error);
     throw error;
+  }
+}
+
+/**
+ * Get all team reference data from database
+ * Uses production database connection (shared between staging and prod)
+ * @param activeOnly - If true, only returns active teams
+ */
+export async function getAllTeamReferenceData(activeOnly: boolean = false): Promise<Record<string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }>> {
+  try {
+    const { teamDataSql } = await import('./teamDataConnection');
+    let result;
+    
+    if (activeOnly) {
+      result = await teamDataSql`
+        SELECT key, id, name, mascot, logo, COALESCE(active, false) as active
+        FROM team_reference_data
+        WHERE COALESCE(active, false) = true
+        ORDER BY CAST(id AS INTEGER)
+      `;
+    } else {
+      result = await teamDataSql`
+        SELECT key, id, name, mascot, logo, COALESCE(active, false) as active
+        FROM team_reference_data
+        ORDER BY CAST(id AS INTEGER)
+      `;
+    }
+    
+    const teams: Record<string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }> = {};
+    for (const row of result.rows) {
+      teams[row.key as string] = {
+        id: row.id as string,
+        name: row.name as string,
+        mascot: (row.mascot as string) || undefined,
+        logo: (row.logo as string) || '',
+        active: (row.active as boolean) ?? false,
+      };
+    }
+    
+    return teams;
+  } catch (error) {
+    console.error('Error getting team reference data:', error);
+    // If table doesn't exist, return empty object
+    if (error instanceof Error && (
+      error.message.includes('does not exist') || 
+      error.message.includes('relation')
+    )) {
+      return {};
+    }
+    throw error;
+  }
+}
+
+/**
+ * Update team reference data (replace all teams)
+ * Uses production database connection (shared between staging and prod)
+ */
+export async function updateTeamReferenceData(teams: Record<string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }>): Promise<void> {
+  try {
+    const { teamDataSql } = await import('./teamDataConnection');
+    
+    // Delete all existing teams (no environment filter needed)
+    await teamDataSql`
+      DELETE FROM team_reference_data
+    `;
+    
+    // Insert all teams
+    const entries = Object.entries(teams);
+    if (entries.length > 0) {
+      for (const [key, team] of entries) {
+        // Determine active status: if not specified, use non-numerical abbreviation logic
+        const isActive = team.active ?? (!/^[0-9]+$/.test(key));
+        
+        await teamDataSql`
+          INSERT INTO team_reference_data (key, id, name, mascot, logo, active, updated_at)
+          VALUES (${key}, ${team.id}, ${team.name}, ${team.mascot || null}, ${team.logo || null}, ${isActive}, CURRENT_TIMESTAMP)
+          ON CONFLICT (key) DO UPDATE
+          SET id = EXCLUDED.id,
+              name = EXCLUDED.name,
+              mascot = EXCLUDED.mascot,
+              logo = EXCLUDED.logo,
+              active = EXCLUDED.active,
+              updated_at = CURRENT_TIMESTAMP
+        `;
+      }
+    }
+  } catch (error) {
+    console.error('Error updating team reference data:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update a single team's active status
+ */
+export async function updateTeamActiveStatus(key: string, active: boolean): Promise<void> {
+  try {
+    const { teamDataSql } = await import('./teamDataConnection');
+    
+    await teamDataSql`
+      UPDATE team_reference_data
+      SET active = ${active}, updated_at = CURRENT_TIMESTAMP
+      WHERE key = ${key}
+    `;
+  } catch (error) {
+    console.error('Error updating team active status:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete a team from team reference data by key
+ * Uses production database connection (shared between staging and prod)
+ */
+export async function deleteTeamReferenceData(key: string): Promise<void> {
+  try {
+    const { teamDataSql } = await import('./teamDataConnection');
+    
+    await teamDataSql`
+      DELETE FROM team_reference_data
+      WHERE key = ${key}
+    `;
+  } catch (error) {
+    console.error('Error deleting team reference data:', error);
+    throw error;
+  }
+}
+
+/**
+ * Initialize team_reference_data table in production database
+ * This is called before any team data operations
+ */
+export async function initializeTeamDataTable(): Promise<void> {
+  try {
+    const { teamDataSql } = await import('./teamDataConnection');
+    await teamDataSql`
+      CREATE TABLE IF NOT EXISTS team_reference_data (
+        key VARCHAR(50) PRIMARY KEY,
+        id VARCHAR(20) NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        mascot VARCHAR(255),
+        logo VARCHAR(500),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+    
+    await teamDataSql`CREATE INDEX IF NOT EXISTS idx_team_ref_id ON team_reference_data(id)`;
+    
+    // Add mascot column if it doesn't exist (safe migration for existing databases)
+    try {
+      const columnCheck = await teamDataSql`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'team_reference_data' 
+          AND column_name = 'mascot'
+          AND table_schema = current_schema()
+      `;
+      
+      if (columnCheck.rows.length === 0) {
+        console.log('[initializeTeamDataTable] Adding mascot column to team_reference_data table');
+        await teamDataSql`ALTER TABLE team_reference_data ADD COLUMN mascot VARCHAR(255)`;
+        console.log('[initializeTeamDataTable] Successfully added mascot column');
+      }
+    } catch (mascotError) {
+      // Column might already exist or there's an issue, but don't fail initialization
+      if (mascotError instanceof Error && (
+        mascotError.message.includes('already exists') || 
+        mascotError.message.includes('duplicate column')
+      )) {
+        console.log('[initializeTeamDataTable] mascot column already exists');
+      } else {
+        console.error('[initializeTeamDataTable] Error checking/adding mascot column:', mascotError);
+      }
+    }
+
+    // Add active column if it doesn't exist (safe migration for existing databases)
+    try {
+      const activeColumnCheck = await teamDataSql`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'team_reference_data' 
+          AND column_name = 'active'
+          AND table_schema = current_schema()
+      `;
+      
+      if (activeColumnCheck.rows.length === 0) {
+        console.log('[initializeTeamDataTable] Adding active column to team_reference_data table');
+        await teamDataSql`ALTER TABLE team_reference_data ADD COLUMN active BOOLEAN DEFAULT false`;
+        console.log('[initializeTeamDataTable] Successfully added active column');
+        
+        // Set initial active status based on abbreviation (non-numerical = active)
+        await teamDataSql`
+          UPDATE team_reference_data 
+          SET active = true 
+          WHERE key !~ '^[0-9]+$'
+        `;
+        console.log('[initializeTeamDataTable] Set initial active status for teams');
+      }
+    } catch (activeError) {
+      // Column might already exist or there's an issue, but don't fail initialization
+      if (activeError instanceof Error && (
+        activeError.message.includes('already exists') || 
+        activeError.message.includes('duplicate column')
+      )) {
+        console.log('[initializeTeamDataTable] active column already exists');
+      } else {
+        console.error('[initializeTeamDataTable] Error checking/adding active column:', activeError);
+      }
+    }
+    
+    console.log('[initializeTeamDataTable] Team reference data table initialized');
+  } catch (error) {
+    console.error('[initializeTeamDataTable] Error initializing team data table:', error);
+    // Don't throw - allow function to continue even if table creation fails
+    // (might already exist)
+  }
+}
+
+/**
+ * Sync team data from JSON file to database
+ * This runs when the database is empty, regardless of environment
+ * In staging/prod, once data exists, it's managed via Admin Panel
+ */
+export async function syncTeamDataFromJSON(): Promise<void> {
+  try {
+    const { teamDataSql } = await import('./teamDataConnection');
+    
+    // Check if we already have data in the database
+    const existingCount = await teamDataSql`
+      SELECT COUNT(*) as count
+      FROM team_reference_data
+    `;
+    
+    if ((existingCount.rows[0]?.count as number) > 0) {
+      console.log('[syncTeamDataFromJSON] Team data already exists in database, skipping sync');
+      return;
+    }
+    
+    // Database is empty, try to sync from JSON file
+    console.log('[syncTeamDataFromJSON] Database is empty, attempting to sync from JSON file');
+    
+    // Try to read from JSON file and import
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    const filePath = path.join(process.cwd(), 'public', 'data', 'team-mappings.json');
+    
+    try {
+      const fileContents = await fs.readFile(filePath, 'utf8');
+      const teamData = JSON.parse(fileContents);
+      
+      // Import all teams
+      await updateTeamReferenceData(teamData);
+      console.log('[syncTeamDataFromJSON] Successfully synced team data from JSON to database');
+    } catch (fileError) {
+      console.error('[syncTeamDataFromJSON] Could not read JSON file:', fileError);
+      // Continue - database will be empty but functional
+    }
+  } catch (error) {
+    console.error('[syncTeamDataFromJSON] Error syncing team data:', error);
+    // Don't throw - allow function to continue even if sync fails
   }
 }

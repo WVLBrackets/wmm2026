@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { TournamentData, TournamentBracket, BracketSubmission } from '@/types/tournament';
@@ -40,16 +40,7 @@ function BracketContent() {
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
 
-  useEffect(() => {
-    if (status === 'loading') return;
-    
-    if (status === 'unauthenticated') {
-      router.push('/auth/signin');
-      return;
-    }
-    
-    loadTournament();
-  }, [status, router]);
+  const loadTournamentRef = useRef<(() => Promise<void>) | undefined>(undefined);
 
   // Check for admin mode and edit parameter
   useEffect(() => {
@@ -77,18 +68,22 @@ function BracketContent() {
     }
   }, [session?.user?.name, entryName]);
 
+  // Assign function to ref after it's declared
   const loadTournament = async () => {
     try {
       setIsLoading(true);
-      const data = await loadTournamentData('2025');
+      
+      // Load site config first to get tournament year
+      const config = await getSiteConfigFromGoogleSheets();
+      setSiteConfig(config);
+      
+      // Use tournament year from config (fallback to '2025' if not available)
+      const tournamentYear = config?.tournamentYear || '2025';
+      const data = await loadTournamentData(tournamentYear);
       setTournamentData(data);
       
       const bracketData = generate64TeamBracket(data);
       setBracket(bracketData);
-      
-      // Load site config
-      const config = await getSiteConfigFromGoogleSheets();
-      setSiteConfig(config);
       
       // Load user's submitted brackets
       await loadSubmittedBrackets();
@@ -98,6 +93,20 @@ function BracketContent() {
       setIsLoading(false);
     }
   };
+
+  // Assign function to ref after it's declared
+  loadTournamentRef.current = loadTournament;
+
+  useEffect(() => {
+    if (status === 'loading') return;
+    
+    if (status === 'unauthenticated') {
+      router.push('/auth/signin');
+      return;
+    }
+    
+    loadTournamentRef.current?.();
+  }, [status, router]);
 
   const loadSubmittedBrackets = async () => {
     try {

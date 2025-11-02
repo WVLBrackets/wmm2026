@@ -5,6 +5,7 @@ import { useBracketMode } from '@/contexts/BracketModeContext';
 import { generate64TeamBracket, updateBracketWithPicks } from '@/lib/bracketGenerator';
 import { loadTournamentData } from '@/lib/tournamentLoader';
 import { getTeamInfo } from '@/lib/teamLogos';
+import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
 import { TournamentTeam, TournamentData } from '@/types/tournament';
 import Image from 'next/image';
 
@@ -21,8 +22,12 @@ export default function PrintBracketPage() {
     
     const loadBracketData = async () => {
       try {
-        // Load tournament data first
-        const tournamentData = await loadTournamentData('2025');
+        // Load site config first to get tournament year
+        const config = await getSiteConfigFromGoogleSheets();
+        
+        // Use tournament year from config (fallback to '2025' if not available)
+        const tournamentYear = config?.tournamentYear || '2025';
+        const tournamentData = await loadTournamentData(tournamentYear);
         setTournamentData(tournamentData as unknown as Record<string, unknown>);
         
         const storedBracketData = sessionStorage.getItem('printBracketData');

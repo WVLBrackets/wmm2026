@@ -8,6 +8,7 @@ import {
   getUserByEmail,
   getAllBrackets 
 } from '@/lib/secureDatabase';
+import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
 
 /**
  * POST /api/tournament-bracket - Create a new tournament bracket (submit)
@@ -265,11 +266,18 @@ export async function GET() {
       );
     }
 
+    // Get tournament year from config
+    const config = await getSiteConfigFromGoogleSheets();
+    const tournamentYear = config?.tournamentYear ? parseInt(config.tournamentYear) : new Date().getFullYear();
+    
     // Get all brackets for this user
     const brackets = await getBracketsByUserId(user.id);
     
+    // Filter brackets to only include current tournament year
+    const currentYearBrackets = brackets.filter(bracket => bracket.year === tournamentYear);
+    
     // Transform to frontend format
-    const formattedBrackets = brackets.map(bracket => ({
+    const formattedBrackets = currentYearBrackets.map(bracket => ({
       id: bracket.id,
       playerName: user.name,
       playerEmail: user.email,

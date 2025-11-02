@@ -59,4 +59,5 @@ export interface BracketSubmission {
   };
   totalPoints?: number;
   status: 'in_progress' | 'submitted';
+  year?: number;
 }

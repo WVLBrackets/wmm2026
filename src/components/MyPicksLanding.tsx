@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useSession } from 'next-auth/react';
-import { Trophy, Plus, Edit, Eye, Clock, CheckCircle, LogOut, Trash2, Copy, Printer, ShieldCheck } from 'lucide-react';
+import { Trophy, Plus, Edit, Eye, Clock, CheckCircle, LogOut, Trash2, Copy, Printer } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { TournamentData, TournamentBracket } from '@/types/tournament';
 import { SiteConfigData } from '@/lib/siteConfig';
@@ -19,6 +19,7 @@ interface Bracket {
   picks: { [gameId: string]: string };
   status: 'in_progress' | 'submitted' | 'deleted';
   totalPoints?: number;
+  year?: number;
 }
 
 interface MyPicksLandingProps {
@@ -35,27 +36,15 @@ interface MyPicksLandingProps {
 
 export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBracket, onDeleteBracket, onCopyBracket, deletingBracketId, tournamentData, bracket, siteConfig }: MyPicksLandingProps) {
   const { data: session } = useSession();
-  const [isAdmin, setIsAdmin] = useState(false);
   
-  // Filter out deleted brackets from user view
-  const visibleBrackets = brackets.filter(b => b.status !== 'deleted');
-
-  // Check if current user is admin
-  useEffect(() => {
-    const checkAdmin = async () => {
-      if (session?.user?.email) {
-        try {
-          const response = await fetch('/api/check-admin');
-          const data = await response.json();
-          setIsAdmin(data.isAdmin);
-        } catch (error) {
-          console.error('Error checking admin status:', error);
-          setIsAdmin(false);
-        }
-      }
-    };
-    checkAdmin();
-  }, [session]);
+  // Get tournament year from config or tournament data
+  const tournamentYear = siteConfig?.tournamentYear ? parseInt(siteConfig.tournamentYear) : (tournamentData?.year ? parseInt(tournamentData.year) : new Date().getFullYear());
+  
+  // Filter out deleted brackets and filter by tournament year
+  const visibleBrackets = brackets.filter(b => 
+    b.status !== 'deleted' && 
+    (b.year === tournamentYear || (!b.year && tournamentYear === new Date().getFullYear()))
+  );
 
   // Calculate bracket progress (number of picks out of 63)
   const calculateProgress = (picks: { [gameId: string]: string }) => {
@@ -311,16 +300,6 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                 <Plus className="h-4 w-4" />
                 <span>New Bracket</span>
               </button>
-              
-              {isAdmin && (
-                <button
-                  onClick={() => window.location.href = '/admin'}
-                  className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center space-x-2 cursor-pointer"
-                >
-                  <ShieldCheck className="h-4 w-4" />
-                  <span>Admin</span>
-                </button>
-              )}
               
               <button
                 onClick={() => signOut({ callbackUrl: '/auth/signin' })}

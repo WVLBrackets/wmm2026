@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Trash2, Edit, Save, X, Users, Trophy, CheckCircle, Key, Edit3, LogOut, Link2, Database, Plus } from 'lucide-react';
+import { Trash2, Edit, Save, X, Users, Trophy, CheckCircle, Key, Edit3, LogOut, Link2, Table, Plus, Download, AlertCircle } from 'lucide-react';
 import { useBracketMode } from '@/contexts/BracketModeContext';
 
 interface User {
@@ -46,38 +46,36 @@ export default function AdminPage() {
   const [filteredBrackets, setFilteredBrackets] = useState<Bracket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'brackets' | 'users' | 'data'>('brackets');
+  const [activeTab, setActiveTab] = useState<'brackets' | 'users' | 'data'>('users');
   const [editingBracket, setEditingBracket] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Bracket>>({});
   const [filterUser, setFilterUser] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterYear, setFilterYear] = useState<string>('all');
   const [changingPasswordUserId, setChangingPasswordUserId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [passwordError, setPasswordError] = useState<string>('');
   const [showEndpoints, setShowEndpoints] = useState(false);
-  const [teamData, setTeamData] = useState<Record<string, { id: string; name: string; logo: string }>>({});
+  const [teamData, setTeamData] = useState<Record<string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }>>({});
   const [editingTeam, setEditingTeam] = useState<string | null>(null);
-  const [editingTeamData, setEditingTeamData] = useState<{ key: string; id: string; name: string; logo: string } | null>(null);
+  const [editingTeamData, setEditingTeamData] = useState<{ key: string; id: string; name: string; mascot?: string; logo: string; active?: boolean } | null>(null);
   const [isAddingTeam, setIsAddingTeam] = useState(false);
-  const [newTeamData, setNewTeamData] = useState<{ key: string; id: string; name: string; logo: string }>({ key: '', id: '', name: '', logo: '' });
+  const [newTeamData, setNewTeamData] = useState<{ key: string; id: string; name: string; mascot?: string; logo: string; active?: boolean }>({ key: '', id: '', name: '', mascot: '', logo: '', active: true });
   const [teamDataError, setTeamDataError] = useState('');
+  const [teamFilters, setTeamFilters] = useState<{ key: string; id: string; name: string; mascot: string; logo: string }>({ key: '', id: '', name: '', mascot: '', logo: '' });
+  const [teamSortColumn, setTeamSortColumn] = useState<'name' | 'mascot' | 'key' | 'id' | null>('name');
+  const [teamSortOrder, setTeamSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [duplicateCheck, setDuplicateCheck] = useState<{ hasDuplicates: boolean; duplicateIds: string[] }>({ hasDuplicates: false, duplicateIds: [] });
+  const [isDevelopment, setIsDevelopment] = useState(false);
+  const [teamActiveFilter, setTeamActiveFilter] = useState<'all' | 'active' | 'inactive'>('active');
 
   // Ensure bracket mode is disabled when admin page loads
   useEffect(() => {
     setInBracketMode(false);
   }, [setInBracketMode]);
 
-  useEffect(() => {
-    if (status === 'loading') return;
-    
-    if (status === 'unauthenticated') {
-      router.push('/auth/signin');
-      return;
-    }
-    
-    loadData();
-  }, [status, router]);
+  const loadDataRef = useRef<(() => Promise<void>) | undefined>(undefined);
 
   useEffect(() => {
     // Filter brackets when filters change
@@ -91,16 +89,15 @@ export default function AdminPage() {
       filtered = filtered.filter(b => b.status === filterStatus);
     }
     
-    setFilteredBrackets(filtered);
-  }, [brackets, filterUser, filterStatus]);
-
-  useEffect(() => {
-    // Load team data when Data tab is active
-    if (activeTab === 'data') {
-      loadTeamData();
+    if (filterYear !== 'all') {
+      const yearNum = parseInt(filterYear);
+      filtered = filtered.filter(b => b.year === yearNum);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+    
+    setFilteredBrackets(filtered);
+  }, [brackets, filterUser, filterStatus, filterYear]);
+
+  const loadTeamDataRef = useRef<(() => Promise<void>) | undefined>(undefined);
 
   const loadData = async () => {
     try {
@@ -138,19 +135,174 @@ export default function AdminPage() {
   const loadTeamData = async () => {
     try {
       setTeamDataError('');
-      const response = await fetch('/api/admin/team-data');
+      setIsLoading(true);
+      
+      // Build URL with active filter
+      let url = '/api/admin/team-data';
+      if (teamActiveFilter === 'active') {
+        url += '?activeOnly=true';
+      } else if (teamActiveFilter === 'inactive') {
+        // For inactive, we need all teams and filter client-side
+        url += '';
+      } else {
+        // 'all' - get all teams
+        url += '';
+      }
+      
+      const response = await fetch(url);
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to load team data');
+        const errorMessage = data.error || 'Failed to load team data';
+        throw new Error(errorMessage);
       }
       
-      setTeamData(data.data || {});
+      // Type assertion for team data from API
+      const loadedData = (data.data as Record<string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }>) || {};
+      
+      // Filter by active status if needed
+      let filteredData = loadedData;
+      if (teamActiveFilter === 'inactive') {
+        filteredData = Object.fromEntries(
+          Object.entries(loadedData).filter(([_, team]) => !team.active)
+        );
+      } else if (teamActiveFilter === 'active') {
+        filteredData = Object.fromEntries(
+          Object.entries(loadedData).filter(([_, team]) => team.active !== false)
+        );
+      }
+      
+      setTeamData(filteredData);
+      setTeamDataError(''); // Clear any previous errors
+      
+      // Run duplicate check after loading data
+      checkForDuplicates(filteredData);
     } catch (error) {
       console.error('Error loading team data:', error);
-      setTeamDataError('Failed to load team data');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load team data';
+      setTeamDataError(errorMessage);
+      setTeamData({}); // Clear team data on error
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  /**
+   * Check for duplicate values in Team (name), Abbreviation (key), and ID columns
+   */
+  const checkForDuplicates = (data: Record<string, { id: string; name: string; logo: string }>) => {
+    const nameCounts: Record<string, string[]> = {};
+    const keyCounts: Record<string, string[]> = {};
+    const idCounts: Record<string, string[]> = {};
+    const duplicateIds: Set<string> = new Set();
+
+    // Count occurrences of each value
+    Object.entries(data).forEach(([key, team]) => {
+      // Check for duplicate names
+      if (team.name) {
+        const nameKey = team.name.toLowerCase();
+        if (!nameCounts[nameKey]) {
+          nameCounts[nameKey] = [];
+        }
+        nameCounts[nameKey].push(key);
+      }
+
+      // Check for duplicate keys
+      if (key) {
+        const keyLower = key.toLowerCase();
+        if (!keyCounts[keyLower]) {
+          keyCounts[keyLower] = [];
+        }
+        keyCounts[keyLower].push(key);
+      }
+
+      // Check for duplicate IDs
+      if (team.id) {
+        const idKey = team.id.toLowerCase();
+        if (!idCounts[idKey]) {
+          idCounts[idKey] = [];
+        }
+        idCounts[idKey].push(key);
+      }
+    });
+
+    // Find duplicates (values that appear more than once)
+    Object.entries(nameCounts).forEach(([name, keys]) => {
+      if (keys.length > 1) {
+        keys.forEach(k => duplicateIds.add(k));
+      }
+    });
+
+    Object.entries(keyCounts).forEach(([key, keys]) => {
+      if (keys.length > 1) {
+        keys.forEach(k => duplicateIds.add(k));
+      }
+    });
+
+    Object.entries(idCounts).forEach(([id, keys]) => {
+      if (keys.length > 1) {
+        keys.forEach(k => duplicateIds.add(k));
+      }
+    });
+
+    // Get the IDs of teams with duplicates
+    const duplicateIdList = Array.from(duplicateIds).map(key => {
+      const team = data[key];
+      return team ? team.id : key;
+    });
+
+    setDuplicateCheck({
+      hasDuplicates: duplicateIds.size > 0,
+      duplicateIds: duplicateIdList
+    });
+  };
+
+  /**
+   * Handle column sorting
+   */
+  const handleSort = (column: 'name' | 'mascot' | 'key' | 'id') => {
+    if (teamSortColumn === column) {
+      // Same column, toggle order
+      setTeamSortOrder(teamSortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New column, default to ascending
+      setTeamSortColumn(column);
+      setTeamSortOrder('asc');
+    }
+  };
+
+  // Assign functions to refs after they're declared
+  loadDataRef.current = loadData;
+  loadTeamDataRef.current = loadTeamData;
+
+  useEffect(() => {
+    if (status === 'loading') return;
+    
+    if (status === 'unauthenticated') {
+      router.push('/auth/signin');
+      return;
+    }
+    
+    // Check if we're in development (hide Team Data tab)
+    const hostname = window.location.hostname;
+    setIsDevelopment(hostname === 'localhost' || hostname === '127.0.0.1');
+    
+    loadDataRef.current?.();
+  }, [status, router]);
+
+  useEffect(() => {
+    // Load team data when Data tab is active
+    if (activeTab === 'data') {
+      loadTeamDataRef.current?.();
+    }
+  }, [activeTab]);
+
+  // Reload team data when filter changes
+  useEffect(() => {
+    if (activeTab === 'data' && loadTeamDataRef.current) {
+      loadTeamDataRef.current();
+    }
+  }, [teamActiveFilter, activeTab]);
 
   const handleEditTeam = (key: string) => {
     const team = teamData[key];
@@ -159,7 +311,9 @@ export default function AdminPage() {
       key,
       id: team.id,
       name: team.name,
+      mascot: team.mascot,
       logo: team.logo,
+      active: team.active ?? false,
     });
   };
 
@@ -197,7 +351,9 @@ export default function AdminPage() {
       updatedTeamData[editingTeamData.key] = {
         id: editingTeamData.id,
         name: editingTeamData.name,
+        mascot: editingTeamData.mascot || undefined,
         logo: editingTeamData.logo,
+        active: editingTeamData.active ?? false,
       };
 
       const response = await fetch('/api/admin/team-data', {
@@ -216,20 +372,50 @@ export default function AdminPage() {
       await loadTeamData();
       setEditingTeam(null);
       setEditingTeamData(null);
+      
+      // Duplicate check will run in loadTeamData
     } catch (error) {
       console.error('Error saving team data:', error);
       setTeamDataError(error instanceof Error ? error.message : 'Failed to save team data');
     }
   };
 
+  const handleDeleteTeam = async (key: string) => {
+    if (!confirm(`Are you sure you want to delete team "${teamData[key]?.name || key}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setTeamDataError('');
+
+    try {
+      const response = await fetch(`/api/admin/team-data?key=${encodeURIComponent(key)}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete team');
+      }
+
+      // Reload team data
+      await loadTeamData();
+      
+      // Duplicate check will run in loadTeamData
+    } catch (error) {
+      console.error('Error deleting team:', error);
+      setTeamDataError(error instanceof Error ? error.message : 'Failed to delete team');
+    }
+  };
+
   const handleAddTeam = () => {
     setIsAddingTeam(true);
-    setNewTeamData({ key: '', id: '', name: '', logo: '' });
+    setNewTeamData({ key: '', id: '', name: '', mascot: '', logo: '', active: true });
   };
 
   const handleCancelAddTeam = () => {
     setIsAddingTeam(false);
-    setNewTeamData({ key: '', id: '', name: '', logo: '' });
+    setNewTeamData({ key: '', id: '', name: '', mascot: '', logo: '', active: true });
   };
 
   const handleSaveNewTeam = async () => {
@@ -253,7 +439,9 @@ export default function AdminPage() {
         [newTeamData.key]: {
           id: newTeamData.id,
           name: newTeamData.name,
+          mascot: newTeamData.mascot || undefined,
           logo: newTeamData.logo,
+          active: newTeamData.active ?? true,
         },
       };
 
@@ -272,10 +460,113 @@ export default function AdminPage() {
       // Reload team data to get sorted version
       await loadTeamData();
       setIsAddingTeam(false);
-      setNewTeamData({ key: '', id: '', name: '', logo: '' });
+      setNewTeamData({ key: '', id: '', name: '', mascot: '', logo: '', active: true });
+      
+      // Duplicate check will run in loadTeamData
     } catch (error) {
       console.error('Error saving new team:', error);
       setTeamDataError(error instanceof Error ? error.message : 'Failed to save new team');
+    }
+  };
+
+  const handleExportTeamData = async () => {
+    try {
+      // Filter team data based on current view filters
+      const filteredTeams = Object.entries(teamData)
+        .filter(([key, team]) => {
+          // Apply active filter
+          if (teamActiveFilter === 'active') {
+            if (!(team.active ?? false)) return false;
+          } else if (teamActiveFilter === 'inactive') {
+            if (team.active ?? false) return false;
+          }
+          // else 'all' - no active filter
+
+          // Apply text filters (same logic as table display)
+          const keyMatch = !teamFilters.key || key.toLowerCase().includes(teamFilters.key.toLowerCase());
+          const idMatch = !teamFilters.id || team.id.toLowerCase().includes(teamFilters.id.toLowerCase());
+          const nameMatch = !teamFilters.name || team.name.toLowerCase().includes(teamFilters.name.toLowerCase());
+          const mascotMatch = !teamFilters.mascot || (team.mascot && team.mascot.toLowerCase().includes(teamFilters.mascot.toLowerCase()));
+          
+          return keyMatch && idMatch && nameMatch && mascotMatch;
+        })
+        .reduce((acc, [key, team]) => {
+          acc[key] = {
+            id: team.id,
+            name: team.name,
+            mascot: team.mascot || undefined,
+            logo: team.logo,
+            active: team.active ?? undefined,
+          };
+          return acc;
+        }, {} as Record<string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }>);
+
+      // Create JSON blob from filtered data
+      const jsonString = JSON.stringify(filteredTeams, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'team-mappings.json';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error exporting team data:', error);
+      setTeamDataError(error instanceof Error ? error.message : 'Failed to export team data');
+    }
+  };
+
+  const handleToggleActive = async (key: string, currentActive: boolean) => {
+    // Optimistically update the UI immediately
+    const newActiveStatus = !currentActive;
+    setTeamData(prev => {
+      const updated = { ...prev };
+      if (updated[key]) {
+        updated[key] = { ...updated[key], active: newActiveStatus };
+      }
+      return updated;
+    });
+
+    try {
+      setTeamDataError('');
+      
+      const response = await fetch('/api/admin/team-data', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          key,
+          active: newActiveStatus,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        // Revert the optimistic update on error
+        setTeamData(prev => {
+          const updated = { ...prev };
+          if (updated[key]) {
+            updated[key] = { ...updated[key], active: currentActive };
+          }
+          return updated;
+        });
+        throw new Error(data.error || 'Failed to update team active status');
+      }
+
+      // If we're filtering by active status, the team may disappear/appear
+      // Let the existing filter logic handle it based on teamActiveFilter
+      // Re-run duplicate check on updated data
+      setTeamData(prev => {
+        checkForDuplicates(prev);
+        return prev;
+      });
+    } catch (error) {
+      console.error('Error toggling team active status:', error);
+      setTeamDataError(error instanceof Error ? error.message : 'Failed to toggle team active status');
     }
   };
 
@@ -445,6 +736,52 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Error deleting bracket:', error);
       alert('Failed to delete bracket');
+    }
+  };
+
+  const handleDeleteAllFiltered = async () => {
+    if (filteredBrackets.length === 0) {
+      return;
+    }
+
+    const confirmMessage = `Are you sure you want to delete ${filteredBrackets.length} bracket(s)?\n\nThis action cannot be undone.`;
+    
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError('');
+      
+      // Delete all filtered brackets
+      const deletePromises = filteredBrackets.map(bracket => 
+        fetch(`/api/admin/brackets/${bracket.id}`, {
+          method: 'DELETE',
+        })
+      );
+
+      const results = await Promise.all(deletePromises);
+      const dataResults = await Promise.all(results.map(r => r.json()));
+      
+      // Check for any failures
+      const failures = dataResults.filter(d => !d.success);
+      
+      if (failures.length > 0) {
+        alert(`Failed to delete ${failures.length} bracket(s). ${dataResults.length - failures.length} bracket(s) deleted successfully.`);
+      }
+
+      // Reload data
+      await loadData();
+      
+      if (failures.length === 0) {
+        alert(`Successfully deleted ${filteredBrackets.length} bracket(s).`);
+      }
+    } catch (error) {
+      console.error('Error deleting filtered brackets:', error);
+      alert('Failed to delete brackets. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -709,17 +1046,6 @@ export default function AdminPage() {
           <div className="border-b border-gray-200">
             <nav className="flex -mb-px">
               <button
-                onClick={() => setActiveTab('brackets')}
-                className={`flex items-center space-x-2 px-6 py-4 border-b-2 font-medium text-sm ${
-                  activeTab === 'brackets'
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <Trophy className="w-5 h-5" />
-                <span>Brackets ({brackets.length})</span>
-              </button>
-              <button
                 onClick={() => setActiveTab('users')}
                 className={`flex items-center space-x-2 px-6 py-4 border-b-2 font-medium text-sm ${
                   activeTab === 'users'
@@ -731,16 +1057,29 @@ export default function AdminPage() {
                 <span>Users ({users.length})</span>
               </button>
               <button
-                onClick={() => setActiveTab('data')}
+                onClick={() => setActiveTab('brackets')}
                 className={`flex items-center space-x-2 px-6 py-4 border-b-2 font-medium text-sm ${
-                  activeTab === 'data'
+                  activeTab === 'brackets'
                     ? 'border-blue-600 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                <Database className="w-5 h-5" />
-                <span>Data ({Object.keys(teamData).length})</span>
+                <Trophy className="w-5 h-5" />
+                <span>Brackets ({brackets.length})</span>
               </button>
+              {!isDevelopment && (
+                <button
+                  onClick={() => setActiveTab('data')}
+                  className={`flex items-center space-x-2 px-6 py-4 border-b-2 font-medium text-sm ${
+                    activeTab === 'data'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <Table className="w-5 h-5" />
+                  <span>Team Data ({Object.keys(teamData).length})</span>
+                </button>
+              )}
             </nav>
           </div>
         </div>
@@ -782,6 +1121,42 @@ export default function AdminPage() {
                   <option value="in_progress">In Progress</option>
                   <option value="deleted">Deleted</option>
                 </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Filter by Year
+                </label>
+                <select
+                  value={filterYear}
+                  onChange={(e) => setFilterYear(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                >
+                  <option value="all">All Years</option>
+                  {Array.from(new Set(brackets.map(b => b.year).filter(y => y !== undefined && y !== null)))
+                    .sort((a, b) => (b || 0) - (a || 0))
+                    .map(year => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              
+              <div className="ml-auto">
+                <button
+                  onClick={handleDeleteAllFiltered}
+                  disabled={filteredBrackets.length === 0}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                    filteredBrackets.length === 0
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-red-600 text-white hover:bg-red-700'
+                  }`}
+                  title={filteredBrackets.length === 0 ? 'No brackets to delete' : `Delete ${filteredBrackets.length} filtered bracket(s)`}
+                >
+                  <Trash2 className="w-4 h-4 inline mr-2" />
+                  Delete All Filtered ({filteredBrackets.length})
+                </button>
               </div>
             </div>
 
@@ -1104,98 +1479,77 @@ export default function AdminPage() {
             </div>
           </div>
         )}
-      </div>
 
-      {/* Password Change Modal */}
-      {changingPasswordUserId && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
-          <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Change User Password</h3>
-                <button
-                  onClick={handleCancelPasswordChange}
-                  className="text-gray-400 hover:text-gray-500"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                    New Password
-                  </label>
-                  <input
-                    type="password"
-                    id="newPassword"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter new password (min 6 characters)"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                    Confirm Password
-                  </label>
-                  <input
-                    type="password"
-                    id="confirmPassword"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Confirm new password"
-                  />
-                </div>
-
-                {passwordError && (
-                  <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded">
-                    <p className="text-sm text-red-800">{passwordError}</p>
-                  </div>
+        {/* Data Tab */}
+        {activeTab === 'data' && (
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Team Reference Data</h2>
+              <div className="flex items-center space-x-3">
+                {!isAddingTeam && (
+                  <>
+                    <button
+                      onClick={() => router.push('/admin/tournament-builder')}
+                      className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>New Bracket</span>
+                    </button>
+                    <button
+                      onClick={handleExportTeamData}
+                      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                      title="Export team data to JSON file for git commit"
+                    >
+                      <Download className="h-4 w-4" />
+                      <span>Export JSON</span>
+                    </button>
+                    <button
+                      onClick={handleAddTeam}
+                      className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Add Team</span>
+                    </button>
+                  </>
                 )}
-
-                <div className="bg-yellow-50 border-l-4 border-yellow-500 p-3 rounded">
-                  <p className="text-sm text-yellow-800">
-                    This will change the user&apos;s password, confirm their account, and allow them to login immediately.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end space-x-3">
-                <button
-                  onClick={handleCancelPasswordChange}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleChangePassword}
-                  className="px-4 py-2 bg-blue-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Change Password
-                </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Data Tab */}
-      {activeTab === 'data' && (
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-xl font-bold text-gray-900">Team Reference Data</h2>
-            {!isAddingTeam && (
+            
+            {/* Active Filter Toggles */}
+            <div className="flex items-center space-x-2 mb-4">
+              <span className="text-sm font-medium text-gray-700">Show:</span>
               <button
-                onClick={handleAddTeam}
-                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                onClick={() => setTeamActiveFilter('active')}
+                className={`px-3 py-1 text-sm rounded ${
+                  teamActiveFilter === 'active'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
               >
-                <Plus className="h-4 w-4" />
-                <span>Add Team</span>
+                Active
               </button>
-            )}
+              <button
+                onClick={() => setTeamActiveFilter('inactive')}
+                className={`px-3 py-1 text-sm rounded ${
+                  teamActiveFilter === 'inactive'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Inactive
+              </button>
+              <button
+                onClick={() => setTeamActiveFilter('all')}
+                className={`px-3 py-1 text-sm rounded ${
+                  teamActiveFilter === 'all'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                All
+              </button>
+            </div>
           </div>
 
           {teamDataError && (
@@ -1247,15 +1601,26 @@ export default function AdminPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Logo Path
+                    Mascot
                   </label>
                   <input
                     type="text"
-                    value={newTeamData.logo}
-                    onChange={(e) => setNewTeamData({ ...newTeamData, logo: e.target.value })}
+                    value={newTeamData.mascot || ''}
+                    onChange={(e) => setNewTeamData({ ...newTeamData, mascot: e.target.value })}
                     className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                    placeholder="e.g., /logos/teams/41.png"
+                    placeholder="e.g., Huskies"
                   />
+                </div>
+                <div>
+                  <label className="flex items-center space-x-2 mt-6">
+                    <input
+                      type="checkbox"
+                      checked={newTeamData.active ?? true}
+                      onChange={(e) => setNewTeamData({ ...newTeamData, active: e.target.checked })}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Active</span>
+                  </label>
                 </div>
               </div>
               <div className="mt-4 flex justify-end space-x-3">
@@ -1275,57 +1640,225 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* Duplicate Check Indicator */}
+          <div className="mb-4 bg-white rounded-lg shadow p-4">
+            <div className="flex items-center space-x-2">
+              <span className="font-medium text-gray-700">Duplicate Check:</span>
+              {duplicateCheck.hasDuplicates ? (
+                <>
+                  <AlertCircle className="h-5 w-5 text-red-600" />
+                  <span className="text-red-600 font-semibold">Failed</span>
+                  {duplicateCheck.duplicateIds.length > 0 && (
+                    <span className="text-sm text-red-600 ml-2">
+                      (Duplicate IDs: {duplicateCheck.duplicateIds.join(', ')})
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <span className="text-green-600 font-semibold">Passed</span>
+                </>
+              )}
+            </div>
+          </div>
+
           {/* Team Data Table */}
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <div className="overflow-y-auto max-h-[calc(100vh-400px)]">
+              <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50 sticky top-0 z-10">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Key
+                  <th 
+                    className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort('name')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>School</span>
+                      {teamSortColumn === 'name' && (
+                        <span className="text-gray-400">
+                          {teamSortOrder === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ID
+                  <th 
+                    className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort('mascot')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Mascot</span>
+                      {teamSortColumn === 'mascot' && (
+                        <span className="text-gray-400">
+                          {teamSortOrder === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Name
+                  <th 
+                    className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort('key')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Abbreviation</span>
+                      {teamSortColumn === 'key' && (
+                        <span className="text-gray-400">
+                          {teamSortOrder === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th 
+                    className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort('id')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Index</span>
+                      {teamSortColumn === 'id' && (
+                        <span className="text-gray-400">
+                          {teamSortOrder === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                     Logo
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                    Active
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                     Actions
                   </th>
                 </tr>
+                <tr className="bg-gray-100 sticky top-[48px] z-10">
+                  <th className="px-3 py-2 bg-gray-100">
+                    <input
+                      type="text"
+                      value={teamFilters.name}
+                      onChange={(e) => setTeamFilters({ ...teamFilters, name: e.target.value })}
+                      placeholder="Filter Team..."
+                      className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
+                    />
+                  </th>
+                  <th className="px-3 py-2 bg-gray-100">
+                    <input
+                      type="text"
+                      value={teamFilters.mascot}
+                      onChange={(e) => setTeamFilters({ ...teamFilters, mascot: e.target.value })}
+                      placeholder="Filter Mascot..."
+                      className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
+                    />
+                  </th>
+                  <th className="px-3 py-2 bg-gray-100">
+                    <input
+                      type="text"
+                      value={teamFilters.key}
+                      onChange={(e) => setTeamFilters({ ...teamFilters, key: e.target.value })}
+                      placeholder="Filter Abbreviation..."
+                      className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
+                    />
+                  </th>
+                  <th className="px-3 py-2 bg-gray-100">
+                    <input
+                      type="text"
+                      value={teamFilters.id}
+                      onChange={(e) => setTeamFilters({ ...teamFilters, id: e.target.value })}
+                      placeholder="Filter ID..."
+                      className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
+                    />
+                  </th>
+                  <th className="px-3 py-2 bg-gray-100">
+                    {/* Empty cell for logo image column filter */}
+                  </th>
+                  <th className="px-3 py-2 bg-gray-100">
+                    {/* Empty cell for active column filter */}
+                  </th>
+                  <th className="px-3 py-2 bg-gray-100">
+                    {/* Empty cell for actions column filter */}
+                  </th>
+                </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {Object.keys(teamData).length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
-                      {teamDataError ? 'Error loading team data' : 'Loading team data...'}
-                    </td>
-                  </tr>
-                ) : (
-                  Object.entries(teamData).map(([key, team]) => (
+               <tbody className="bg-white divide-y divide-gray-200">
+                 {teamDataError ? (
+                   <tr>
+                     <td colSpan={7} className="px-3 py-4 text-center">
+                       <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
+                         <p className="text-sm font-medium text-red-800">Error loading team data</p>
+                         <p className="text-sm text-red-700 mt-1">{teamDataError}</p>
+                         <button
+                           onClick={loadTeamData}
+                           className="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                         >
+                           Retry
+                         </button>
+                       </div>
+                     </td>
+                   </tr>
+                 ) : Object.keys(teamData).length === 0 && isLoading ? (
+                   <tr>
+                     <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                       Loading team data...
+                     </td>
+                   </tr>
+                 ) : Object.keys(teamData).length === 0 ? (
+                   <tr>
+                     <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                       No team data found. Click &quot;Add Team&quot; to add your first team.
+                     </td>
+                   </tr>
+                 ) : (
+                  Object.entries(teamData)
+                    .filter(([key, team]) => {
+                      const keyMatch = !teamFilters.key || key.toLowerCase().includes(teamFilters.key.toLowerCase());
+                      const idMatch = !teamFilters.id || team.id.toLowerCase().includes(teamFilters.id.toLowerCase());
+                      const nameMatch = !teamFilters.name || team.name.toLowerCase().includes(teamFilters.name.toLowerCase());
+                      const mascotMatch = !teamFilters.mascot || (team.mascot && team.mascot.toLowerCase().includes(teamFilters.mascot.toLowerCase()));
+                      return keyMatch && idMatch && nameMatch && mascotMatch;
+                    })
+                    .sort((a, b) => {
+                      if (teamSortColumn === 'name') {
+                        const compareA = a[1].name.toLowerCase();
+                        const compareB = b[1].name.toLowerCase();
+                        if (teamSortOrder === 'asc') {
+                          return compareA.localeCompare(compareB);
+                        } else {
+                          return compareB.localeCompare(compareA);
+                        }
+                      } else if (teamSortColumn === 'mascot') {
+                        const mascotA = (a[1].mascot || '').toLowerCase();
+                        const mascotB = (b[1].mascot || '').toLowerCase();
+                        if (teamSortOrder === 'asc') {
+                          return mascotA.localeCompare(mascotB);
+                        } else {
+                          return mascotB.localeCompare(mascotA);
+                        }
+                      } else if (teamSortColumn === 'key') {
+                        const compareA = a[0].toLowerCase();
+                        const compareB = b[0].toLowerCase();
+                        if (teamSortOrder === 'asc') {
+                          return compareA.localeCompare(compareB);
+                        } else {
+                          return compareB.localeCompare(compareA);
+                        }
+                      } else if (teamSortColumn === 'id') {
+                        // Sort ID as numeric
+                        const numA = parseInt(a[1].id) || 0;
+                        const numB = parseInt(b[1].id) || 0;
+                        if (teamSortOrder === 'asc') {
+                          return numA - numB;
+                        } else {
+                          return numB - numA;
+                        }
+                      } else {
+                        return 0;
+                      }
+                    })
+                    .map(([key, team]) => (
                     <tr key={key}>
                       {editingTeam === key ? (
                         <>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <input
-                              type="text"
-                              value={editingTeamData?.key || ''}
-                              onChange={(e) => setEditingTeamData({ ...editingTeamData!, key: e.target.value })}
-                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
-                            />
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <input
-                              type="text"
-                              value={editingTeamData?.id || ''}
-                              onChange={(e) => setEditingTeamData({ ...editingTeamData!, id: e.target.value })}
-                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
-                            />
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 py-4 whitespace-nowrap">
                             <input
                               type="text"
                               value={editingTeamData?.name || ''}
@@ -1333,15 +1866,55 @@ export default function AdminPage() {
                               className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
                             />
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 py-4 whitespace-nowrap">
                             <input
                               type="text"
-                              value={editingTeamData?.logo || ''}
-                              onChange={(e) => setEditingTeamData({ ...editingTeamData!, logo: e.target.value })}
+                              value={editingTeamData?.mascot || ''}
+                              onChange={(e) => setEditingTeamData({ ...editingTeamData!, mascot: e.target.value })}
                               className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
                             />
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 py-4 whitespace-nowrap">
+                            <input
+                              type="text"
+                              value={editingTeamData?.key || ''}
+                              onChange={(e) => setEditingTeamData({ ...editingTeamData!, key: e.target.value })}
+                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                            />
+                          </td>
+                          <td className="px-3 py-4 whitespace-nowrap">
+                            <input
+                              type="text"
+                              value={editingTeamData?.id || ''}
+                              onChange={(e) => setEditingTeamData({ ...editingTeamData!, id: e.target.value })}
+                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                            />
+                          </td>
+                          <td className="px-3 py-4 whitespace-nowrap">
+                            {editingTeamData?.logo ? (
+                              <img
+                                src={editingTeamData.logo}
+                                alt="Preview"
+                                className="h-8 w-8 object-contain"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <span className="text-gray-400 text-xs">No logo</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-4 whitespace-nowrap">
+                            <label className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                checked={editingTeamData?.active ?? false}
+                                onChange={(e) => setEditingTeamData({ ...editingTeamData!, active: e.target.checked })}
+                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                              />
+                            </label>
+                          </td>
+                          <td className="px-3 py-4 whitespace-nowrap">
                             <div className="flex items-center space-x-2">
                               <button
                                 onClick={handleSaveTeam}
@@ -1362,26 +1935,60 @@ export default function AdminPage() {
                         </>
                       ) : (
                         <>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {key}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {team.id}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
                             {team.name}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {team.logo || '-'}
+                          <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {team.mascot || <span className="text-gray-400">—</span>}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <button
-                              onClick={() => handleEditTeam(key)}
-                              className="text-blue-600 hover:text-blue-900"
-                              title="Edit"
-                            >
-                              <Edit className="w-5 h-5" />
-                            </button>
+                          <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {key}
+                          </td>
+                          <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {team.id}
+                          </td>
+                          <td className="px-3 py-4 whitespace-nowrap">
+                            {team.logo ? (
+                              <img
+                                src={team.logo}
+                                alt={team.name}
+                                className="h-8 w-8 object-contain"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <span className="text-gray-400 text-xs">No logo</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-4 whitespace-nowrap">
+                            <label className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                checked={team.active ?? false}
+                                onChange={() => handleToggleActive(key, team.active ?? false)}
+                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                              />
+                              <span className="text-sm text-gray-700">{team.active ? 'Active' : 'Inactive'}</span>
+                            </label>
+                          </td>
+                          <td className="px-3 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleEditTeam(key)}
+                                className="text-blue-600 hover:text-blue-900"
+                                title="Edit"
+                              >
+                                <Edit className="w-5 h-5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteTeam(key)}
+                                className="text-red-600 hover:text-red-900"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-5 h-5" />
+                              </button>
+                            </div>
                           </td>
                         </>
                       )}
@@ -1390,9 +1997,11 @@ export default function AdminPage() {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

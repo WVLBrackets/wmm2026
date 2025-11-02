@@ -19,7 +19,7 @@ let lastFetchTime = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 /**
- * Fetch team reference data from local JSON file
+ * Fetch team reference data (from database first, then JSON file fallback)
  */
 export async function getTeamRefData(): Promise<TeamRefData[]> {
   const startTime = performance.now();
@@ -33,8 +33,38 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
     return cachedTeamData;
   }
 
+  // Try database first (server-side only)
+  if (typeof window === 'undefined') {
+    try {
+      const { getAllTeamReferenceData } = await import('@/lib/secureDatabase');
+      // Only get active teams for public-facing calls
+      const dbTeams = await getAllTeamReferenceData(true);
+      
+      if (Object.keys(dbTeams).length > 0) {
+        const teamData: TeamRefData[] = Object.entries(dbTeams)
+          .filter(([_, teamInfo]) => teamInfo.active !== false)
+          .map(([abbr, teamInfo]) => ({
+            abbr,
+            id: teamInfo.id,
+            name: teamInfo.name
+          }));
+        
+        console.log(`📋 Loaded ${teamData.length} active teams from database`);
+        
+        cachedTeamData = teamData;
+        lastFetchTime = now;
+        
+        const totalTime = performance.now() - startTime;
+        console.log(`✅ Team reference data ready from database in ${totalTime.toFixed(2)}ms`);
+        return teamData;
+      }
+    } catch (dbError) {
+      console.log('📋 Database not available or empty, falling back to JSON:', dbError instanceof Error ? dbError.message : String(dbError));
+    }
+  }
+
   try {
-    // Fetch from local JSON file
+    // Fetch from local JSON file (client-side or database fallback)
     console.log('📋 Fetching team reference data from local JSON file');
     
     // Create AbortController for timeout
