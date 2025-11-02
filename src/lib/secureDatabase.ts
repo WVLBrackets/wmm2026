@@ -856,11 +856,22 @@ export async function getAllTeamReferenceData(activeOnly: boolean = false): Prom
     const teams: Record<string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }> = {};
     for (const row of result.rows) {
       // Convert database boolean/null to JavaScript boolean
-      // If active is null in DB, it means it hasn't been set (should default to false)
+      // PostgreSQL returns null as a JavaScript null, but we need to handle it explicitly
+      // If active is null in DB, treat as false (inactive)
       // If active is explicitly false in DB, preserve that
       // If active is true in DB, preserve that
-      const activeValue = row.active;
-      const activeBoolean = activeValue === null || activeValue === undefined ? false : (activeValue as boolean);
+      let activeBoolean: boolean;
+      if (row.active === null || row.active === undefined) {
+        activeBoolean = false;
+      } else {
+        // PostgreSQL booleans come as true/false, but ensure it's a proper boolean
+        activeBoolean = Boolean(row.active);
+      }
+      
+      // Debug logging for first few teams to see what we're getting
+      if (Object.keys(teams).length < 3) {
+        console.log(`[DB] Team ${row.key}: active value = ${row.active}, type = ${typeof row.active}, converted = ${activeBoolean}`);
+      }
       
       teams[row.key as string] = {
         id: row.id as string,
