@@ -190,6 +190,14 @@ export default function AdminPage() {
         console.log(`[Inactive Filter] Total: ${allEntries.length}, Active (true): ${activeEntries.length}, Inactive (false): ${inactiveEntries.length}, Other (${otherEntries.length}):`, 
           otherEntries.map(([k, t]) => `${t.name}(${typeof t.active})`).slice(0, 5));
         
+        // Show sample of first few inactive teams for debugging
+        if (inactiveEntries.length > 0) {
+          console.log(`[Inactive Filter] Sample inactive teams:`, inactiveEntries.slice(0, 3).map(([k, t]) => `${k}: ${t.name} (active=${t.active})`));
+        } else {
+          console.log(`[Inactive Filter] WARNING: No inactive teams found! All ${allEntries.length} teams have active=true.`);
+          console.log(`[Inactive Filter] To test: Toggle a team's active checkbox to false, then check this filter again.`);
+        }
+        
         filteredData = Object.fromEntries(inactiveEntries);
       } else if (teamActiveFilter === 'active') {
         // Filter to show only teams where active is true (or undefined/null which should be treated as active)
