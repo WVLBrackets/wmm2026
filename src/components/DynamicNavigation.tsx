@@ -12,8 +12,8 @@ import Image from 'next/image';
 
 const navigationItems = [
   { name: 'Home', href: '/', icon: Home },
-  { name: 'Info', href: '/info', icon: Trophy },
-  { name: 'Standings', href: '/standings', icon: Info },
+  { name: 'Info', href: '/info', icon: Info },
+  { name: 'Standings', href: '/standings', icon: Trophy },
   { name: 'Hall of Fame', href: '/hall-of-fame', icon: Star },
 ];
 
