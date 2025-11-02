@@ -100,36 +100,32 @@ export default function InfoPage() {
         <div className="space-y-8">
           
           {/* Quick Navigation Links */}
-          <div className="bg-white rounded-lg shadow-lg p-6 sticky top-4 z-10">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Navigation</h2>
-            <div className="flex flex-wrap gap-3">
-              <a 
-                href="#entry-payment" 
-                className="flex items-center space-x-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
-              >
-                <DollarSign className="h-4 w-4" />
-                <span className="font-medium">
-                  <span className="md:hidden">Pay</span>
-                  <span className="hidden md:inline">Entry & Payment</span>
-                </span>
-              </a>
-              <a 
-                href="#scoring-rules" 
-                className="flex items-center space-x-2 px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors"
-              >
-                <Trophy className="h-4 w-4" />
-                <span className="font-medium">
-                  <span className="md:hidden">Scoring</span>
-                  <span className="hidden md:inline">Scoring & Rules</span>
-                </span>
-              </a>
-              <a 
-                href="#prizes" 
-                className="flex items-center space-x-2 px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors"
-              >
-                <Gift className="h-4 w-4" />
-                <span className="font-medium">Prizes</span>
-              </a>
+          <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 sticky top-4 z-10">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
+              <h2 className="text-xl font-bold text-gray-900">Quick Navigation</h2>
+              <div className="flex flex-wrap gap-2 md:gap-3">
+                <a 
+                  href="#entry-payment" 
+                  className="flex items-center space-x-2 px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+                >
+                  <DollarSign className="h-4 w-4" />
+                  <span className="font-medium">Pay</span>
+                </a>
+                <a 
+                  href="#scoring-rules" 
+                  className="flex items-center space-x-2 px-3 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors"
+                >
+                  <Trophy className="h-4 w-4" />
+                  <span className="font-medium">Scoring</span>
+                </a>
+                <a 
+                  href="#prizes" 
+                  className="flex items-center space-x-2 px-3 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors"
+                >
+                  <Gift className="h-4 w-4" />
+                  <span className="font-medium">Prizes</span>
+                </a>
+              </div>
             </div>
           </div>
           
@@ -180,16 +176,7 @@ export default function InfoPage() {
               <div className="flex items-start mt-6">
                 <CheckCircle className="h-5 w-5 text-green-600 mr-3 mt-1" />
                 <p className="text-gray-700">
-                  <strong>Group Payments:</strong> If you are playing with a group of people, 
-                  please batch your payments together as much as possible.
-                </p>
-              </div>
-              
-              <div className="flex items-start">
-                <CheckCircle className="h-5 w-5 text-green-600 mr-3 mt-1" />
-                <p className="text-gray-700">
-                  <strong>Player List:</strong> Be sure to include a list of the <strong>entry names</strong> that 
-                  are being paid for when you submit any payment.
+                  If you are paying for multiple entries, a group of people, please include a list of entries covered with your payment.
                 </p>
               </div>
               
@@ -218,11 +205,11 @@ export default function InfoPage() {
             </div>
           </div>
 
-          {/* Section 2: Scoring & Rules */}
+          {/* Section 2: Scoring */}
           <div id="scoring-rules" className="bg-white rounded-lg shadow-lg p-8 scroll-mt-4">
             <div className="flex items-center mb-6">
               <Trophy className="h-8 w-8 text-yellow-600 mr-3" />
-              <h2 className="text-2xl font-bold text-gray-900">Scoring & Rules</h2>
+              <h2 className="text-2xl font-bold text-gray-900">Scoring</h2>
             </div>
             
             {/* Alert Section - First Four Notice */}
