@@ -98,8 +98,36 @@ export default function InfoPage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="space-y-8">
           
+          {/* Quick Navigation Links */}
+          <div className="bg-white rounded-lg shadow-lg p-6 sticky top-4 z-10">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Navigation</h2>
+            <div className="flex flex-wrap gap-3">
+              <a 
+                href="#entry-payment" 
+                className="flex items-center space-x-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+              >
+                <DollarSign className="h-4 w-4" />
+                <span className="font-medium">Entry & Payment</span>
+              </a>
+              <a 
+                href="#scoring-rules" 
+                className="flex items-center space-x-2 px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors"
+              >
+                <Trophy className="h-4 w-4" />
+                <span className="font-medium">Scoring & Rules</span>
+              </a>
+              <a 
+                href="#prizes" 
+                className="flex items-center space-x-2 px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors"
+              >
+                <Gift className="h-4 w-4" />
+                <span className="font-medium">Prizes</span>
+              </a>
+            </div>
+          </div>
+          
           {/* Section 1: Entry & Payment */}
-          <div className="bg-white rounded-lg shadow-lg p-8">
+          <div id="entry-payment" className="bg-white rounded-lg shadow-lg p-8 scroll-mt-4">
             <div className="flex items-center mb-6">
               <DollarSign className="h-8 w-8 text-green-600 mr-3" />
               <h2 className="text-2xl font-bold text-gray-900">Entry & Payment</h2>
@@ -194,7 +222,7 @@ export default function InfoPage() {
           </div>
 
           {/* Section 2: Scoring & Rules */}
-          <div className="bg-white rounded-lg shadow-lg p-8">
+          <div id="scoring-rules" className="bg-white rounded-lg shadow-lg p-8 scroll-mt-4">
             <div className="flex items-center mb-6">
               <Trophy className="h-8 w-8 text-yellow-600 mr-3" />
               <h2 className="text-2xl font-bold text-gray-900">Scoring & Rules</h2>
@@ -213,27 +241,27 @@ export default function InfoPage() {
             {/* Scoring Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div className="flex justify-between items-center py-3 px-4 bg-blue-50 rounded-lg">
-                <span className="font-medium">First Round</span>
+                <span className="font-medium text-gray-900">First Round</span>
                 <span className="font-bold text-blue-600">1 point</span>
               </div>
               <div className="flex justify-between items-center py-3 px-4 bg-blue-50 rounded-lg">
-                <span className="font-medium">Second Round</span>
+                <span className="font-medium text-gray-900">Second Round</span>
                 <span className="font-bold text-blue-600">2 points</span>
               </div>
               <div className="flex justify-between items-center py-3 px-4 bg-blue-50 rounded-lg">
-                <span className="font-medium">Sweet Sixteen</span>
+                <span className="font-medium text-gray-900">Sweet Sixteen</span>
                 <span className="font-bold text-blue-600">4 points</span>
               </div>
               <div className="flex justify-between items-center py-3 px-4 bg-blue-50 rounded-lg">
-                <span className="font-medium">Elite Eight</span>
+                <span className="font-medium text-gray-900">Elite Eight</span>
                 <span className="font-bold text-blue-600">8 points</span>
               </div>
               <div className="flex justify-between items-center py-3 px-4 bg-blue-50 rounded-lg">
-                <span className="font-medium">Final Four</span>
+                <span className="font-medium text-gray-900">Final Four</span>
                 <span className="font-bold text-blue-600">12 points</span>
               </div>
               <div className="flex justify-between items-center py-3 px-4 bg-yellow-50 rounded-lg">
-                <span className="font-medium">Championship Game</span>
+                <span className="font-medium text-gray-900">Championship Game</span>
                 <span className="font-bold text-yellow-600">16 points</span>
               </div>
             </div>
@@ -304,7 +332,7 @@ export default function InfoPage() {
           </div>
 
           {/* Section 3: Prizes */}
-          <div className="bg-white rounded-lg shadow-lg p-8">
+          <div id="prizes" className="bg-white rounded-lg shadow-lg p-8 scroll-mt-4">
             <div className="flex items-center mb-6">
               <Gift className="h-8 w-8 text-orange-600 mr-3" />
               <h2 className="text-2xl font-bold text-gray-900">Prizes</h2>
