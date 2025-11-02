@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { DollarSign, Trophy, FileSpreadsheet, AlertTriangle, Dog, Calculator, CreditCard, Heart, CheckCircle, Gift, Medal, Crown } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getSiteConfig } from '@/config/site';
@@ -158,7 +159,13 @@ export default function InfoPage() {
               <div className="flex items-start">
                 <div className="flex-shrink-0 w-2 h-2 bg-blue-600 rounded-full mt-2 mr-3"></div>
                 <div className="text-gray-700">
-                  <p>Email all entries back to: <strong>NCAATourney@gmail.com</strong></p>
+                  <p>
+                    To Enter, email your picks sheet to <strong>NCAATourney@gmail.com</strong> or fill out a bracket on the{' '}
+                    <Link href="/bracket" className="text-blue-600 hover:text-blue-800 underline font-medium">
+                      My Picks
+                    </Link>
+                    {' '}section of this site.
+                  </p>
                 </div>
               </div>
               
