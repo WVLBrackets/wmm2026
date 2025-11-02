@@ -169,7 +169,7 @@ export default function InfoPage() {
               <div className="flex items-start mt-6">
                 <CheckCircle className="h-5 w-5 text-green-600 mr-3 mt-1" />
                 <p className="text-gray-700">
-                  If you are paying for multiple entries, a group of people, please include a list of entries covered with your payment.
+                  If you are paying for multiple entries, please include the list of entries covered with your payment.
                 </p>
               </div>
               
