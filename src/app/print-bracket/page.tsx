@@ -52,13 +52,14 @@ export default function PrintBracketPage() {
                 const teamInfo = await getTeamInfo(champion.name);
                 setChampionTeam({ ...champion, ...teamInfo });
                 
-                // Fetch mascot from database
+                // Fetch mascot from API
                 try {
-                  const { getAllTeamReferenceData } = await import('@/lib/secureDatabase');
-                  const allTeams = await getAllTeamReferenceData(false);
-                  const teamMatch = Object.values(allTeams).find(team => team.id === champion.id);
-                  if (teamMatch?.mascot) {
-                    setChampionMascot(teamMatch.mascot);
+                  const mascotResponse = await fetch(`/api/team-mascot/${champion.id}`);
+                  if (mascotResponse.ok) {
+                    const mascotData = await mascotResponse.json();
+                    if (mascotData.success && mascotData.mascot) {
+                      setChampionMascot(mascotData.mascot);
+                    }
                   }
                 } catch (mascotError) {
                   console.error('Error loading champion mascot:', mascotError);
