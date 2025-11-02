@@ -847,7 +847,7 @@ export async function getAllTeamReferenceData(activeOnly: boolean = false): Prom
       `;
     } else {
       result = await teamDataSql`
-        SELECT key, id, name, mascot, logo, COALESCE(active, false) as active
+        SELECT key, id, name, mascot, logo, active
         FROM team_reference_data
         ORDER BY CAST(id AS INTEGER)
       `;
@@ -855,12 +855,19 @@ export async function getAllTeamReferenceData(activeOnly: boolean = false): Prom
     
     const teams: Record<string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }> = {};
     for (const row of result.rows) {
+      // Convert database boolean/null to JavaScript boolean
+      // If active is null in DB, it means it hasn't been set (should default to false)
+      // If active is explicitly false in DB, preserve that
+      // If active is true in DB, preserve that
+      const activeValue = row.active;
+      const activeBoolean = activeValue === null || activeValue === undefined ? false : (activeValue as boolean);
+      
       teams[row.key as string] = {
         id: row.id as string,
         name: row.name as string,
         mascot: (row.mascot as string) || undefined,
         logo: (row.logo as string) || '',
-        active: (row.active as boolean) ?? false,
+        active: activeBoolean,
       };
     }
     
