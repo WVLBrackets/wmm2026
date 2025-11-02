@@ -679,8 +679,7 @@ export default function PrintBracketPage() {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        fontSize: '20px',
-        position: 'relative'
+        fontSize: '20px'
       }}>
         {/* Left: Warren's March Madness + Year */}
         <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', alignItems: 'center', paddingLeft: '20px' }}>
@@ -710,24 +709,6 @@ export default function PrintBracketPage() {
               )}
             </>
           )}
-        </div>
-        
-        {/* Logo - absolutely positioned below entry name */}
-        <div style={{
-          position: 'absolute',
-          top: '45px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 10,
-          pointerEvents: 'none'
-        }}>
-          <Image
-            src="/images/warrens-march-madness.png"
-            alt="Warren's March Madness Logo"
-            width={120}
-            height={60}
-            style={{ objectFit: 'contain' }}
-          />
         </div>
       </div>
       
