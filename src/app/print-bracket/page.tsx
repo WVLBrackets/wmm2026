@@ -14,6 +14,8 @@ export default function PrintBracketPage() {
   const [bracket, setBracket] = useState<Record<string, unknown> | null>(null);
   const [tournamentData, setTournamentData] = useState<Record<string, unknown> | null>(null);
   const [championTeam, setChampionTeam] = useState<TournamentTeam | null>(null);
+  const [siteConfig, setSiteConfig] = useState<{ tournamentYear?: string } | null>(null);
+  const [championMascot, setChampionMascot] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { setInPrintMode } = useBracketMode();
 
@@ -24,6 +26,7 @@ export default function PrintBracketPage() {
       try {
         // Load site config first to get tournament year
         const config = await getSiteConfigFromGoogleSheets();
+        setSiteConfig(config);
         
         // Use tournament year from config (fallback to '2025' if not available)
         const tournamentYear = config?.tournamentYear || '2025';
@@ -40,7 +43,7 @@ export default function PrintBracketPage() {
           const updatedBracket = updateBracketWithPicks(generatedBracket, parsedData.picks, tournamentData);
           setBracket(updatedBracket as unknown as Record<string, unknown>);
           
-          // Load champion team info
+          // Load champion team info and mascot
           const championshipPick = parsedData.picks['championship'];
           if (championshipPick) {
             const champion = tournamentData.regions.flatMap(r => r.teams).find(t => t.id === championshipPick);
@@ -48,6 +51,18 @@ export default function PrintBracketPage() {
               try {
                 const teamInfo = await getTeamInfo(champion.name);
                 setChampionTeam({ ...champion, ...teamInfo });
+                
+                // Fetch mascot from database
+                try {
+                  const { getAllTeamReferenceData } = await import('@/lib/secureDatabase');
+                  const allTeams = await getAllTeamReferenceData(false);
+                  const teamMatch = Object.values(allTeams).find(team => team.id === champion.id);
+                  if (teamMatch?.mascot) {
+                    setChampionMascot(teamMatch.mascot);
+                  }
+                } catch (mascotError) {
+                  console.error('Error loading champion mascot:', mascotError);
+                }
               } catch (error) {
                 console.error('Error loading champion team info:', error);
                 setChampionTeam(champion);
@@ -661,89 +676,82 @@ export default function PrintBracketPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Title Bar */}
+      {/* Header */}
       <div style={{ 
-        padding: '5px 0px', 
-        borderBottom: '1px solid #e5e7eb',
+        padding: '8px 0px', 
+        borderBottom: '2px solid #000000',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        position: 'relative',
-        minHeight: '60px'
+        fontSize: '20px'
       }}>
-        {/* Left spacer to balance the buttons */}
-        <div style={{ width: '120px' }}></div>
-        
-        {/* Centered gold box */}
-        <div style={{ 
-          position: 'absolute',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          display: 'flex', 
-          flexDirection: 'column', 
-          alignItems: 'center', 
-          gap: '1px', 
-          padding: '4px 8px', 
-          backgroundColor: '#fef3c7', 
-          borderRadius: '4px', 
-          border: '1px solid #f59e0b',
-          minWidth: '400px'
-        }}>
-          {/* Top Row: Entry Name - Champion Logo Seed Name */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '18px', fontWeight: 'bold', color: '#92400e' }}>
-            <span>{bracketData.entryName as string}</span>
-            <span>-</span>
-            {championTeam && championTeam.logo && (
-              <Image
-                src={championTeam.logo}
-                alt={`${championTeam.name} logo`}
-                width={24} 
-                height={24} 
-                style={{ objectFit: 'contain' }}
-              />
-            )}
-            {championTeam && (
-              <span>#{championTeam.seed} {championTeam.name}</span>
-            )}
-          </div>
-          
-          {/* Bottom Row: Tie Breaker */}
-          <div style={{ fontSize: '12px', color: '#92400e' }}>
-            Tie Breaker - {(bracketData.tieBreaker as string) || 'N/A'}
-          </div>
+        {/* Left: Warren's March Madness + Year */}
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
+          <span>Warren's March Madness {siteConfig?.tournamentYear || ''}</span>
         </div>
         
-        {/* Right side buttons */}
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button 
-            onClick={handlePrint}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#10b981',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '14px'
-            }}
-          >
-            Print
-          </button>
-          <button 
-            onClick={handleBack}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '14px'
-            }}
-          >
-            Close
-          </button>
+        {/* Center: Entry Name */}
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <span>{bracketData?.entryName as string || ''}</span>
         </div>
+        
+        {/* Right: Your Champ: Seed Team Mascot Logo */}
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '6px' }}>
+          <span>Your Champ:</span>
+          {championTeam && (
+            <>
+              <span>#{championTeam.seed}</span>
+              <span>{championTeam.name}</span>
+              {championMascot && <span>{championMascot}</span>}
+              {championTeam.logo && (
+                <Image
+                  src={championTeam.logo}
+                  alt={`${championTeam.name} logo`}
+                  width={24} 
+                  height={24} 
+                  style={{ objectFit: 'contain', flexShrink: 0 }}
+                />
+              )}
+            </>
+          )}
+        </div>
+      </div>
+      
+      {/* Print/Close Buttons */}
+      <div style={{ 
+        padding: '5px 10px', 
+        display: 'flex',
+        justifyContent: 'flex-end',
+        gap: '8px'
+      }}>
+        <button 
+          onClick={handlePrint}
+          style={{
+            padding: '8px 16px',
+            backgroundColor: '#10b981',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px'
+          }}
+        >
+          Print
+        </button>
+        <button 
+          onClick={handleBack}
+          style={{
+            padding: '8px 16px',
+            backgroundColor: '#3b82f6',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px'
+          }}
+        >
+          Close
+        </button>
       </div>
 
       {/* Bracket Content */}
