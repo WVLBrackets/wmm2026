@@ -42,6 +42,31 @@ function BracketContent() {
 
   const loadTournamentRef = useRef<(() => Promise<void>) | undefined>(undefined);
 
+  // Determine if My Picks page should be shown based on environment and feature flags
+  const shouldShowMyPicksPage = () => {
+    if (!siteConfig) return false;
+    
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    
+    // Detect preview/staging by checking if we're on a Vercel preview URL
+    // Vercel preview URLs follow the pattern: project-name-git-branch-owner-projects.vercel.app
+    // Production is typically on a custom domain (wmm2026.com) or the main vercel.app domain
+    const isPreview = typeof window !== 'undefined' && (
+      window.location.hostname.includes('-git-') || 
+      (window.location.hostname.includes('vercel.app') && 
+       !window.location.hostname.startsWith('wmm2026') &&
+       window.location.hostname.includes('.'))
+    );
+    
+    // Use dev flag for both local development and preview/staging deployments
+    if (isDevelopment || isPreview) {
+      return siteConfig.showPicksDev === 'Yes';
+    }
+    
+    // Use prod flag for production deployments only
+    return siteConfig.showPicksProd === 'Yes';
+  };
+
   // Check for admin mode and edit parameter
   useEffect(() => {
     if (!searchParams) return;
@@ -535,6 +560,27 @@ function BracketContent() {
           <div className="text-center">
             <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
             <p className="mt-4 text-gray-600">Loading tournament...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if My Picks page should be available based on config
+  if (siteConfig && !shouldShowMyPicksPage()) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="text-center">
+            <div className="bg-white rounded-lg shadow-lg p-12 max-w-md mx-auto">
+              <Trophy className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                Page not Available
+              </h2>
+              <p className="text-gray-600">
+                This page is currently not available.
+              </p>
+            </div>
           </div>
         </div>
       </div>
