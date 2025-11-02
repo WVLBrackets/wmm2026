@@ -7,15 +7,13 @@ import { useSession, signOut } from 'next-auth/react';
 import { getSiteConfig } from '@/config/site';
 import { SiteConfigData } from '@/lib/siteConfig';
 import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
-import { Home, Trophy, BookOpen, CreditCard, Gift, Star, Menu, X, Vote, User, LogOut, Shield } from 'lucide-react';
+import { Home, Trophy, Info, Star, Menu, X, Vote, User, LogOut, Shield } from 'lucide-react';
 import Image from 'next/image';
 
 const navigationItems = [
   { name: 'Home', href: '/', icon: Home },
   { name: 'Standings', href: '/standings', icon: Trophy },
-  { name: 'Rules', href: '/rules', icon: BookOpen },
-  { name: 'Payments', href: '/payments', icon: CreditCard },
-  { name: 'Prizes', href: '/prizes', icon: Gift },
+  { name: 'Info', href: '/info', icon: Info },
   { name: 'Hall of Fame', href: '/hall-of-fame', icon: Star },
 ];
 
