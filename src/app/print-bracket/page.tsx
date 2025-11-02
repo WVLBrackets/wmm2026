@@ -818,8 +818,8 @@ export default function PrintBracketPage() {
                 {/* Bottom Row - Bottom Left and Bottom Right Regions */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   {/* Bottom Left Region */}
-                  <div style={{ border: '1px solid #e5e7eb', borderRadius: '4px', background: '#f9fafb', padding: '3px', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ textAlign: 'center', padding: '2px 0', fontSize: '10px', fontWeight: 'bold', color: '#374151', borderBottom: '1px solid #d1d5db', marginBottom: '2px' }}>
+                  <div style={{ padding: '3px', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ textAlign: 'center', padding: '2px 0', fontSize: '10px', fontWeight: 'bold', color: '#374151', marginBottom: '2px' }}>
                       {bottomLeftRegionName}
                     </div>
                     <div style={{ display: 'flex', gap: '0px' }}>
