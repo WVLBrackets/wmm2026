@@ -126,7 +126,8 @@ export default function PrintBracketPage() {
     return (
       <div style={{ 
         width: '50%',
-        marginLeft: '25%',
+        maxWidth: '500px',
+        margin: '0 auto',
         display: 'flex', 
         flexDirection: 'row', 
         gap: '5px',
