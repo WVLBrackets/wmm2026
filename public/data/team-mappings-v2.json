@@ -545,9 +545,9 @@
     "logo": "/logos/teams/228.png",
     "active": true
   },
-  "ChSo": {
+  "CSo": {
     "id": "232",
-    "name": "Charleston Southern",
+    "name": "Charleston Southern ERROR",
     "mascot": "Cougars",
     "logo": "/logos/teams/232.png",
     "active": true
@@ -995,7 +995,7 @@
   },
   "NorSt": {
     "id": "2450",
-    "name": "North Dakota State",
+    "name": "North Dakota State ERROR",
     "mascot": "Spartans",
     "logo": "/logos/teams/2450.png",
     "active": true
@@ -1035,9 +1035,9 @@
     "logo": "/logos/teams/2523.png",
     "active": true
   },
-  "SH": {
+  "Sam": {
     "id": "2535",
-    "name": "Sam Houston",
+    "name": "Sam Houston ERROR",
     "mascot": "Bulldogs",
     "logo": "/logos/teams/2535.png",
     "active": true
