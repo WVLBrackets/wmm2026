@@ -131,13 +131,13 @@ export default function InfoPage() {
           
           {/* Section 1: Entry & Payment */}
           <div id="entry-payment" className="bg-white rounded-lg shadow-lg p-8 scroll-mt-4">
-            <div className="flex items-center mb-6">
+            <div className="flex items-center mb-4">
               <DollarSign className="h-8 w-8 text-green-600 mr-3" />
               <h2 className="text-2xl font-bold text-gray-900">Entry & Payment</h2>
             </div>
             
             {/* Entry Fee Highlight */}
-            <div className="bg-green-50 rounded-lg p-6 mb-6">
+            <div className="bg-green-50 rounded-lg p-4 mb-6">
               <div className="text-center">
                 <p className="text-3xl font-bold text-green-600 mb-2">$5 per entry</p>
                 <p className="text-gray-700">Enter as many times as you like!</p>
@@ -145,13 +145,6 @@ export default function InfoPage() {
             </div>
 
             <div className="space-y-4">
-              <div className="flex items-start">
-                <div className="flex-shrink-0 w-2 h-2 bg-blue-600 rounded-full mt-2 mr-3"></div>
-                <p className="text-gray-700">
-                  Each entry is <strong>$5</strong>. Enter as many times as you like.
-                </p>
-              </div>
-              
               <div className="flex items-start">
                 <div className="flex-shrink-0 w-2 h-2 bg-blue-600 rounded-full mt-2 mr-3"></div>
                 <div className="text-gray-700">
@@ -212,16 +205,6 @@ export default function InfoPage() {
               <h2 className="text-2xl font-bold text-gray-900">Scoring</h2>
             </div>
             
-            {/* Alert Section - First Four Notice */}
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-              <div className="flex items-center">
-                <AlertTriangle className="h-5 w-5 text-yellow-600 mr-3 flex-shrink-0" />
-                <p className="text-yellow-800 font-medium">
-                  The &quot;First Four&quot; play-in games are ignored in our scoring.
-                </p>
-              </div>
-            </div>
-            
             {/* Scoring Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div className="flex justify-between items-center py-3 px-4 bg-blue-50 rounded-lg">
@@ -247,6 +230,16 @@ export default function InfoPage() {
               <div className="flex justify-between items-center py-3 px-4 bg-yellow-50 rounded-lg">
                 <span className="font-medium text-gray-900">Championship Game</span>
                 <span className="font-bold text-yellow-600">16 points</span>
+              </div>
+            </div>
+            
+            {/* Alert Section - First Four Notice */}
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center">
+                <AlertTriangle className="h-5 w-5 text-yellow-600 mr-3 flex-shrink-0" />
+                <p className="text-yellow-800 font-medium">
+                  The &quot;First Four&quot; play-in games are ignored in our scoring.
+                </p>
               </div>
             </div>
             
