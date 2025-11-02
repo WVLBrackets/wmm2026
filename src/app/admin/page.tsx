@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Trash2, Edit, Save, X, Users, Trophy, CheckCircle, Key, Edit3, LogOut, Link2, Table, Plus, Download, AlertCircle } from 'lucide-react';
+import { Trash2, Edit, Save, X, Users, Trophy, CheckCircle, Key, Edit3, LogOut, Link2, Table, Plus, Download, AlertCircle, Power, PowerOff } from 'lucide-react';
 import { useBracketMode } from '@/contexts/BracketModeContext';
 
 interface User {
@@ -601,6 +601,178 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Error toggling team active status:', error);
       setTeamDataError(error instanceof Error ? error.message : 'Failed to toggle team active status');
+    }
+  };
+
+  // Helper function to get filtered teams based on current filters
+  const getFilteredTeams = (): Array<[string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }]> => {
+    return Object.entries(teamData).filter(([key, team]) => {
+      const keyMatch = !teamFilters.key || key.toLowerCase().includes(teamFilters.key.toLowerCase());
+      const idMatch = !teamFilters.id || team.id.toLowerCase().includes(teamFilters.id.toLowerCase());
+      const nameMatch = !teamFilters.name || team.name.toLowerCase().includes(teamFilters.name.toLowerCase());
+      const mascotMatch = !teamFilters.mascot || (team.mascot && team.mascot.toLowerCase().includes(teamFilters.mascot.toLowerCase()));
+      return keyMatch && idMatch && nameMatch && mascotMatch;
+    });
+  };
+
+  const handleDeleteFilteredTeams = async () => {
+    const filteredTeams = getFilteredTeams();
+    
+    if (filteredTeams.length === 0) {
+      setTeamDataError('No teams to delete');
+      return;
+    }
+
+    const confirmMessage = `Are you sure you want to delete ${filteredTeams.length} team(s) from the database?\n\nThis action cannot be undone.`;
+    
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setTeamDataError('');
+
+      // Delete all filtered teams
+      const deletePromises = filteredTeams.map(([key]) =>
+        fetch(`/api/admin/team-data?key=${encodeURIComponent(key)}`, {
+          method: 'DELETE',
+        })
+      );
+
+      const results = await Promise.all(deletePromises);
+      const dataResults = await Promise.all(results.map(r => r.json()));
+
+      // Check for any failures
+      const failures = dataResults.filter(d => !d.success);
+
+      if (failures.length > 0) {
+        setTeamDataError(`Failed to delete ${failures.length} team(s). ${dataResults.length - failures.length} team(s) deleted successfully.`);
+      } else {
+        setTeamDataError('');
+      }
+
+      // Reload team data
+      if (loadTeamDataRef.current) {
+        await loadTeamDataRef.current();
+      }
+
+      if (failures.length === 0) {
+        alert(`Successfully deleted ${filteredTeams.length} team(s).`);
+      }
+    } catch (error) {
+      console.error('Error deleting filtered teams:', error);
+      setTeamDataError('Failed to delete teams. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleActivateFilteredTeams = async () => {
+    const filteredTeams = getFilteredTeams();
+    
+    if (filteredTeams.length === 0) {
+      setTeamDataError('No teams to activate');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setTeamDataError('');
+
+      // Activate all filtered teams
+      const activatePromises = filteredTeams.map(([key]) =>
+        fetch('/api/admin/team-data', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            key,
+            active: true,
+          }),
+        })
+      );
+
+      const results = await Promise.all(activatePromises);
+      const dataResults = await Promise.all(results.map(r => r.json()));
+
+      // Check for any failures
+      const failures = dataResults.filter(d => !d.success);
+
+      if (failures.length > 0) {
+        setTeamDataError(`Failed to activate ${failures.length} team(s). ${dataResults.length - failures.length} team(s) activated successfully.`);
+      } else {
+        setTeamDataError('');
+      }
+
+      // Reload team data
+      if (loadTeamDataRef.current) {
+        await loadTeamDataRef.current();
+      }
+
+      if (failures.length === 0) {
+        alert(`Successfully activated ${filteredTeams.length} team(s).`);
+      }
+    } catch (error) {
+      console.error('Error activating filtered teams:', error);
+      setTeamDataError('Failed to activate teams. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeactivateFilteredTeams = async () => {
+    const filteredTeams = getFilteredTeams();
+    
+    if (filteredTeams.length === 0) {
+      setTeamDataError('No teams to deactivate');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setTeamDataError('');
+
+      // Deactivate all filtered teams
+      const deactivatePromises = filteredTeams.map(([key]) =>
+        fetch('/api/admin/team-data', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            key,
+            active: false,
+          }),
+        })
+      );
+
+      const results = await Promise.all(deactivatePromises);
+      const dataResults = await Promise.all(results.map(r => r.json()));
+
+      // Check for any failures
+      const failures = dataResults.filter(d => !d.success);
+
+      if (failures.length > 0) {
+        setTeamDataError(`Failed to deactivate ${failures.length} team(s). ${dataResults.length - failures.length} team(s) deactivated successfully.`);
+      } else {
+        setTeamDataError('');
+      }
+
+      // Reload team data
+      if (loadTeamDataRef.current) {
+        await loadTeamDataRef.current();
+      }
+
+      if (failures.length === 0) {
+        alert(`Successfully deactivated ${filteredTeams.length} team(s).`);
+      }
+    } catch (error) {
+      console.error('Error deactivating filtered teams:', error);
+      setTeamDataError('Failed to deactivate teams. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -1537,6 +1709,33 @@ export default function AdminPage() {
                     >
                       <Download className="h-4 w-4" />
                       <span>Export JSON</span>
+                    </button>
+                    <button
+                      onClick={handleDeleteFilteredTeams}
+                      disabled={getFilteredTeams().length === 0}
+                      className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={`Delete all ${getFilteredTeams().length} team(s) in current view`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span>Delete Teams ({getFilteredTeams().length})</span>
+                    </button>
+                    <button
+                      onClick={handleActivateFilteredTeams}
+                      disabled={getFilteredTeams().length === 0}
+                      className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={`Activate all ${getFilteredTeams().length} team(s) in current view`}
+                    >
+                      <Power className="h-4 w-4" />
+                      <span>Activate Teams ({getFilteredTeams().length})</span>
+                    </button>
+                    <button
+                      onClick={handleDeactivateFilteredTeams}
+                      disabled={getFilteredTeams().length === 0}
+                      className="flex items-center space-x-2 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={`Deactivate all ${getFilteredTeams().length} team(s) in current view`}
+                    >
+                      <PowerOff className="h-4 w-4" />
+                      <span>Deactivate Teams ({getFilteredTeams().length})</span>
                     </button>
                     <button
                       onClick={handleAddTeam}
