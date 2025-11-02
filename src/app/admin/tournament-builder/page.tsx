@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Save, X } from 'lucide-react';
+import { ArrowLeft, Save } from 'lucide-react';
 import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
 import { TournamentRegion } from '@/types/tournament';
 
