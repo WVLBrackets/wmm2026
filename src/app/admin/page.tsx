@@ -166,15 +166,30 @@ export default function AdminPage() {
         // Filter to show only teams where active is explicitly false
         // Debug: Log what we're filtering
         const allEntries = Object.entries(loadedData);
-        const inactiveEntries = allEntries.filter(([_, team]) => {
-          const isInactive = team.active === false;
-          if (!isInactive && team.active !== true) {
-            // Log teams that might have undefined/null active status
-            console.log('Team with non-boolean active:', team.name, 'active:', team.active);
+        const inactiveEntries: Array<[string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }]> = [];
+        const activeEntries: Array<[string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }]> = [];
+        const otherEntries: Array<[string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }]> = [];
+        
+        allEntries.forEach(([key, team]) => {
+          const activeValue = team.active;
+          const activeType = typeof activeValue;
+          const isStrictFalse = activeValue === false;
+          const isStrictTrue = activeValue === true;
+          
+          if (isStrictFalse) {
+            inactiveEntries.push([key, team]);
+          } else if (isStrictTrue) {
+            activeEntries.push([key, team]);
+          } else {
+            otherEntries.push([key, team]);
+            // Log teams with unexpected active values
+            console.log(`[Inactive Filter] Team "${team.name}" (${key}): active =`, activeValue, `(type: ${activeType})`);
           }
-          return isInactive;
         });
-        console.log(`[Inactive Filter] Total teams: ${allEntries.length}, Inactive teams: ${inactiveEntries.length}`);
+        
+        console.log(`[Inactive Filter] Total: ${allEntries.length}, Active (true): ${activeEntries.length}, Inactive (false): ${inactiveEntries.length}, Other (${otherEntries.length}):`, 
+          otherEntries.map(([k, t]) => `${t.name}(${typeof t.active})`).slice(0, 5));
+        
         filteredData = Object.fromEntries(inactiveEntries);
       } else if (teamActiveFilter === 'active') {
         // Filter to show only teams where active is true (or undefined/null which should be treated as active)
