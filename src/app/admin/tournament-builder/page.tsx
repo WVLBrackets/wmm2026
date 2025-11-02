@@ -195,37 +195,44 @@ export default function TournamentBuilderPage() {
       // Map tournament regions to component regions
       if (tournamentData.regions && Array.isArray(tournamentData.regions)) {
         const mappedRegions: Region[] = tournamentData.regions.map((region: TournamentRegion) => {
-          // Create teams array with 16 slots, mapping from tournament data
-          const regionTeams: RegionTeam[] = Array(16).fill(null).map((_, i) => {
-            const team = region.teams && region.teams[i];
-            if (team && team.id) {
-              // Find the team key from the ID to get the most up-to-date team data
-              const teamKey = teamIdToKeyMap.get(team.id);
-              // If we found a matching team in our teams record, use its data
-              if (teamKey && teams[teamKey]) {
-                const teamData = teams[teamKey];
-                return {
-                  id: teamData.id,
-                  name: teamData.name,
-                  seed: team.seed || (i + 1),
-                  logo: teamData.logo || `/logos/teams/${team.id}.png`,
-                };
+          // Create teams array with 16 slots, initialized as empty
+          const regionTeams: RegionTeam[] = Array(16).fill(null).map((_, i) => ({
+            id: '',
+            name: '',
+            seed: i + 1,
+            logo: '',
+          }));
+
+          // Place each team at the array position corresponding to its seed (seed - 1)
+          if (region.teams && Array.isArray(region.teams)) {
+            region.teams.forEach((team) => {
+              if (team && team.id && team.seed && team.seed >= 1 && team.seed <= 16) {
+                const arrayPosition = team.seed - 1;
+                
+                // Find the team key from the ID to get the most up-to-date team data
+                const teamKey = teamIdToKeyMap.get(team.id);
+                
+                // If we found a matching team in our teams record, use its data
+                if (teamKey && teams[teamKey]) {
+                  const teamData = teams[teamKey];
+                  regionTeams[arrayPosition] = {
+                    id: teamData.id,
+                    name: teamData.name,
+                    seed: team.seed,
+                    logo: teamData.logo || `/logos/teams/${team.id}.png`,
+                  };
+                } else {
+                  // Fallback: use data from tournament file directly
+                  regionTeams[arrayPosition] = {
+                    id: team.id,
+                    name: team.name || '',
+                    seed: team.seed,
+                    logo: team.logo || `/logos/teams/${team.id}.png`,
+                  };
+                }
               }
-              // Fallback: use data from tournament file directly
-              return {
-                id: team.id,
-                name: team.name || '',
-                seed: team.seed || (i + 1),
-                logo: team.logo || `/logos/teams/${team.id}.png`,
-              };
-            }
-            return {
-              id: '',
-              name: '',
-              seed: i + 1,
-              logo: '',
-            };
-          });
+            });
+          }
 
           return {
             name: region.name || '',
