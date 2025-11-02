@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/lib/adminAuth';
-import { getAllTeamReferenceData, syncTeamDataFromJSON, updateTeamReferenceData, deleteTeamReferenceData, initializeTeamDataTable, updateTeamActiveStatus } from '@/lib/secureDatabase';
+import { getAllTeamReferenceData, updateTeamReferenceData, deleteTeamReferenceData, initializeTeamDataTable, updateTeamActiveStatus } from '@/lib/secureDatabase';
 
 /**
  * GET /api/admin/team-data - Get all team reference data
@@ -22,9 +22,7 @@ export async function GET(request: NextRequest) {
     // Ensure team_reference_data table exists
     await initializeTeamDataTable();
 
-    // Sync from JSON only in development (staging/prod use database directly)
-    await syncTeamDataFromJSON();
-
+    // Database is the source of truth - no sync from JSON file
     // Check for activeOnly query parameter
     const { searchParams } = new URL(request.url);
     const activeOnly = searchParams.get('activeOnly') === 'true';

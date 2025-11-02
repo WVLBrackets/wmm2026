@@ -1,17 +1,11 @@
-// Team reference data from local JSON file
-// Fetches team abbreviations and ESPN IDs from local team-mappings.json
+// Team reference data from database
+// Database is the source of truth for team reference data
 
 export interface TeamRefData {
   abbr: string;
   id: string;
   name: string;
 }
-
-// Local team mappings configuration
-const TEAM_MAPPINGS_PATH = '/data/team-mappings.json';
-
-// Import the JSON data directly for better development support
-import teamMappingsData from '../../public/data/team-mappings.json';
 
 // Cache for team reference data
 let cachedTeamData: TeamRefData[] | null = null;
@@ -33,7 +27,7 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
     return cachedTeamData;
   }
 
-  // Try database first (server-side only)
+  // Try database (server-side only)
   if (typeof window === 'undefined') {
     try {
       const { getAllTeamReferenceData } = await import('@/lib/secureDatabase');
@@ -58,90 +52,40 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
         console.log(`✅ Team reference data ready from database in ${totalTime.toFixed(2)}ms`);
         return teamData;
       }
+      
+      // Database is empty - this shouldn't happen in production, but use fallback
+      console.warn('⚠️ Database has no team data, using fallback data');
+      const fallbackStart = performance.now();
+      const fallbackData = getFallbackTeamData();
+      const fallbackEnd = performance.now();
+      console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
+      
+      cachedTeamData = fallbackData;
+      lastFetchTime = now;
+      
+      const totalTime = performance.now() - startTime;
+      console.log(`✅ Team reference data ready (fallback) in ${totalTime.toFixed(2)}ms`);
+      return fallbackData;
+      
     } catch (dbError) {
-      console.log('📋 Database not available or empty, falling back to JSON:', dbError instanceof Error ? dbError.message : String(dbError));
+      console.error('❌ Database error, using fallback:', dbError instanceof Error ? dbError.message : String(dbError));
+      // Use hardcoded fallback data if database fails
+      const fallbackStart = performance.now();
+      const fallbackData = getFallbackTeamData();
+      const fallbackEnd = performance.now();
+      console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
+      
+      cachedTeamData = fallbackData;
+      lastFetchTime = now;
+      
+      const totalTime = performance.now() - startTime;
+      console.log(`✅ Team reference data ready (fallback) in ${totalTime.toFixed(2)}ms`);
+      return fallbackData;
     }
   }
-
-  try {
-    // Fetch from local JSON file (client-side or database fallback)
-    console.log('📋 Fetching team reference data from local JSON file');
-    
-    // Create AbortController for timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-    
-    try {
-      // Try to fetch the file with proper headers
-      const response = await fetch(TEAM_MAPPINGS_PATH, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        },
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        console.error(`❌ Failed to fetch team mappings: ${response.status} ${response.statusText}`);
-        throw new Error(`Failed to fetch team mappings: ${response.status} ${response.statusText}`);
-      }
-      
-      const teamMappings = await response.json();
-      
-      // Convert to TeamRefData format
-      const teamData: TeamRefData[] = Object.entries(teamMappings).map(([abbr, teamInfo]) => ({
-        abbr,
-        id: (teamInfo as { id: string; name: string; abbr: string }).id,
-        name: (teamInfo as { id: string; name: string; abbr: string }).name
-      }));
-      
-      console.log(`📋 Loaded ${teamData.length} teams from local JSON file`);
-      
-      // Log available team abbreviations for debugging
-      console.log(`📋 Available team abbreviations (${teamData.length} total):`, 
-        teamData.map(t => t.abbr).sort().join(', '));
-      
-      cachedTeamData = teamData;
-      lastFetchTime = now;
-      
-      const totalTime = performance.now() - startTime;
-      console.log(`✅ Team reference data ready in ${totalTime.toFixed(2)}ms`);
-      return teamData;
-      
-    } catch (fetchError) {
-      clearTimeout(timeoutId);
-      console.error('❌ Network error fetching team mappings:', fetchError);
-      throw fetchError;
-    }
-    
-  } catch (error) {
-    console.error('❌ Error loading team mappings from local JSON:', error);
-    console.log('📋 Falling back to imported JSON data');
-    
-    try {
-      // Try to use the imported JSON data
-      const teamData: TeamRefData[] = Object.entries(teamMappingsData).map(([abbr, teamInfo]: [string, { id: string; name: string; logo: string }]) => ({
-        abbr,
-        id: teamInfo.id,
-        name: teamInfo.name
-      }));
-      
-      console.log(`📋 Loaded ${teamData.length} teams from imported JSON data`);
-      
-      cachedTeamData = teamData;
-      lastFetchTime = now;
-      
-      const totalTime = performance.now() - startTime;
-      console.log(`✅ Team reference data ready in ${totalTime.toFixed(2)}ms`);
-      return teamData;
-      
-    } catch (importError) {
-      console.error('❌ Error with imported JSON data:', importError);
-      console.log('📋 Falling back to hardcoded team data');
-      
-      // Use hardcoded fallback data
+  
+  // Client-side: database operations aren't available, use fallback
+  console.warn('⚠️ Client-side call: using fallback data (database not available client-side)');
   const fallbackStart = performance.now();
   const fallbackData = getFallbackTeamData();
   const fallbackEnd = performance.now();
@@ -151,10 +95,8 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
   lastFetchTime = now;
   
   const totalTime = performance.now() - startTime;
-  console.log(`✅ Team reference data ready in ${totalTime.toFixed(2)}ms`);
+  console.log(`✅ Team reference data ready (fallback) in ${totalTime.toFixed(2)}ms`);
   return fallbackData;
-    }
-  }
 }
 
 /**

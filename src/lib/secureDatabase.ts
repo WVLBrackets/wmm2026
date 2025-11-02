@@ -1064,45 +1064,13 @@ export async function initializeTeamDataTable(): Promise<void> {
 
 /**
  * Sync team data from JSON file to database
- * This runs when the database is empty, regardless of environment
- * In staging/prod, once data exists, it's managed via Admin Panel
+ * DEPRECATED: Database is now the single source of truth.
+ * This function is kept for backwards compatibility but does nothing.
+ * Team data should be managed through the Admin Panel.
  */
 export async function syncTeamDataFromJSON(): Promise<void> {
-  try {
-    const { teamDataSql } = await import('./teamDataConnection');
-    
-    // Check if we already have data in the database
-    const existingCount = await teamDataSql`
-      SELECT COUNT(*) as count
-      FROM team_reference_data
-    `;
-    
-    if ((existingCount.rows[0]?.count as number) > 0) {
-      console.log('[syncTeamDataFromJSON] Team data already exists in database, skipping sync');
-      return;
-    }
-    
-    // Database is empty, try to sync from JSON file
-    console.log('[syncTeamDataFromJSON] Database is empty, attempting to sync from JSON file');
-    
-    // Try to read from JSON file and import
-    const fs = await import('fs/promises');
-    const path = await import('path');
-    const filePath = path.join(process.cwd(), 'public', 'data', 'team-mappings.json');
-    
-    try {
-      const fileContents = await fs.readFile(filePath, 'utf8');
-      const teamData = JSON.parse(fileContents);
-      
-      // Import all teams
-      await updateTeamReferenceData(teamData);
-      console.log('[syncTeamDataFromJSON] Successfully synced team data from JSON to database');
-    } catch (fileError) {
-      console.error('[syncTeamDataFromJSON] Could not read JSON file:', fileError);
-      // Continue - database will be empty but functional
-    }
-  } catch (error) {
-    console.error('[syncTeamDataFromJSON] Error syncing team data:', error);
-    // Don't throw - allow function to continue even if sync fails
-  }
+  // Database is the source of truth - no longer syncing from JSON file
+  // This function is a no-op to maintain backwards compatibility
+  console.log('[syncTeamDataFromJSON] Database is the source of truth - JSON sync disabled');
+  return;
 }
