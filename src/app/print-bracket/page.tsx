@@ -242,11 +242,20 @@ export default function PrintBracketPage() {
                     display: 'flex', 
                     alignItems: 'center', 
                     padding: '2px 4px',
-                    fontSize: '8px',
+                    fontSize: '10px',
                     backgroundColor: '#ffffff'
                   }}>
                     {winner ? (
                       <>
+                        {winner.logo && (
+                          <Image
+                            src={winner.logo}
+                            alt={`${winner.name} logo`}
+                            width={12}
+                            height={12}
+                            style={{ objectFit: 'contain', marginRight: '4px', flexShrink: 0 }}
+                          />
+                        )}
                         <span style={{ fontWeight: 'bold', marginRight: '2px' }}>#{winner.seed}</span>
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {winner.name}
@@ -281,11 +290,20 @@ export default function PrintBracketPage() {
                       display: 'flex', 
                       alignItems: 'center', 
                       padding: '2px 4px',
-                      fontSize: '8px',
+                      fontSize: '12px',
                       backgroundColor: '#ffffff'
                     }}>
                       {winner ? (
                         <>
+                          {winner.logo && (
+                            <Image
+                              src={winner.logo}
+                              alt={`${winner.name} logo`}
+                              width={16}
+                              height={16}
+                              style={{ objectFit: 'contain', marginRight: '4px', flexShrink: 0 }}
+                            />
+                          )}
                           <span style={{ fontWeight: 'bold', marginRight: '2px' }}>#{winner.seed}</span>
                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {winner.name}
@@ -315,11 +333,20 @@ export default function PrintBracketPage() {
                       display: 'flex', 
                       alignItems: 'center', 
                       padding: '2px 4px',
-                      fontSize: '8px',
+                      fontSize: '12px',
                       backgroundColor: '#ffffff'
                     }}>
                       {winner ? (
                         <>
+                          {winner.logo && (
+                            <Image
+                              src={winner.logo}
+                              alt={`${winner.name} logo`}
+                              width={14}
+                              height={14}
+                              style={{ objectFit: 'contain', marginRight: '4px', flexShrink: 0 }}
+                            />
+                          )}
                           <span style={{ fontWeight: 'bold', marginRight: '2px' }}>#{winner.seed}</span>
                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {winner.name}
@@ -349,11 +376,20 @@ export default function PrintBracketPage() {
                       display: 'flex', 
                       alignItems: 'center', 
                       padding: '2px 4px',
-                      fontSize: '8px',
+                      fontSize: '12px',
                       backgroundColor: '#ffffff'
                     }}>
                       {winner ? (
                         <>
+                          {winner.logo && (
+                            <Image
+                              src={winner.logo}
+                              alt={`${winner.name} logo`}
+                              width={14}
+                              height={14}
+                              style={{ objectFit: 'contain', marginRight: '4px', flexShrink: 0 }}
+                            />
+                          )}
                           <span style={{ fontWeight: 'bold', marginRight: '2px' }}>#{winner.seed}</span>
                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {winner.name}
@@ -383,11 +419,20 @@ export default function PrintBracketPage() {
                       display: 'flex', 
                       alignItems: 'center', 
                       padding: '2px 4px',
-                      fontSize: '8px',
+                      fontSize: '12px',
                       backgroundColor: '#ffffff'
                     }}>
                       {winner ? (
                         <>
+                          {winner.logo && (
+                            <Image
+                              src={winner.logo}
+                              alt={`${winner.name} logo`}
+                              width={14}
+                              height={14}
+                              style={{ objectFit: 'contain', marginRight: '4px', flexShrink: 0 }}
+                            />
+                          )}
                           <span style={{ fontWeight: 'bold', marginRight: '2px' }}>#{winner.seed}</span>
                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {winner.name}
@@ -426,11 +471,20 @@ export default function PrintBracketPage() {
                       display: 'flex', 
                       alignItems: 'center', 
                       padding: '2px 4px',
-                      fontSize: '8px',
+                      fontSize: '12px',
                       backgroundColor: '#ffffff'
                     }}>
                       {winner ? (
                         <>
+                          {winner.logo && (
+                            <Image
+                              src={winner.logo}
+                              alt={`${winner.name} logo`}
+                              width={16}
+                              height={16}
+                              style={{ objectFit: 'contain', marginRight: '4px', flexShrink: 0 }}
+                            />
+                          )}
                           <span style={{ fontWeight: 'bold', marginRight: '2px' }}>#{winner.seed}</span>
                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {winner.name}
@@ -460,11 +514,20 @@ export default function PrintBracketPage() {
                       display: 'flex', 
                       alignItems: 'center', 
                       padding: '2px 4px',
-                      fontSize: '8px',
+                      fontSize: '12px',
                       backgroundColor: '#ffffff'
                     }}>
                       {winner ? (
                         <>
+                          {winner.logo && (
+                            <Image
+                              src={winner.logo}
+                              alt={`${winner.name} logo`}
+                              width={16}
+                              height={16}
+                              style={{ objectFit: 'contain', marginRight: '4px', flexShrink: 0 }}
+                            />
+                          )}
                           <span style={{ fontWeight: 'bold', marginRight: '2px' }}>#{winner.seed}</span>
                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {winner.name}
@@ -503,11 +566,20 @@ export default function PrintBracketPage() {
                       display: 'flex', 
                       alignItems: 'center', 
                       padding: '2px 4px',
-                      fontSize: '8px',
+                      fontSize: '19px',
                       backgroundColor: '#ffffff'
                     }}>
                       {winner ? (
                         <>
+                          {winner.logo && (
+                            <Image
+                              src={winner.logo}
+                              alt={`${winner.name} logo`}
+                              width={22}
+                              height={22}
+                              style={{ objectFit: 'contain', marginRight: '4px', flexShrink: 0 }}
+                            />
+                          )}
                           <span style={{ fontWeight: 'bold', marginRight: '2px' }}>#{winner.seed}</span>
                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {winner.name}
