@@ -130,23 +130,27 @@ export default function PrintBracketPage() {
         margin: '0 auto',
         display: 'flex', 
         flexDirection: 'row', 
-        gap: '5px',
         padding: '4px 8px',
         alignItems: 'center',
-        justifyContent: 'center',
         border: '1px solid #d1d5db',
         borderRadius: '4px',
         backgroundColor: '#ffffff',
         minHeight: '30px'
       }}>
         {/* Finalist 1 */}
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', paddingRight: '8px' }}>
+        <div style={{ 
+          flex: 1, 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center',
+          paddingRight: '20px'
+        }}>
           <div style={{
             fontSize: '14px',
             display: 'flex',
             flexDirection: 'row',
             alignItems: 'center',
-            justifyContent: 'flex-end',
+            justifyContent: 'center',
             gap: '4px'
           }}>
             {finalist1 ? (
@@ -174,20 +178,26 @@ export default function PrintBracketPage() {
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'center',
-          minWidth: '60px',
+          width: '60px',
           flexShrink: 0
         }}>
           <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#374151' }}>VS</div>
         </div>
 
         {/* Finalist 2 */}
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', paddingLeft: '8px' }}>
+        <div style={{ 
+          flex: 1, 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center',
+          paddingLeft: '20px'
+        }}>
           <div style={{
             fontSize: '14px',
             display: 'flex',
             flexDirection: 'row',
             alignItems: 'center',
-            justifyContent: 'flex-start',
+            justifyContent: 'center',
             gap: '4px'
           }}>
             {finalist2 ? (
