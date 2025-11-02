@@ -163,14 +163,17 @@ export default function AdminPage() {
       // Filter by active status if needed
       let filteredData = loadedData;
       if (teamActiveFilter === 'inactive') {
+        // Filter to show only teams where active is explicitly false
         filteredData = Object.fromEntries(
-          Object.entries(loadedData).filter(([_, team]) => !team.active)
+          Object.entries(loadedData).filter(([_, team]) => team.active === false)
         );
       } else if (teamActiveFilter === 'active') {
+        // Filter to show only teams where active is true (or undefined/null which should be treated as active)
         filteredData = Object.fromEntries(
-          Object.entries(loadedData).filter(([_, team]) => team.active !== false)
+          Object.entries(loadedData).filter(([_, team]) => team.active === true)
         );
       }
+      // 'all' filter doesn't need client-side filtering - show everything from API
       
       setTeamData(filteredData);
       setTeamDataError(''); // Clear any previous errors
