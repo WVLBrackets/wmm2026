@@ -471,7 +471,7 @@ export default function PrintBracketPage() {
                       display: 'flex', 
                       alignItems: 'center', 
                       padding: '2px 4px',
-                      fontSize: '12px',
+                      fontSize: '15px',
                       backgroundColor: '#ffffff'
                     }}>
                       {winner ? (
@@ -480,8 +480,8 @@ export default function PrintBracketPage() {
                             <Image
                               src={winner.logo}
                               alt={`${winner.name} logo`}
-                              width={16}
-                              height={16}
+                              width={20}
+                              height={20}
                               style={{ objectFit: 'contain', marginRight: '4px', flexShrink: 0 }}
                             />
                           )}
@@ -514,7 +514,7 @@ export default function PrintBracketPage() {
                       display: 'flex', 
                       alignItems: 'center', 
                       padding: '2px 4px',
-                      fontSize: '12px',
+                      fontSize: '15px',
                       backgroundColor: '#ffffff'
                     }}>
                       {winner ? (
@@ -523,8 +523,8 @@ export default function PrintBracketPage() {
                             <Image
                               src={winner.logo}
                               alt={`${winner.name} logo`}
-                              width={16}
-                              height={16}
+                              width={20}
+                              height={20}
                               style={{ objectFit: 'contain', marginRight: '4px', flexShrink: 0 }}
                             />
                           )}
