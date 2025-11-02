@@ -125,7 +125,9 @@ export default function PrintBracketPage() {
 
     return (
       <div style={{ 
-        width: '100%',
+        width: '50%',
+        maxWidth: '500px',
+        margin: '0 auto',
         display: 'flex', 
         flexDirection: 'row', 
         padding: '4px 8px',
@@ -141,8 +143,7 @@ export default function PrintBracketPage() {
           display: 'flex', 
           justifyContent: 'center', 
           alignItems: 'center',
-          paddingRight: '10px',
-          minWidth: 0
+          paddingRight: '20px'
         }}>
           <div style={{
             fontSize: '14px',
@@ -150,14 +151,12 @@ export default function PrintBracketPage() {
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '4px',
-            minWidth: 0,
-            width: '100%'
+            gap: '4px'
           }}>
             {finalist1 ? (
               <>
-                <span style={{ fontWeight: 'bold', flexShrink: 0 }}>#{finalist1.seed}</span>
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{finalist1.name}</span>
+                <span style={{ fontWeight: 'bold' }}>#{finalist1.seed}</span>
+                <span>{finalist1.name}</span>
                 {finalist1.logo && (
                   <Image
                     src={finalist1.logo}
@@ -191,8 +190,7 @@ export default function PrintBracketPage() {
           display: 'flex', 
           justifyContent: 'center', 
           alignItems: 'center',
-          paddingLeft: '10px',
-          minWidth: 0
+          paddingLeft: '20px'
         }}>
           <div style={{
             fontSize: '14px',
@@ -200,9 +198,7 @@ export default function PrintBracketPage() {
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '4px',
-            minWidth: 0,
-            width: '100%'
+            gap: '4px'
           }}>
             {finalist2 ? (
               <>
@@ -215,8 +211,8 @@ export default function PrintBracketPage() {
                     style={{ objectFit: 'contain', flexShrink: 0 }}
                   />
                 )}
-                <span style={{ fontWeight: 'bold', flexShrink: 0 }}>#{finalist2.seed}</span>
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{finalist2.name}</span>
+                <span style={{ fontWeight: 'bold' }}>#{finalist2.seed}</span>
+                <span>{finalist2.name}</span>
               </>
             ) : (
               <span style={{ color: '#9ca3af' }}>Finalist 2</span>
@@ -242,7 +238,7 @@ export default function PrintBracketPage() {
     return columnOrder.map((round, index) => {
       if (round === 'Round of 64') {
         return (
-          <div key={round} style={{ width: '9%', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+          <div key={round} style={{ minWidth: '90px', flex: '1 1 0', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0px', flex: 1 }}>
               {tournament.regions[regionIndex].teams.map((team, teamIndex) => {
                 const gameIndex = Math.floor(teamIndex / 2);
@@ -273,7 +269,7 @@ export default function PrintBracketPage() {
         );
       } else if (round === 'Round of 32') {
         return (
-          <div key={round} style={{ width: '9%', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+          <div key={round} style={{ minWidth: '90px', flex: '1 1 0', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0px', flex: 1 }}>
               {Array.from({ length: 8 }, (_, gameIndex) => {
                 const roundOf64Game = (bracketTyped.regions as Record<string, unknown[]>)[regionKey]?.find(g => (g as Record<string, unknown>).round === 'Round of 64' && (g as Record<string, unknown>).gameNumber === gameIndex + 1);
@@ -316,7 +312,7 @@ export default function PrintBracketPage() {
         );
       } else if (round === 'Sweet 16') {
         return (
-          <div key={round} style={{ width: '9%', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+          <div key={round} style={{ minWidth: '90px', flex: '1 1 0', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0px', flex: 1 }}>
                     {/* 6% top gap */}
                     <div style={{ height: '6%' }}></div>
@@ -497,7 +493,7 @@ export default function PrintBracketPage() {
         );
       } else if (round === 'Elite 8') {
         return (
-          <div key={round} style={{ width: '9%', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+          <div key={round} style={{ minWidth: '90px', flex: '1 1 0', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0px', flex: 1 }}>
                     {/* 12% top gap */}
                     <div style={{ height: '12%' }}></div>
@@ -600,7 +596,7 @@ export default function PrintBracketPage() {
         );
       } else if (round === 'Final Four') {
         return (
-          <div key={round} style={{ width: '9%', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+          <div key={round} style={{ minWidth: '90px', flex: '1 1 0', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0px', flex: 1 }}>
                     {/* 36% top gap */}
                     <div style={{ height: '36%' }}></div>
@@ -765,16 +761,11 @@ export default function PrintBracketPage() {
       </div>
 
       {/* Bracket Content */}
-      <div style={{ 
-        paddingLeft: '4%',
-        paddingRight: '4%',
-        paddingTop: '10px',
-        paddingBottom: '10px'
-      }}>
+      <div style={{ padding: '10px' }}>
         <div style={{ 
           display: 'flex', 
           flexDirection: 'column',
-          gap: '2%'
+          gap: '10px'
         }}>
           {/* Helper function to get region name by position */}
           {(() => {
@@ -811,87 +802,51 @@ export default function PrintBracketPage() {
             return (
               <>
                 {/* Top Row - Top Left and Top Right Regions */}
-                <div style={{ 
-                  display: 'flex', 
-                  width: '100%',
-                  gap: '2%'
-                }}>
-                  {/* Top Left Region - 45% (5 columns × 9%) */}
-                  <div style={{ 
-                    width: '45%',
-                    padding: '3px', 
-                    display: 'flex', 
-                    flexDirection: 'column' 
-                  }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  {/* Top Left Region */}
+                  <div style={{ padding: '3px', display: 'flex', flexDirection: 'column' }}>
                     <div style={{ textAlign: 'left', padding: '2px 15px', fontSize: '14px', fontWeight: 'bold', color: '#374151', marginBottom: '2px' }}>
                       {topLeftRegionName}
                     </div>
-                    <div style={{ display: 'flex', gap: '0px', width: '100%', minWidth: 0 }}>
+                    <div style={{ display: 'flex', gap: '0px' }}>
                       {renderRegionColumns('Top Left', topLeftIndex)}
                     </div>
                   </div>
                   
-                  {/* Top Right Region - 45% (5 columns × 9%) */}
-                  <div style={{ 
-                    width: '45%',
-                    padding: '3px', 
-                    display: 'flex', 
-                    flexDirection: 'column' 
-                  }}>
+                  {/* Top Right Region */}
+                  <div style={{ padding: '3px', display: 'flex', flexDirection: 'column' }}>
                     <div style={{ textAlign: 'right', padding: '2px 15px', fontSize: '14px', fontWeight: 'bold', color: '#374151', marginBottom: '2px' }}>
                       {topRightRegionName}
                     </div>
-                    <div style={{ display: 'flex', gap: '0px', width: '100%', minWidth: 0 }}>
+                    <div style={{ display: 'flex', gap: '0px' }}>
                       {renderRegionColumns('Top Right', topRightIndex)}
                     </div>
                   </div>
                 </div>
                 
                 {/* Final Four Section - Middle */}
-                {/* Spans 4 middle columns (columns 4-7) = 4 × 9% = 36%, plus gap = 38% total */}
-                {/* Position: 4% (margin) + 27% (3 columns) + 2% (gap) = 33% from left, width 38% */}
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  marginLeft: '33%',
-                  width: '38%'
-                }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {renderFinalFourSection()}
                 </div>
                 
                 {/* Bottom Row - Bottom Left and Bottom Right Regions */}
-                <div style={{ 
-                  display: 'flex', 
-                  width: '100%',
-                  gap: '2%'
-                }}>
-                  {/* Bottom Left Region - 45% (5 columns × 9%) */}
-                  <div style={{ 
-                    width: '45%',
-                    padding: '3px', 
-                    display: 'flex', 
-                    flexDirection: 'column' 
-                  }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  {/* Bottom Left Region */}
+                  <div style={{ padding: '3px', display: 'flex', flexDirection: 'column' }}>
                     <div style={{ textAlign: 'left', padding: '2px 15px', fontSize: '14px', fontWeight: 'bold', color: '#374151', marginBottom: '2px' }}>
                       {bottomLeftRegionName}
                     </div>
-                    <div style={{ display: 'flex', gap: '0px', width: '100%', minWidth: 0 }}>
+                    <div style={{ display: 'flex', gap: '0px' }}>
                       {renderRegionColumns('Bottom Left', bottomLeftIndex)}
                     </div>
                   </div>
                   
-                  {/* Bottom Right Region - 45% (5 columns × 9%) */}
-                  <div style={{ 
-                    width: '45%',
-                    padding: '3px', 
-                    display: 'flex', 
-                    flexDirection: 'column' 
-                  }}>
+                  {/* Bottom Right Region */}
+                  <div style={{ padding: '3px', display: 'flex', flexDirection: 'column' }}>
                     <div style={{ textAlign: 'right', padding: '2px 15px', fontSize: '14px', fontWeight: 'bold', color: '#374151', marginBottom: '2px' }}>
                       {bottomRightRegionName}
                     </div>
-                    <div style={{ display: 'flex', gap: '0px', width: '100%', minWidth: 0 }}>
+                    <div style={{ display: 'flex', gap: '0px' }}>
                       {renderRegionColumns('Bottom Right', bottomRightIndex)}
                     </div>
                   </div>
