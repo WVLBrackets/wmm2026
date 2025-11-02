@@ -126,18 +126,29 @@ export default function PrintBracketPage() {
             border: '1px solid #d1d5db',
             borderRadius: '4px',
             backgroundColor: '#ffffff',
-            fontSize: '13px',
+            fontSize: '14px',
             minHeight: '30px',
             width: '50%',
             display: 'flex',
-            flexDirection: 'row',
+            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center'
           }}>
             {finalist1 ? (
               <>
-                <span style={{ fontWeight: 'bold', marginRight: '4px' }}>#{finalist1.seed}</span>
-                <span>{finalist1.name}</span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '4px' }}>
+                  <span style={{ fontWeight: 'bold', marginRight: '4px' }}>#{finalist1.seed}</span>
+                  <span>{finalist1.name}</span>
+                </div>
+                {finalist1.logo && (
+                  <Image
+                    src={finalist1.logo}
+                    alt={`${finalist1.name} logo`}
+                    width={24}
+                    height={24}
+                    style={{ objectFit: 'contain', flexShrink: 0 }}
+                  />
+                )}
               </>
             ) : (
               <span style={{ color: '#9ca3af' }}>Finalist 1</span>
@@ -161,18 +172,29 @@ export default function PrintBracketPage() {
             border: '1px solid #d1d5db',
             borderRadius: '4px',
             backgroundColor: '#ffffff',
-            fontSize: '13px',
+            fontSize: '14px',
             minHeight: '30px',
             width: '50%',
             display: 'flex',
-            flexDirection: 'row',
+            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center'
           }}>
             {finalist2 ? (
               <>
-                <span style={{ fontWeight: 'bold', marginRight: '4px' }}>#{finalist2.seed}</span>
-                <span>{finalist2.name}</span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '4px' }}>
+                  <span style={{ fontWeight: 'bold', marginRight: '4px' }}>#{finalist2.seed}</span>
+                  <span>{finalist2.name}</span>
+                </div>
+                {finalist2.logo && (
+                  <Image
+                    src={finalist2.logo}
+                    alt={`${finalist2.name} logo`}
+                    width={24}
+                    height={24}
+                    style={{ objectFit: 'contain', flexShrink: 0 }}
+                  />
+                )}
               </>
             ) : (
               <span style={{ color: '#9ca3af' }}>Finalist 2</span>
