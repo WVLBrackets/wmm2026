@@ -128,20 +128,18 @@ export default function PrintBracketPage() {
         display: 'flex', 
         flexDirection: 'row', 
         gap: '5px',
-        padding: '3px',
+        padding: '4px 8px',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        border: '1px solid #d1d5db',
+        borderRadius: '4px',
+        backgroundColor: '#ffffff',
+        minHeight: '30px'
       }}>
         {/* Finalist 1 */}
         <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', paddingRight: '10px' }}>
           <div style={{
-            padding: '4px 8px',
-            border: '1px solid #d1d5db',
-            borderRadius: '4px',
-            backgroundColor: '#ffffff',
             fontSize: '14px',
-            minHeight: '30px',
-            width: '50%',
             display: 'flex',
             flexDirection: 'row',
             alignItems: 'center',
@@ -181,13 +179,7 @@ export default function PrintBracketPage() {
         {/* Finalist 2 */}
         <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', paddingLeft: '10px' }}>
           <div style={{
-            padding: '4px 8px',
-            border: '1px solid #d1d5db',
-            borderRadius: '4px',
-            backgroundColor: '#ffffff',
             fontSize: '14px',
-            minHeight: '30px',
-            width: '50%',
             display: 'flex',
             flexDirection: 'row',
             alignItems: 'center',
