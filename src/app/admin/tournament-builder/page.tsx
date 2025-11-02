@@ -552,21 +552,9 @@ export default function TournamentBuilderPage() {
                     const team2 = region.teams[team2Index];
 
                     return (
-                      <div key={pairIndex} className="border border-gray-200 rounded-lg p-2">
+                      <div key={pairIndex} className="border border-gray-200 rounded-lg p-1.5">
                         {/* Team 1 */}
                         <div className="mb-1">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-semibold text-gray-600">Seed {team1.seed}</span>
-                            {team1.id && (
-                              <button
-                                onClick={() => clearTeam(regionIndex, team1Index)}
-                                className="text-red-600 hover:text-red-800"
-                                title="Clear"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            )}
-                          </div>
                           <select
                             value={(() => {
                               // Find team key that matches team1.id
@@ -591,31 +579,18 @@ export default function TournamentBuilderPage() {
                             ))}
                           </select>
                           {team1.name && (
-                            <div className="mt-1 flex items-center space-x-1">
+                            <div className="mt-1 flex items-center space-x-1.5">
+                              <span className="text-xs font-semibold text-gray-600">{team1.seed}</span>
+                              <span className="text-xs text-gray-600 truncate flex-1">{team1.name}</span>
                               {team1.logo && (
-                                <img src={team1.logo} alt={team1.name} className="w-4 h-4 object-contain" />
+                                <img src={team1.logo} alt={team1.name} className="w-4 h-4 object-contain flex-shrink-0" />
                               )}
-                              <span className="text-xs text-gray-600 truncate">{team1.name}</span>
                             </div>
                           )}
                         </div>
 
-                        <div className="text-center text-xs text-gray-400 mb-1">vs</div>
-
                         {/* Team 2 */}
                         <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-semibold text-gray-600">Seed {team2.seed}</span>
-                            {team2.id && (
-                              <button
-                                onClick={() => clearTeam(regionIndex, team2Index)}
-                                className="text-red-600 hover:text-red-800"
-                                title="Clear"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            )}
-                          </div>
                           <select
                             value={(() => {
                               // Find team key that matches team2.id
@@ -640,11 +615,12 @@ export default function TournamentBuilderPage() {
                             ))}
                           </select>
                           {team2.name && (
-                            <div className="mt-1 flex items-center space-x-1">
+                            <div className="mt-1 flex items-center space-x-1.5">
+                              <span className="text-xs font-semibold text-gray-600">{team2.seed}</span>
+                              <span className="text-xs text-gray-600 truncate flex-1">{team2.name}</span>
                               {team2.logo && (
-                                <img src={team2.logo} alt={team2.name} className="w-4 h-4 object-contain" />
+                                <img src={team2.logo} alt={team2.name} className="w-4 h-4 object-contain flex-shrink-0" />
                               )}
-                              <span className="text-xs text-gray-600 truncate">{team2.name}</span>
                             </div>
                           )}
                         </div>
