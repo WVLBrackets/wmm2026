@@ -585,13 +585,11 @@ export default function AdminPage() {
         throw new Error(data.error || 'Failed to update team active status');
       }
 
-      // If we're filtering by active status, the team may disappear/appear
-      // Let the existing filter logic handle it based on teamActiveFilter
-      // Re-run duplicate check on updated data
-      setTeamData(prev => {
-        checkForDuplicates(prev);
-        return prev;
-      });
+      // Reload team data from database to ensure we have the latest state
+      // This is important because the filter view needs fresh data from DB
+      if (loadTeamDataRef.current) {
+        await loadTeamDataRef.current();
+      }
     } catch (error) {
       console.error('Error toggling team active status:', error);
       setTeamDataError(error instanceof Error ? error.message : 'Failed to toggle team active status');
