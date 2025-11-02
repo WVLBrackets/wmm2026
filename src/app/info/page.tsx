@@ -215,22 +215,6 @@ export default function InfoPage() {
                   </p>
                 </div>
               </div>
-
-              {/* Questions Section */}
-              <div className="bg-gray-50 rounded-lg p-6 mt-6">
-                <div className="flex items-center mb-3">
-                  <Heart className="h-5 w-5 text-red-600 mr-2" />
-                  <h3 className="text-lg font-semibold text-gray-900">Questions?</h3>
-                </div>
-                <p className="text-gray-700 mb-2">
-                  If you have any questions about payments or need help with the process, 
-                  don&apos;t hesitate to reach out!
-                </p>
-                <p className="text-sm text-gray-600">
-                  Remember: The more you can help streamline the payment process, 
-                  the more time I can spend on making the tournament experience great for everyone!
-                </p>
-              </div>
             </div>
           </div>
 
