@@ -113,9 +113,6 @@ export default function PrintBracketPage() {
         flexDirection: 'row', 
         gap: '5px',
         padding: '3px',
-        border: '2px solid #e5e7eb',
-        borderRadius: '8px',
-        backgroundColor: '#f9fafb',
         alignItems: 'center',
         justifyContent: 'center'
       }}>
@@ -793,8 +790,8 @@ export default function PrintBracketPage() {
                 {/* Top Row - Top Left and Top Right Regions */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   {/* Top Left Region */}
-                  <div style={{ border: '1px solid #e5e7eb', borderRadius: '4px', background: '#f9fafb', padding: '3px', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ textAlign: 'center', padding: '2px 0', fontSize: '10px', fontWeight: 'bold', color: '#374151', borderBottom: '1px solid #d1d5db', marginBottom: '2px' }}>
+                  <div style={{ padding: '3px', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ textAlign: 'center', padding: '2px 0', fontSize: '10px', fontWeight: 'bold', color: '#374151', marginBottom: '2px' }}>
                       {topLeftRegionName}
                     </div>
                     <div style={{ display: 'flex', gap: '0px' }}>
@@ -803,8 +800,8 @@ export default function PrintBracketPage() {
                   </div>
                   
                   {/* Top Right Region */}
-                  <div style={{ border: '1px solid #e5e7eb', borderRadius: '4px', background: '#f9fafb', padding: '3px', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ textAlign: 'center', padding: '2px 0', fontSize: '10px', fontWeight: 'bold', color: '#374151', borderBottom: '1px solid #d1d5db', marginBottom: '2px' }}>
+                  <div style={{ padding: '3px', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ textAlign: 'center', padding: '2px 0', fontSize: '10px', fontWeight: 'bold', color: '#374151', marginBottom: '2px' }}>
                       {topRightRegionName}
                     </div>
                     <div style={{ display: 'flex', gap: '0px' }}>
@@ -831,8 +828,8 @@ export default function PrintBracketPage() {
                   </div>
                   
                   {/* Bottom Right Region */}
-                  <div style={{ border: '1px solid #e5e7eb', borderRadius: '4px', background: '#f9fafb', padding: '3px', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ textAlign: 'center', padding: '2px 0', fontSize: '10px', fontWeight: 'bold', color: '#374151', borderBottom: '1px solid #d1d5db', marginBottom: '2px' }}>
+                  <div style={{ padding: '3px', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ textAlign: 'center', padding: '2px 0', fontSize: '10px', fontWeight: 'bold', color: '#374151', marginBottom: '2px' }}>
                       {bottomRightRegionName}
                     </div>
                     <div style={{ display: 'flex', gap: '0px' }}>
