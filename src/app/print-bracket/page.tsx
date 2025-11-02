@@ -8,6 +8,7 @@ import { getTeamInfo } from '@/lib/teamLogos';
 import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
 import { TournamentTeam, TournamentData } from '@/types/tournament';
 import Image from 'next/image';
+import { Trophy } from 'lucide-react';
 
 export default function PrintBracketPage() {
   const [bracketData, setBracketData] = useState<Record<string, unknown> | null>(null);
@@ -124,7 +125,8 @@ export default function PrintBracketPage() {
 
     return (
       <div style={{ 
-        width: '100%',
+        width: '50%',
+        marginLeft: '25%',
         display: 'flex', 
         flexDirection: 'row', 
         gap: '5px',
@@ -690,7 +692,7 @@ export default function PrintBracketPage() {
         
         {/* Right: Champ: Team Mascot Logo */}
         <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '6px', paddingRight: '20px' }}>
-          <span>Champ:</span>
+          <Trophy size={20} color="#d4af37" style={{ flexShrink: 0 }} />
           {championTeam && (
             <>
               <span>{championTeam.name}</span>
