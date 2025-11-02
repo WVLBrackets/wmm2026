@@ -107,14 +107,20 @@ export default function InfoPage() {
                 className="flex items-center space-x-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
               >
                 <DollarSign className="h-4 w-4" />
-                <span className="font-medium">Entry & Payment</span>
+                <span className="font-medium">
+                  <span className="md:hidden">Pay</span>
+                  <span className="hidden md:inline">Entry & Payment</span>
+                </span>
               </a>
               <a 
                 href="#scoring-rules" 
                 className="flex items-center space-x-2 px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors"
               >
                 <Trophy className="h-4 w-4" />
-                <span className="font-medium">Scoring & Rules</span>
+                <span className="font-medium">
+                  <span className="md:hidden">Scoring</span>
+                  <span className="hidden md:inline">Scoring & Rules</span>
+                </span>
               </a>
               <a 
                 href="#prizes" 
