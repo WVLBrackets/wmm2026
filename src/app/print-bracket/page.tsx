@@ -469,26 +469,30 @@ export default function PrintBracketPage() {
                       height: '100%', 
                       border: '1px solid #d1d5db', 
                       display: 'flex', 
+                      flexDirection: 'column',
                       alignItems: 'center', 
+                      justifyContent: 'center',
                       padding: '2px 4px',
                       fontSize: '12px',
                       backgroundColor: '#ffffff'
                     }}>
                       {winner ? (
                         <>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '2px' }}>
+                            <span style={{ fontWeight: 'bold', marginRight: '2px' }}>#{winner.seed}</span>
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {winner.name}
+                            </span>
+                          </div>
                           {winner.logo && (
                             <Image
                               src={winner.logo}
                               alt={`${winner.name} logo`}
-                              width={14}
-                              height={14}
-                              style={{ objectFit: 'contain', marginRight: '4px', flexShrink: 0 }}
+                              width={20}
+                              height={20}
+                              style={{ objectFit: 'contain', flexShrink: 0 }}
                             />
                           )}
-                          <span style={{ fontWeight: 'bold', marginRight: '2px' }}>#{winner.seed}</span>
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {winner.name}
-                          </span>
                         </>
                       ) : (
                         <span style={{ color: '#9ca3af' }}>Winner</span>
@@ -512,26 +516,30 @@ export default function PrintBracketPage() {
                       height: '100%', 
                       border: '1px solid #d1d5db', 
                       display: 'flex', 
+                      flexDirection: 'column',
                       alignItems: 'center', 
+                      justifyContent: 'center',
                       padding: '2px 4px',
                       fontSize: '12px',
                       backgroundColor: '#ffffff'
                     }}>
                       {winner ? (
                         <>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '2px' }}>
+                            <span style={{ fontWeight: 'bold', marginRight: '2px' }}>#{winner.seed}</span>
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {winner.name}
+                            </span>
+                          </div>
                           {winner.logo && (
                             <Image
                               src={winner.logo}
                               alt={`${winner.name} logo`}
-                              width={14}
-                              height={14}
-                              style={{ objectFit: 'contain', marginRight: '4px', flexShrink: 0 }}
+                              width={20}
+                              height={20}
+                              style={{ objectFit: 'contain', flexShrink: 0 }}
                             />
                           )}
-                          <span style={{ fontWeight: 'bold', marginRight: '2px' }}>#{winner.seed}</span>
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {winner.name}
-                          </span>
                         </>
                       ) : (
                         <span style={{ color: '#9ca3af' }}>Winner</span>
@@ -564,26 +572,30 @@ export default function PrintBracketPage() {
                       height: '100%', 
                       border: '1px solid #d1d5db', 
                       display: 'flex', 
+                      flexDirection: 'column',
                       alignItems: 'center', 
+                      justifyContent: 'center',
                       padding: '2px 4px',
                       fontSize: '12px',
                       backgroundColor: '#ffffff'
                     }}>
                       {winner ? (
                         <>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '2px' }}>
+                            <span style={{ fontWeight: 'bold', marginRight: '2px' }}>#{winner.seed}</span>
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {winner.name}
+                            </span>
+                          </div>
                           {winner.logo && (
                             <Image
                               src={winner.logo}
                               alt={`${winner.name} logo`}
-                              width={14}
-                              height={14}
-                              style={{ objectFit: 'contain', marginRight: '4px', flexShrink: 0 }}
+                              width={20}
+                              height={20}
+                              style={{ objectFit: 'contain', flexShrink: 0 }}
                             />
                           )}
-                          <span style={{ fontWeight: 'bold', marginRight: '2px' }}>#{winner.seed}</span>
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {winner.name}
-                          </span>
                         </>
                       ) : (
                         <span style={{ color: '#9ca3af' }}>Winner</span>
