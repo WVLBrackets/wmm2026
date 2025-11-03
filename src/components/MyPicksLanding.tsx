@@ -196,9 +196,9 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
             {/* Compact Header */}
-            <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
+            <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="flex flex-col md:flex-row md:items-center space-y-3 md:space-y-0 md:space-x-4">
                   {/* WMM Logo */}
                   <div className="flex-shrink-0">
                     <Image 
@@ -211,8 +211,8 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                   </div>
                   
                   {/* Welcome text */}
-                  <div>
-                    <h1 className="text-2xl font-bold text-gray-900">
+                  <div className="flex-1 min-w-0">
+                    <h1 className="text-xl md:text-2xl font-bold text-gray-900">
                       {(siteConfig?.welcomeGreeting || 'Welcome back {name}').replace('{name}', session?.user?.name || 'User')}
                     </h1>
                     {(() => {
@@ -292,7 +292,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                   </div>
                 </div>
             
-            <div className="flex items-center space-x-2 md:space-x-3">
+            <div className="flex items-center justify-end md:justify-start space-x-2 md:space-x-3 flex-shrink-0">
               <button
                 onClick={onCreateNew}
                 className="bg-blue-600 text-white px-2 py-2 md:px-4 md:py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
