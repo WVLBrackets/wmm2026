@@ -261,28 +261,23 @@ export default function RegionBracketLayout({
             />
           </div>
 
-          {/* Row 2: Region Name */}
+          {/* Row 2: Region Name with checkmark (only when complete) */}
           <div className="mb-4">
-            <div className="text-sm font-medium text-gray-700 mb-1">Region:</div>
-            <div className="text-lg font-bold text-gray-800">{regionName}</div>
+            <div className="text-lg font-bold text-gray-800 flex items-center space-x-2">
+              <span>{regionName}</span>
+              {isComplete && (
+                <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+              )}
+            </div>
           </div>
 
-          {/* Row 3: Regional Champion (only when complete) */}
+          {/* Row 3: Regional Champion (only when complete) - seed, name, and logo on same line */}
           {isComplete && regionalChampion && (
-            <div className="border-t border-gray-200 pt-4">
-              <div className="text-xs font-medium text-gray-700 mb-2">Regional Champion:</div>
-              <div className="flex items-center space-x-2">
-                <span className="text-sm font-bold text-gray-600">#{regionalChampion.seed}</span>
-                <span className="text-sm font-semibold text-gray-800 flex-1">{regionalChampion.name}</span>
-                {regionalChampion.mascot && (
-                  <span className="text-xs text-gray-600">{regionalChampion.mascot}</span>
-                )}
-                <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-              </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm font-bold text-gray-600">#{regionalChampion.seed}</span>
+              <span className="text-sm font-semibold text-gray-800 flex-1">{regionalChampion.name}</span>
               {regionalChampion.logo && (
-                <div className="mt-2 flex justify-start">
-                  <img src={regionalChampion.logo} alt={regionalChampion.name} className="w-12 h-12 object-contain" />
-                </div>
+                <img src={regionalChampion.logo} alt={regionalChampion.name} className="w-8 h-8 object-contain flex-shrink-0" />
               )}
             </div>
           )}
