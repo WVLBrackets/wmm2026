@@ -173,6 +173,7 @@ export default function StepByStepBracket({
           onPrevious={handlePrevious}
           onSave={handleSave}
           onNext={handleNext}
+          onClose={onClose}
           onCancel={onCancel}
           canProceed={canProceed()}
           currentStep={currentStep}
