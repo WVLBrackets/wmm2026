@@ -196,103 +196,105 @@ export default function RegionBracketLayout({
 
   return (
     <div className="relative border-2 border-red-500">
-      {/* Bracket Layout */}
-      <div className="flex items-start min-w-max border-2 border-red-500">
-        {/* Round of 64 */}
-        <div className="w-48 border-2 border-red-500">
-          {roundOf64.map(game => renderGame(game, 'Round of 64'))}
-        </div>
+      {/* Bracket Layout Container - wraps both columns and buttons */}
+      <div className="flex flex-col min-w-max border-2 border-red-500">
+        {/* Bracket Columns */}
+        <div className="flex items-start">
+          {/* Round of 64 */}
+          <div className="w-48 border-2 border-red-500">
+            {roundOf64.map(game => renderGame(game, 'Round of 64'))}
+          </div>
 
-        {/* Spacer */}
-        <div className="w-8"></div>
+          {/* Spacer */}
+          <div className="w-8"></div>
 
-        {/* Round of 32 */}
-        <div className="w-48 border-2 border-red-500">
-          {roundOf32.map((game, index) => (
-            <div key={game.id} style={{ marginTop: index === 0 ? '2rem' : '4.25rem' }}>
-              {renderGame(game, 'Round of 32')}
-            </div>
-          ))}
-        </div>
-
-        {/* Spacer */}
-        <div className="w-6"></div>
-
-        {/* Sweet 16 */}
-        <div className="w-48 border-2 border-red-500">
-          {sweet16.map((game, index) => (
-            <div key={game.id} style={{ marginTop: index === 0 ? '6rem' : '12.25rem' }}>
-              {renderGame(game, 'Sweet 16')}
-            </div>
-          ))}
-        </div>
-
-        {/* Spacer */}
-        <div className="w-4"></div>
-
-        {/* Elite 8 (fourth column - same size as first three) */}
-        <div className="w-48 flex-shrink-0 border-2 border-red-500">
-          {/* Elite 8 Games */}
-          <div>
-            {elite8.map((game, index) => (
-              <div key={game.id} style={{ marginTop: index === 0 ? '14rem' : '0' }}>
-                {renderGame(game, 'Elite 8')}
+          {/* Round of 32 */}
+          <div className="w-48 border-2 border-red-500">
+            {roundOf32.map((game, index) => (
+              <div key={game.id} style={{ marginTop: index === 0 ? '2rem' : '4.25rem' }}>
+                {renderGame(game, 'Round of 32')}
               </div>
             ))}
           </div>
-        </div>
 
-        {/* Fifth Column - Summary Panel (half width, right-aligned, can overlap) */}
-        <div className="w-24 flex-shrink-0 relative border-2 border-red-500">
-          {/* Summary Panel: Entry Name, Region Name, Champion Info - right-aligned, top aligned with Game 1 */}
-          <div className="absolute right-0" style={{ minWidth: 'max-content' }}>
-            {/* Row 1: Entry Name */}
-            <div className="mb-4">
-              <label htmlFor="entryName" className="block text-xs font-medium text-gray-700 mb-1">
-                Entry Name:
-              </label>
-              <input
-                type="text"
-                id="entryName"
-                value={entryName}
-                onChange={(e) => onEntryNameChange?.(e.target.value)}
-                disabled={readOnly}
-                className={`px-3 py-2 border border-gray-300 rounded-lg text-sm ${
-                  readOnly 
-                    ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
-                    : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
-                }`}
-                style={{ width: 'max-content', minWidth: '200px' }}
-                placeholder="Enter your bracket name"
-              />
-            </div>
+          {/* Spacer */}
+          <div className="w-6"></div>
 
-            {/* Row 2: Region Name with checkmark (only when complete) */}
-            <div className="mb-4">
-              <div className="text-lg font-bold text-gray-800 flex items-center space-x-2 justify-end">
-                <span>{regionName}</span>
-                {isComplete && (
-                  <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-                )}
+          {/* Sweet 16 */}
+          <div className="w-48 border-2 border-red-500">
+            {sweet16.map((game, index) => (
+              <div key={game.id} style={{ marginTop: index === 0 ? '6rem' : '12.25rem' }}>
+                {renderGame(game, 'Sweet 16')}
               </div>
-            </div>
+            ))}
+          </div>
 
-            {/* Row 3: Regional Champion (only when complete) - seed, name, and logo on same line */}
-            {isComplete && regionalChampion && (
-              <div className="flex items-center space-x-2 justify-end">
-                <span className="text-sm font-bold text-gray-600">#{regionalChampion.seed}</span>
-                <span className="text-sm font-semibold text-gray-800">{regionalChampion.name}</span>
-                {regionalChampion.logo && (
-                  <img src={regionalChampion.logo} alt={regionalChampion.name} className="w-8 h-8 object-contain flex-shrink-0" />
-                )}
+          {/* Spacer */}
+          <div className="w-4"></div>
+
+          {/* Elite 8 (fourth column - same size as first three) */}
+          <div className="w-48 flex-shrink-0 border-2 border-red-500">
+            {/* Elite 8 Games */}
+            <div>
+              {elite8.map((game, index) => (
+                <div key={game.id} style={{ marginTop: index === 0 ? '14rem' : '0' }}>
+                  {renderGame(game, 'Elite 8')}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Fifth Column - Summary Panel (half width, right-aligned, can overlap) */}
+          <div className="w-24 flex-shrink-0 relative border-2 border-red-500">
+            {/* Summary Panel: Entry Name, Region Name, Champion Info - right-aligned, top aligned with Game 1 */}
+            <div className="absolute right-0" style={{ minWidth: 'max-content' }}>
+              {/* Row 1: Entry Name */}
+              <div className="mb-4">
+                <label htmlFor="entryName" className="block text-xs font-medium text-gray-700 mb-1">
+                  Entry Name:
+                </label>
+                <input
+                  type="text"
+                  id="entryName"
+                  value={entryName}
+                  onChange={(e) => onEntryNameChange?.(e.target.value)}
+                  disabled={readOnly}
+                  className={`px-3 py-2 border border-gray-300 rounded-lg text-sm ${
+                    readOnly 
+                      ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
+                      : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+                  }`}
+                  style={{ width: 'max-content', minWidth: '200px' }}
+                  placeholder="Enter your bracket name"
+                />
               </div>
-            )}
+
+              {/* Row 2: Region Name with checkmark (only when complete) */}
+              <div className="mb-4">
+                <div className="text-lg font-bold text-gray-800 flex items-center space-x-2 justify-end">
+                  <span>{regionName}</span>
+                  {isComplete && (
+                    <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                  )}
+                </div>
+              </div>
+
+              {/* Row 3: Regional Champion (only when complete) - seed, name, and logo on same line */}
+              {isComplete && regionalChampion && (
+                <div className="flex items-center space-x-2 justify-end">
+                  <span className="text-sm font-bold text-gray-600">#{regionalChampion.seed}</span>
+                  <span className="text-sm font-semibold text-gray-800">{regionalChampion.name}</span>
+                  {regionalChampion.logo && (
+                    <img src={regionalChampion.logo} alt={regionalChampion.name} className="w-8 h-8 object-contain flex-shrink-0" />
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Control Buttons at bottom of bracket */}
-      <div className="flex items-center justify-between mt-8 min-w-max border-2 border-red-500">
+        {/* Control Buttons at bottom of bracket */}
+        <div className="flex items-center justify-between mt-8 w-full border-2 border-red-500">
         {/* Left: Previous Button */}
         <div className="flex-shrink-0">
           {onPrevious && (
