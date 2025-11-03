@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { TournamentData, TournamentBracket, TournamentGame } from '@/types/tournament';
 import { getRegionalGames, updateBracketWithPicks } from '@/lib/bracketGenerator';
 import RegionBracketLayout from './RegionBracketLayout';
@@ -166,6 +166,7 @@ export default function StepByStepBracket({
           picks={picks}
           onPick={onPick}
           readOnly={readOnly}
+          scrollContainerRef={scrollContainerRef}
         />
       );
     } else {
@@ -184,7 +185,7 @@ export default function StepByStepBracket({
   };
 
   return (
-    <div className="w-full relative overflow-x-auto">
+    <div className="w-full relative overflow-x-auto" ref={scrollContainerRef}>
       {/* Current Step Content */}
       <div className="bg-white rounded-lg shadow-lg p-8 min-w-max">
             {/* Entry Name Field - positioned in top white space */}

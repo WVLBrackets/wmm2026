@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef, RefObject } from 'react';
 import { TournamentGame } from '@/types/tournament';
 import { CheckCircle } from 'lucide-react';
 
@@ -9,6 +10,7 @@ interface RegionBracketLayoutProps {
   picks: { [gameId: string]: string };
   onPick: (gameId: string, teamId: string) => void;
   readOnly?: boolean;
+  scrollContainerRef?: RefObject<HTMLDivElement>;
 }
 
 export default function RegionBracketLayout({ 
@@ -16,8 +18,10 @@ export default function RegionBracketLayout({
   games, 
   picks, 
   onPick,
-  readOnly = false
+  readOnly = false,
+  scrollContainerRef
 }: RegionBracketLayoutProps) {
+  const hasScrolledRef = useRef(false);
   
   const handleTeamClick = (game: TournamentGame, team: Record<string, unknown>) => {
     if (game.winner || readOnly) return;
@@ -76,6 +80,26 @@ export default function RegionBracketLayout({
   const roundOf32 = games.filter(game => game.round === 'Round of 32');
   const sweet16 = games.filter(game => game.round === 'Sweet 16');
   const elite8 = games.filter(game => game.round === 'Elite 8');
+
+  // Auto-scroll when Round of 64 is complete
+  useEffect(() => {
+    if (!scrollContainerRef?.current || readOnly || hasScrolledRef.current) return;
+    
+    // Check if all Round of 64 games have picks (8 games)
+    const roundOf64Complete = roundOf64.length > 0 && roundOf64.every(game => picks[game.id]);
+    
+    if (roundOf64Complete) {
+      // Scroll horizontally to bring Round of 32 into view
+      // Round of 64 column (w-48 = 192px) + spacer (w-8 = 32px) = 224px
+      // Scroll by ~150px to bring Round of 32 into view while keeping some of Round of 64 visible
+      const scrollAmount = 150;
+      scrollContainerRef.current.scrollBy({
+        left: scrollAmount,
+        behavior: 'smooth'
+      });
+      hasScrolledRef.current = true;
+    }
+  }, [roundOf64, picks, scrollContainerRef, readOnly]);
 
   // Check if region is complete and find regional champion
   const isRegionComplete = () => {
