@@ -166,11 +166,10 @@ export default function FinalFourChampionship({
   const isDuplicateName = () => {
     if (!entryNameValid() || !siteConfig?.tournamentYear) return false;
     const trimmedName = entryName?.trim() || '';
-    return existingBracketNames.some(name => 
-      name === trimmedName && 
-      // Exclude current bracket if editing
-      (currentBracketId ? true : true) // We'll check this via API in real-time
-    );
+    // Check if name exists in submitted brackets (only submitted brackets count for duplicates)
+    // Note: We're checking all submitted brackets, but should exclude current bracket if editing
+    // For now, we check against all names - the API will handle the exclusion properly
+    return existingBracketNames.some(name => name === trimmedName);
   };
 
   // Determine message state
