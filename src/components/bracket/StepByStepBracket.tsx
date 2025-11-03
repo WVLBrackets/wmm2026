@@ -179,6 +179,8 @@ export default function StepByStepBracket({
           nextButtonText={currentStep === totalSteps - 1 ? 'Submit Bracket' : 'Next'}
           onStepClick={handleStepClick}
           isStepComplete={isStepComplete}
+          entryName={entryName}
+          onEntryNameChange={onEntryNameChange}
         />
       );
     } else {
