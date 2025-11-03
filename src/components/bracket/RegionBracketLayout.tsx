@@ -247,7 +247,7 @@ export default function RegionBracketLayout({
             {/* Summary Panel: Entry Name, Region Name, Champion Info - right-aligned, top aligned with Game 1 */}
             <div className="absolute right-0" style={{ minWidth: 'max-content' }}>
               {/* Row 1: Entry Name - label and field on same row */}
-              <div className="mb-4 flex items-center space-x-2 justify-end">
+              <div className="mb-4 flex items-center space-x-2 justify-end" style={{ paddingTop: '2px', paddingRight: '2px' }}>
                 <label htmlFor="entryName" className="text-xs font-medium text-gray-700 whitespace-nowrap">
                   Entry Name:
                 </label>
@@ -269,7 +269,7 @@ export default function RegionBracketLayout({
 
               {/* Row 2: Region Name with checkmark on left (only when complete) */}
               <div className="mb-4">
-                <div className="text-lg font-bold text-gray-800 flex items-center space-x-2 justify-end">
+                <div className="text-lg font-bold text-gray-800 flex items-center space-x-2 justify-end" style={{ paddingRight: '2px' }}>
                   {isComplete && (
                     <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
                   )}
@@ -292,7 +292,7 @@ export default function RegionBracketLayout({
         </div>
 
         {/* Control Buttons at bottom of bracket */}
-        <div className="flex items-center justify-between mt-4" style={{ width: '100%', maxWidth: '100%' }}>
+        <div className="flex items-center justify-between mt-4" style={{ width: '100%', maxWidth: '100%', paddingLeft: '2px', paddingRight: '2px', paddingBottom: '2px' }}>
         {/* Left: Previous Button */}
         <div className="flex-shrink-0">
           {onPrevious && (

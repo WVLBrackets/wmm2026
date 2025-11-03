@@ -199,7 +199,7 @@ export default function StepByStepBracket({
   };
 
   return (
-    <div className="w-full relative overflow-x-auto" ref={scrollContainerRef}>
+    <div className="w-full relative overflow-x-auto bg-gray-200 min-h-screen" ref={scrollContainerRef}>
       {/* Current Step Content */}
       <div className="bg-white rounded-lg shadow-lg p-4 min-w-max">
         {renderCurrentStep()}
