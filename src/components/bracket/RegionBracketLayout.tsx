@@ -280,8 +280,8 @@ export default function RegionBracketLayout({
               {/* Row 3: Regional Champion (only when complete) - seed, name, and logo on same line */}
               {isComplete && regionalChampion && (
                 <div className="flex items-center space-x-2 justify-end">
-                  <span className="text-sm font-bold text-gray-600">#{regionalChampion.seed}</span>
-                  <span className="text-sm font-semibold text-gray-800">{regionalChampion.name}</span>
+                  <span className="text-lg font-bold text-gray-600">#{regionalChampion.seed}</span>
+                  <span className="text-lg font-semibold text-gray-800">{regionalChampion.name}</span>
                   {regionalChampion.logo && (
                     <img src={regionalChampion.logo} alt={regionalChampion.name} className="w-8 h-8 object-contain flex-shrink-0" />
                   )}
