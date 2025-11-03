@@ -658,7 +658,7 @@ function BracketContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gray-300">
       {/* Full-screen bracket mode - no header, no toolbar */}
       <div className="w-full">
         {/* Full-screen Step-by-Step Bracket - no padding, no header */}

@@ -269,7 +269,7 @@ export default function RegionBracketLayout({
 
               {/* Row 2: Region Name with checkmark on left (only when complete) */}
               <div className="mb-4">
-                <div className="text-lg font-bold text-gray-800 flex items-center space-x-2 justify-end" style={{ paddingRight: '2px' }}>
+                <div className="text-lg font-bold text-gray-800 flex items-center space-x-2 justify-end" style={{ paddingRight: '5px' }}>
                   {isComplete && (
                     <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
                   )}
@@ -279,7 +279,7 @@ export default function RegionBracketLayout({
 
               {/* Row 3: Regional Champion (only when complete) - seed, name, and logo on same line */}
               {isComplete && regionalChampion && (
-                <div className="flex items-center space-x-2 justify-end">
+                <div className="flex items-center space-x-2 justify-end" style={{ paddingRight: '5px' }}>
                   <span className="text-lg font-bold text-gray-600">#{regionalChampion.seed}</span>
                   <span className="text-lg font-semibold text-gray-800">{regionalChampion.name}</span>
                   {regionalChampion.logo && (
