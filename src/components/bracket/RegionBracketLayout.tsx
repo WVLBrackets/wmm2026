@@ -196,24 +196,8 @@ export default function RegionBracketLayout({
 
   return (
     <div className="relative">
-      {/* Champion info on top right when complete */}
-      {isComplete && regionalChampion && (
-        <div className="absolute top-0 right-0">
-          <div className="text-right">
-            <div className="flex items-center space-x-3 mb-2">
-              <span className="text-sm font-bold text-gray-600">#{regionalChampion.seed}</span>
-              <span className="text-base font-semibold text-gray-800">{regionalChampion.name}</span>
-              <CheckCircle className="w-5 h-5 text-green-600" />
-            </div>
-            <div className="flex justify-end">
-              <img src={regionalChampion.logo} alt={regionalChampion.name} className="w-18 h-18" />
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Bracket Layout */}
-      <div className="flex items-start mt-8 min-w-max">
+      <div className="flex items-start min-w-max">
         {/* Round of 64 */}
         <div className="w-48">
           {roundOf64.map(game => renderGame(game, 'Round of 64'))}
