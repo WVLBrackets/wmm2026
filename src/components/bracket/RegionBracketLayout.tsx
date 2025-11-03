@@ -195,7 +195,7 @@ export default function RegionBracketLayout({
   const isComplete = isRegionComplete();
 
   return (
-    <div className="flex flex-col mx-auto" style={{ width: 'fit-content' }}>
+    <div className="flex flex-col mx-auto border-2 border-gray-300 rounded-lg" style={{ width: 'fit-content' }}>
         {/* Bracket Columns */}
         <div className="flex items-start">
           {/* Round of 64 */}
