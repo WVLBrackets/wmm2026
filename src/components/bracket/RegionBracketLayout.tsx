@@ -195,7 +195,7 @@ export default function RegionBracketLayout({
   const isComplete = isRegionComplete();
 
   return (
-    <div className="relative border-2 border-red-500">
+    <div className="relative border-2 border-red-500 mx-auto">
       {/* Bracket Layout Container - wraps both columns and buttons */}
       <div className="flex flex-col border-2 border-red-500" style={{ width: 'fit-content' }}>
         {/* Bracket Columns */}
@@ -294,7 +294,7 @@ export default function RegionBracketLayout({
         </div>
 
         {/* Control Buttons at bottom of bracket */}
-        <div className="flex items-center justify-between mt-8 border-2 border-red-500" style={{ width: '100%', maxWidth: '100%' }}>
+        <div className="flex items-center justify-between mt-4 border-2 border-red-500" style={{ width: '100%', maxWidth: '100%' }}>
         {/* Left: Previous Button */}
         <div className="flex-shrink-0">
           {onPrevious && (
