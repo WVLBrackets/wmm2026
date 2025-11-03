@@ -1736,37 +1736,57 @@ export default function AdminPage() {
             {/* Active Filter Toggles with second row of buttons */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-2">
-              <span className="text-sm font-medium text-gray-700">Show:</span>
-              <button
-                onClick={() => setTeamActiveFilter('active')}
-                className={`px-3 py-1 text-sm rounded ${
-                  teamActiveFilter === 'active'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                Active
-              </button>
-              <button
-                onClick={() => setTeamActiveFilter('inactive')}
-                className={`px-3 py-1 text-sm rounded ${
-                  teamActiveFilter === 'inactive'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                Inactive
-              </button>
-              <button
-                onClick={() => setTeamActiveFilter('all')}
-                className={`px-3 py-1 text-sm rounded ${
-                  teamActiveFilter === 'all'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                All
-              </button>
+                <span className="text-sm font-medium text-gray-700">Show:</span>
+                <button
+                  onClick={() => setTeamActiveFilter('active')}
+                  className={`px-3 py-1 text-sm rounded ${
+                    teamActiveFilter === 'active'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  Active
+                </button>
+                <button
+                  onClick={() => setTeamActiveFilter('inactive')}
+                  className={`px-3 py-1 text-sm rounded ${
+                    teamActiveFilter === 'inactive'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  Inactive
+                </button>
+                <button
+                  onClick={() => setTeamActiveFilter('all')}
+                  className={`px-3 py-1 text-sm rounded ${
+                    teamActiveFilter === 'all'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  All
+                </button>
+              </div>
+              {!isAddingTeam && (
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => router.push('/admin/tournament-builder')}
+                    className="flex items-center space-x-1 px-3 py-1.5 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>New Bracket</span>
+                  </button>
+                  <button
+                    onClick={handleExportTeamData}
+                    className="flex items-center space-x-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    title="Export team data to JSON file for git commit"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>Export JSON</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
