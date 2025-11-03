@@ -133,23 +133,13 @@ export default function PrintBracketPage() {
         margin: '0 auto',
         display: 'flex', 
         flexDirection: 'column',
-        padding: '12px 8px',
+        padding: '6px 8px',
         alignItems: 'center',
         border: '1px solid #d1d5db',
         borderRadius: '4px',
         backgroundColor: '#ffffff',
-        minHeight: '50px'
+        minHeight: '40px'
       }}>
-        {/* Finals Title */}
-        <div style={{
-          fontSize: '14px',
-          fontWeight: 'bold',
-          color: '#374151',
-          marginBottom: '6px'
-        }}>
-          Finals
-        </div>
-
         {/* Teams Row */}
         <div style={{
           display: 'flex',
@@ -157,7 +147,7 @@ export default function PrintBracketPage() {
           alignItems: 'center',
           justifyContent: 'center',
           width: '100%',
-          marginBottom: '6px'
+          marginBottom: '4px'
         }}>
           {/* Finalist 1 */}
           <div style={{ 
