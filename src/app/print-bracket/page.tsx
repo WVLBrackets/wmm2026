@@ -123,101 +123,139 @@ export default function PrintBracketPage() {
     const finalist2 = semifinal2Pick && tournament ? tournament.regions.flatMap(r => r.teams).find(t => t.id === semifinal2Pick) : null;
     const champion = championshipPick && tournament ? tournament.regions.flatMap(r => r.teams).find(t => t.id === championshipPick) : null;
 
+    const bracketDataTyped = bracketData as Record<string, unknown>;
+    const tieBreaker = bracketDataTyped.tieBreaker as string | number | undefined;
+
     return (
       <div style={{ 
         width: '50%',
         maxWidth: '500px',
         margin: '0 auto',
         display: 'flex', 
-        flexDirection: 'row', 
-        padding: '20px 8px',
+        flexDirection: 'column',
+        padding: '30px 8px',
         alignItems: 'center',
         border: '1px solid #d1d5db',
         borderRadius: '4px',
         backgroundColor: '#ffffff',
-        minHeight: '60px'
+        minHeight: '100px'
       }}>
-        {/* Finalist 1 */}
-        <div style={{ 
-          flex: 1, 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center',
-          paddingRight: '20px'
+        {/* Finals Title */}
+        <div style={{
+          fontSize: '16px',
+          fontWeight: 'bold',
+          color: '#374151',
+          marginBottom: '12px'
         }}>
-          <div style={{
-            fontSize: '14px',
-            display: 'flex',
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '4px'
-          }}>
-            {finalist1 ? (
-              <>
-                <span style={{ fontWeight: 'bold' }}>#{finalist1.seed}</span>
-                <span>{finalist1.name}</span>
-                {finalist1.logo && (
-                  <Image
-                    src={finalist1.logo}
-                    alt={`${finalist1.name} logo`}
-                    width={24}
-                    height={24}
-                    style={{ objectFit: 'contain', flexShrink: 0 }}
-                  />
-                )}
-              </>
-            ) : (
-              <span style={{ color: '#9ca3af' }}>Finalist 1</span>
-            )}
-          </div>
+          Finals
         </div>
 
-        {/* VS */}
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
+        {/* Teams Row */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
           justifyContent: 'center',
-          width: '60px',
-          flexShrink: 0
+          width: '100%',
+          marginBottom: '12px'
         }}>
-          <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#374151' }}>VS</div>
+          {/* Finalist 1 */}
+          <div style={{ 
+            flex: 1, 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center',
+            paddingRight: '10px',
+            minWidth: 0
+          }}>
+            <div style={{
+              fontSize: '14px',
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px',
+              minWidth: 0,
+              width: '100%'
+            }}>
+              {finalist1 ? (
+                <>
+                  <span style={{ fontWeight: 'bold', flexShrink: 0 }}>#{finalist1.seed}</span>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{finalist1.name}</span>
+                  {finalist1.logo && (
+                    <Image
+                      src={finalist1.logo}
+                      alt={`${finalist1.name} logo`}
+                      width={24}
+                      height={24}
+                      style={{ objectFit: 'contain', flexShrink: 0 }}
+                    />
+                  )}
+                </>
+              ) : (
+                <span style={{ color: '#9ca3af' }}>Finalist 1</span>
+              )}
+            </div>
+          </div>
+
+          {/* VS */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            width: '60px',
+            flexShrink: 0
+          }}>
+            <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#374151' }}>VS</div>
+          </div>
+
+          {/* Finalist 2 */}
+          <div style={{ 
+            flex: 1, 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center',
+            paddingLeft: '10px',
+            minWidth: 0
+          }}>
+            <div style={{
+              fontSize: '14px',
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px',
+              minWidth: 0,
+              width: '100%'
+            }}>
+              {finalist2 ? (
+                <>
+                  {finalist2.logo && (
+                    <Image
+                      src={finalist2.logo}
+                      alt={`${finalist2.name} logo`}
+                      width={24}
+                      height={24}
+                      style={{ objectFit: 'contain', flexShrink: 0 }}
+                    />
+                  )}
+                  <span style={{ fontWeight: 'bold', flexShrink: 0 }}>#{finalist2.seed}</span>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{finalist2.name}</span>
+                </>
+              ) : (
+                <span style={{ color: '#9ca3af' }}>Finalist 2</span>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Finalist 2 */}
-        <div style={{ 
-          flex: 1, 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center',
-          paddingLeft: '20px'
+        {/* Tie Breaker */}
+        <div style={{
+          fontSize: '12px',
+          color: '#6b7280',
+          marginTop: 'auto'
         }}>
-          <div style={{
-            fontSize: '14px',
-            display: 'flex',
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '4px'
-          }}>
-            {finalist2 ? (
-              <>
-                {finalist2.logo && (
-                  <Image
-                    src={finalist2.logo}
-                    alt={`${finalist2.name} logo`}
-                    width={24}
-                    height={24}
-                    style={{ objectFit: 'contain', flexShrink: 0 }}
-                  />
-                )}
-                <span style={{ fontWeight: 'bold' }}>#{finalist2.seed}</span>
-                <span>{finalist2.name}</span>
-              </>
-            ) : (
-              <span style={{ color: '#9ca3af' }}>Finalist 2</span>
-            )}
-          </div>
+          Tie Breaker (Finals Total) = {tieBreaker !== undefined && tieBreaker !== null ? tieBreaker.toString() : '—'}
         </div>
       </div>
     );
