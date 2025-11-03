@@ -390,5 +390,6 @@ export default function RegionBracketLayout({
         </div>
       </div>
     </div>
+    </div>
   );
 }
