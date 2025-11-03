@@ -114,6 +114,22 @@ export default function RegionBracketLayout({
   const sweet16 = games.filter(game => game.round === 'Sweet 16');
   const elite8 = games.filter(game => game.round === 'Elite 8');
 
+  // Reset scroll position and tracking refs when region changes (tracked by regionName or currentStep)
+  useEffect(() => {
+    if (!scrollContainerRef?.current || readOnly) return;
+    
+    // Scroll to the left to show first round games
+    scrollContainerRef.current.scrollTo({
+      left: 0,
+      behavior: 'smooth'
+    });
+    
+    // Reset all scroll tracking refs for the new region
+    hasScrolledRoundOf64Ref.current = false;
+    hasScrolledRoundOf32Ref.current = false;
+    hasScrolledSweet16Ref.current = false;
+  }, [regionName, currentStep, scrollContainerRef, readOnly]);
+
   // Auto-scroll when Round of 64 is complete
   useEffect(() => {
     if (!scrollContainerRef?.current || readOnly || hasScrolledRoundOf64Ref.current) return;
