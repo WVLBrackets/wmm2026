@@ -25,6 +25,9 @@ interface RegionBracketLayoutProps {
   // Progress dots props
   onStepClick?: (stepIndex: number) => void;
   isStepComplete?: (step: number) => boolean;
+  // Entry name and region info props
+  entryName?: string;
+  onEntryNameChange?: (value: string) => void;
 }
 
 export default function RegionBracketLayout({ 
@@ -45,7 +48,9 @@ export default function RegionBracketLayout({
   year,
   nextButtonText = 'Next',
   onStepClick,
-  isStepComplete
+  isStepComplete,
+  entryName = '',
+  onEntryNameChange
 }: RegionBracketLayoutProps) {
   const hasScrolledRoundOf64Ref = useRef(false);
   const hasScrolledRoundOf32Ref = useRef(false);
@@ -248,6 +253,56 @@ export default function RegionBracketLayout({
               {renderGame(game, 'Elite 8')}
             </div>
           ))}
+        </div>
+        </div>
+
+        {/* Right Panel: Entry Name, Region Name, Champion Info */}
+        <div className="ml-8 w-64 flex-shrink-0">
+          {/* Row 1: Entry Name */}
+          <div className="mb-4">
+            <label htmlFor="entryName" className="block text-xs font-medium text-gray-700 mb-1">
+              Entry Name:
+            </label>
+            <input
+              type="text"
+              id="entryName"
+              value={entryName}
+              onChange={(e) => onEntryNameChange?.(e.target.value)}
+              disabled={readOnly}
+              className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm ${
+                readOnly 
+                  ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
+                  : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+              }`}
+              placeholder="Enter your bracket name"
+            />
+          </div>
+
+          {/* Row 2: Region Name */}
+          <div className="mb-4">
+            <div className="text-sm font-medium text-gray-700 mb-1">Region:</div>
+            <div className="text-lg font-bold text-gray-800">{regionName}</div>
+          </div>
+
+          {/* Row 3: Regional Champion (only when complete) */}
+          {isComplete && regionalChampion && (
+            <div className="border-t border-gray-200 pt-4">
+              <div className="text-xs font-medium text-gray-700 mb-2">Regional Champion:</div>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm font-bold text-gray-600">#{regionalChampion.seed}</span>
+                <span className="text-sm font-semibold text-gray-800 flex-1">{regionalChampion.name}</span>
+                {regionalChampion.mascot && (
+                  <span className="text-xs text-gray-600">{regionalChampion.mascot}</span>
+                )}
+                <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+              </div>
+              {regionalChampion.logo && (
+                <div className="mt-2 flex justify-start">
+                  <img src={regionalChampion.logo} alt={regionalChampion.name} className="w-12 h-12 object-contain" />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

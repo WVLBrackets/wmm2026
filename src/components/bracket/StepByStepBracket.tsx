@@ -200,37 +200,6 @@ export default function StepByStepBracket({
     <div className="w-full relative overflow-x-auto" ref={scrollContainerRef}>
       {/* Current Step Content */}
       <div className="bg-white rounded-lg shadow-lg p-8 min-w-max">
-            {/* Entry Name Field - positioned in top white space */}
-            <div className="mb-6">
-              <div className="flex items-center">
-                <div className="flex items-center space-x-3">
-                  <label htmlFor="entryName" className="text-sm font-medium text-gray-700 whitespace-nowrap">
-                    Entry Name:
-                  </label>
-                  <input
-                    type="text"
-                    id="entryName"
-                    value={entryName}
-                    onChange={(e) => onEntryNameChange?.(e.target.value)}
-                    disabled={readOnly}
-                    className={`max-w-md px-3 py-2 border border-gray-300 rounded-lg text-sm ${
-                      readOnly 
-                        ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
-                        : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
-                    }`}
-                    placeholder="Enter your bracket name"
-                  />
-                </div>
-                
-                {/* Region name on the right - using flex-1 to push to far right */}
-                <div className="flex-1 text-right">
-                  <h3 className="text-2xl font-bold text-gray-800">
-                    {getStepName(currentStep)}
-                  </h3>
-                </div>
-              </div>
-            </div>
-        
         {renderCurrentStep()}
       </div>
 
