@@ -168,6 +168,15 @@ export default function StepByStepBracket({
           onPick={onPick}
           readOnly={readOnly}
           scrollContainerRef={scrollContainerRef}
+          onPrevious={handlePrevious}
+          onSave={handleSave}
+          onNext={handleNext}
+          canProceed={canProceed()}
+          currentStep={currentStep}
+          totalSteps={totalSteps}
+          bracketNumber={bracketNumber}
+          year={year}
+          nextButtonText={currentStep === totalSteps - 1 ? 'Submit Bracket' : 'Next'}
         />
       );
     } else {
@@ -269,75 +278,6 @@ export default function StepByStepBracket({
           </div>
         </div>
       )}
-
-      {/* Unified Control Bar */}
-      <div className="mt-6 bg-white rounded-lg shadow-lg border border-gray-200 p-4">
-        <div className="flex items-center justify-between">
-          {/* Left: Previous Button */}
-          <div className="flex-shrink-0">
-            <button
-              onClick={handlePrevious}
-              disabled={currentStep === 0}
-              className={`
-                flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors
-                ${currentStep === 0
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                }
-              `}
-            >
-              <ChevronLeft className="w-4 h-4" />
-              <span>Previous</span>
-            </button>
-          </div>
-
-          {/* Center: Bracket ID */}
-          <div className="flex-1 flex justify-center">
-            {bracketNumber !== undefined && year !== undefined && (
-              <div className="text-sm font-medium text-gray-700">
-                Bracket ID: {year}-{String(bracketNumber).padStart(6, '0')}
-              </div>
-            )}
-          </div>
-
-            {/* Right: Save/Close and Next/Submit Buttons */}
-            <div className="flex items-center space-x-3 flex-shrink-0">
-              {readOnly ? (
-                <button
-                  onClick={onClose}
-                  className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors cursor-pointer"
-                >
-                  <span>Close</span>
-                </button>
-              ) : (
-                <button
-                  onClick={handleSave}
-                  className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors cursor-pointer"
-                >
-                  <Save className="h-4 w-4" />
-                  <span>Save</span>
-                </button>
-              )}
-
-              {!readOnly && (
-                <button
-                  onClick={handleNext}
-                  disabled={!canProceed()}
-                  className={`
-                    flex items-center space-x-2 px-6 py-2 rounded-lg transition-colors
-                    ${canProceed()
-                      ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }
-                  `}
-                >
-                  <span>{currentStep === totalSteps - 1 ? 'Submit Bracket' : 'Next'}</span>
-                  {currentStep < totalSteps - 1 && <ChevronRight className="w-4 h-4" />}
-                </button>
-              )}
-            </div>
-        </div>
-      </div>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, RefObject } from 'react';
 import { TournamentGame } from '@/types/tournament';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, ChevronLeft, ChevronRight, Save } from 'lucide-react';
 
 interface RegionBracketLayoutProps {
   regionName: string;
@@ -11,6 +11,17 @@ interface RegionBracketLayoutProps {
   onPick: (gameId: string, teamId: string) => void;
   readOnly?: boolean;
   scrollContainerRef?: RefObject<HTMLDivElement | null>;
+  // Control buttons props
+  onPrevious?: () => void;
+  onSave?: () => void;
+  onNext?: () => void;
+  onClose?: () => void;
+  canProceed?: boolean;
+  currentStep?: number;
+  totalSteps?: number;
+  bracketNumber?: number;
+  year?: number;
+  nextButtonText?: string;
 }
 
 export default function RegionBracketLayout({ 
@@ -19,7 +30,17 @@ export default function RegionBracketLayout({
   picks, 
   onPick,
   readOnly = false,
-  scrollContainerRef
+  scrollContainerRef,
+  onPrevious,
+  onSave,
+  onNext,
+  onClose,
+  canProceed = false,
+  currentStep = 0,
+  totalSteps = 5,
+  bracketNumber,
+  year,
+  nextButtonText = 'Next'
 }: RegionBracketLayoutProps) {
   const hasScrolledRoundOf64Ref = useRef(false);
   const hasScrolledRoundOf32Ref = useRef(false);
@@ -222,6 +243,70 @@ export default function RegionBracketLayout({
               {renderGame(game, 'Elite 8')}
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Control Buttons at bottom of bracket */}
+      <div className="flex items-center justify-between mt-8 w-full">
+        {/* Left: Previous Button */}
+        <div className="flex-shrink-0">
+          {onPrevious && (
+            <button
+              onClick={onPrevious}
+              disabled={currentStep === 0}
+              className={`
+                flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors
+                ${currentStep === 0
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                }
+              `}
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>Previous</span>
+            </button>
+          )}
+        </div>
+
+        {/* Right: Save/Close and Next/Submit Buttons */}
+        <div className="flex items-center space-x-3 flex-shrink-0">
+          {readOnly ? (
+            onClose && (
+              <button
+                onClick={onClose}
+                className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors cursor-pointer"
+              >
+                <span>Close</span>
+              </button>
+            )
+          ) : (
+            onSave && (
+              <button
+                onClick={onSave}
+                className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors cursor-pointer"
+              >
+                <Save className="h-4 w-4" />
+                <span>Save</span>
+              </button>
+            )
+          )}
+
+          {!readOnly && onNext && (
+            <button
+              onClick={onNext}
+              disabled={!canProceed}
+              className={`
+                flex items-center space-x-2 px-6 py-2 rounded-lg transition-colors
+                ${canProceed
+                  ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }
+              `}
+            >
+              <span>{nextButtonText}</span>
+              {currentStep < totalSteps - 1 && <ChevronRight className="w-4 h-4" />}
+            </button>
+          )}
         </div>
       </div>
     </div>
