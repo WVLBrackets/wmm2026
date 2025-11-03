@@ -406,7 +406,7 @@ export default function RegionBracketLayout({
               {onClose && (
                 <button
                   onClick={onClose}
-                  className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors cursor-pointer"
+                  className="flex items-center space-x-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer"
                 >
                   <span>Close</span>
                 </button>
@@ -434,7 +434,7 @@ export default function RegionBracketLayout({
               {onSave && (
                 <button
                   onClick={onSave}
-                  className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors cursor-pointer"
+                  className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors cursor-pointer"
                 >
                   <Save className="h-4 w-4" />
                   <span>Save</span>
