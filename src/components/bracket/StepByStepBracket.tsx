@@ -17,6 +17,7 @@ interface StepByStepBracketProps {
   onComplete: () => void;
   onSave?: () => void;
   onClose?: () => void;
+  onCancel?: () => void;
   onEntryNameChange?: (entryName: string) => void;
   onTieBreakerChange?: (tieBreaker: string) => void;
   readOnly?: boolean;
