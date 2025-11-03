@@ -720,14 +720,14 @@ export default function PrintBracketPage() {
         alignItems: 'center',
         fontSize: '20px'
       }}>
-        {/* Left: Warren's March Madness + Year */}
+        {/* Left: Entry Name */}
         <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', alignItems: 'center', paddingLeft: '20px' }}>
-          <span>Warren&apos;s March Madness {siteConfig?.tournamentYear || ''}</span>
+          <span>{bracketData?.entryName as string || ''}</span>
         </div>
         
-        {/* Center: Entry Name */}
+        {/* Center: Warren's March Madness + Year */}
         <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <span>{bracketData?.entryName as string || ''}</span>
+          <span>Warren&apos;s March Madness {siteConfig?.tournamentYear || ''}</span>
         </div>
         
         {/* Right: Champ: Team Mascot Logo */}
