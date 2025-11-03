@@ -133,19 +133,19 @@ export default function PrintBracketPage() {
         margin: '0 auto',
         display: 'flex', 
         flexDirection: 'column',
-        padding: '30px 8px',
+        padding: '12px 8px',
         alignItems: 'center',
         border: '1px solid #d1d5db',
         borderRadius: '4px',
         backgroundColor: '#ffffff',
-        minHeight: '100px'
+        minHeight: '50px'
       }}>
         {/* Finals Title */}
         <div style={{
-          fontSize: '16px',
+          fontSize: '14px',
           fontWeight: 'bold',
           color: '#374151',
-          marginBottom: '12px'
+          marginBottom: '6px'
         }}>
           Finals
         </div>
@@ -157,7 +157,7 @@ export default function PrintBracketPage() {
           alignItems: 'center',
           justifyContent: 'center',
           width: '100%',
-          marginBottom: '12px'
+          marginBottom: '6px'
         }}>
           {/* Finalist 1 */}
           <div style={{ 
@@ -251,9 +251,9 @@ export default function PrintBracketPage() {
 
         {/* Tie Breaker */}
         <div style={{
-          fontSize: '12px',
+          fontSize: '11px',
           color: '#6b7280',
-          marginTop: 'auto'
+          marginTop: '4px'
         }}>
           Tie Breaker (Finals Total) = {tieBreaker !== undefined && tieBreaker !== null ? tieBreaker.toString() : '—'}
         </div>
@@ -867,8 +867,8 @@ export default function PrintBracketPage() {
                   display: 'flex', 
                   alignItems: 'center', 
                   justifyContent: 'center',
-                  marginTop: '-15px',
-                  marginBottom: '-15px',
+                  marginTop: '-5px',
+                  marginBottom: '-5px',
                   position: 'relative',
                   zIndex: 1
                 }}>
