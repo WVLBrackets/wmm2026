@@ -399,7 +399,7 @@ export default function RegionBracketLayout({
           </div>
         )}
 
-        {/* Right: Save/Close and Next/Submit Buttons */}
+        {/* Right: Cancel, Save/Close and Next/Submit Buttons */}
         <div className="flex items-center space-x-3 flex-shrink-0">
           {readOnly ? (
             onClose && (
@@ -411,15 +411,25 @@ export default function RegionBracketLayout({
               </button>
             )
           ) : (
-            onSave && (
-              <button
-                onClick={onSave}
-                className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors cursor-pointer"
-              >
-                <Save className="h-4 w-4" />
-                <span>Save</span>
-              </button>
-            )
+            <>
+              {onCancel && (
+                <button
+                  onClick={onCancel}
+                  className="flex items-center space-x-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors cursor-pointer"
+                >
+                  <span>Cancel</span>
+                </button>
+              )}
+              {onSave && (
+                <button
+                  onClick={onSave}
+                  className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors cursor-pointer"
+                >
+                  <Save className="h-4 w-4" />
+                  <span>Save</span>
+                </button>
+              )}
+            </>
           )}
 
           {!readOnly && onNext && (

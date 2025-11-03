@@ -673,6 +673,7 @@ function BracketContent() {
           onComplete={handleBracketComplete}
           onSave={handleSaveBracket}
           onClose={handleCloseBracket}
+          onCancel={handleCloseBracket}
           onEntryNameChange={setEntryName}
           onTieBreakerChange={setTieBreaker}
           readOnly={isReadOnly}
