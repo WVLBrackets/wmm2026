@@ -65,7 +65,7 @@ export default function FinalFourChampionship({
       const renderGame = (game: TournamentGame, title: string) => {
         // Always render both team slots, even if teams are not yet determined
         return (
-          <div className="border-2 border-gray-300 rounded-lg p-1 space-y-0.5">
+          <div className="border-2 border-gray-300 rounded-lg p-1 space-y-0.5 w-full">
             <div className="text-xs font-semibold text-gray-700 text-center mb-1">
               {title}
             </div>
