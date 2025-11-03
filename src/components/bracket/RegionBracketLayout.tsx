@@ -402,20 +402,31 @@ export default function RegionBracketLayout({
         {/* Right: Cancel, Save/Close and Next/Submit Buttons */}
         <div className="flex items-center space-x-3 flex-shrink-0">
           {readOnly ? (
-            onClose && (
-              <button
-                onClick={onClose}
-                className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors cursor-pointer"
-              >
-                <span>Close</span>
-              </button>
-            )
+            <>
+              {onClose && (
+                <button
+                  onClick={onClose}
+                  className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors cursor-pointer"
+                >
+                  <span>Close</span>
+                </button>
+              )}
+              {onNext && (
+                <button
+                  onClick={onNext}
+                  className="flex items-center space-x-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
+                >
+                  <span>{nextButtonText}</span>
+                  {currentStep < totalSteps - 1 && <ChevronRight className="w-4 h-4" />}
+                </button>
+              )}
+            </>
           ) : (
             <>
               {onCancel && (
                 <button
                   onClick={onCancel}
-                  className="flex items-center space-x-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors cursor-pointer"
+                  className="flex items-center space-x-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer"
                 >
                   <span>Cancel</span>
                 </button>
@@ -429,24 +440,23 @@ export default function RegionBracketLayout({
                   <span>Save</span>
                 </button>
               )}
+              {onNext && (
+                <button
+                  onClick={onNext}
+                  disabled={!canProceed}
+                  className={`
+                    flex items-center space-x-2 px-6 py-2 rounded-lg transition-colors
+                    ${canProceed
+                      ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }
+                  `}
+                >
+                  <span>{nextButtonText}</span>
+                  {currentStep < totalSteps - 1 && <ChevronRight className="w-4 h-4" />}
+                </button>
+              )}
             </>
-          )}
-
-          {!readOnly && onNext && (
-            <button
-              onClick={onNext}
-              disabled={!canProceed}
-              className={`
-                flex items-center space-x-2 px-6 py-2 rounded-lg transition-colors
-                ${canProceed
-                  ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }
-              `}
-            >
-              <span>{nextButtonText}</span>
-              {currentStep < totalSteps - 1 && <ChevronRight className="w-4 h-4" />}
-            </button>
           )}
         </div>
       </div>
