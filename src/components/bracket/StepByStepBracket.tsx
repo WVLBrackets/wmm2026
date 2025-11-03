@@ -197,6 +197,17 @@ export default function StepByStepBracket({
           tieBreaker={tieBreaker}
           onTieBreakerChange={onTieBreakerChange || (() => {})}
           readOnly={readOnly}
+          onPrevious={handlePrevious}
+          onSave={handleSave}
+          onNext={handleNext}
+          onClose={onClose}
+          onCancel={onCancel}
+          canProceed={canProceed()}
+          currentStep={currentStep}
+          totalSteps={totalSteps}
+          nextButtonText="Submit Bracket"
+          onStepClick={handleStepClick}
+          isStepComplete={isStepComplete}
         />
       );
     }
