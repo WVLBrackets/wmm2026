@@ -285,6 +285,10 @@ export default function RegionBracketLayout({
             ))}
           </div>
         </div>
+
+        {/* Fifth Column - Blank (half width) */}
+        <div className="w-24 flex-shrink-0">
+        </div>
       </div>
 
       {/* Control Buttons at bottom of bracket */}
