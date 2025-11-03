@@ -159,6 +159,21 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
           case 'mobile_brackets_message':
             config.mobileBracketsMessage = value;
             break;
+          case 'final_message_teams_missing':
+            config.finalMessageTeamsMissing = value;
+            break;
+          case 'final_message_tie_breaker_missing':
+            config.finalMessageTieBreakerMissing = value;
+            break;
+          case 'final_message_tie_breaker_invalid':
+            config.finalMessageTieBreakerInvalid = value;
+            break;
+          case 'final_message_duplicate_name':
+            config.finalMessageDuplicateName = value;
+            break;
+          case 'final_message_ready_to_submit':
+            config.finalMessageReadyToSubmit = value;
+            break;
         }
       }
     }

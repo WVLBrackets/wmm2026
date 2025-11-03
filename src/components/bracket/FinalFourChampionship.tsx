@@ -146,6 +146,71 @@ export default function FinalFourChampionship({
   const champion = getChampion();
   const isComplete = isChampionshipComplete();
 
+  // Validation logic for message bar
+  const allWinnersSelected = () => {
+    const allFinalFourSelected = finalFourGames.every(game => picks[game.id]);
+    const championshipSelected = picks[championshipGame.id];
+    return allFinalFourSelected && championshipSelected;
+  };
+
+  const tieBreakerValid = () => {
+    if (!tieBreaker) return false;
+    const value = Number(tieBreaker);
+    return !isNaN(value) && value >= 100 && value <= 300;
+  };
+
+  const entryNameValid = () => {
+    return entryName && entryName.trim().length > 0;
+  };
+
+  const isDuplicateName = () => {
+    if (!entryNameValid() || !siteConfig?.tournamentYear) return false;
+    const trimmedName = entryName?.trim() || '';
+    return existingBracketNames.some(name => 
+      name === trimmedName && 
+      // Exclude current bracket if editing
+      (currentBracketId ? true : true) // We'll check this via API in real-time
+    );
+  };
+
+  // Determine message state
+  const getMessageState = () => {
+    if (!allWinnersSelected()) {
+      return {
+        color: 'yellow',
+        message: siteConfig?.finalMessageTeamsMissing || 'Please select winners for all Final Four and Championship games.'
+      };
+    }
+    
+    if (!tieBreaker) {
+      return {
+        color: 'yellow',
+        message: siteConfig?.finalMessageTieBreakerMissing || 'Please enter a tie breaker value.'
+      };
+    }
+    
+    if (!tieBreakerValid()) {
+      return {
+        color: 'yellow',
+        message: siteConfig?.finalMessageTieBreakerInvalid || 'Tie breaker must be between 100 and 300.'
+      };
+    }
+    
+    if (isDuplicateName()) {
+      return {
+        color: 'yellow',
+        message: siteConfig?.finalMessageDuplicateName || 'An entry with this name already exists for this year. Please choose a different name.'
+      };
+    }
+    
+    return {
+      color: 'green',
+      message: siteConfig?.finalMessageReadyToSubmit || 'Your bracket is complete and ready to submit!'
+    };
+  };
+
+  const messageState = getMessageState();
+
   return (
     <div className="flex flex-col mx-auto border-2 border-gray-300 rounded-lg" style={{ width: 'fit-content' }}>
       {/* Bracket Content */}
