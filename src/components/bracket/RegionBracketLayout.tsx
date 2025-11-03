@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, RefObject } from 'react';
 import { TournamentGame } from '@/types/tournament';
-import { CheckCircle, ChevronLeft, ChevronRight, Save } from 'lucide-react';
+import { CheckCircle, ChevronLeft, ChevronRight, Save, ArrowRight } from 'lucide-react';
 
 interface RegionBracketLayoutProps {
   regionName: string;
@@ -260,6 +260,36 @@ export default function RegionBracketLayout({
 
           {/* Fifth Column - Summary Panel (half width, right-aligned, can overlap) */}
           <div className="w-24 flex-shrink-0 relative">
+            {/* Arrow button - aligned with Elite 8 matchup */}
+            {onNext && !readOnly && (
+              <div 
+                className="absolute" 
+                style={{ 
+                  top: '14rem',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: '90%',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}
+              >
+                <button
+                  onClick={isComplete ? onNext : undefined}
+                  disabled={!isComplete || !canProceed}
+                  className={`
+                    w-full aspect-square rounded-full flex items-center justify-center transition-colors
+                    ${isComplete && canProceed
+                      ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }
+                  `}
+                  style={{ maxWidth: '90%' }}
+                >
+                  <ArrowRight className="w-6 h-6" />
+                </button>
+              </div>
+            )}
             {/* Summary Panel: Entry Name, Region Name, Champion Info - right-aligned, top aligned with Game 1 */}
             <div className="absolute right-0" style={{ minWidth: 'max-content' }}>
               {/* Row 1: Entry Name - label and field on same row */}
