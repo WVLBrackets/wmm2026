@@ -24,6 +24,9 @@ interface FinalFourChampionshipProps {
   // Progress dots props
   onStepClick?: (stepIndex: number) => void;
   isStepComplete?: (step: number) => boolean;
+  // Entry name props
+  entryName?: string;
+  onEntryNameChange?: (value: string) => void;
 }
 
 export default function FinalFourChampionship({ 
@@ -44,7 +47,9 @@ export default function FinalFourChampionship({
   totalSteps = 5,
   nextButtonText = 'Submit Bracket',
   onStepClick,
-  isStepComplete
+  isStepComplete,
+  entryName,
+  onEntryNameChange
 }: FinalFourChampionshipProps) {
   
   const handleTeamClick = (game: TournamentGame, team: Record<string, unknown>) => {
@@ -128,61 +133,109 @@ export default function FinalFourChampionship({
   const isComplete = isChampionshipComplete();
 
   return (
-    <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg shadow-lg p-6 relative">
-      {/* Champion info on top right when complete */}
-      {isComplete && champion && (
-        <div className="absolute top-6 right-6">
-          <div className="text-right">
-            <h4 className="text-lg font-bold text-gray-800 mb-2">Your Champion:</h4>
-            <div className="flex items-center space-x-3 mb-2">
-              <span className="text-sm font-bold text-gray-600">#{champion.seed}</span>
-              <span className="text-base font-semibold text-gray-800">{champion.name}</span>
-              <CheckCircle className="w-5 h-5 text-green-600" />
+    <div className="flex flex-col mx-auto border-2 border-gray-300 rounded-lg" style={{ width: 'fit-content' }}>
+      {/* Bracket Content */}
+      <div className="flex items-start">
+        {/* First Column - Final Four Games */}
+        <div className="w-48">
+          {/* Final Four Games - stacked vertically */}
+          {finalFourGames.map((game, index) => (
+            <div key={game.id} style={{ marginTop: index === 0 ? '0' : '1rem' }}>
+              {renderGame(game, getSemifinalTitle(game, index))}
             </div>
-            <div className="flex justify-end">
-              <img src={champion.logo} alt={champion.name} className="w-18 h-18" />
-            </div>
+          ))}
+        </div>
+
+        {/* Spacer */}
+        <div className="w-8"></div>
+
+        {/* Second Column - Championship Game */}
+        <div className="w-48">
+          <div style={{ marginTop: '2rem' }}>
+            {renderGame(championshipGame, 'Championship')}
           </div>
         </div>
-      )}
-      
-      <div className="flex flex-col items-center space-y-8">
-            {/* Final Four Games - Top Row */}
-            <div className="flex justify-center space-x-8">
-              {finalFourGames.map((game, index) => (
-                <div key={game.id} className="w-48">
-                  {renderGame(game, getSemifinalTitle(game, index))}
-                </div>
-              ))}
+
+        {/* Spacer */}
+        <div className="w-6"></div>
+
+        {/* Third Column - Empty (for spacing) */}
+        <div className="w-48"></div>
+
+        {/* Spacer */}
+        <div className="w-4"></div>
+
+        {/* Fourth Column - Empty (for spacing) */}
+        <div className="w-48 flex-shrink-0"></div>
+
+        {/* Fifth Column - Summary Panel (half width, right-aligned, same as region pages) */}
+        <div className="w-24 flex-shrink-0 relative">
+          {/* Summary Panel: Entry Name, Champion Info, Tie Breaker - right-aligned, top aligned */}
+          <div className="absolute right-0" style={{ minWidth: 'max-content' }}>
+            {/* Row 1: Entry Name - label and field on same row */}
+            <div className="mb-4 flex items-center space-x-2 justify-end" style={{ paddingTop: '2px', paddingRight: '2px' }}>
+              <label htmlFor="entryName" className="text-xs font-medium text-gray-700 whitespace-nowrap">
+                Entry Name:
+              </label>
+              <input
+                type="text"
+                id="entryName"
+                value={entryName}
+                onChange={(e) => onEntryNameChange?.(e.target.value)}
+                disabled={readOnly}
+                className={`px-3 py-2 border border-gray-300 rounded-lg text-sm ${
+                  readOnly 
+                    ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
+                    : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+                }`}
+                style={{ width: 'max-content', minWidth: '200px' }}
+                placeholder="Enter your bracket name"
+              />
             </div>
 
-        {/* Championship Game - Center */}
-        <div className="w-48">
-          {renderGame(championshipGame, 'Championship')}
-        </div>
+            {/* Row 2: Final Four & Championship Title */}
+            <div className="mb-4">
+              <div className="text-lg font-bold text-gray-800 flex items-center space-x-2 justify-end" style={{ paddingRight: '5px' }}>
+                {isComplete && (
+                  <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                )}
+                <span>Final Four</span>
+              </div>
+            </div>
 
-        {/* Tie Breaker Input */}
-        <div className="mt-8 p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
-          <div className="flex items-center space-x-3">
-            <label htmlFor="tieBreaker" className="text-sm font-medium text-gray-700 whitespace-nowrap">
-              Tie Breaker:
-            </label>
-                <input
-                  type="number"
-                  id="tieBreaker"
-                  value={tieBreaker}
-                  onChange={(e) => onTieBreakerChange(e.target.value)}
-                  min="100"
-                  max="300"
-                  disabled={readOnly}
-                  className={`w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm ${
-                    readOnly 
-                      ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
-                      : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
-                  }`}
-                  placeholder="150"
-                  title="Total combined points scored in the championship game"
-                />
+            {/* Row 3: Champion (only when complete) */}
+            {isComplete && champion && (
+              <div className="flex items-center space-x-2 justify-end mb-4" style={{ paddingRight: '5px' }}>
+                <span className="text-lg font-bold text-gray-600">#{champion.seed}</span>
+                <span className="text-lg font-semibold text-gray-800">{champion.name}</span>
+                {champion.logo && (
+                  <img src={champion.logo} alt={champion.name} className="w-8 h-8 object-contain flex-shrink-0" />
+                )}
+              </div>
+            )}
+
+            {/* Row 4: Tie Breaker Input */}
+            <div className="flex items-center space-x-2 justify-end" style={{ paddingRight: '5px' }}>
+              <label htmlFor="tieBreaker" className="text-xs font-medium text-gray-700 whitespace-nowrap">
+                Tie Breaker:
+              </label>
+              <input
+                type="number"
+                id="tieBreaker"
+                value={tieBreaker}
+                onChange={(e) => onTieBreakerChange(e.target.value)}
+                min="100"
+                max="300"
+                disabled={readOnly}
+                className={`w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm ${
+                  readOnly 
+                    ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
+                    : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+                }`}
+                placeholder="150"
+                title="Total combined points scored in the championship game"
+              />
+            </div>
           </div>
         </div>
       </div>

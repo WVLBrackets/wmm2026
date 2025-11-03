@@ -208,6 +208,8 @@ export default function StepByStepBracket({
           nextButtonText="Submit Bracket"
           onStepClick={handleStepClick}
           isStepComplete={isStepComplete}
+          entryName={entryName}
+          onEntryNameChange={onEntryNameChange}
         />
       );
     }
