@@ -230,6 +230,56 @@ export default function RegionBracketLayout({
         {/* Spacer */}
         <div className="w-4"></div>
 
+        {/* Right Panel: Entry Name, Region Name, Champion Info - aligned with Sweet 16 */}
+        <div className="w-64 flex-shrink-0 self-start">
+          {/* Add top margin to align with first Sweet 16 game */}
+          <div style={{ marginTop: '6rem' }}>
+            {/* Row 1: Entry Name */}
+            <div className="mb-4">
+              <label htmlFor="entryName" className="block text-xs font-medium text-gray-700 mb-1">
+                Entry Name:
+              </label>
+              <input
+                type="text"
+                id="entryName"
+                value={entryName}
+                onChange={(e) => onEntryNameChange?.(e.target.value)}
+                disabled={readOnly}
+                className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm ${
+                  readOnly 
+                    ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
+                    : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+                }`}
+                placeholder="Enter your bracket name"
+              />
+            </div>
+
+            {/* Row 2: Region Name with checkmark (only when complete) */}
+            <div className="mb-4">
+              <div className="text-lg font-bold text-gray-800 flex items-center space-x-2">
+                <span>{regionName}</span>
+                {isComplete && (
+                  <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                )}
+              </div>
+            </div>
+
+            {/* Row 3: Regional Champion (only when complete) - seed, name, and logo on same line */}
+            {isComplete && regionalChampion && (
+              <div className="flex items-center space-x-2">
+                <span className="text-sm font-bold text-gray-600">#{regionalChampion.seed}</span>
+                <span className="text-sm font-semibold text-gray-800 flex-1">{regionalChampion.name}</span>
+                {regionalChampion.logo && (
+                  <img src={regionalChampion.logo} alt={regionalChampion.name} className="w-8 h-8 object-contain flex-shrink-0" />
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Spacer */}
+        <div className="w-4"></div>
+
         {/* Elite 8 */}
         <div className="w-48">
           {elite8.map((game, index) => (
@@ -237,50 +287,6 @@ export default function RegionBracketLayout({
               {renderGame(game, 'Elite 8')}
             </div>
           ))}
-        </div>
-
-        {/* Right Panel: Entry Name, Region Name, Champion Info - aligned with final game */}
-        <div className="ml-2 w-64 flex-shrink-0">
-          {/* Row 1: Entry Name */}
-          <div className="mb-4">
-            <label htmlFor="entryName" className="block text-xs font-medium text-gray-700 mb-1">
-              Entry Name:
-            </label>
-            <input
-              type="text"
-              id="entryName"
-              value={entryName}
-              onChange={(e) => onEntryNameChange?.(e.target.value)}
-              disabled={readOnly}
-              className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm ${
-                readOnly 
-                  ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
-                  : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
-              }`}
-              placeholder="Enter your bracket name"
-            />
-          </div>
-
-          {/* Row 2: Region Name with checkmark (only when complete) */}
-          <div className="mb-4">
-            <div className="text-lg font-bold text-gray-800 flex items-center space-x-2">
-              <span>{regionName}</span>
-              {isComplete && (
-                <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-              )}
-            </div>
-          </div>
-
-          {/* Row 3: Regional Champion (only when complete) - seed, name, and logo on same line */}
-          {isComplete && regionalChampion && (
-            <div className="flex items-center space-x-2">
-              <span className="text-sm font-bold text-gray-600">#{regionalChampion.seed}</span>
-              <span className="text-sm font-semibold text-gray-800 flex-1">{regionalChampion.name}</span>
-              {regionalChampion.logo && (
-                <img src={regionalChampion.logo} alt={regionalChampion.name} className="w-8 h-8 object-contain flex-shrink-0" />
-              )}
-            </div>
-          )}
         </div>
       </div>
 
