@@ -195,11 +195,11 @@ export default function RegionBracketLayout({
   const isComplete = isRegionComplete();
 
   return (
-    <div className="flex flex-col border-2 border-red-500 mx-auto" style={{ width: 'fit-content' }}>
+    <div className="flex flex-col mx-auto" style={{ width: 'fit-content' }}>
         {/* Bracket Columns */}
         <div className="flex items-start">
           {/* Round of 64 */}
-          <div className="w-48 border-2 border-red-500">
+          <div className="w-48">
             {roundOf64.map(game => renderGame(game, 'Round of 64'))}
           </div>
 
@@ -207,7 +207,7 @@ export default function RegionBracketLayout({
           <div className="w-8"></div>
 
           {/* Round of 32 */}
-          <div className="w-48 border-2 border-red-500">
+          <div className="w-48">
             {roundOf32.map((game, index) => (
               <div key={game.id} style={{ marginTop: index === 0 ? '2rem' : '4.25rem' }}>
                 {renderGame(game, 'Round of 32')}
@@ -219,7 +219,7 @@ export default function RegionBracketLayout({
           <div className="w-6"></div>
 
           {/* Sweet 16 */}
-          <div className="w-48 border-2 border-red-500">
+          <div className="w-48">
             {sweet16.map((game, index) => (
               <div key={game.id} style={{ marginTop: index === 0 ? '6rem' : '12.25rem' }}>
                 {renderGame(game, 'Sweet 16')}
@@ -231,7 +231,7 @@ export default function RegionBracketLayout({
           <div className="w-4"></div>
 
           {/* Elite 8 (fourth column - same size as first three) */}
-          <div className="w-48 flex-shrink-0 border-2 border-red-500">
+          <div className="w-48 flex-shrink-0">
             {/* Elite 8 Games */}
             <div>
               {elite8.map((game, index) => (
@@ -243,12 +243,12 @@ export default function RegionBracketLayout({
           </div>
 
           {/* Fifth Column - Summary Panel (half width, right-aligned, can overlap) */}
-          <div className="w-24 flex-shrink-0 relative border-2 border-red-500">
+          <div className="w-24 flex-shrink-0 relative">
             {/* Summary Panel: Entry Name, Region Name, Champion Info - right-aligned, top aligned with Game 1 */}
             <div className="absolute right-0" style={{ minWidth: 'max-content' }}>
-              {/* Row 1: Entry Name */}
-              <div className="mb-4">
-                <label htmlFor="entryName" className="block text-xs font-medium text-gray-700 mb-1">
+              {/* Row 1: Entry Name - label and field on same row */}
+              <div className="mb-4 flex items-center space-x-2 justify-end">
+                <label htmlFor="entryName" className="text-xs font-medium text-gray-700 whitespace-nowrap">
                   Entry Name:
                 </label>
                 <input
@@ -267,13 +267,13 @@ export default function RegionBracketLayout({
                 />
               </div>
 
-              {/* Row 2: Region Name with checkmark (only when complete) */}
+              {/* Row 2: Region Name with checkmark on left (only when complete) */}
               <div className="mb-4">
                 <div className="text-lg font-bold text-gray-800 flex items-center space-x-2 justify-end">
-                  <span>{regionName}</span>
                   {isComplete && (
                     <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
                   )}
+                  <span>{regionName} Region</span>
                 </div>
               </div>
 
@@ -292,7 +292,7 @@ export default function RegionBracketLayout({
         </div>
 
         {/* Control Buttons at bottom of bracket */}
-        <div className="flex items-center justify-between mt-4 border-2 border-red-500" style={{ width: '100%', maxWidth: '100%' }}>
+        <div className="flex items-center justify-between mt-4" style={{ width: '100%', maxWidth: '100%' }}>
         {/* Left: Previous Button */}
         <div className="flex-shrink-0">
           {onPrevious && (
