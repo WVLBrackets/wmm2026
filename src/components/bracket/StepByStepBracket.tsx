@@ -24,6 +24,16 @@ interface StepByStepBracketProps {
   submitError?: string;
   bracketNumber?: number;
   year?: number;
+  siteConfig?: {
+    finalMessageTeamsMissing?: string;
+    finalMessageTieBreakerMissing?: string;
+    finalMessageTieBreakerInvalid?: string;
+    finalMessageDuplicateName?: string;
+    finalMessageReadyToSubmit?: string;
+    tournamentYear?: string;
+  } | null;
+  existingBracketNames?: string[];
+  currentBracketId?: string;
 }
 
 export default function StepByStepBracket({ 
