@@ -44,6 +44,7 @@ export default function StepByStepBracket({
 }: StepByStepBracketProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [completedRegions, setCompletedRegions] = useState<Set<string>>(new Set());
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   const regions = tournamentData.regions;
   const totalSteps = regions.length + 1; // 4 regions + Final Four & Championship
