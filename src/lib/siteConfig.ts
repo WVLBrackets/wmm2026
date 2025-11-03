@@ -34,6 +34,8 @@ export interface SiteConfigData {
   entryPlural: string;
   // Sign-in page configuration
   signinFooter: string;
+  // Mobile brackets message
+  mobileBracketsMessage?: string;
 }
 
 // Function to fetch site config from Google Sheets
@@ -147,6 +149,9 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
             break;
           case 'signin_footer':
             config.signinFooter = value;
+            break;
+          case 'mobile_brackets_message':
+            config.mobileBracketsMessage = value;
             break;
         }
       }

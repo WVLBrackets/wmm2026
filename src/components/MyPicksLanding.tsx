@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { Trophy, Plus, Edit, Eye, Clock, CheckCircle, LogOut, Trash2, Copy, Printer } from 'lucide-react';
+import { Trophy, Plus, Edit, Eye, Clock, CheckCircle, LogOut, Trash2, Copy, Printer, Info, X } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { TournamentData, TournamentBracket } from '@/types/tournament';
 import { SiteConfigData } from '@/lib/siteConfig';
@@ -36,7 +36,7 @@ interface MyPicksLandingProps {
 
 export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBracket, onDeleteBracket, onCopyBracket, deletingBracketId, tournamentData, bracket, siteConfig }: MyPicksLandingProps) {
   const { data: session } = useSession();
-  const [expandedStatus, setExpandedStatus] = useState<'submitted' | 'inprogress' | null>(null);
+  const [expandedStatus, setExpandedStatus] = useState<'info' | null>(null);
   
   // Get tournament year from config or tournament data
   const tournamentYear = siteConfig?.tournamentYear ? parseInt(siteConfig.tournamentYear) : (tournamentData?.year ? parseInt(tournamentData.year) : new Date().getFullYear());
@@ -324,6 +324,11 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                         return firstName;
                       })()}
                     </h1>
+                    {siteConfig?.mobileBracketsMessage && (
+                      <p className="text-sm text-gray-600 mt-1">
+                        {siteConfig.mobileBracketsMessage}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
                     <button
@@ -342,7 +347,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                   </div>
                 </div>
                 
-                {/* Mobile: Simplified counts with clickable statuses */}
+                {/* Mobile: Simplified counts with info icon */}
                 {(() => {
                   const { submittedCount, inProgressCount, totalCost } = getBracketsInfo();
                   
@@ -375,50 +380,73 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                   return (
                     <div className="flex flex-col gap-2">
                       {/* Simplified count line */}
-                      <div className="text-sm text-gray-700">
-                        <button
-                          onClick={() => setExpandedStatus(expandedStatus === 'submitted' ? null : 'submitted')}
-                          className={`hover:text-blue-600 ${submittedCount === 0 ? 'text-gray-400 cursor-default' : 'text-blue-600 cursor-pointer underline'}`}
-                          disabled={submittedCount === 0}
-                        >
+                      <div className="text-sm text-gray-700 flex items-center gap-2">
+                        <span className={submittedCount === 0 ? 'text-gray-400' : ''}>
                           Submitted: {submittedCount}
-                        </button>
-                        <span className="mx-1">-</span>
-                        <button
-                          onClick={() => setExpandedStatus(expandedStatus === 'inprogress' ? null : 'inprogress')}
-                          className={`hover:text-blue-600 ${inProgressCount === 0 ? 'text-gray-400 cursor-default' : 'text-blue-600 cursor-pointer underline'}`}
-                          disabled={inProgressCount === 0}
-                        >
+                        </span>
+                        <Image 
+                          src="/images/basketball icon.png" 
+                          alt="Basketball" 
+                          width={16} 
+                          height={16} 
+                          className="object-contain"
+                        />
+                        <span className={inProgressCount === 0 ? 'text-gray-400' : ''}>
                           In Progress: {inProgressCount}
+                        </span>
+                        <button
+                          onClick={() => setExpandedStatus(expandedStatus === 'info' ? null : 'info')}
+                          className="ml-auto text-blue-600 hover:text-blue-700 cursor-pointer"
+                        >
+                          <Info className="h-4 w-4" />
                         </button>
                       </div>
                       
-                      {/* Expanded details */}
-                      {expandedStatus === 'submitted' && submittedCount > 0 && (
-                        <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded">
-                          {replaceSubmittedPlaceholders(siteConfig?.welcomeSubmittedText || 'Submitted Count: {count} - your total cost is ${cost} so far')}
+                      {/* Expanded details - showing same message as desktop */}
+                      {expandedStatus === 'info' && (
+                        <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded relative">
+                          <button
+                            onClick={() => setExpandedStatus(null)}
+                            className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 cursor-pointer"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                          
+                          {/* Case 2: Submitted is non-zero and In Progress is zero */}
                           {submittedCount > 0 && inProgressCount === 0 && (
-                            <p className="mt-1">{siteConfig?.welcomeCanStartNew || 'You can start a new entry and save it for later without submitting it now'}</p>
+                            <>
+                              <p>
+                                {replaceSubmittedPlaceholders(siteConfig?.welcomeSubmittedText || 'Submitted Count: {count} - your total cost is ${cost} so far')}
+                              </p>
+                              <p className="mt-1">
+                                {siteConfig?.welcomeCanStartNew || 'You can start a new entry and save it for later without submitting it now'}
+                              </p>
+                            </>
                           )}
-                        </div>
-                      )}
-                      
-                      {expandedStatus === 'inprogress' && inProgressCount > 0 && (
-                        <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded">
-                          {siteConfig?.welcomeInprogressReminder || 'Be sure to submit your picks so they can be included in the contest'}
-                          <p className="mt-1">
-                            {replaceInProgressPlaceholders(siteConfig?.welcomeInprogressText || 'In Progress Count: {count} - be sure to \'Submit\' if you want {entry_text} to count')}
-                          </p>
-                        </div>
-                      )}
-                      
-                      {/* Show both if both are non-zero and neither is expanded */}
-                      {submittedCount > 0 && inProgressCount > 0 && expandedStatus === null && (
-                        <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded">
-                          {replaceSubmittedPlaceholders(siteConfig?.welcomeSubmittedText || 'Submitted Count: {count} - your total cost is ${cost} so far')}
-                          <p className="mt-1">
-                            {replaceInProgressPlaceholders(siteConfig?.welcomeInprogressText || 'In Progress Count: {count} - be sure to \'Submit\' if you want {entry_text} to count')}
-                          </p>
+                          
+                          {/* Case 3: Submitted is zero and In Progress is non-zero */}
+                          {submittedCount === 0 && inProgressCount > 0 && (
+                            <>
+                              <p>
+                                {siteConfig?.welcomeInprogressReminder || 'Be sure to submit your picks so they can be included in the contest'}
+                              </p>
+                              <p className="mt-1">
+                                {replaceInProgressPlaceholders(siteConfig?.welcomeInprogressText || 'In Progress Count: {count} - be sure to \'Submit\' if you want {entry_text} to count')}
+                              </p>
+                            </>
+                          )}
+                          
+                          {/* Case 4: Both counts are non-zero */}
+                          {submittedCount > 0 && inProgressCount > 0 && (
+                            <>
+                              <p>
+                                {replaceSubmittedPlaceholders(siteConfig?.welcomeSubmittedText || 'Submitted Count: {count} - your total cost is ${cost} so far')}
+                              </p>
+                              <p className="mt-1">
+                                {replaceInProgressPlaceholders(siteConfig?.welcomeInprogressText || 'In Progress Count: {count} - be sure to \'Submit\' if you want {entry_text} to count')}
+                              </p>
+                            </>
+                          )}
                         </div>
                       )}
                     </div>

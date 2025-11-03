@@ -35,6 +35,8 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   entrySingular: 'this entry',
   entryPlural: 'these entries',
   // Sign-in page configuration
-  signinFooter: ''
+  signinFooter: '',
+  // Mobile brackets message
+  mobileBracketsMessage: ''
 };
 
