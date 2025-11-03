@@ -21,7 +21,9 @@ export default function RegionBracketLayout({
   readOnly = false,
   scrollContainerRef
 }: RegionBracketLayoutProps) {
-  const hasScrolledRef = useRef(false);
+  const hasScrolledRoundOf64Ref = useRef(false);
+  const hasScrolledRoundOf32Ref = useRef(false);
+  const hasScrolledSweet16Ref = useRef(false);
   
   const handleTeamClick = (game: TournamentGame, team: Record<string, unknown>) => {
     if (game.winner || readOnly) return;
@@ -83,7 +85,7 @@ export default function RegionBracketLayout({
 
   // Auto-scroll when Round of 64 is complete
   useEffect(() => {
-    if (!scrollContainerRef?.current || readOnly || hasScrolledRef.current) return;
+    if (!scrollContainerRef?.current || readOnly || hasScrolledRoundOf64Ref.current) return;
     
     // Check if all Round of 64 games have picks (8 games)
     const roundOf64Complete = roundOf64.length > 0 && roundOf64.every(game => picks[game.id]);
@@ -97,9 +99,49 @@ export default function RegionBracketLayout({
         left: scrollAmount,
         behavior: 'smooth'
       });
-      hasScrolledRef.current = true;
+      hasScrolledRoundOf64Ref.current = true;
     }
   }, [roundOf64, picks, scrollContainerRef, readOnly]);
+
+  // Auto-scroll when Round of 32 is complete
+  useEffect(() => {
+    if (!scrollContainerRef?.current || readOnly || hasScrolledRoundOf32Ref.current) return;
+    
+    // Check if all Round of 32 games have picks (4 games)
+    const roundOf32Complete = roundOf32.length > 0 && roundOf32.every(game => picks[game.id]);
+    
+    if (roundOf32Complete) {
+      // Scroll horizontally to bring Sweet 16 into view
+      // Round of 32 column (w-48 = 192px) + spacer (w-6 = 24px) = 216px
+      // Scroll by ~150px to bring Sweet 16 into view while keeping some of Round of 32 visible
+      const scrollAmount = 150;
+      scrollContainerRef.current.scrollBy({
+        left: scrollAmount,
+        behavior: 'smooth'
+      });
+      hasScrolledRoundOf32Ref.current = true;
+    }
+  }, [roundOf32, picks, scrollContainerRef, readOnly]);
+
+  // Auto-scroll when Sweet 16 is complete
+  useEffect(() => {
+    if (!scrollContainerRef?.current || readOnly || hasScrolledSweet16Ref.current) return;
+    
+    // Check if all Sweet 16 games have picks (2 games)
+    const sweet16Complete = sweet16.length > 0 && sweet16.every(game => picks[game.id]);
+    
+    if (sweet16Complete) {
+      // Scroll horizontally to bring Elite 8 into view
+      // Sweet 16 column (w-48 = 192px) + spacer (w-4 = 16px) = 208px
+      // Scroll by ~150px to bring Elite 8 into view while keeping some of Sweet 16 visible
+      const scrollAmount = 150;
+      scrollContainerRef.current.scrollBy({
+        left: scrollAmount,
+        behavior: 'smooth'
+      });
+      hasScrolledSweet16Ref.current = true;
+    }
+  }, [sweet16, picks, scrollContainerRef, readOnly]);
 
   // Check if region is complete and find regional champion
   const isRegionComplete = () => {
