@@ -238,7 +238,6 @@ export default function RegionBracketLayout({
             </div>
           ))}
         </div>
-        </div>
 
         {/* Right Panel: Entry Name, Region Name, Champion Info */}
         <div className="ml-8 w-64 flex-shrink-0">
