@@ -681,7 +681,7 @@ function BracketContent() {
           bracketNumber={editingBracket ? (editingBracket as Record<string, unknown>).bracketNumber as number : undefined}
           year={editingBracket ? (editingBracket as Record<string, unknown>).year as number : undefined}
           siteConfig={siteConfig}
-          existingBracketNames={submittedBrackets.map(b => b.entryName)}
+          existingBracketNames={submittedBrackets.filter(b => b.status === 'submitted').map(b => b.entryName)}
           currentBracketId={editingBracket ? (editingBracket as Record<string, unknown>).id as string : undefined}
         />
       </div>
