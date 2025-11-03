@@ -292,7 +292,7 @@ export default function RegionBracketLayout({
       </div>
 
       {/* Control Buttons at bottom of bracket */}
-      <div className="flex items-center justify-between mt-8 w-full">
+      <div className="flex items-center justify-between mt-8 min-w-max">
         {/* Left: Previous Button */}
         <div className="flex-shrink-0">
           {onPrevious && (
