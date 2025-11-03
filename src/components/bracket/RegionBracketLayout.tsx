@@ -265,10 +265,10 @@ export default function RegionBracketLayout({
               <div 
                 className="absolute" 
                 style={{ 
-                  top: '14rem',
+                  top: 'calc(14rem - 4px)',
                   left: '50%',
                   transform: 'translateX(-50%)',
-                  width: '90%',
+                  width: '76.5%', // 90% * 0.85 = 76.5%
                   display: 'flex',
                   justifyContent: 'center',
                   alignItems: 'center'
@@ -278,15 +278,20 @@ export default function RegionBracketLayout({
                   onClick={isComplete ? onNext : undefined}
                   disabled={!isComplete || !canProceed}
                   className={`
-                    w-full aspect-square rounded-full flex items-center justify-center transition-colors
+                    w-full aspect-square rounded-full flex items-center justify-center transition-all
                     ${isComplete && canProceed
-                      ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 cursor-pointer shadow-lg hover:shadow-xl active:shadow-md'
+                      : 'bg-gradient-to-br from-gray-300 to-gray-400 text-gray-500 cursor-not-allowed shadow'
                     }
                   `}
-                  style={{ maxWidth: '90%' }}
+                  style={{ 
+                    maxWidth: '76.5%',
+                    boxShadow: isComplete && canProceed 
+                      ? '0 4px 6px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -1px 0 rgba(0, 0, 0, 0.2)'
+                      : '0 2px 4px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                  }}
                 >
-                  <ArrowRight className="w-6 h-6" />
+                  <ArrowRight className="w-7 h-7" style={{ filter: isComplete && canProceed ? 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3))' : 'none' }} />
                 </button>
               </div>
             )}
