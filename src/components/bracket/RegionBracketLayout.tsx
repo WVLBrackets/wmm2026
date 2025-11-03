@@ -230,10 +230,19 @@ export default function RegionBracketLayout({
         {/* Spacer */}
         <div className="w-4"></div>
 
-        {/* Right Panel: Entry Name, Region Name, Champion Info - aligned with Sweet 16 */}
-        <div className="w-64 flex-shrink-0 self-start">
-          {/* Add top margin to align with first Sweet 16 game */}
-          <div style={{ marginTop: '6rem' }}>
+        {/* Elite 8 + Summary Panel (rightmost column) */}
+        <div className="w-64 flex-shrink-0">
+          {/* Elite 8 Games */}
+          <div>
+            {elite8.map((game, index) => (
+              <div key={game.id} style={{ marginTop: index === 0 ? '14rem' : '0' }}>
+                {renderGame(game, 'Elite 8')}
+              </div>
+            ))}
+          </div>
+
+          {/* Summary Panel: Entry Name, Region Name, Champion Info */}
+          <div className="mt-4 ml-4">
             {/* Row 1: Entry Name */}
             <div className="mb-4">
               <label htmlFor="entryName" className="block text-xs font-medium text-gray-700 mb-1">
@@ -275,18 +284,6 @@ export default function RegionBracketLayout({
               </div>
             )}
           </div>
-        </div>
-
-        {/* Spacer */}
-        <div className="w-4"></div>
-
-        {/* Elite 8 */}
-        <div className="w-48">
-          {elite8.map((game, index) => (
-            <div key={game.id} style={{ marginTop: index === 0 ? '14rem' : '0' }}>
-              {renderGame(game, 'Elite 8')}
-            </div>
-          ))}
         </div>
       </div>
 
