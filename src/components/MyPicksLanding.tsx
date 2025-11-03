@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { Trophy, Plus, Edit, Eye, Clock, CheckCircle, LogOut, Trash2, Copy, Printer } from 'lucide-react';
 import { signOut } from 'next-auth/react';
@@ -36,6 +36,7 @@ interface MyPicksLandingProps {
 
 export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBracket, onDeleteBracket, onCopyBracket, deletingBracketId, tournamentData, bracket, siteConfig }: MyPicksLandingProps) {
   const { data: session } = useSession();
+  const [expandedStatus, setExpandedStatus] = useState<'submitted' | 'inprogress' | null>(null);
   
   // Get tournament year from config or tournament data
   const tournamentYear = siteConfig?.tournamentYear ? parseInt(siteConfig.tournamentYear) : (tournamentData?.year ? parseInt(tournamentData.year) : new Date().getFullYear());
@@ -197,16 +198,25 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
         
             {/* Compact Header */}
             <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
-              <div className="flex items-center justify-between gap-4">
-                {/* Welcome text */}
-                <div className="flex-1 min-w-0">
-                  <h1 className="text-xl md:text-2xl font-bold text-gray-900">
-                    {(() => {
-                      const fullName = session?.user?.name || 'User';
-                      const firstName = fullName.split(' ')[0];
-                      return `Welcome ${firstName}`;
-                    })()}
-                  </h1>
+              {/* Desktop: Logo and welcome in one row, buttons on right */}
+              <div className="hidden md:flex md:items-center md:justify-between">
+                <div className="flex items-center space-x-4">
+                  {/* WMM Logo - Desktop only */}
+                  <div className="flex-shrink-0">
+                    <Image 
+                      src="/images/warrens-march-madness.png" 
+                      alt="Warren's March Madness" 
+                      width={80} 
+                      height={40} 
+                      className="object-contain"
+                    />
+                  </div>
+                  
+                  {/* Welcome text - Desktop */}
+                  <div className="flex-1 min-w-0">
+                    <h1 className="text-2xl font-bold text-gray-900">
+                      {(siteConfig?.welcomeGreeting || 'Welcome back {name}').replace('{name}', session?.user?.name || 'User')}
+                    </h1>
                     {(() => {
                       const { submittedCount, inProgressCount, totalCost } = getBracketsInfo();
                       
@@ -283,26 +293,139 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                     })()}
                   </div>
                 </div>
-            
-            <div className="flex items-center space-x-2 md:space-x-3 flex-shrink-0">
-              <button
-                onClick={onCreateNew}
-                className="bg-blue-600 text-white px-2 py-2 md:px-4 md:py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
-              >
-                <Plus className="h-4 w-4" />
-                <span className="hidden md:inline">New Bracket</span>
-              </button>
-              
-              <button
-                onClick={() => signOut({ callbackUrl: '/auth/signin' })}
-                className="bg-blue-600 text-white px-2 py-2 md:px-4 md:py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
-              >
-                <LogOut className="h-4 w-4" />
-                <span className="hidden md:inline">Logout</span>
-              </button>
+                <div className="flex items-center space-x-3 flex-shrink-0">
+                  <button
+                    onClick={onCreateNew}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>New Bracket</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Mobile: Welcome and buttons on same line, details below */}
+              <div className="flex flex-col md:hidden gap-3">
+                <div className="flex items-center justify-between">
+                  {/* Welcome text - Mobile */}
+                  <div className="flex-1 min-w-0">
+                    <h1 className="text-xl font-bold text-gray-900">
+                      Welcome {(() => {
+                        const fullName = session?.user?.name || 'User';
+                        const firstName = fullName.split(' ')[0];
+                        return firstName;
+                      })()}
+                    </h1>
+                  </div>
+                  <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
+                    <button
+                      onClick={onCreateNew}
+                      className="bg-blue-600 text-white px-2 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                    
+                    <button
+                      onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+                      className="bg-blue-600 text-white px-2 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
+                    >
+                      <LogOut className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+                
+                {/* Mobile: Simplified counts with clickable statuses */}
+                {(() => {
+                  const { submittedCount, inProgressCount, totalCost } = getBracketsInfo();
+                  
+                  // Helper functions to replace placeholders
+                  const replaceSubmittedPlaceholders = (text: string) => {
+                    return text
+                      .replace('{count}', submittedCount.toString())
+                      .replace('{cost}', totalCost.toString());
+                  };
+                  
+                  const replaceInProgressPlaceholders = (text: string) => {
+                    const entryText = inProgressCount === 1 
+                      ? (siteConfig?.entrySingular || 'this entry')
+                      : (siteConfig?.entryPlural || 'these entries');
+                    
+                    return text
+                      .replace('{count}', inProgressCount.toString())
+                      .replace('{entry_text}', entryText);
+                  };
+                  
+                  // Case 1: Both counts are 0
+                  if (submittedCount === 0 && inProgressCount === 0) {
+                    return (
+                      <p className="text-sm text-gray-600">
+                        {siteConfig?.welcomeNoBracketsLine2 || 'Click New Bracket to start your entry'}
+                      </p>
+                    );
+                  }
+                  
+                  return (
+                    <div className="flex flex-col gap-2">
+                      {/* Simplified count line */}
+                      <div className="text-sm text-gray-700">
+                        <button
+                          onClick={() => setExpandedStatus(expandedStatus === 'submitted' ? null : 'submitted')}
+                          className={`hover:text-blue-600 ${submittedCount === 0 ? 'text-gray-400 cursor-default' : 'text-blue-600 cursor-pointer underline'}`}
+                          disabled={submittedCount === 0}
+                        >
+                          Submitted: {submittedCount}
+                        </button>
+                        <span className="mx-1">-</span>
+                        <button
+                          onClick={() => setExpandedStatus(expandedStatus === 'inprogress' ? null : 'inprogress')}
+                          className={`hover:text-blue-600 ${inProgressCount === 0 ? 'text-gray-400 cursor-default' : 'text-blue-600 cursor-pointer underline'}`}
+                          disabled={inProgressCount === 0}
+                        >
+                          In Progress: {inProgressCount}
+                        </button>
+                      </div>
+                      
+                      {/* Expanded details */}
+                      {expandedStatus === 'submitted' && submittedCount > 0 && (
+                        <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded">
+                          {replaceSubmittedPlaceholders(siteConfig?.welcomeSubmittedText || 'Submitted Count: {count} - your total cost is ${cost} so far')}
+                          {submittedCount > 0 && inProgressCount === 0 && (
+                            <p className="mt-1">{siteConfig?.welcomeCanStartNew || 'You can start a new entry and save it for later without submitting it now'}</p>
+                          )}
+                        </div>
+                      )}
+                      
+                      {expandedStatus === 'inprogress' && inProgressCount > 0 && (
+                        <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded">
+                          {siteConfig?.welcomeInprogressReminder || 'Be sure to submit your picks so they can be included in the contest'}
+                          <p className="mt-1">
+                            {replaceInProgressPlaceholders(siteConfig?.welcomeInprogressText || 'In Progress Count: {count} - be sure to \'Submit\' if you want {entry_text} to count')}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {/* Show both if both are non-zero and neither is expanded */}
+                      {submittedCount > 0 && inProgressCount > 0 && expandedStatus === null && (
+                        <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded">
+                          {replaceSubmittedPlaceholders(siteConfig?.welcomeSubmittedText || 'Submitted Count: {count} - your total cost is ${cost} so far')}
+                          <p className="mt-1">
+                            {replaceInProgressPlaceholders(siteConfig?.welcomeInprogressText || 'In Progress Count: {count} - be sure to \'Submit\' if you want {entry_text} to count')}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
-          </div>
-        </div>
 
 
         {/* Brackets List */}
