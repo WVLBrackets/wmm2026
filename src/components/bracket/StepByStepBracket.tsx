@@ -35,6 +35,7 @@ export default function StepByStepBracket({
   onComplete, 
   onSave, 
   onClose,
+  onCancel,
   onEntryNameChange, 
   onTieBreakerChange,
   readOnly = false,
@@ -171,6 +172,7 @@ export default function StepByStepBracket({
           onPrevious={handlePrevious}
           onSave={handleSave}
           onNext={handleNext}
+          onCancel={onCancel}
           canProceed={canProceed()}
           currentStep={currentStep}
           totalSteps={totalSteps}

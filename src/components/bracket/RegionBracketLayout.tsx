@@ -16,6 +16,7 @@ interface RegionBracketLayoutProps {
   onSave?: () => void;
   onNext?: () => void;
   onClose?: () => void;
+  onCancel?: () => void;
   canProceed?: boolean;
   currentStep?: number;
   totalSteps?: number;
@@ -41,6 +42,7 @@ export default function RegionBracketLayout({
   onSave,
   onNext,
   onClose,
+  onCancel,
   canProceed = false,
   currentStep = 0,
   totalSteps = 5,
@@ -265,7 +267,7 @@ export default function RegionBracketLayout({
               <div 
                 className="absolute" 
                 style={{ 
-                  top: 'calc(14rem - 4px)',
+                  top: 'calc(14rem - 3px)',
                   left: '50%',
                   transform: 'translateX(-50%)',
                   width: '76.5%', // 90% * 0.85 = 76.5%
