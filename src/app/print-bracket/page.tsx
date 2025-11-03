@@ -130,12 +130,12 @@ export default function PrintBracketPage() {
         margin: '0 auto',
         display: 'flex', 
         flexDirection: 'row', 
-        padding: '4px 8px',
+        padding: '20px 8px',
         alignItems: 'center',
         border: '1px solid #d1d5db',
         borderRadius: '4px',
         backgroundColor: '#ffffff',
-        minHeight: '30px'
+        minHeight: '60px'
       }}>
         {/* Finalist 1 */}
         <div style={{ 
@@ -825,7 +825,15 @@ export default function PrintBracketPage() {
                 </div>
                 
                 {/* Final Four Section - Middle */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  marginTop: '-15px',
+                  marginBottom: '-15px',
+                  position: 'relative',
+                  zIndex: 1
+                }}>
                   {renderFinalFourSection()}
                 </div>
                 
