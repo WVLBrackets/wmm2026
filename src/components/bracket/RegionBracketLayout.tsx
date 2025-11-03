@@ -239,8 +239,11 @@ export default function RegionBracketLayout({
           ))}
         </div>
 
-        {/* Right Panel: Entry Name, Region Name, Champion Info */}
-        <div className="ml-8 w-64 flex-shrink-0">
+        {/* Spacer */}
+        <div className="w-4"></div>
+
+        {/* Right Panel: Entry Name, Region Name, Champion Info - aligned with final game */}
+        <div className="w-64 flex-shrink-0">
           {/* Row 1: Entry Name */}
           <div className="mb-4">
             <label htmlFor="entryName" className="block text-xs font-medium text-gray-700 mb-1">
