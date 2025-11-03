@@ -1703,15 +1703,6 @@ export default function AdminPage() {
                     <span>Add Team</span>
                   </button>
                   <button
-                    onClick={handleDeleteFilteredTeams}
-                    disabled={getFilteredTeams().length === 0}
-                    className="flex items-center space-x-1 px-3 py-1.5 text-sm bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title={`Delete all ${getFilteredTeams().length} team(s) in current view`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span>Delete</span>
-                  </button>
-                  <button
                     onClick={handleActivateFilteredTeams}
                     disabled={getFilteredTeams().length === 0}
                     className="flex items-center space-x-1 px-3 py-1.5 text-sm bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1728,6 +1719,15 @@ export default function AdminPage() {
                   >
                     <PowerOff className="h-4 w-4" />
                     <span>Deactivate</span>
+                  </button>
+                  <button
+                    onClick={handleDeleteFilteredTeams}
+                    disabled={getFilteredTeams().length === 0}
+                    className="flex items-center space-x-1 px-3 py-1.5 text-sm bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={getFilteredTeams().length === 0 ? 'No teams to delete' : `Delete ${getFilteredTeams().length} filtered team(s)`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>Delete All ({getFilteredTeams().length})</span>
                   </button>
                 </div>
               )}
