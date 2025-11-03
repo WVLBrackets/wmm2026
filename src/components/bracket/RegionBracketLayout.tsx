@@ -232,17 +232,8 @@ export default function RegionBracketLayout({
 
         {/* Elite 8 + Summary Panel (rightmost column) */}
         <div className="w-64 flex-shrink-0">
-          {/* Elite 8 Games */}
+          {/* Summary Panel: Entry Name, Region Name, Champion Info - top aligned with Game 1 */}
           <div>
-            {elite8.map((game, index) => (
-              <div key={game.id} style={{ marginTop: index === 0 ? '14rem' : '0' }}>
-                {renderGame(game, 'Elite 8')}
-              </div>
-            ))}
-          </div>
-
-          {/* Summary Panel: Entry Name, Region Name, Champion Info */}
-          <div className="mt-4 ml-4">
             {/* Row 1: Entry Name */}
             <div className="mb-4">
               <label htmlFor="entryName" className="block text-xs font-medium text-gray-700 mb-1">
@@ -283,6 +274,15 @@ export default function RegionBracketLayout({
                 )}
               </div>
             )}
+          </div>
+
+          {/* Elite 8 Games - below summary panel */}
+          <div className="mt-6">
+            {elite8.map((game, index) => (
+              <div key={game.id} style={{ marginTop: index === 0 ? '0' : '4.25rem' }}>
+                {renderGame(game, 'Elite 8')}
+              </div>
+            ))}
           </div>
         </div>
       </div>
