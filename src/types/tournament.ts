@@ -4,6 +4,7 @@ export interface TournamentTeam {
   seed: number;
   logo: string;
   region?: string; // Added for Final Four teams to show which region they came from
+  mascot?: string;
 }
 
 export interface TournamentRegion {
