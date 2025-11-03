@@ -292,21 +292,21 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                   </div>
                 </div>
             
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 md:space-x-3">
               <button
                 onClick={onCreateNew}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
+                className="bg-blue-600 text-white px-2 py-2 md:px-4 md:py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
               >
                 <Plus className="h-4 w-4" />
-                <span>New Bracket</span>
+                <span className="hidden md:inline">New Bracket</span>
               </button>
               
               <button
                 onClick={() => signOut({ callbackUrl: '/auth/signin' })}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
+                className="bg-blue-600 text-white px-2 py-2 md:px-4 md:py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
               >
                 <LogOut className="h-4 w-4" />
-                <span>Logout</span>
+                <span className="hidden md:inline">Logout</span>
               </button>
             </div>
           </div>
