@@ -10,7 +10,7 @@ interface RegionBracketLayoutProps {
   picks: { [gameId: string]: string };
   onPick: (gameId: string, teamId: string) => void;
   readOnly?: boolean;
-  scrollContainerRef?: RefObject<HTMLDivElement>;
+  scrollContainerRef?: RefObject<HTMLDivElement | null>;
 }
 
 export default function RegionBracketLayout({ 
