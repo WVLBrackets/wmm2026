@@ -22,6 +22,9 @@ interface RegionBracketLayoutProps {
   bracketNumber?: number;
   year?: number;
   nextButtonText?: string;
+  // Progress dots props
+  onStepClick?: (stepIndex: number) => void;
+  isStepComplete?: (step: number) => boolean;
 }
 
 export default function RegionBracketLayout({ 
@@ -40,7 +43,9 @@ export default function RegionBracketLayout({
   totalSteps = 5,
   bracketNumber,
   year,
-  nextButtonText = 'Next'
+  nextButtonText = 'Next',
+  onStepClick,
+  isStepComplete
 }: RegionBracketLayoutProps) {
   const hasScrolledRoundOf64Ref = useRef(false);
   const hasScrolledRoundOf32Ref = useRef(false);
@@ -267,6 +272,39 @@ export default function RegionBracketLayout({
             </button>
           )}
         </div>
+
+        {/* Center: Progress Dots */}
+        {onStepClick && isStepComplete && (
+          <div className="flex items-center space-x-2 flex-1 justify-center">
+            {Array.from({ length: totalSteps }, (_, i) => {
+              const isFinalStep = i === totalSteps - 1;
+              const allRegionsComplete = Array.from({ length: totalSteps - 1 }, (_, j) => isStepComplete(j)).every(Boolean);
+              const isClickable = !isFinalStep || allRegionsComplete;
+
+              return (
+                <div key={i} className="flex items-center">
+                  <button
+                    onClick={() => onStepClick(i)}
+                    disabled={!isClickable}
+                    title={isFinalStep && !allRegionsComplete ? "Complete all four regions first" : ""}
+                    className={`
+                      w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors
+                      ${isClickable ? 'cursor-pointer' : 'cursor-not-allowed'}
+                      ${i === currentStep ? 'bg-blue-600 text-white' :
+                        isStepComplete(i) ? 'bg-green-600 text-white hover:bg-green-700' :
+                        isClickable ? 'bg-gray-300 text-gray-600 hover:bg-gray-400' : 'bg-gray-200 text-gray-400'}
+                    `}
+                  >
+                    {isStepComplete(i) ? <CheckCircle className="w-5 h-5" /> : i + 1}
+                  </button>
+                  {i < totalSteps - 1 && (
+                    <div className={`w-6 h-0.5 ${isStepComplete(i) ? 'bg-green-600' : 'bg-gray-300'} transition-colors`} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Right: Save/Close and Next/Submit Buttons */}
         <div className="flex items-center space-x-3 flex-shrink-0">

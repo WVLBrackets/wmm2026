@@ -177,6 +177,8 @@ export default function StepByStepBracket({
           bracketNumber={bracketNumber}
           year={year}
           nextButtonText={currentStep === totalSteps - 1 ? 'Submit Bracket' : 'Next'}
+          onStepClick={handleStepClick}
+          isStepComplete={isStepComplete}
         />
       );
     } else {
@@ -218,37 +220,6 @@ export default function StepByStepBracket({
                     }`}
                     placeholder="Enter your bracket name"
                   />
-                </div>
-                
-                {/* Progress Dots - Fixed position to the right of Entry Name */}
-                <div className="flex items-center space-x-2 ml-8">
-                  {Array.from({ length: totalSteps }, (_, i) => {
-                    const isFinalStep = i === totalSteps - 1;
-                    const allRegionsComplete = Array.from({ length: totalSteps - 1 }, (_, j) => isStepComplete(j)).every(Boolean);
-                    const isClickable = !isFinalStep || allRegionsComplete;
-
-                    return (
-                      <div key={i} className="flex items-center">
-                        <button
-                          onClick={() => handleStepClick(i)}
-                          disabled={!isClickable}
-                          title={isFinalStep && !allRegionsComplete ? "Complete all four regions first" : ""}
-                          className={`
-                            w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors
-                            ${isClickable ? 'cursor-pointer' : 'cursor-not-allowed'}
-                            ${i === currentStep ? 'bg-blue-600 text-white' :
-                              isStepComplete(i) ? 'bg-green-600 text-white hover:bg-green-700' :
-                              isClickable ? 'bg-gray-300 text-gray-600 hover:bg-gray-400' : 'bg-gray-200 text-gray-400'}
-                          `}
-                        >
-                          {isStepComplete(i) ? <CheckCircle className="w-5 h-5" /> : i + 1}
-                        </button>
-                        {i < totalSteps - 1 && (
-                          <div className={`w-6 h-0.5 ${isStepComplete(i) ? 'bg-green-600' : 'bg-gray-300'} transition-colors`} />
-                        )}
-                      </div>
-                    );
-                  })}
                 </div>
                 
                 {/* Region name on the right - using flex-1 to push to far right */}
