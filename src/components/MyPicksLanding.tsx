@@ -197,24 +197,16 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
         
             {/* Compact Header */}
             <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div className="flex flex-col md:flex-row md:items-center space-y-3 md:space-y-0 md:space-x-4">
-                  {/* WMM Logo */}
-                  <div className="flex-shrink-0">
-                    <Image 
-                      src="/images/warrens-march-madness.png" 
-                      alt="Warren's March Madness" 
-                      width={80} 
-                      height={40} 
-                      className="object-contain"
-                    />
-                  </div>
-                  
-                  {/* Welcome text */}
-                  <div className="flex-1 min-w-0">
-                    <h1 className="text-xl md:text-2xl font-bold text-gray-900">
-                      {(siteConfig?.welcomeGreeting || 'Welcome back {name}').replace('{name}', session?.user?.name || 'User')}
-                    </h1>
+              <div className="flex items-center justify-between gap-4">
+                {/* Welcome text */}
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-xl md:text-2xl font-bold text-gray-900">
+                    {(() => {
+                      const fullName = session?.user?.name || 'User';
+                      const firstName = fullName.split(' ')[0];
+                      return `Welcome ${firstName}`;
+                    })()}
+                  </h1>
                     {(() => {
                       const { submittedCount, inProgressCount, totalCost } = getBracketsInfo();
                       
@@ -292,7 +284,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                   </div>
                 </div>
             
-            <div className="flex items-center justify-end md:justify-start space-x-2 md:space-x-3 flex-shrink-0">
+            <div className="flex items-center space-x-2 md:space-x-3 flex-shrink-0">
               <button
                 onClick={onCreateNew}
                 className="bg-blue-600 text-white px-2 py-2 md:px-4 md:py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
