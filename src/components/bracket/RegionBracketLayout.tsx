@@ -131,12 +131,9 @@ export default function RegionBracketLayout({
     const sweet16Complete = sweet16.length > 0 && sweet16.every(game => picks[game.id]);
     
     if (sweet16Complete) {
-      // Scroll horizontally to bring Elite 8 into view
-      // Sweet 16 column (w-48 = 192px) + spacer (w-4 = 16px) = 208px
-      // Scroll by ~150px to bring Elite 8 into view while keeping some of Sweet 16 visible
-      const scrollAmount = 150;
-      scrollContainerRef.current.scrollBy({
-        left: scrollAmount,
+      // Scroll all the way to the right end of the container to fully show Elite 8
+      scrollContainerRef.current.scrollTo({
+        left: scrollContainerRef.current.scrollWidth,
         behavior: 'smooth'
       });
       hasScrolledSweet16Ref.current = true;
