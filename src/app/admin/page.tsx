@@ -1361,7 +1361,7 @@ export default function AdminPage() {
                   title={filteredBrackets.length === 0 ? 'No brackets to delete' : `Delete ${filteredBrackets.length} filtered bracket(s)`}
                 >
                   <Trash2 className="w-4 h-4 inline mr-2" />
-                  Delete All Filtered ({filteredBrackets.length})
+                  Delete All ({filteredBrackets.length})
                 </button>
               </div>
             </div>
@@ -1690,73 +1690,52 @@ export default function AdminPage() {
         {activeTab === 'data' && (
         <div className="bg-white rounded-lg shadow-lg p-6">
           <div className="mb-4">
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="text-xl font-bold text-gray-900">Team Reference Data</h2>
-              </div>
+            {/* Header with title and first row of buttons */}
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-xl font-bold text-gray-900">Team Reference Data</h2>
               {!isAddingTeam && (
-                <div className="flex flex-col space-y-2">
-                  {/* Row 1: Add Team and bulk actions */}
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={handleAddTeam}
-                      className="flex items-center space-x-1 px-3 py-1.5 text-sm bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span>Add Team</span>
-                    </button>
-                    <button
-                      onClick={handleDeleteFilteredTeams}
-                      disabled={getFilteredTeams().length === 0}
-                      className="flex items-center space-x-1 px-3 py-1.5 text-sm bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      title={`Delete all ${getFilteredTeams().length} team(s) in current view`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span>Delete</span>
-                    </button>
-                    <button
-                      onClick={handleActivateFilteredTeams}
-                      disabled={getFilteredTeams().length === 0}
-                      className="flex items-center space-x-1 px-3 py-1.5 text-sm bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      title={`Activate all ${getFilteredTeams().length} team(s) in current view`}
-                    >
-                      <Power className="h-4 w-4" />
-                      <span>Activate</span>
-                    </button>
-                    <button
-                      onClick={handleDeactivateFilteredTeams}
-                      disabled={getFilteredTeams().length === 0}
-                      className="flex items-center space-x-1 px-3 py-1.5 text-sm bg-yellow-600 text-white rounded hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      title={`Deactivate all ${getFilteredTeams().length} team(s) in current view`}
-                    >
-                      <PowerOff className="h-4 w-4" />
-                      <span>Deactivate</span>
-                    </button>
-                  </div>
-                  {/* Row 2: Tournament and Export actions */}
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => router.push('/admin/tournament-builder')}
-                      className="flex items-center space-x-1 px-3 py-1.5 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span>New Bracket</span>
-                    </button>
-                    <button
-                      onClick={handleExportTeamData}
-                      className="flex items-center space-x-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                      title="Export team data to JSON file for git commit"
-                    >
-                      <Download className="h-4 w-4" />
-                      <span>Export JSON</span>
-                    </button>
-                  </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={handleAddTeam}
+                    className="flex items-center space-x-1 px-3 py-1.5 text-sm bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Add Team</span>
+                  </button>
+                  <button
+                    onClick={handleDeleteFilteredTeams}
+                    disabled={getFilteredTeams().length === 0}
+                    className="flex items-center space-x-1 px-3 py-1.5 text-sm bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={`Delete all ${getFilteredTeams().length} team(s) in current view`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>Delete</span>
+                  </button>
+                  <button
+                    onClick={handleActivateFilteredTeams}
+                    disabled={getFilteredTeams().length === 0}
+                    className="flex items-center space-x-1 px-3 py-1.5 text-sm bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={`Activate all ${getFilteredTeams().length} team(s) in current view`}
+                  >
+                    <Power className="h-4 w-4" />
+                    <span>Activate</span>
+                  </button>
+                  <button
+                    onClick={handleDeactivateFilteredTeams}
+                    disabled={getFilteredTeams().length === 0}
+                    className="flex items-center space-x-1 px-3 py-1.5 text-sm bg-yellow-600 text-white rounded hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={`Deactivate all ${getFilteredTeams().length} team(s) in current view`}
+                  >
+                    <PowerOff className="h-4 w-4" />
+                    <span>Deactivate</span>
+                  </button>
                 </div>
               )}
             </div>
             
-            {/* Active Filter Toggles */}
-            <div className="flex items-center space-x-2 mb-4">
+            {/* Active Filter Toggles with second row of buttons */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
               <span className="text-sm font-medium text-gray-700">Show:</span>
               <button
                 onClick={() => setTeamActiveFilter('active')}
