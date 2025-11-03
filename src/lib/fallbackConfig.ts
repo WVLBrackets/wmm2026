@@ -37,6 +37,12 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   // Sign-in page configuration
   signinFooter: '',
   // Mobile brackets message
-  mobileBracketsMessage: ''
+  mobileBracketsMessage: '',
+  // Final Four validation messages
+  finalMessageTeamsMissing: 'Please select winners for all Final Four and Championship games.',
+  finalMessageTieBreakerMissing: 'Please enter a tie breaker value.',
+  finalMessageTieBreakerInvalid: 'Tie breaker must be between 100 and 300.',
+  finalMessageDuplicateName: 'An entry with this name already exists for this year. Please choose a different name.',
+  finalMessageReadyToSubmit: 'Your bracket is complete and ready to submit!'
 };
 

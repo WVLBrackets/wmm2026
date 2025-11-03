@@ -27,6 +27,17 @@ interface FinalFourChampionshipProps {
   // Entry name props
   entryName?: string;
   onEntryNameChange?: (value: string) => void;
+  // Site config and validation props
+  siteConfig?: {
+    finalMessageTeamsMissing?: string;
+    finalMessageTieBreakerMissing?: string;
+    finalMessageTieBreakerInvalid?: string;
+    finalMessageDuplicateName?: string;
+    finalMessageReadyToSubmit?: string;
+    tournamentYear?: string;
+  } | null;
+  existingBracketNames?: string[];
+  currentBracketId?: string;
 }
 
 export default function FinalFourChampionship({ 
@@ -49,7 +60,10 @@ export default function FinalFourChampionship({
   onStepClick,
   isStepComplete,
   entryName,
-  onEntryNameChange
+  onEntryNameChange,
+  siteConfig,
+  existingBracketNames = [],
+  currentBracketId
 }: FinalFourChampionshipProps) {
   
   const handleTeamClick = (game: TournamentGame, team: Record<string, unknown>) => {
@@ -239,6 +253,17 @@ export default function FinalFourChampionship({
           </div>
         </div>
       </div>
+
+      {/* Message Bar */}
+      {!readOnly && (
+        <div className={`mt-4 p-3 rounded-lg border-2 ${
+          messageState.color === 'yellow' 
+            ? 'bg-yellow-50 border-yellow-400 text-yellow-800' 
+            : 'bg-green-50 border-green-400 text-green-800'
+        }`}>
+          <p className="text-sm font-medium text-center">{messageState.message}</p>
+        </div>
+      )}
 
       {/* Control Buttons at bottom */}
       <div className="flex items-center justify-between mt-4" style={{ width: '100%', maxWidth: '100%', paddingLeft: '2px', paddingRight: '2px', paddingBottom: '2px' }}>

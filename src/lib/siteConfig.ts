@@ -36,6 +36,12 @@ export interface SiteConfigData {
   signinFooter: string;
   // Mobile brackets message
   mobileBracketsMessage?: string;
+  // Final Four validation messages
+  finalMessageTeamsMissing?: string;
+  finalMessageTieBreakerMissing?: string;
+  finalMessageTieBreakerInvalid?: string;
+  finalMessageDuplicateName?: string;
+  finalMessageReadyToSubmit?: string;
 }
 
 // Function to fetch site config from Google Sheets

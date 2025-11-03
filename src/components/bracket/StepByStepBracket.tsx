@@ -42,7 +42,10 @@ export default function StepByStepBracket({
   readOnly = false,
   submitError = '',
   bracketNumber,
-  year
+  year,
+  siteConfig,
+  existingBracketNames = [],
+  currentBracketId
 }: StepByStepBracketProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [completedRegions, setCompletedRegions] = useState<Set<string>>(new Set());
@@ -210,6 +213,9 @@ export default function StepByStepBracket({
           isStepComplete={isStepComplete}
           entryName={entryName}
           onEntryNameChange={onEntryNameChange}
+          siteConfig={siteConfig}
+          existingBracketNames={existingBracketNames}
+          currentBracketId={currentBracketId}
         />
       );
     }
