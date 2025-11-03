@@ -28,7 +28,7 @@ export default function RegionBracketLayout({
     // Always render a slot, even if no team is assigned yet
     if (!team) {
       return (
-        <div className="h-6 bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
+        <div className="w-full h-6 bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
           <span className="text-xs text-gray-400">-</span>
         </div>
       );
@@ -64,7 +64,7 @@ export default function RegionBracketLayout({
   const renderGame = (game: TournamentGame, round: string) => {
     // Always render both team slots, even if teams are not yet determined
     return (
-      <div key={game.id} className="border border-gray-300 rounded p-1 space-y-0.5 mb-1">
+      <div key={game.id} className="border border-gray-300 rounded p-1 space-y-0.5 mb-1 w-full">
         {renderTeam(game.team1 as unknown as Record<string, unknown> | undefined, game, true, round)}
         {renderTeam(game.team2 as unknown as Record<string, unknown> | undefined, game, false, round)}
       </div>
@@ -119,7 +119,7 @@ export default function RegionBracketLayout({
       )}
 
       {/* Bracket Layout */}
-      <div className="flex items-start mt-8">
+      <div className="flex items-start mt-8 min-w-max">
         {/* Round of 64 */}
         <div className="w-48">
           {roundOf64.map(game => renderGame(game, 'Round of 64'))}

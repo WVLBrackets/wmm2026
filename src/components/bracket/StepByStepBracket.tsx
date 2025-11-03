@@ -184,9 +184,9 @@ export default function StepByStepBracket({
   };
 
   return (
-    <div className="max-w-6xl mx-auto relative">
+    <div className="w-full relative overflow-x-auto">
       {/* Current Step Content */}
-      <div className="bg-white rounded-lg shadow-lg p-8">
+      <div className="bg-white rounded-lg shadow-lg p-8 min-w-max">
             {/* Entry Name Field - positioned in top white space */}
             <div className="mb-6">
               <div className="flex items-center">

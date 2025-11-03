@@ -32,7 +32,7 @@ export default function FinalFourChampionship({
     // Always render a slot, even if no team is assigned yet
     if (!team) {
       return (
-        <div className="h-6 bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
+        <div className="w-full h-6 bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
           <span className="text-xs text-gray-400">-</span>
         </div>
       );
