@@ -628,14 +628,6 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end space-x-2">
-                          <button
-                            onClick={() => onCopyBracket(bracket)}
-                            className="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700 flex items-center space-x-1 cursor-pointer"
-                          >
-                            <Copy className="h-3 w-3" />
-                            <span>Copy</span>
-                          </button>
-                          
                           {/* Action buttons - icon-only squares with tooltips */}
                           {bracket.status === 'in_progress' ? (
                             <>
