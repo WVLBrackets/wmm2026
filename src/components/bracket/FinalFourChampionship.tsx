@@ -303,7 +303,7 @@ export default function FinalFourChampionship({
             {/* Row 2: Final Four & Championship Title */}
             <div className="mb-4">
               <div className="text-lg font-bold text-gray-800 flex items-center space-x-2 justify-end" style={{ paddingRight: '5px' }}>
-                <span>Final Four</span>
+                <span>Final Four & Champ</span>
               </div>
             </div>
 
