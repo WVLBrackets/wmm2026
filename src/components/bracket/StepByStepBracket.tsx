@@ -217,7 +217,7 @@ export default function StepByStepBracket({
           isStepComplete={isStepComplete}
           entryName={entryName}
           onEntryNameChange={onEntryNameChange}
-          siteConfig={siteConfig}
+          siteConfig={siteConfig as SiteConfigData | null}
           existingBracketNames={existingBracketNames}
           currentBracketId={currentBracketId}
         />
