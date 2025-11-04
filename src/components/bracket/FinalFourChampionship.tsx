@@ -149,6 +149,7 @@ export default function FinalFourChampionship({
   };
 
   const champion = getChampion();
+  
   // Check if all three winners are selected (both semifinals + championship)
   const allWinnersSelected = () => {
     const allFinalFourSelected = finalFourGames.every(game => picks[game.id]);
@@ -158,11 +159,6 @@ export default function FinalFourChampionship({
   const isComplete = allWinnersSelected();
 
   // Validation logic for message bar
-  const allWinnersSelected = () => {
-    const allFinalFourSelected = finalFourGames.every(game => picks[game.id]);
-    const championshipSelected = picks[championshipGame.id];
-    return allFinalFourSelected && championshipSelected;
-  };
 
   const tieBreakerValid = () => {
     if (!tieBreaker) return false;
