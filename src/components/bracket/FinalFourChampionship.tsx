@@ -223,8 +223,8 @@ export default function FinalFourChampionship({
         <div className="w-4"></div>
         <div className="w-48"></div>
         <div className="w-24 flex-shrink-0 relative">
-          <div className="absolute right-0" style={{ minWidth: 'max-content' }}>
-            <h2 className="text-lg font-bold text-gray-800 mb-4" style={{ paddingTop: '2px', paddingRight: '2px' }}>
+          <div className="absolute left-0" style={{ minWidth: 'max-content' }}>
+            <h2 className="text-lg font-bold text-gray-800 mb-4" style={{ paddingTop: '2px', paddingLeft: '2px' }}>
               {siteConfig?.finalFourHeaderMessage || 'Final Four & Championship'}
             </h2>
           </div>
