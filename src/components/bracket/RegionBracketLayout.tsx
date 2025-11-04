@@ -403,21 +403,45 @@ export default function RegionBracketLayout({
         <div className="flex items-center space-x-3 flex-shrink-0">
           {readOnly ? (
             <>
+              {/* View mode: Previous, Next (disabled on first/last page), and Close on all pages */}
+              {onPrevious && (
+                <button
+                  onClick={onPrevious}
+                  disabled={currentStep === 0}
+                  className={`
+                    flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors
+                    ${currentStep === 0
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                    }
+                  `}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span>Previous</span>
+                </button>
+              )}
+              {onNext && (
+                <button
+                  onClick={onNext}
+                  disabled={currentStep === (totalSteps ? totalSteps - 1 : 4)}
+                  className={`
+                    flex items-center space-x-2 px-6 py-2 rounded-lg transition-colors
+                    ${currentStep === (totalSteps ? totalSteps - 1 : 4)
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                    }
+                  `}
+                >
+                  <span>Next</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
               {onClose && (
                 <button
                   onClick={onClose}
                   className="flex items-center space-x-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer"
                 >
                   <span>Close</span>
-                </button>
-              )}
-              {onNext && (
-                <button
-                  onClick={onNext}
-                  className="flex items-center space-x-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
-                >
-                  <span>{nextButtonText}</span>
-                  {currentStep < totalSteps - 1 && <ChevronRight className="w-4 h-4" />}
                 </button>
               )}
             </>
