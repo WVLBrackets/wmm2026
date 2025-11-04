@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { TournamentData, TournamentBracket, TournamentGame } from '@/types/tournament';
 import { getRegionalGames, updateBracketWithPicks } from '@/lib/bracketGenerator';
+import { SiteConfigData } from '@/lib/siteConfig';
 import RegionBracketLayout from './RegionBracketLayout';
 import FinalFourChampionship from './FinalFourChampionship';
 import { ChevronLeft, ChevronRight, CheckCircle, Circle, Save } from 'lucide-react';
@@ -24,15 +25,7 @@ interface StepByStepBracketProps {
   submitError?: string;
   bracketNumber?: number;
   year?: number;
-  siteConfig?: {
-    finalMessageTeamsMissing?: string;
-    finalMessageTieBreakerMissing?: string;
-    finalMessageTieBreakerInvalid?: string;
-    finalMessageDuplicateName?: string;
-    finalMessageReadyToSubmit?: string;
-    tournamentYear?: string;
-    finalFourHeaderMessage?: string;
-  } | null;
+  siteConfig?: SiteConfigData | null;
   existingBracketNames?: string[];
   currentBracketId?: string;
 }
