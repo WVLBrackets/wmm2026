@@ -62,16 +62,27 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
     // Parse the CSV data
     const config: Partial<SiteConfigData> = {};
     
+    // Debug: Log total lines
+    console.log('SiteConfig - Total lines in CSV:', lines.length);
+    
+    // Process ALL rows - don't skip any (except empty ones)
     for (let i = 1; i < lines.length; i++) { // Skip header row
       const line = lines[i].trim();
-      if (!line) continue;
+      // Only skip completely empty lines
+      if (!line || line.length === 0) {
+        console.log(`SiteConfig - Skipping empty line ${i + 1}`);
+        continue;
+      }
       
       const fields = parseCSVLine(line);
       if (fields.length >= 2) {
-        const parameter = fields[0].trim();
+        const parameter = fields[0].trim().toLowerCase(); // Normalize to lowercase
         const value = fields[1].trim();
         
-        // Map parameters to config properties
+        // Debug: Log every parameter being processed
+        console.log(`SiteConfig - Processing row ${i + 1}: parameter="${parameter}", value="${value.substring(0, 50)}${value.length > 50 ? '...' : ''}"`);
+        
+        // Map parameters to config properties (case-insensitive matching)
         switch (parameter) {
           case 'tournament_year':
             config.tournamentYear = value;
@@ -177,10 +188,22 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
             break;
           case 'final_four_header_message':
             config.finalFourHeaderMessage = value;
+            console.log(`SiteConfig - Found final_four_header_message: "${value}"`);
+            break;
+          default:
+            // Unknown parameter - log it but continue processing
+            console.log(`SiteConfig - Unknown parameter "${parameter}" on row ${i + 1}, skipping`);
             break;
         }
+      } else {
+        // Log rows that don't have at least 2 fields
+        console.log(`SiteConfig - Row ${i + 1} has insufficient fields (${fields.length}), line: "${line.substring(0, 100)}"`);
       }
     }
+    
+    // Debug: Log final config keys
+    console.log('SiteConfig - Final config keys:', Object.keys(config));
+    console.log('SiteConfig - finalFourHeaderMessage:', config.finalFourHeaderMessage);
     
     // Validate that we have all required fields
     if (config.tournamentYear && config.lastYearWinner && config.siteName) {
