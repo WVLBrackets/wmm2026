@@ -361,7 +361,7 @@ export default function FinalFourChampionship({
       )}
 
       {/* Control Buttons at bottom */}
-      <div className="flex items-center justify-between mt-4" style={{ width: '100%', maxWidth: '100%', paddingLeft: '2px', paddingRight: '2px', paddingBottom: '2px' }}>
+      <div className="flex items-center justify-between mt-4" style={{ width: '100%', maxWidth: '100%', paddingLeft: '2px', paddingRight: '2px', paddingBottom: '2px', border: '2px solid red' }}>
         {/* Left: Previous Button */}
         <div className="flex-shrink-0">
           {onPrevious && (
