@@ -346,9 +346,9 @@ export default function RegionBracketLayout({
 
         {/* Control Buttons at bottom of bracket */}
         <div className="flex items-center justify-between mt-4" style={{ width: '100%', maxWidth: '100%', paddingLeft: '2px', paddingRight: '2px', paddingBottom: '2px' }}>
-        {/* Left: Previous Button */}
+        {/* Left: Previous Button (only in edit mode, or in view mode if not readOnly) */}
         <div className="flex-shrink-0">
-          {onPrevious && (
+          {onPrevious && !readOnly && (
             <button
               onClick={onPrevious}
               disabled={currentStep === 0}
