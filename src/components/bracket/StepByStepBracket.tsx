@@ -31,6 +31,7 @@ interface StepByStepBracketProps {
     finalMessageDuplicateName?: string;
     finalMessageReadyToSubmit?: string;
     tournamentYear?: string;
+    finalFourHeaderMessage?: string;
   } | null;
   existingBracketNames?: string[];
   currentBracketId?: string;

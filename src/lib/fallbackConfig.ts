@@ -43,6 +43,7 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   finalMessageTieBreakerMissing: 'Please enter a tie breaker value.',
   finalMessageTieBreakerInvalid: 'Tie breaker must be between 100 and 300.',
   finalMessageDuplicateName: 'An entry with this name already exists for this year. Please choose a different name.',
-  finalMessageReadyToSubmit: 'Your bracket is complete and ready to submit!'
+  finalMessageReadyToSubmit: 'Your bracket is complete and ready to submit!',
+  finalFourHeaderMessage: 'Final Four & Championship'
 };
 

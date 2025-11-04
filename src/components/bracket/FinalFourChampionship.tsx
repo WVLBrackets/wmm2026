@@ -1,7 +1,7 @@
 'use client';
 
 import { TournamentGame } from '@/types/tournament';
-import { CheckCircle, ChevronLeft, ChevronRight, Save } from 'lucide-react';
+import { CheckCircle, ChevronLeft, ChevronRight, Save, Trophy } from 'lucide-react';
 
 interface FinalFourChampionshipProps {
   finalFourGames: TournamentGame[];
@@ -35,6 +35,7 @@ interface FinalFourChampionshipProps {
     finalMessageDuplicateName?: string;
     finalMessageReadyToSubmit?: string;
     tournamentYear?: string;
+    finalFourHeaderMessage?: string;
   } | null;
   existingBracketNames?: string[];
   currentBracketId?: string;
@@ -218,7 +219,7 @@ export default function FinalFourChampionship({
         <div className="w-48">
           {/* Final Four Games - stacked vertically */}
           {finalFourGames.map((game, index) => (
-            <div key={game.id} style={{ marginTop: index === 0 ? '0' : '1rem' }}>
+            <div key={game.id} style={{ marginTop: index === 0 ? '2rem' : '1rem' }}>
               {renderGame(game, getSemifinalTitle(game, index))}
             </div>
           ))}
@@ -229,7 +230,7 @@ export default function FinalFourChampionship({
 
         {/* Second Column - Championship Game */}
         <div className="w-48">
-          <div style={{ marginTop: '2rem' }}>
+          <div style={{ marginTop: '4rem' }}>
             {renderGame(championshipGame, 'Championship')}
           </div>
         </div>
@@ -274,23 +275,25 @@ export default function FinalFourChampionship({
             {/* Row 2: Final Four & Championship Title */}
             <div className="mb-4">
               <div className="text-lg font-bold text-gray-800 flex items-center space-x-2 justify-end" style={{ paddingRight: '5px' }}>
-                {isComplete && (
-                  <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-                )}
                 <span>Final Four</span>
               </div>
             </div>
 
-            {/* Row 3: Champion (only when complete) */}
-            {isComplete && champion && (
-              <div className="flex items-center space-x-2 justify-end mb-4" style={{ paddingRight: '5px' }}>
-                <span className="text-lg font-bold text-gray-600">#{champion.seed}</span>
-                <span className="text-lg font-semibold text-gray-800">{champion.name}</span>
-                {champion.logo && (
-                  <img src={champion.logo} alt={champion.name} className="w-8 h-8 object-contain flex-shrink-0" />
-                )}
-              </div>
-            )}
+            {/* Row 3: Champion (always show, empty if not complete) */}
+            <div className="flex items-center space-x-2 justify-end mb-4" style={{ paddingRight: '5px', minHeight: '2rem' }}>
+              {isComplete && champion ? (
+                <>
+                  <Trophy className="w-5 h-5 text-yellow-500 flex-shrink-0" />
+                  <span className="text-lg font-bold text-gray-600">#{champion.seed}</span>
+                  <span className="text-lg font-semibold text-gray-800">{champion.name}</span>
+                  {champion.logo && (
+                    <img src={champion.logo} alt={champion.name} className="w-8 h-8 object-contain flex-shrink-0" />
+                  )}
+                </>
+              ) : (
+                <div style={{ height: '2rem' }}></div>
+              )}
+            </div>
 
             {/* Row 4: Tie Breaker Input */}
             <div className="flex items-center space-x-2 justify-end" style={{ paddingRight: '5px' }}>

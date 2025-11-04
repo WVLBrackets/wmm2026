@@ -42,6 +42,7 @@ export interface SiteConfigData {
   finalMessageTieBreakerInvalid?: string;
   finalMessageDuplicateName?: string;
   finalMessageReadyToSubmit?: string;
+  finalFourHeaderMessage?: string;
 }
 
 // Function to fetch site config from Google Sheets
@@ -173,6 +174,9 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
             break;
           case 'final_message_ready_to_submit':
             config.finalMessageReadyToSubmit = value;
+            break;
+          case 'final_four_header_message':
+            config.finalFourHeaderMessage = value;
             break;
         }
       }
