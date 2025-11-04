@@ -225,29 +225,19 @@ export default function FinalFourChampionship({
 
   return (
     <div className="flex flex-col mx-auto border-2 border-gray-300 rounded-lg" style={{ width: 'fit-content' }}>
-      {/* Header Title - First Column, left-justified, can overlap into columns 2 and 3 */}
-      <div className="flex items-start px-2 pt-2" style={{ border: '2px solid red' }}>
-        <div className="flex-shrink-0" style={{ minWidth: '12rem', maxWidth: 'none', border: '2px solid red' }}>
-          <h2 className="text-lg font-bold text-gray-800 whitespace-nowrap" style={{ paddingTop: '2px', paddingLeft: '2px' }}>
-            {siteConfig?.finalFourHeaderMessage || ''}
-          </h2>
-        </div>
-        <div className="w-8" style={{ border: '2px solid red' }}></div>
-        <div className="w-48" style={{ border: '2px solid red' }}></div>
-        <div className="w-6" style={{ border: '2px solid red' }}></div>
-        <div className="w-48" style={{ border: '2px solid red' }}></div>
-        <div className="w-4" style={{ border: '2px solid red' }}></div>
-        <div className="w-48 flex-shrink-0" style={{ border: '2px solid red' }}></div>
-        <div className="w-24 flex-shrink-0" style={{ border: '2px solid red' }}></div>
-      </div>
-
       {/* Bracket Content */}
       <div className="flex items-start" style={{ border: '2px solid red' }}>
-        {/* First Column - Final Four Games */}
+        {/* First Column - Header Title and Final Four Games */}
         <div className="w-48" style={{ border: '2px solid red' }}>
+          {/* Header Title - First row, left-justified, can overlap into columns 2 and 3 */}
+          <div className="flex-shrink-0" style={{ minWidth: '12rem', maxWidth: 'none', border: '2px solid red', paddingTop: '2px', paddingLeft: '2px', marginBottom: '1rem' }}>
+            <h2 className="text-lg font-bold text-gray-800 whitespace-nowrap">
+              {siteConfig?.finalFourHeaderMessage || ''}
+            </h2>
+          </div>
           {/* Final Four Games - stacked vertically */}
           {finalFourGames.map((game, index) => (
-            <div key={game.id} style={{ marginTop: index === 0 ? '2rem' : '1rem' }}>
+            <div key={game.id} style={{ marginTop: index === 0 ? '0' : '1rem' }}>
               {renderGame(game, getSemifinalTitle(game, index))}
             </div>
           ))}
