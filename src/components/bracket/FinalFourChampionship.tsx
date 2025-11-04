@@ -225,16 +225,16 @@ export default function FinalFourChampionship({
 
   return (
     <div className="flex flex-col mx-auto border-2 border-gray-300 rounded-lg" style={{ width: 'fit-content' }}>
-      {/* Header Title - First Column, left-justified */}
+      {/* Header Title - First Column, left-justified, can overlap into columns 2 and 3 */}
       <div className="flex items-start px-2 pt-2">
-        <div className="w-48">
-          <h2 className="text-lg font-bold text-gray-800" style={{ paddingTop: '2px', paddingLeft: '2px' }}>
+        <div className="flex-shrink-0" style={{ minWidth: '12rem', maxWidth: 'none' }}>
+          <h2 className="text-lg font-bold text-gray-800 whitespace-nowrap" style={{ paddingTop: '2px', paddingLeft: '2px' }}>
             {siteConfig?.finalFourHeaderMessage || ''}
           </h2>
         </div>
         <div className="w-8"></div>
         <div className="w-48"></div>
-        <div className="w-6"></div>
+               <div className="w-6"></div>
         <div className="w-48"></div>
         <div className="w-4"></div>
         <div className="w-48 flex-shrink-0"></div>
