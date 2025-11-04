@@ -226,11 +226,11 @@ export default function FinalFourChampionship({
   return (
     <div className="flex flex-col mx-auto border-2 border-gray-300 rounded-lg" style={{ width: 'fit-content' }}>
       {/* Bracket Content */}
-      <div className="flex items-start" style={{ border: '2px solid red' }}>
+      <div className="flex items-start">
         {/* First Column - Header Title and Final Four Games */}
-        <div className="w-48" style={{ border: '2px solid red' }}>
+        <div className="w-48">
           {/* Header Title - First row, left-justified, can overlap into columns 2 and 3 */}
-          <div className="flex-shrink-0" style={{ minWidth: '12rem', maxWidth: 'none', border: '2px solid red', paddingTop: '2px', paddingLeft: '2px', marginBottom: '1rem' }}>
+          <div className="flex-shrink-0" style={{ minWidth: '12rem', maxWidth: 'none', paddingTop: '2px', paddingLeft: '2px', marginBottom: '1rem' }}>
             <h2 className="text-lg font-bold text-gray-800 whitespace-nowrap">
               {siteConfig?.finalFourHeaderMessage || ''}
             </h2>
@@ -244,31 +244,31 @@ export default function FinalFourChampionship({
         </div>
 
         {/* Spacer */}
-        <div className="w-8" style={{ border: '2px solid red' }}></div>
+        <div className="w-8"></div>
 
         {/* Second Column - Championship Game */}
-        <div className="w-48" style={{ border: '2px solid red' }}>
+        <div className="w-48">
           <div style={{ marginTop: '4rem' }}>
             {renderGame(championshipGame, 'Championship')}
           </div>
         </div>
 
         {/* Spacer */}
-        <div className="w-6" style={{ border: '2px solid red' }}></div>
+        <div className="w-6"></div>
 
         {/* Third Column - Empty (for spacing) */}
-        <div className="w-48" style={{ border: '2px solid red' }}></div>
+        <div className="w-48"></div>
 
         {/* Spacer */}
-        <div className="w-4" style={{ border: '2px solid red' }}></div>
+        <div className="w-4"></div>
 
         {/* Fourth Column - Empty (for spacing) */}
-        <div className="w-48 flex-shrink-0" style={{ border: '2px solid red' }}></div>
+        <div className="w-48 flex-shrink-0"></div>
 
         {/* Fifth Column - Summary Panel (half width, right-aligned, same as region pages) */}
-        <div className="w-24 flex-shrink-0 relative" style={{ border: '2px solid red' }}>
+        <div className="w-24 flex-shrink-0 relative">
           {/* Summary Panel: Entry Name, Champion Info, Tie Breaker - right-aligned, top aligned */}
-          <div className="absolute right-0" style={{ minWidth: 'max-content', border: '2px solid red' }}>
+          <div className="absolute right-0" style={{ minWidth: 'max-content' }}>
             {/* Row 1: Entry Name - label and field on same row */}
             <div className="mb-4 flex items-center space-x-2 justify-end" style={{ paddingTop: '2px', paddingRight: '2px' }}>
               <label htmlFor="entryName" className="text-xs font-medium text-gray-700 whitespace-nowrap">
@@ -345,7 +345,7 @@ export default function FinalFourChampionship({
           messageState.color === 'yellow' 
             ? 'bg-yellow-50 border-yellow-400 text-yellow-800' 
             : 'bg-green-50 border-green-400 text-green-800'
-        }`} style={{ border: '2px solid red', width: 'fit-content', maxWidth: '100%' }}>
+        }`} style={{ width: 'fit-content', maxWidth: '100%' }}>
           <p className="text-sm font-medium text-center">{messageState.message}</p>
         </div>
       )}
