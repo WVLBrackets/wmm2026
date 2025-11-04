@@ -303,6 +303,9 @@ export default function FinalFourChampionship({
             {/* Row 2: Final Four & Championship Title */}
             <div className="mb-4">
               <div className="text-lg font-bold text-gray-800 flex items-center space-x-2 justify-end" style={{ paddingRight: '5px' }}>
+                {isComplete && (
+                  <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                )}
                 <span>Final Four & Champ</span>
               </div>
             </div>
