@@ -448,10 +448,10 @@ export default function FinalFourChampionship({
               {onNext && (
                 <button
                   onClick={onNext}
-                  disabled={!canProceed}
+                  disabled={!canProceed || isDuplicateName()}
                   className={`
                     flex items-center space-x-2 px-6 py-2 rounded-lg transition-colors
-                    ${canProceed
+                    ${canProceed && !isDuplicateName()
                       ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }
