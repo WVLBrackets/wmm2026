@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { TournamentGame } from '@/types/tournament';
 import { SiteConfigData } from '@/lib/siteConfig';
 import { CheckCircle, ChevronLeft, ChevronRight, Save, Trophy } from 'lucide-react';
@@ -204,6 +205,24 @@ export default function FinalFourChampionship({
 
   const messageState = getMessageState();
 
+  // Debug logging for config parameter
+  useEffect(() => {
+    console.log('=== FinalFourChampionship Debug ===');
+    console.log('siteConfig object:', siteConfig);
+    console.log('siteConfig type:', typeof siteConfig);
+    console.log('siteConfig is null?', siteConfig === null);
+    console.log('siteConfig is undefined?', siteConfig === undefined);
+    if (siteConfig) {
+      console.log('All siteConfig keys:', Object.keys(siteConfig));
+      console.log('finalFourHeaderMessage value:', siteConfig.finalFourHeaderMessage);
+      console.log('finalFourHeaderMessage type:', typeof siteConfig.finalFourHeaderMessage);
+      console.log('finalFourHeaderMessage is undefined?', siteConfig.finalFourHeaderMessage === undefined);
+      console.log('finalFourHeaderMessage is empty string?', siteConfig.finalFourHeaderMessage === '');
+    }
+    console.log('Rendered value:', siteConfig?.finalFourHeaderMessage || '');
+    console.log('=== End Debug ===');
+  }, [siteConfig]);
+
   return (
     <div className="flex flex-col mx-auto border-2 border-gray-300 rounded-lg" style={{ width: 'fit-content' }}>
       {/* Header Title - First Column, left-justified */}
@@ -218,7 +237,7 @@ export default function FinalFourChampionship({
         <div className="w-6"></div>
         <div className="w-48"></div>
         <div className="w-4"></div>
-        <div className="w-48"></div>
+        <div className="w-48 flex-shrink-0"></div>
         <div className="w-24 flex-shrink-0"></div>
       </div>
 
