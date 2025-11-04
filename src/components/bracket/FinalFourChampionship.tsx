@@ -240,7 +240,7 @@ export default function FinalFourChampionship({
         {/* First Column - Header Title and Final Four Games */}
         <div className="w-48">
           {/* Header Title - First row, left-justified, can overlap into columns 2 and 3 */}
-          <div className="flex-shrink-0" style={{ minWidth: '12rem', maxWidth: 'none', paddingTop: '2px', paddingLeft: '2px', marginBottom: '1rem' }}>
+          <div className="flex-shrink-0" style={{ minWidth: '12rem', maxWidth: 'none', paddingTop: '2px', paddingLeft: 'calc(2px + 5px)', marginBottom: '1rem' }}>
             <h2 className="text-lg font-bold text-gray-800 whitespace-nowrap">
               {siteConfig?.finalFourHeaderMessage || ''}
             </h2>
@@ -356,7 +356,7 @@ export default function FinalFourChampionship({
             ? 'bg-yellow-50 border-yellow-400 text-yellow-800' 
             : 'bg-green-50 border-green-400 text-green-800'
         }`} style={{ width: '100%' }}>
-          <p className="text-sm font-medium text-right">{messageState.message}</p>
+          <p className="text-sm font-medium text-left">{messageState.message}</p>
         </div>
       )}
 
@@ -419,20 +419,45 @@ export default function FinalFourChampionship({
         <div className="flex items-center space-x-3 flex-shrink-0">
           {readOnly ? (
             <>
+              {/* View mode: Previous, Next (disabled on first/last page), and Close on all pages */}
+              {onPrevious && (
+                <button
+                  onClick={onPrevious}
+                  disabled={currentStep === 0}
+                  className={`
+                    flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors
+                    ${currentStep === 0
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                    }
+                  `}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span>Previous</span>
+                </button>
+              )}
+              {onNext && (
+                <button
+                  onClick={onNext}
+                  disabled={currentStep === (totalSteps ? totalSteps - 1 : 4)}
+                  className={`
+                    flex items-center space-x-2 px-6 py-2 rounded-lg transition-colors
+                    ${currentStep === (totalSteps ? totalSteps - 1 : 4)
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                    }
+                  `}
+                >
+                  <span>Next</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
               {onClose && (
                 <button
                   onClick={onClose}
                   className="flex items-center space-x-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer"
                 >
                   <span>Close</span>
-                </button>
-              )}
-              {onNext && (
-                <button
-                  onClick={onNext}
-                  className="flex items-center space-x-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
-                >
-                  <span>{nextButtonText}</span>
                 </button>
               )}
             </>

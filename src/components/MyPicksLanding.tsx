@@ -294,23 +294,23 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                   </div>
                 </div>
                 <div className="flex items-center space-x-3 flex-shrink-0">
-                  <button
-                    onClick={onCreateNew}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>New Bracket</span>
-                  </button>
-                  
-                  <button
-                    onClick={() => signOut({ callbackUrl: '/auth/signin' })}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    <span>Logout</span>
-                  </button>
-                </div>
-              </div>
+              <button
+                onClick={onCreateNew}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
+              >
+                <Plus className="h-4 w-4" />
+                <span>New Bracket</span>
+              </button>
+              
+              <button
+                onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Logout</span>
+              </button>
+            </div>
+          </div>
 
               {/* Mobile: Welcome and buttons on same line, details below */}
               <div className="flex flex-col md:hidden gap-3">
@@ -453,7 +453,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                   );
                 })()}
               </div>
-            </div>
+        </div>
 
 
         {/* Brackets List */}
@@ -636,48 +636,62 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                             <span>Copy</span>
                           </button>
                           
-                          {/* Print button - only for submitted brackets */}
-                          {bracket.status === 'submitted' && (
-                            <button
-                              onClick={() => handlePrintBracket(bracket)}
-                              className="bg-purple-600 text-white px-3 py-1 rounded text-xs hover:bg-purple-700 flex items-center space-x-1 cursor-pointer"
-                            >
-                              <Printer className="h-3 w-3" />
-                              <span>Print</span>
-                            </button>
-                          )}
-                          
-                          <button
-                            onClick={() => onEditBracket(bracket)}
-                            className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 flex items-center space-x-1 cursor-pointer"
-                          >
-                            {bracket.status === 'submitted' ? (
-                              <>
-                                <Eye className="h-3 w-3" />
-                                <span>View</span>
-                              </>
-                            ) : (
-                              <>
-                                <Edit className="h-3 w-3" />
-                                <span>Edit</span>
-                              </>
-                            )}
-                          </button>
-                          
-                          {/* Delete button - only for in-progress brackets */}
-                          {bracket.status === 'in_progress' && (
-                            <button
-                              onClick={() => handleDeleteBracket(bracket.id)}
-                              disabled={deletingBracketId === bracket.id}
-                              className={`px-3 py-1 rounded text-xs flex items-center space-x-1 ${
-                                deletingBracketId === bracket.id
-                                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                                  : 'bg-red-600 text-white hover:bg-red-700 cursor-pointer'
-                              }`}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                              <span>{deletingBracketId === bracket.id ? 'Deleting...' : 'Delete'}</span>
-                            </button>
+                          {/* Action buttons - icon-only squares with tooltips */}
+                          {bracket.status === 'in_progress' ? (
+                            <>
+                              {/* In Progress: Edit, Copy, Delete */}
+                              <button
+                                onClick={() => onEditBracket(bracket)}
+                                className="bg-blue-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-blue-700 cursor-pointer transition-colors"
+                                title="Edit"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => onCopyBracket(bracket)}
+                                className="bg-green-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-green-700 cursor-pointer transition-colors"
+                                title="Copy"
+                              >
+                                <Copy className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteBracket(bracket.id)}
+                                disabled={deletingBracketId === bracket.id}
+                                className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
+                                  deletingBracketId === bracket.id
+                                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                    : 'bg-red-600 text-white hover:bg-red-700 cursor-pointer'
+                                }`}
+                                title={deletingBracketId === bracket.id ? 'Deleting...' : 'Delete'}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              {/* Submitted: View, Copy, Print */}
+                              <button
+                                onClick={() => onEditBracket(bracket)}
+                                className="bg-blue-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-blue-700 cursor-pointer transition-colors"
+                                title="View"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => onCopyBracket(bracket)}
+                                className="bg-green-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-green-700 cursor-pointer transition-colors"
+                                title="Copy"
+                              >
+                                <Copy className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => handlePrintBracket(bracket)}
+                                className="bg-purple-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-purple-700 cursor-pointer transition-colors"
+                                title="Print"
+                              >
+                                <Printer className="h-4 w-4" />
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>
