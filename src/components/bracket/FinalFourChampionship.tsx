@@ -133,6 +133,16 @@ export default function FinalFourChampionship({
     const championId = picks[championshipGame.id];
     if (!championId) return null;
     
+    // Verify that the selected champion ID actually matches one of the current teams in the championship game
+    // This handles the case where semifinals change and invalidate a previously selected champion
+    const team1Id = championshipGame.team1?.id;
+    const team2Id = championshipGame.team2?.id;
+    
+    if (championId !== team1Id && championId !== team2Id) {
+      // The selected champion is no longer valid (not in current championship teams)
+      return null;
+    }
+    
     // Find the champion team
     const champion = championshipGame.team1?.id === championId ? championshipGame.team1 : championshipGame.team2;
     return champion;
@@ -248,7 +258,7 @@ export default function FinalFourChampionship({
 
         {/* Second Column - Championship Game */}
         <div className="w-48">
-          <div style={{ marginTop: '4rem' }}>
+          <div style={{ marginTop: 'calc(4rem + 8px)' }}>
             {renderGame(championshipGame, 'Championship')}
           </div>
         </div>
@@ -345,13 +355,13 @@ export default function FinalFourChampionship({
           messageState.color === 'yellow' 
             ? 'bg-yellow-50 border-yellow-400 text-yellow-800' 
             : 'bg-green-50 border-green-400 text-green-800'
-        }`} style={{ width: 'fit-content', maxWidth: '100%' }}>
-          <p className="text-sm font-medium text-center">{messageState.message}</p>
+        }`} style={{ width: '100%' }}>
+          <p className="text-sm font-medium text-right">{messageState.message}</p>
         </div>
       )}
 
       {/* Control Buttons at bottom */}
-      <div className="flex items-center justify-between mt-4" style={{ width: '100%', maxWidth: '100%', paddingLeft: '2px', paddingRight: '2px', paddingBottom: '2px', border: '2px solid red' }}>
+      <div className="flex items-center justify-between mt-4" style={{ width: '100%', maxWidth: '100%', paddingLeft: '2px', paddingRight: '2px', paddingBottom: '2px' }}>
         {/* Left: Previous Button */}
         <div className="flex-shrink-0">
           {onPrevious && (
