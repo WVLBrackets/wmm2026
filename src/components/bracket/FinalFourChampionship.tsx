@@ -151,10 +151,27 @@ export default function FinalFourChampionship({
   const champion = getChampion();
   
   // Check if all three winners are selected (both semifinals + championship)
+  // AND that the championship winner is valid (exists in current championship teams)
   const allWinnersSelected = () => {
     const allFinalFourSelected = finalFourGames.every(game => picks[game.id]);
     const championshipSelected = picks[championshipGame.id];
-    return allFinalFourSelected && championshipSelected;
+    
+    if (!allFinalFourSelected || !championshipSelected) {
+      return false;
+    }
+    
+    // Verify that the selected champion ID actually matches one of the current teams in the championship game
+    // This handles the case where semifinals change and invalidate a previously selected champion
+    const championId = picks[championshipGame.id];
+    const team1Id = championshipGame.team1?.id;
+    const team2Id = championshipGame.team2?.id;
+    
+    // If the champion ID doesn't match either team, the selection is invalid
+    if (championId !== team1Id && championId !== team2Id) {
+      return false;
+    }
+    
+    return true;
   };
   const isComplete = allWinnersSelected();
 
