@@ -108,32 +108,64 @@ function BracketContent() {
 
   // Restore bracket state from sessionStorage on mount (only once)
   useEffect(() => {
-    if (typeof window === 'undefined' || isLoading || hasRestoredState.current) return;
+    if (typeof window === 'undefined' || isLoading || hasRestoredState.current || !bracket || !tournamentData) return;
     
     const savedState = sessionStorage.getItem('bracketState');
-    if (savedState && currentView === 'landing') {
+    const savedStep = sessionStorage.getItem('bracketCurrentStep');
+    
+    if (savedState && savedStep) {
       try {
         const state = JSON.parse(savedState);
+        const currentStep = parseInt(savedStep, 10);
         
         // Only restore if we have picks data (user was working on a bracket)
         if (state.picks && Object.keys(state.picks).length > 0) {
           hasRestoredState.current = true;
           setIsAdminMode(state.isAdminMode || false);
           
+          // Identify games for the current step to clear their picks
+          const gamesToClear: string[] = [];
+          
+          if (currentStep < tournamentData.regions.length) {
+            // Region step - get all games for this region
+            const region = tournamentData.regions[currentStep];
+            const regionGames = bracket.regions[region.position] || [];
+            regionGames.forEach(game => {
+              gamesToClear.push(game.id);
+            });
+          } else if (currentStep === tournamentData.regions.length) {
+            // Final Four & Championship step
+            bracket.finalFour.forEach(game => {
+              gamesToClear.push(game.id);
+            });
+            gamesToClear.push(bracket.championship.id);
+          }
+          
+          // Filter picks to exclude games for the current step
+          const filteredPicks: { [gameId: string]: string } = {};
+          Object.entries(state.picks).forEach(([gameId, teamId]) => {
+            if (!gamesToClear.includes(gameId)) {
+              filteredPicks[gameId] = teamId as string;
+            }
+          });
+          
+          // Clear tieBreaker if refreshing on Final Four step
+          const restoredTieBreaker = (currentStep === tournamentData.regions.length) ? '' : (state.tieBreaker || '');
+          
           // If we were editing a bracket, try to restore it
           if (state.editingBracketId) {
-            // Load the bracket data, then restore picks (to preserve unsaved changes)
+            // Load the bracket data, then restore filtered picks (clear current step)
             loadBracketForEdit(state.editingBracketId, state.isAdminMode).then(() => {
-              // Restore picks after bracket is loaded (preserve user's unsaved changes)
-              setPicks(state.picks);
+              // Restore filtered picks (excluding current step) and other state
+              setPicks(filteredPicks);
               setEntryName(state.entryName || '');
-              setTieBreaker(state.tieBreaker || '');
+              setTieBreaker(restoredTieBreaker);
             });
           } else {
-            // New bracket - restore state and go to bracket view
-            setPicks(state.picks);
+            // New bracket - restore filtered picks and go to bracket view
+            setPicks(filteredPicks);
             setEntryName(state.entryName || '');
-            setTieBreaker(state.tieBreaker || '');
+            setTieBreaker(restoredTieBreaker);
             setIsReadOnly(false);
             setCurrentView('bracket');
           }
@@ -144,7 +176,7 @@ function BracketContent() {
         sessionStorage.removeItem('bracketCurrentStep');
       }
     }
-  }, [isLoading, currentView]); // Run when loading completes and we're on landing page
+  }, [isLoading, bracket, tournamentData]); // Run when loading completes and bracket/tournament data is available
 
 
   // Set default entry name when user data is available
