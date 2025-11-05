@@ -270,8 +270,8 @@ export default function FinalFourChampionship({
     if (bothSemifinalsComplete) {
       // Scroll horizontally to bring championship into view
       // Final Four column (w-48 = 192px) + spacer (w-8 = 32px) = 224px
-      // Scroll by ~250px to bring championship into view while keeping some of Final Four visible
-      const scrollAmount = 250;
+      // Scroll by ~200px to bring championship into view while keeping some of Final Four visible
+      const scrollAmount = 200;
       scrollContainerRef.current.scrollBy({
         left: scrollAmount,
         behavior: 'smooth'
@@ -422,7 +422,7 @@ export default function FinalFourChampionship({
                 className={`w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm ${
                   readOnly 
                     ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
-                    : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+                    : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black placeholder:text-gray-600'
                 }`}
                 placeholder="150"
                 title="Total combined points scored in the championship game"
