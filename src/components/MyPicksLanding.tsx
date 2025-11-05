@@ -254,39 +254,63 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                       // Case 2: Submitted is non-zero and In Progress is zero
                       if (submittedCount > 0 && inProgressCount === 0) {
                         return (
-                          <div className="flex items-center gap-2 mt-2">
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
-                              Submitted {submittedCount}
-                            </span>
-                          </div>
+                          <>
+                            <p className="text-sm text-gray-600 mt-1">
+                              {replaceSubmittedPlaceholders(siteConfig?.welcomeSubmittedText || 'Submitted Count: {count} - your total cost is ${cost} so far')}
+                            </p>
+                            <p className="text-sm text-gray-600 mt-1">
+                              {siteConfig?.welcomeCanStartNew || 'You can start a new entry and save it for later without submitting it now'}
+                            </p>
+                            <div className="mt-2">
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
+                                Submitted {submittedCount}
+                              </span>
+                            </div>
+                          </>
                         );
                       }
                       
                       // Case 3: Submitted is zero and In Progress is non-zero
                       if (submittedCount === 0 && inProgressCount > 0) {
                         return (
-                          <div className="flex items-center gap-2 mt-2">
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                              <Clock className="h-4 w-4 text-yellow-500 mr-1" />
-                              In Progress {inProgressCount}
-                            </span>
-                          </div>
+                          <>
+                            <p className="text-sm text-gray-600 mt-1">
+                              {siteConfig?.welcomeInprogressReminder || 'Be sure to submit your picks so they can be included in the contest'}
+                            </p>
+                            <p className="text-sm text-gray-600 mt-1">
+                              {replaceInProgressPlaceholders(siteConfig?.welcomeInprogressText || 'In Progress Count: {count} - be sure to \'Submit\' if you want {entry_text} to count')}
+                            </p>
+                            <div className="mt-2">
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                <Clock className="h-4 w-4 text-yellow-500 mr-1" />
+                                In Progress {inProgressCount}
+                              </span>
+                            </div>
+                          </>
                         );
                       }
                       
                       // Case 4: Both counts are non-zero (default case)
                       return (
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
-                            Submitted {submittedCount}
-                          </span>
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                            <Clock className="h-4 w-4 text-yellow-500 mr-1" />
-                            In Progress {inProgressCount}
-                          </span>
-                        </div>
+                        <>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {replaceSubmittedPlaceholders(siteConfig?.welcomeSubmittedText || 'Submitted Count: {count} - your total cost is ${cost} so far')}
+                          </p>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {replaceInProgressPlaceholders(siteConfig?.welcomeInprogressText || 'In Progress Count: {count} - be sure to \'Submit\' if you want {entry_text} to count')}
+                          </p>
+                          <div className="mt-2 flex flex-col gap-2">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 w-fit">
+                              <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
+                              Submitted {submittedCount}
+                            </span>
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 w-fit">
+                              <Clock className="h-4 w-4 text-yellow-500 mr-1" />
+                              In Progress {inProgressCount}
+                            </span>
+                          </div>
+                        </>
                       );
                     })()}
                   </div>
