@@ -51,9 +51,53 @@ export default function StepByStepBracket({
   existingBracketNames = [],
   currentBracketId
 }: StepByStepBracketProps) {
-  const [currentStep, setCurrentStep] = useState(0);
+  // Restore current step from sessionStorage on mount
+  const getInitialStep = () => {
+    if (typeof window === 'undefined') return 0;
+    const savedStep = sessionStorage.getItem('bracketCurrentStep');
+    return savedStep ? parseInt(savedStep, 10) : 0;
+  };
+  
+  const [currentStep, setCurrentStep] = useState(getInitialStep);
   const [completedRegions, setCompletedRegions] = useState<Set<string>>(new Set());
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Track if this is the initial mount
+  const isInitialMount = useRef(true);
+  
+  // Initialize history state on mount and save step changes
+  useEffect(() => {
+    if (typeof window === 'undefined' || readOnly) return;
+    
+    // Save current step to sessionStorage
+    sessionStorage.setItem('bracketCurrentStep', String(currentStep));
+    
+    if (isInitialMount.current) {
+      // On initial mount, replace current history entry with step info
+      window.history.replaceState({ step: currentStep }, '', window.location.href);
+      isInitialMount.current = false;
+    } else {
+      // On subsequent step changes, push new history entry
+      window.history.pushState({ step: currentStep }, '', window.location.href);
+    }
+  }, [currentStep, readOnly]);
+  
+  // Handle browser back button - navigate to previous step
+  useEffect(() => {
+    if (typeof window === 'undefined' || readOnly) return;
+    
+    const handlePopState = (event: PopStateEvent) => {
+      const step = event.state?.step;
+      if (step !== undefined && step >= 0 && step !== currentStep) {
+        setCurrentStep(step);
+      }
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [currentStep, readOnly]);
   
   const regions = tournamentData.regions;
   const totalSteps = regions.length + 1; // 4 regions + Final Four & Championship

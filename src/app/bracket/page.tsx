@@ -41,6 +41,7 @@ function BracketContent() {
   const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
 
   const loadTournamentRef = useRef<(() => Promise<void>) | undefined>(undefined);
+  const hasRestoredState = useRef(false);
 
   // Determine if My Picks page should be shown based on environment and feature flags
   const shouldShowMyPicksPage = () => {
@@ -85,6 +86,66 @@ function BracketContent() {
   useEffect(() => {
     setInBracketMode(currentView === 'bracket');
   }, [currentView, setInBracketMode]);
+
+  // Save bracket state to sessionStorage whenever it changes
+  useEffect(() => {
+    if (currentView === 'bracket' && !isReadOnly) {
+      const bracketState = {
+        picks,
+        entryName,
+        tieBreaker,
+        editingBracketId: editingBracket ? (editingBracket as Record<string, unknown>).id as string : null,
+        editingBracketStatus: editingBracket ? (editingBracket as Record<string, unknown>).status as string : null,
+        isAdminMode
+      };
+      sessionStorage.setItem('bracketState', JSON.stringify(bracketState));
+    } else {
+      // Clear state when not in bracket view or in read-only mode
+      sessionStorage.removeItem('bracketState');
+      sessionStorage.removeItem('bracketCurrentStep');
+    }
+  }, [picks, entryName, tieBreaker, currentView, editingBracket, isReadOnly, isAdminMode]);
+
+  // Restore bracket state from sessionStorage on mount (only once)
+  useEffect(() => {
+    if (typeof window === 'undefined' || isLoading || hasRestoredState.current) return;
+    
+    const savedState = sessionStorage.getItem('bracketState');
+    if (savedState && currentView === 'landing') {
+      try {
+        const state = JSON.parse(savedState);
+        
+        // Only restore if we have picks data (user was working on a bracket)
+        if (state.picks && Object.keys(state.picks).length > 0) {
+          hasRestoredState.current = true;
+          setIsAdminMode(state.isAdminMode || false);
+          
+          // If we were editing a bracket, try to restore it
+          if (state.editingBracketId) {
+            // Load the bracket data, then restore picks (to preserve unsaved changes)
+            loadBracketForEdit(state.editingBracketId, state.isAdminMode).then(() => {
+              // Restore picks after bracket is loaded (preserve user's unsaved changes)
+              setPicks(state.picks);
+              setEntryName(state.entryName || '');
+              setTieBreaker(state.tieBreaker || '');
+            });
+          } else {
+            // New bracket - restore state and go to bracket view
+            setPicks(state.picks);
+            setEntryName(state.entryName || '');
+            setTieBreaker(state.tieBreaker || '');
+            setIsReadOnly(false);
+            setCurrentView('bracket');
+          }
+        }
+      } catch (error) {
+        console.error('Error restoring bracket state:', error);
+        sessionStorage.removeItem('bracketState');
+        sessionStorage.removeItem('bracketCurrentStep');
+      }
+    }
+  }, [isLoading, currentView]); // Run when loading completes and we're on landing page
+
 
   // Set default entry name when user data is available
   useEffect(() => {
@@ -361,6 +422,12 @@ function BracketContent() {
   };
 
   const handleBackToLanding = async () => {
+    // Clear sessionStorage when leaving bracket view
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('bracketState');
+      sessionStorage.removeItem('bracketCurrentStep');
+    }
+    
     // If in admin mode, redirect back to admin panel
     if (isAdminMode) {
       router.push('/admin');
