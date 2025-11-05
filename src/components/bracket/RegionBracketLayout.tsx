@@ -313,7 +313,7 @@ export default function RegionBracketLayout({
                   className={`px-3 py-2 border border-gray-300 rounded-lg text-sm ${
                     readOnly 
                       ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
-                      : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+                      : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black'
                   }`}
                   style={{ width: 'max-content', minWidth: '200px' }}
                   placeholder="Enter your bracket name"
