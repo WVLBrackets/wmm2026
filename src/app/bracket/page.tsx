@@ -89,6 +89,15 @@ function BracketContent() {
 
   // Save bracket state to sessionStorage whenever it changes
   useEffect(() => {
+    // Don't save/clear during initial restoration
+    if (hasRestoredState.current === false && typeof window !== 'undefined') {
+      const savedState = sessionStorage.getItem('bracketState');
+      if (savedState) {
+        // Don't clear during initial load - wait for restoration to complete
+        return;
+      }
+    }
+    
     if (currentView === 'bracket' && !isReadOnly) {
       const bracketState = {
         picks,
@@ -99,24 +108,36 @@ function BracketContent() {
         isAdminMode
       };
       sessionStorage.setItem('bracketState', JSON.stringify(bracketState));
-    } else {
+      console.log('[Save] Saving bracket state to sessionStorage');
+    } else if (currentView === 'landing' && hasRestoredState.current) {
+      // Only clear state when explicitly leaving bracket view (not during initial load)
       // Clear state when not in bracket view or in read-only mode
       sessionStorage.removeItem('bracketState');
       sessionStorage.removeItem('bracketCurrentStep');
+      console.log('[Save] Clearing bracket state from sessionStorage');
     }
   }, [picks, entryName, tieBreaker, currentView, editingBracket, isReadOnly, isAdminMode]);
 
   // Restore bracket state from sessionStorage on mount (only once)
   useEffect(() => {
-    if (typeof window === 'undefined' || isLoading || hasRestoredState.current || !bracket || !tournamentData) return;
+    if (typeof window === 'undefined' || isLoading || hasRestoredState.current || !bracket || !tournamentData) {
+      if (typeof window !== 'undefined' && !isLoading && bracket && tournamentData) {
+        console.log('[Restore] Ready but hasRestoredState:', hasRestoredState.current, 'currentView:', currentView);
+      }
+      return;
+    }
     
     const savedState = sessionStorage.getItem('bracketState');
     const savedStep = sessionStorage.getItem('bracketCurrentStep');
+    
+    console.log('[Restore] Checking sessionStorage - savedState exists:', !!savedState, 'savedStep:', savedStep);
     
     if (savedState && savedStep) {
       try {
         const state = JSON.parse(savedState);
         const currentStep = parseInt(savedStep, 10);
+        
+        console.log('[Restore] Found saved state - step:', currentStep, 'picks count:', Object.keys(state.picks || {}).length, 'editingBracketId:', state.editingBracketId);
         
         // Only restore if we have picks data (user was working on a bracket)
         if (state.picks && Object.keys(state.picks).length > 0) {
@@ -130,16 +151,21 @@ function BracketContent() {
             // Region step - get all games for this region
             const region = tournamentData.regions[currentStep];
             const regionGames = bracket.regions[region.position] || [];
+            console.log('[Restore] Region step:', currentStep, 'region:', region.name, 'position:', region.position, 'games count:', regionGames.length);
             regionGames.forEach(game => {
               gamesToClear.push(game.id);
             });
           } else if (currentStep === tournamentData.regions.length) {
             // Final Four & Championship step
+            console.log('[Restore] Final Four step - finalFour games:', bracket.finalFour.length, 'championship:', bracket.championship.id);
             bracket.finalFour.forEach(game => {
               gamesToClear.push(game.id);
             });
             gamesToClear.push(bracket.championship.id);
           }
+          
+          console.log('[Restore] Games to clear:', gamesToClear);
+          console.log('[Restore] All saved picks:', Object.keys(state.picks));
           
           // Filter picks to exclude games for the current step
           const filteredPicks: { [gameId: string]: string } = {};
@@ -149,19 +175,24 @@ function BracketContent() {
             }
           });
           
+          console.log('[Restore] Filtered picks count:', Object.keys(filteredPicks).length, 'removed:', Object.keys(state.picks).length - Object.keys(filteredPicks).length);
+          
           // Clear tieBreaker if refreshing on Final Four step
           const restoredTieBreaker = (currentStep === tournamentData.regions.length) ? '' : (state.tieBreaker || '');
           
           // If we were editing a bracket, try to restore it
           if (state.editingBracketId) {
+            console.log('[Restore] Restoring edited bracket:', state.editingBracketId);
             // Load the bracket data, then restore filtered picks (clear current step)
             loadBracketForEdit(state.editingBracketId, state.isAdminMode).then(() => {
+              console.log('[Restore] Bracket loaded, applying filtered picks');
               // Restore filtered picks (excluding current step) and other state
               setPicks(filteredPicks);
               setEntryName(state.entryName || '');
               setTieBreaker(restoredTieBreaker);
             });
           } else {
+            console.log('[Restore] Restoring new bracket, setting view to bracket');
             // New bracket - restore filtered picks and go to bracket view
             setPicks(filteredPicks);
             setEntryName(state.entryName || '');
@@ -169,12 +200,16 @@ function BracketContent() {
             setIsReadOnly(false);
             setCurrentView('bracket');
           }
+        } else {
+          console.log('[Restore] No picks data found, skipping restoration');
         }
       } catch (error) {
         console.error('Error restoring bracket state:', error);
         sessionStorage.removeItem('bracketState');
         sessionStorage.removeItem('bracketCurrentStep');
       }
+    } else {
+      console.log('[Restore] No saved state or step found');
     }
   }, [isLoading, bracket, tournamentData]); // Run when loading completes and bracket/tournament data is available
 
