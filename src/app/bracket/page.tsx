@@ -108,7 +108,7 @@ function BracketContent() {
         isAdminMode
       };
       sessionStorage.setItem('bracketState', JSON.stringify(bracketState));
-      console.log('[Save] Saving bracket state to sessionStorage');
+      console.log('[Save] Saving bracket state - picks count:', Object.keys(picks).length, 'entryName:', entryName, 'tieBreaker:', tieBreaker);
     } else if (currentView === 'landing' && hasRestoredState.current) {
       // Only clear state when explicitly leaving bracket view (not during initial load)
       // Clear state when not in bracket view or in read-only mode
@@ -139,69 +139,68 @@ function BracketContent() {
         
         console.log('[Restore] Found saved state - step:', currentStep, 'picks count:', Object.keys(state.picks || {}).length, 'editingBracketId:', state.editingBracketId);
         
-        // Only restore if we have picks data (user was working on a bracket)
-        if (state.picks && Object.keys(state.picks).length > 0) {
-          hasRestoredState.current = true;
-          setIsAdminMode(state.isAdminMode || false);
-          
-          // Identify games for the current step to clear their picks
-          const gamesToClear: string[] = [];
-          
-          if (currentStep < tournamentData.regions.length) {
-            // Region step - get all games for this region
-            const region = tournamentData.regions[currentStep];
-            const regionGames = bracket.regions[region.position] || [];
-            console.log('[Restore] Region step:', currentStep, 'region:', region.name, 'position:', region.position, 'games count:', regionGames.length);
-            regionGames.forEach(game => {
-              gamesToClear.push(game.id);
-            });
-          } else if (currentStep === tournamentData.regions.length) {
-            // Final Four & Championship step
-            console.log('[Restore] Final Four step - finalFour games:', bracket.finalFour.length, 'championship:', bracket.championship.id);
-            bracket.finalFour.forEach(game => {
-              gamesToClear.push(game.id);
-            });
-            gamesToClear.push(bracket.championship.id);
-          }
-          
-          console.log('[Restore] Games to clear:', gamesToClear);
+        // Always restore if we have saved state and step (even if no picks yet)
+        hasRestoredState.current = true;
+        setIsAdminMode(state.isAdminMode || false);
+        
+        // Identify games for the current step to clear their picks
+        const gamesToClear: string[] = [];
+        
+        if (currentStep < tournamentData.regions.length) {
+          // Region step - get all games for this region
+          const region = tournamentData.regions[currentStep];
+          const regionGames = bracket.regions[region.position] || [];
+          console.log('[Restore] Region step:', currentStep, 'region:', region.name, 'position:', region.position, 'games count:', regionGames.length);
+          regionGames.forEach(game => {
+            gamesToClear.push(game.id);
+          });
+        } else if (currentStep === tournamentData.regions.length) {
+          // Final Four & Championship step
+          console.log('[Restore] Final Four step - finalFour games:', bracket.finalFour.length, 'championship:', bracket.championship.id);
+          bracket.finalFour.forEach(game => {
+            gamesToClear.push(game.id);
+          });
+          gamesToClear.push(bracket.championship.id);
+        }
+        
+        console.log('[Restore] Games to clear:', gamesToClear);
+        
+        // Filter picks to exclude games for the current step (if picks exist)
+        const filteredPicks: { [gameId: string]: string } = {};
+        if (state.picks && typeof state.picks === 'object') {
           console.log('[Restore] All saved picks:', Object.keys(state.picks));
-          
-          // Filter picks to exclude games for the current step
-          const filteredPicks: { [gameId: string]: string } = {};
           Object.entries(state.picks).forEach(([gameId, teamId]) => {
             if (!gamesToClear.includes(gameId)) {
               filteredPicks[gameId] = teamId as string;
             }
           });
-          
           console.log('[Restore] Filtered picks count:', Object.keys(filteredPicks).length, 'removed:', Object.keys(state.picks).length - Object.keys(filteredPicks).length);
-          
-          // Clear tieBreaker if refreshing on Final Four step
-          const restoredTieBreaker = (currentStep === tournamentData.regions.length) ? '' : (state.tieBreaker || '');
-          
-          // If we were editing a bracket, try to restore it
-          if (state.editingBracketId) {
-            console.log('[Restore] Restoring edited bracket:', state.editingBracketId);
-            // Load the bracket data, then restore filtered picks (clear current step)
-            loadBracketForEdit(state.editingBracketId, state.isAdminMode).then(() => {
-              console.log('[Restore] Bracket loaded, applying filtered picks');
-              // Restore filtered picks (excluding current step) and other state
-              setPicks(filteredPicks);
-              setEntryName(state.entryName || '');
-              setTieBreaker(restoredTieBreaker);
-            });
-          } else {
-            console.log('[Restore] Restoring new bracket, setting view to bracket');
-            // New bracket - restore filtered picks and go to bracket view
+        } else {
+          console.log('[Restore] No picks to filter, starting fresh');
+        }
+        
+        // Clear tieBreaker if refreshing on Final Four step
+        const restoredTieBreaker = (currentStep === tournamentData.regions.length) ? '' : (state.tieBreaker || '');
+        
+        // If we were editing a bracket, try to restore it
+        if (state.editingBracketId) {
+          console.log('[Restore] Restoring edited bracket:', state.editingBracketId);
+          // Load the bracket data, then restore filtered picks (clear current step)
+          loadBracketForEdit(state.editingBracketId, state.isAdminMode).then(() => {
+            console.log('[Restore] Bracket loaded, applying filtered picks');
+            // Restore filtered picks (excluding current step) and other state
             setPicks(filteredPicks);
             setEntryName(state.entryName || '');
             setTieBreaker(restoredTieBreaker);
-            setIsReadOnly(false);
-            setCurrentView('bracket');
-          }
+          });
         } else {
-          console.log('[Restore] No picks data found, skipping restoration');
+          console.log('[Restore] Restoring new bracket, setting view to bracket');
+          // New bracket - restore filtered picks and go to bracket view
+          setPicks(filteredPicks);
+          setEntryName(state.entryName || '');
+          setTieBreaker(restoredTieBreaker);
+          setIsReadOnly(false);
+          setCurrentView('bracket');
         }
       } catch (error) {
         console.error('Error restoring bracket state:', error);
