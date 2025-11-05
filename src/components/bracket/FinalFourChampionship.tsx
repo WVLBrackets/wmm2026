@@ -182,7 +182,7 @@ export default function FinalFourChampionship({
   const tieBreakerValid = () => {
     if (!tieBreaker) return false;
     const value = Number(tieBreaker);
-    return !isNaN(value) && value >= 100 && value <= 300;
+    return !isNaN(value) && value >= 50 && value <= 500;
   };
 
   const entryNameValid = () => {
@@ -217,7 +217,7 @@ export default function FinalFourChampionship({
     if (!tieBreakerValid()) {
       return {
         color: 'yellow',
-        message: siteConfig?.finalMessageTieBreakerInvalid || 'Tie breaker must be between 100 and 300.'
+        message: siteConfig?.finalMessageTieBreakerInvalid || 'Tie breaker must be between 50 and 500.'
       };
     }
     
@@ -416,15 +416,15 @@ export default function FinalFourChampionship({
                 id="tieBreaker"
                 value={tieBreaker}
                 onChange={(e) => onTieBreakerChange(e.target.value)}
-                min="100"
-                max="300"
+                min="50"
+                max="500"
                 disabled={readOnly}
                 className={`w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm ${
                   readOnly 
                     ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
-                    : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black placeholder:text-gray-400'
+                    : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black placeholder:text-gray-200'
                 }`}
-                placeholder="150"
+                placeholder="###"
                 title="Total combined points scored in the championship game"
               />
             </div>
