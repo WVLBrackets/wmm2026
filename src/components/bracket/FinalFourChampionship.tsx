@@ -422,7 +422,7 @@ export default function FinalFourChampionship({
                 className={`w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm ${
                   readOnly 
                     ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
-                    : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black placeholder:text-gray-600'
+                    : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black placeholder:text-gray-500'
                 }`}
                 placeholder="150"
                 title="Total combined points scored in the championship game"
