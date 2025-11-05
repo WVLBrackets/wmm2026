@@ -204,6 +204,7 @@ export default function StepByStepBracket({
           tieBreaker={tieBreaker}
           onTieBreakerChange={onTieBreakerChange || (() => {})}
           readOnly={readOnly}
+          scrollContainerRef={scrollContainerRef}
           onPrevious={handlePrevious}
           onSave={handleSave}
           onNext={handleNext}

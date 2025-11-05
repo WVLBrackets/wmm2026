@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef, RefObject } from 'react';
 import { TournamentGame } from '@/types/tournament';
 import { SiteConfigData } from '@/lib/siteConfig';
 import { CheckCircle, ChevronLeft, ChevronRight, Save, Trophy } from 'lucide-react';
@@ -13,6 +13,7 @@ interface FinalFourChampionshipProps {
   tieBreaker: string;
   onTieBreakerChange: (value: string) => void;
   readOnly?: boolean;
+  scrollContainerRef?: RefObject<HTMLDivElement | null>;
   // Control buttons props
   onPrevious?: () => void;
   onSave?: () => void;
@@ -43,6 +44,7 @@ export default function FinalFourChampionship({
   tieBreaker, 
   onTieBreakerChange,
   readOnly = false,
+  scrollContainerRef,
   onPrevious,
   onSave,
   onNext,
@@ -233,6 +235,65 @@ export default function FinalFourChampionship({
   };
 
   const messageState = getMessageState();
+
+  // Track scroll states to prevent repeated scrolling
+  const hasScrolledToStartRef = useRef(false);
+  const hasScrolledToChampionshipRef = useRef(false);
+  const hasScrolledToEndRef = useRef(false);
+  
+  // Scroll to left when component mounts or step changes to Final Four
+  useEffect(() => {
+    if (!scrollContainerRef?.current || readOnly) return;
+    
+    // Reset scroll tracking when step changes
+    hasScrolledToStartRef.current = false;
+    hasScrolledToChampionshipRef.current = false;
+    hasScrolledToEndRef.current = false;
+    
+    // Scroll to the left to show Final Four games
+    scrollContainerRef.current.scrollTo({
+      left: 0,
+      behavior: 'smooth'
+    });
+    
+    hasScrolledToStartRef.current = true;
+  }, [currentStep, scrollContainerRef, readOnly]);
+  
+  // Auto-scroll when both semifinals are complete (scroll right to show championship)
+  useEffect(() => {
+    if (!scrollContainerRef?.current || readOnly || hasScrolledToChampionshipRef.current) return;
+    
+    // Check if both semifinal games have picks
+    const bothSemifinalsComplete = finalFourGames.length === 2 && 
+      finalFourGames.every(game => picks[game.id]);
+    
+    if (bothSemifinalsComplete) {
+      // Scroll horizontally to bring championship into view
+      // Final Four column (w-48 = 192px) + spacer (w-8 = 32px) = 224px
+      // Scroll by ~250px to bring championship into view while keeping some of Final Four visible
+      const scrollAmount = 250;
+      scrollContainerRef.current.scrollBy({
+        left: scrollAmount,
+        behavior: 'smooth'
+      });
+      hasScrolledToChampionshipRef.current = true;
+    }
+  }, [finalFourGames, picks, scrollContainerRef, readOnly]);
+  
+  // Auto-scroll when championship winner is selected (scroll all the way right to show Tie Breaker and Submit)
+  useEffect(() => {
+    if (!scrollContainerRef?.current || readOnly || hasScrolledToEndRef.current) return;
+    
+    const championshipPick = picks[championshipGame.id];
+    if (championshipPick) {
+      // Scroll all the way to the right to show Tie Breaker and Submit button
+      scrollContainerRef.current.scrollTo({
+        left: scrollContainerRef.current.scrollWidth,
+        behavior: 'smooth'
+      });
+      hasScrolledToEndRef.current = true;
+    }
+  }, [championshipGame.id, picks, scrollContainerRef, readOnly]);
 
   // Debug logging for config parameter
   useEffect(() => {
