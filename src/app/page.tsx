@@ -1,9 +1,12 @@
 import { Calendar } from 'lucide-react';
 import CountdownClock from '@/components/CountdownClock';
 import Announcements from '@/components/Announcements';
-import Image from 'next/image';
+import { getSiteConfig } from '@/config/site';
+import HomePageLogo from '@/components/HomePageLogo';
 
-export default function Home() {
+export default async function Home() {
+  const siteConfig = await getSiteConfig();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
 
@@ -26,17 +29,10 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Warren's March Madness Logo - Narrow */}
+          {/* Home Page Logo - Narrow */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-lg p-2 h-full flex items-center justify-center">
-              <Image 
-                src="/images/warrens-march-madness.png" 
-                alt="Warren's March Madness" 
-                width={120} 
-                height={60} 
-                className="max-w-full h-auto object-contain"
-                priority
-              />
+              <HomePageLogo logoFileName={siteConfig?.homePageLogo} />
             </div>
           </div>
         </div>

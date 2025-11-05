@@ -43,6 +43,8 @@ export interface SiteConfigData {
   finalMessageDuplicateName?: string;
   finalMessageReadyToSubmit?: string;
   finalFourHeaderMessage?: string;
+  // Home page logo
+  homePageLogo?: string;
 }
 
 // Function to fetch site config from Google Sheets
@@ -189,6 +191,10 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
           case 'final_four_header_message':
             config.finalFourHeaderMessage = value;
             console.log(`SiteConfig - Found final_four_header_message: "${value}"`);
+            break;
+          case 'home_page_logo':
+            config.homePageLogo = value;
+            console.log(`SiteConfig - Found home_page_logo: "${value}"`);
             break;
           default:
             // Unknown parameter - log it but continue processing
