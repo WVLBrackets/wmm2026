@@ -91,7 +91,7 @@ export default function RegionBracketLayout({
         <div className="flex items-center space-x-1 flex-1 min-w-0">
           <span className="text-xs font-bold text-gray-600">#{team.seed as number}</span>
           <img src={team.logo as string} alt={team.name as string} className="w-3 h-3 flex-shrink-0" />
-          <span className="text-xs font-medium truncate">{team.name as string}</span>
+          <span className="text-xs font-medium truncate text-black">{team.name as string}</span>
         </div>
         {isSelected && (
           <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />

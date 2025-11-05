@@ -154,7 +154,7 @@ export default function StepByStepBracket({
         <div className="flex items-center space-x-1">
           <span className="text-xs font-bold text-gray-600">#{team.seed as number}</span>
           <img src={team.logo as string} alt={team.name as string} className="w-3 h-3" />
-          <span className="text-xs font-medium truncate">{team.name as string}</span>
+          <span className="text-xs font-medium truncate text-black">{team.name as string}</span>
         </div>
         {isSelected && (
           <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
