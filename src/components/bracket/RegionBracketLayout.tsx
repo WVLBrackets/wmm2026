@@ -346,9 +346,9 @@ export default function RegionBracketLayout({
 
         {/* Control Buttons at bottom of bracket */}
         <div className="flex items-center justify-between mt-4" style={{ width: '100%', maxWidth: '100%', paddingLeft: '2px', paddingRight: '2px', paddingBottom: '2px' }}>
-        {/* Left: Previous Button (only in edit mode, or in view mode if not readOnly) */}
+        {/* Left: Previous Button */}
         <div className="flex-shrink-0">
-          {onPrevious && !readOnly && (
+          {onPrevious && (
             <button
               onClick={onPrevious}
               disabled={currentStep === 0}
@@ -403,23 +403,8 @@ export default function RegionBracketLayout({
         <div className="flex items-center space-x-3 flex-shrink-0">
           {readOnly ? (
             <>
-              {/* View mode: Previous, Next (disabled on first/last page), and Close on all pages */}
-              {onPrevious && (
-                <button
-                  onClick={onPrevious}
-                  disabled={currentStep === 0}
-                  className={`
-                    flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors
-                    ${currentStep === 0
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                    }
-                  `}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  <span>Previous</span>
-                </button>
-              )}
+              {/* View mode: Next (disabled on last page), and Close on all pages */}
+              {/* Previous button is shown on the left side, not here */}
               {onNext && (
                 <button
                   onClick={onNext}

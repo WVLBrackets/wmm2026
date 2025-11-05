@@ -502,23 +502,8 @@ export default function FinalFourChampionship({
         <div className="flex items-center space-x-3 flex-shrink-0">
           {readOnly ? (
             <>
-              {/* View mode: Previous, Next (disabled on first/last page), and Close on all pages */}
-              {onPrevious && (
-                <button
-                  onClick={onPrevious}
-                  disabled={currentStep === 0}
-                  className={`
-                    flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors
-                    ${currentStep === 0
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                    }
-                  `}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  <span>Previous</span>
-                </button>
-              )}
+              {/* View mode: Next (disabled on last page), and Close on all pages */}
+              {/* Previous button is shown on the left side, not here */}
               {onNext && (
                 <button
                   onClick={onNext}
