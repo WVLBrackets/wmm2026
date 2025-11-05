@@ -31,8 +31,10 @@ export default async function Home() {
 
           {/* Home Page Logo - Narrow */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-lg p-2 h-full flex items-center justify-center">
-              <HomePageLogo logoFileName={siteConfig?.homePageLogo} />
+            <div className="bg-white rounded-lg shadow-lg p-4 h-full">
+              <div className="w-full h-full flex items-center justify-center">
+                <HomePageLogo logoFileName={siteConfig?.homePageLogo} />
+              </div>
             </div>
           </div>
         </div>

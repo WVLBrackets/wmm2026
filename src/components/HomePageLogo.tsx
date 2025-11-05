@@ -34,26 +34,29 @@ export default function HomePageLogo({ logoFileName }: HomePageLogoProps) {
   // If no custom logo specified, use Next.js Image with default
   if (!logoFileName) {
     return (
-      <Image 
-        src={defaultLogo}
-        alt="Site Logo" 
-        width={120} 
-        height={60} 
-        className="max-w-full h-auto object-contain"
-        priority
-      />
+      <div className="w-full h-full flex items-center justify-center">
+        <Image 
+          src={defaultLogo}
+          alt="Site Logo" 
+          width={400} 
+          height={200} 
+          className="w-full h-full object-contain max-w-full max-h-full"
+          priority
+        />
+      </div>
     );
   }
 
   // For custom logos, use regular img tag for better error handling
   return (
-    <img
-      src={logoPath}
-      alt="Site Logo"
-      className="max-w-full h-auto object-contain"
-      style={{ maxWidth: '120px', maxHeight: '60px' }}
-      onError={() => setImageError(true)}
-    />
+    <div className="w-full h-full flex items-center justify-center">
+      <img
+        src={logoPath}
+        alt="Site Logo"
+        className="w-full h-full object-contain max-w-full max-h-full"
+        onError={() => setImageError(true)}
+      />
+    </div>
   );
 }
 
