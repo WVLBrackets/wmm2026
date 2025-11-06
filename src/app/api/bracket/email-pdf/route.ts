@@ -13,9 +13,12 @@ import { TournamentData, TournamentBracket, TournamentTeam } from '@/types/tourn
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('[Email PDF] Starting request');
+    
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
+      console.log('[Email PDF] Unauthorized - no session');
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -23,6 +26,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { bracketId } = await request.json();
+    console.log('[Email PDF] Bracket ID:', bracketId);
 
     if (!bracketId) {
       return NextResponse.json(
@@ -32,9 +36,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch bracket data
+    console.log('[Email PDF] Fetching bracket...');
     const bracket = await getBracketById(bracketId);
 
     if (!bracket) {
+      console.log('[Email PDF] Bracket not found');
       return NextResponse.json(
         { success: false, error: 'Bracket not found' },
         { status: 404 }
@@ -42,8 +48,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user by email to verify ownership
+    console.log('[Email PDF] Verifying ownership...');
     const user = await getUserByEmail(session.user.email);
     if (!user || bracket.userId !== user.id) {
+      console.log('[Email PDF] Ownership verification failed');
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 403 }
@@ -52,6 +60,7 @@ export async function POST(request: NextRequest) {
 
     // Only allow emailing submitted brackets
     if (bracket.status !== 'submitted') {
+      console.log('[Email PDF] Bracket not submitted, status:', bracket.status);
       return NextResponse.json(
         { success: false, error: 'Only submitted brackets can be emailed' },
         { status: 400 }
@@ -59,16 +68,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Load tournament data and site config
+    console.log('[Email PDF] Loading tournament data...');
     const siteConfig = await getSiteConfigFromGoogleSheets();
     const tournamentYear = siteConfig?.tournamentYear || '2025';
     const tournamentData = await loadTournamentData(tournamentYear);
+    console.log('[Email PDF] Tournament data loaded');
 
     // Generate bracket with picks
+    console.log('[Email PDF] Generating bracket structure...');
     const generatedBracket = generate64TeamBracket(tournamentData);
     const updatedBracket = updateBracketWithPicks(generatedBracket, bracket.picks, tournamentData);
+    console.log('[Email PDF] Bracket structure generated');
 
     // Generate PDF using Puppeteer
+    console.log('[Email PDF] Generating PDF...');
     const pdfBuffer = await generateBracketPDF(bracket, updatedBracket, tournamentData, siteConfig);
+    console.log('[Email PDF] PDF generated, size:', pdfBuffer.length, 'bytes');
 
     // Send email with PDF attachment
     const entryName = bracket.entryName || `Bracket ${bracket.id}`;
@@ -109,6 +124,8 @@ export async function POST(request: NextRequest) {
       This is an automated email from Warren's March Madness.
     `;
 
+    // Send email with PDF attachment
+    console.log('[Email PDF] Sending email...');
     const emailSent = await emailService.sendEmail({
       to: session.user.email,
       subject: `Your ${tournamentYear} Bracket - ${entryName}`,
@@ -124,26 +141,37 @@ export async function POST(request: NextRequest) {
     });
 
     if (!emailSent) {
+      console.error('[Email PDF] Email service returned false');
       return NextResponse.json(
         { success: false, error: 'Failed to send email. Please try again later.' },
         { status: 500 }
       );
     }
 
+    console.log('[Email PDF] Email sent successfully');
     return NextResponse.json({
       success: true,
       message: 'Email sent successfully',
     });
   } catch (error) {
-    console.error('Error sending bracket PDF email:', error);
+    console.error('[Email PDF] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     const errorStack = error instanceof Error ? error.stack : undefined;
-    console.error('Error details:', { errorMessage, errorStack });
+    console.error('[Email PDF] Error details:', { 
+      errorMessage, 
+      errorStack,
+      errorName: error instanceof Error ? error.name : undefined
+    });
+    
+    // Return error details in staging/development for debugging
+    const isStaging = process.env.VERCEL_ENV === 'preview' || process.env.NODE_ENV === 'development';
+    
     return NextResponse.json(
       { 
         success: false, 
         error: 'An error occurred while sending the email',
-        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+        details: isStaging ? errorMessage : undefined,
+        stack: isStaging && errorStack ? errorStack.substring(0, 500) : undefined
       },
       { status: 500 }
     );
@@ -189,24 +217,32 @@ async function generateBracketPDF(
   tournamentData: TournamentData,
   siteConfig: SiteConfigData | null
 ): Promise<Buffer> {
+  console.log('[PDF Generation] Starting...');
+  
   // Dynamically require puppeteer packages only at runtime (optional dependencies)
   let puppeteer: PuppeteerType | null = null;
   let chromium: ChromiumType | null = null;
   
   try {
+    console.log('[PDF Generation] Loading puppeteer-core...');
     // Use dynamic require to avoid build-time module resolution errors
     puppeteer = eval('require')('puppeteer-core') as PuppeteerType;
-  } catch {
-    // puppeteer-core not installed
+    console.log('[PDF Generation] puppeteer-core loaded');
+  } catch (error) {
+    console.error('[PDF Generation] Failed to load puppeteer-core:', error);
+    throw new Error(`Failed to load puppeteer-core: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
   
   try {
+    console.log('[PDF Generation] Loading @sparticuz/chromium...');
     chromium = eval('require')('@sparticuz/chromium') as ChromiumType;
     if (chromium && typeof chromium.setGraphicsMode === 'function') {
       chromium.setGraphicsMode(false);
     }
-  } catch {
-    // @sparticuz/chromium not installed
+    console.log('[PDF Generation] @sparticuz/chromium loaded');
+  } catch (error) {
+    console.error('[PDF Generation] Failed to load @sparticuz/chromium:', error);
+    throw new Error(`Failed to load @sparticuz/chromium: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
   
   if (!puppeteer || !chromium) {
@@ -221,23 +257,34 @@ async function generateBracketPDF(
     // Only use local Chrome for local development
     const vercelEnv = process.env.VERCEL_ENV;
     const isVercel = vercelEnv === 'production' || vercelEnv === 'preview';
+    console.log('[PDF Generation] Environment:', vercelEnv, 'isVercel:', isVercel);
+    
+    console.log('[PDF Generation] Launching browser...');
+    const executablePath = isVercel ? await chromium.executablePath() : (process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome');
+    console.log('[PDF Generation] Executable path:', executablePath);
     
     browser = await puppeteer.launch({
       args: isVercel ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox'],
       defaultViewport: chromium.defaultViewport,
-      executablePath: isVercel 
-        ? await chromium.executablePath() 
-        : process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome',
+      executablePath: executablePath,
       headless: chromium.headless,
     }) as Browser;
+    console.log('[PDF Generation] Browser launched');
 
     const page = await browser.newPage();
+    console.log('[PDF Generation] Page created');
 
     // Generate HTML content for the bracket
+    console.log('[PDF Generation] Generating HTML...');
     const htmlContent = generatePrintPageHTML(bracket, updatedBracket, tournamentData, siteConfig);
+    console.log('[PDF Generation] HTML generated, length:', htmlContent.length);
+    
+    console.log('[PDF Generation] Setting page content...');
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+    console.log('[PDF Generation] Page content set');
 
     // Generate PDF
+    console.log('[PDF Generation] Generating PDF...');
     const pdf = await page.pdf({
       format: 'A4',
       landscape: true,
@@ -249,10 +296,15 @@ async function generateBracketPDF(
         left: '10mm',
       },
     });
+    console.log('[PDF Generation] PDF generated, size:', pdf.length, 'bytes');
 
     return Buffer.from(pdf);
+  } catch (error) {
+    console.error('[PDF Generation] Error:', error);
+    throw error;
   } finally {
     if (browser) {
+      console.log('[PDF Generation] Closing browser...');
       await browser.close();
     }
   }
