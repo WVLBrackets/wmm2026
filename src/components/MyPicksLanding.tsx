@@ -480,27 +480,29 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                     return (
                     <tr key={bracket.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {bracket.entryName || `Bracket #${index + 1}`}
+                        <div 
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium cursor-pointer ${getStatusColor(bracket.status)}`}
+                          onClick={() => onEditBracket(bracket)}
+                        >
+                          {getStatusIcon(bracket.status)}
+                          <span className="ml-1">{bracket.entryName || `Bracket #${index + 1}`}</span>
+                          <span className="ml-2">{getStatusText(bracket.status)}</span>
                         </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(bracket.status)}`}>
-                          {getStatusIcon(bracket.status)}
-                          <span className="ml-1">{getStatusText(bracket.status)}</span>
-                        </span>
+                        {/* Status column - now empty since it's combined with Entry Name */}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-600">
-                          {year}-{String(number).padStart(6, '0')}
+                          {String(number).padStart(6, '0')}
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex flex-col space-y-1" style={{ minWidth: '150px' }}>
+                        <div className="flex flex-col space-y-1" style={{ width: 'fit-content' }}>
                           <div className="text-xs text-gray-600">
                             {progress.completed} / {progress.total} picks
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div className="bg-gray-200 rounded-full h-2" style={{ width: '60px' }}>
                             <div 
                               className="bg-green-600 h-2 rounded-full transition-all duration-300"
                               style={{ width: `${progress.percentage}%` }}
@@ -510,12 +512,8 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-center">
-                          <div className={`w-12 h-8 flex items-center justify-center rounded border-2 font-medium text-sm ${
-                            bracket.tieBreaker 
-                              ? 'bg-green-100 border-green-500 text-green-900' 
-                              : 'bg-yellow-100 border-yellow-500'
-                          }`}>
-                            {bracket.tieBreaker || ''}
+                          <div className="w-12 h-8 flex items-center justify-center rounded border-2 border-gray-300 bg-gray-100 font-medium text-sm text-gray-700">
+                            {bracket.tieBreaker || '?'}
                           </div>
                         </div>
                       </td>
