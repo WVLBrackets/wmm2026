@@ -37,6 +37,7 @@ interface MyPicksLandingProps {
 export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBracket, onDeleteBracket, onCopyBracket, deletingBracketId, tournamentData, bracket, siteConfig }: MyPicksLandingProps) {
   const { data: session } = useSession();
   const [expandedStatus, setExpandedStatus] = useState<'info' | null>(null);
+  const [logoError, setLogoError] = useState(false);
   
   // Get tournament year from config or tournament data
   const tournamentYear = siteConfig?.tournamentYear ? parseInt(siteConfig.tournamentYear) : (tournamentData?.year ? parseInt(tournamentData.year) : new Date().getFullYear());
@@ -251,6 +252,26 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
               {/* Desktop Layout */}
               <div className="hidden md:block">
                 <div className="flex items-start justify-between">
+                  {/* Site Logo - Far Left */}
+                  {siteConfig?.homePageLogo && (
+                    <div className="flex-shrink-0 mr-4">
+                      <div className="w-20 h-20 flex items-center justify-center">
+                        {logoError ? (
+                          <div className="text-red-600 text-xs text-center">
+                            Image not Found
+                          </div>
+                        ) : (
+                          <img
+                            src={`/images/${siteConfig.homePageLogo}`}
+                            alt="Site Logo"
+                            className="w-full h-full object-contain max-w-full max-h-full"
+                            onError={() => setLogoError(true)}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="flex-1">
                     {/* Line 1: Welcome message with full name */}
                     <h1 className="text-2xl font-bold text-gray-900">
