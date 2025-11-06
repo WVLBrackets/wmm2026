@@ -531,14 +531,6 @@ export default function FinalFourChampionship({
             </>
           ) : (
             <>
-              {onCancel && (
-                <button
-                  onClick={onCancel}
-                  className="flex items-center space-x-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer"
-                >
-                  <span>Cancel</span>
-                </button>
-              )}
               {onSave && (
                 <button
                   onClick={onSave}
@@ -546,6 +538,14 @@ export default function FinalFourChampionship({
                 >
                   <Save className="h-4 w-4" />
                   <span>Save</span>
+                </button>
+              )}
+              {onCancel && (
+                <button
+                  onClick={onCancel}
+                  className="flex items-center space-x-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer"
+                >
+                  <span>Cancel</span>
                 </button>
               )}
               {onNext && (
