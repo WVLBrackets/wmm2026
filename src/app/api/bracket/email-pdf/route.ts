@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { getBracketById } from '@/lib/secureDatabase';
+import { getBracketById, Bracket } from '@/lib/secureDatabase';
 import { emailService } from '@/lib/emailService';
 import { loadTournamentData } from '@/lib/tournamentLoader';
 import { generate64TeamBracket, updateBracketWithPicks } from '@/lib/bracketGenerator';
-import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
+import { getSiteConfigFromGoogleSheets, SiteConfigData } from '@/lib/siteConfig';
+import { TournamentData, TournamentBracket } from '@/types/tournament';
 // PDF generation using puppeteer
 // Install: npm install puppeteer-core @sparticuz/chromium
 // Note: These packages are not installed yet, so PDF generation is disabled
@@ -119,7 +120,7 @@ export async function POST(request: NextRequest) {
           contentType: 'application/pdf',
         },
       ],
-    } as any);
+    });
 
     if (!emailSent) {
       return NextResponse.json(
@@ -141,29 +142,42 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// Types for puppeteer (optional dependencies)
+interface PuppeteerType {
+  launch: (options: unknown) => Promise<unknown>;
+}
+
+interface ChromiumType {
+  args: string[];
+  defaultViewport: { width: number; height: number };
+  headless: boolean;
+  setGraphicsMode: (mode: boolean) => void;
+  executablePath: () => Promise<string>;
+}
+
 async function generateBracketPDF(
-  bracket: any,
-  updatedBracket: any,
-  tournamentData: any,
-  siteConfig: any
+  bracket: Bracket,
+  updatedBracket: TournamentBracket,
+  tournamentData: TournamentData,
+  siteConfig: SiteConfigData | null
 ): Promise<Buffer> {
   // Dynamically require puppeteer packages only at runtime (optional dependencies)
-  let puppeteer: any = null;
-  let chromium: any = null;
+  let puppeteer: PuppeteerType | null = null;
+  let chromium: ChromiumType | null = null;
   
   try {
     // Use dynamic require to avoid build-time module resolution errors
-    puppeteer = eval('require')('puppeteer-core');
-  } catch (e) {
+    puppeteer = eval('require')('puppeteer-core') as PuppeteerType;
+  } catch {
     // puppeteer-core not installed
   }
   
   try {
-    chromium = eval('require')('@sparticuz/chromium');
+    chromium = eval('require')('@sparticuz/chromium') as ChromiumType;
     if (chromium && typeof chromium.setGraphicsMode === 'function') {
       chromium.setGraphicsMode(false);
     }
-  } catch (e) {
+  } catch {
     // @sparticuz/chromium not installed
   }
   
@@ -214,10 +228,10 @@ async function generateBracketPDF(
 }
 
 function generatePrintPageHTML(
-  bracket: any,
-  updatedBracket: any,
-  tournamentData: any,
-  siteConfig: any
+  bracket: Bracket,
+  updatedBracket: TournamentBracket,
+  tournamentData: TournamentData,
+  siteConfig: SiteConfigData | null
 ): string {
   // Generate HTML that matches the print-bracket page structure
   // This is a simplified version - should be enhanced to match the actual print-bracket page

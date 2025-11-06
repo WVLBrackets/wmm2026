@@ -101,7 +101,20 @@ class EmailService {
             throw new Error('Email transporter not initialized');
           }
           
-          const mailOptions: any = {
+          interface MailOptions {
+            from: string;
+            to: string;
+            subject: string;
+            html: string;
+            text?: string;
+            attachments?: Array<{
+              filename: string;
+              content: Buffer | string;
+              contentType: string;
+            }>;
+          }
+
+          const mailOptions: MailOptions = {
             from: `"Warren's March Madness" <${this.config.user || 'noreply@warrensmarchmadness.com'}>`,
             to: options.to,
             subject: options.subject,
