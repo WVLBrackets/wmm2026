@@ -455,11 +455,49 @@ function BracketContent() {
 
   const handleEditBracket = (bracketToEdit: unknown) => {
     setEditingBracket(bracketToEdit);
-    const bracket = bracketToEdit as Record<string, unknown>;
-    setPicks((bracket.picks as Record<string, string>) || {});
-    setEntryName((bracket.entryName as string) || session?.user?.name || '');
-    setTieBreaker((bracket.tieBreaker as string) || '');
-    setIsReadOnly(bracket.status === 'submitted');
+    const bracketData = bracketToEdit as Record<string, unknown>;
+    const bracketPicks = (bracketData.picks as Record<string, string>) || {};
+    setPicks(bracketPicks);
+    setEntryName((bracketData.entryName as string) || session?.user?.name || '');
+    setTieBreaker((bracketData.tieBreaker as string) || '');
+    setIsReadOnly(bracketData.status === 'submitted');
+    
+    // Calculate first incomplete step for in-progress brackets
+    if (bracketData.status === 'in_progress' && bracket && tournamentData) {
+      const regions = tournamentData.regions;
+      
+      // Check each region step (0-3)
+      for (let step = 0; step < regions.length; step++) {
+        const region = regions[step];
+        const regionGames = bracket.regions[region.position];
+        
+        if (regionGames && regionGames.length > 0) {
+          // Check if all games in this region have picks
+          const allGamesHavePicks = regionGames.every(game => bracketPicks[game.id]);
+          
+          if (!allGamesHavePicks) {
+            // This region is incomplete, start here
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem('bracketCurrentStep', String(step));
+            }
+            setCurrentView('bracket');
+            setBracketResetKey(prev => prev + 1);
+            return;
+          }
+        }
+      }
+      
+      // All regions are complete, go to Final Four step (step 4)
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('bracketCurrentStep', String(regions.length));
+      }
+    } else {
+      // For new brackets or submitted brackets, start at step 0
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('bracketCurrentStep', '0');
+      }
+    }
+    
     setCurrentView('bracket');
     setBracketResetKey(prev => prev + 1);
   };
