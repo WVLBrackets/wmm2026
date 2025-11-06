@@ -212,8 +212,29 @@ export default function RegionBracketLayout({
   const regionalChampion = getRegionalChampion();
   const isComplete = isRegionComplete();
 
+  // Extract region letters for vertical display (split by character, filter spaces)
+  const regionLetters = regionName.split('').filter(char => char.trim() !== '');
+
   return (
-    <div className="flex flex-col mx-auto border-2 border-gray-300 rounded-lg" style={{ width: 'fit-content' }}>
+    <div className="flex items-center mx-auto" style={{ width: 'fit-content' }}>
+      {/* Region Name - Vertical Letters in separate container to the left */}
+      <div className="flex flex-col items-center justify-center pr-4" style={{ height: '100%', minWidth: '2rem' }}>
+        {regionLetters.map((letter, index) => (
+          <div 
+            key={index} 
+            className="text-2xl font-bold text-gray-700"
+            style={{ 
+              lineHeight: '1.2',
+              marginBottom: index < regionLetters.length - 1 ? '0.25rem' : '0'
+            }}
+          >
+            {letter}
+          </div>
+        ))}
+      </div>
+
+      {/* Bracket Container */}
+      <div className="flex flex-col border-2 border-gray-300 rounded-lg" style={{ width: 'fit-content' }}>
         {/* Bracket Columns */}
         <div className="flex items-start">
           {/* Round of 64 */}
@@ -468,6 +489,7 @@ export default function RegionBracketLayout({
             </>
           )}
         </div>
+      </div>
       </div>
     </div>
   );
