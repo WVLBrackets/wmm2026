@@ -29,9 +29,9 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   bracketsMessage: 'Create and submit your picks here',
   mobileBracketsMessage: 'Create and submit your picks here',
   welcomeNoBrackets: 'Click New Bracket to start your first entry',
-  welcomeNoInProgress: 'Your total cost so far is ${cost}. You can create a new entry and save it for later without submitting it now.',
-  welcomeNoSubmitted: 'You have not submitted any brackets yet. Please complete and submit your bracket(s) to be included in the contest.',
-  welcomeYourBrackets: 'Your total cost so far is ${cost}. In Progress brackets are not included in the contest until submitted.',
+  welcomeNoInProgress: 'Your total cost so far is ${cost}.||You can create a new entry and save it for later without submitting it now.',
+  welcomeNoSubmitted: 'You have not submitted any brackets yet.||Please complete and submit your bracket(s) to be included in the contest.',
+  welcomeYourBrackets: 'Your total cost so far is ${cost}.||In Progress brackets are not included in the contest until submitted.',
   // Legacy fields (kept for backward compatibility)
   welcomeNoBracketsLine2: 'Click New Bracket to start your entry',
   welcomeNoBracketsLine3: 'You can start a new entry and save it for later without submitting it now',

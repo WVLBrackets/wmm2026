@@ -219,6 +219,29 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
     return message;
   };
 
+  // Helper function to render messages with line breaks (using || as delimiter)
+  const renderMessageWithLineBreaks = (message: string) => {
+    // Split by || delimiter and render each part
+    const parts = message.split('||');
+    
+    if (parts.length === 1) {
+      // No line breaks, return as single element
+      return <>{message}</>;
+    }
+    
+    // Render with line breaks
+    return (
+      <>
+        {parts.map((part, index) => (
+          <React.Fragment key={index}>
+            {part}
+            {index < parts.length - 1 && <br />}
+          </React.Fragment>
+        ))}
+      </>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -237,7 +260,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                     {/* Line 2: Brackets message */}
                     {siteConfig?.bracketsMessage && (
                       <p className="text-sm text-gray-600 mt-1">
-                        {siteConfig.bracketsMessage}
+                        {renderMessageWithLineBreaks(siteConfig.bracketsMessage)}
                       </p>
                     )}
                     
@@ -255,7 +278,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                     
                     {/* Line 4: Dynamic message - always shown on desktop */}
                     <p className="text-sm text-gray-600 mt-2">
-                      {getDynamicMessage()}
+                      {renderMessageWithLineBreaks(getDynamicMessage())}
                     </p>
                   </div>
                   
@@ -292,7 +315,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                     {/* Line 2: Mobile brackets message */}
                     {siteConfig?.mobileBracketsMessage && (
                       <p className="text-sm text-gray-600 mt-1">
-                        {siteConfig.mobileBracketsMessage}
+                        {renderMessageWithLineBreaks(siteConfig.mobileBracketsMessage)}
                       </p>
                     )}
                     
@@ -323,7 +346,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                         >
                           <X className="h-4 w-4" />
                         </button>
-                        <p>{getDynamicMessage()}</p>
+                        <p>{renderMessageWithLineBreaks(getDynamicMessage())}</p>
                       </div>
                     )}
                   </div>
