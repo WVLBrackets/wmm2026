@@ -486,11 +486,15 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                         >
                           {getStatusIcon(bracket.status)}
                           <span className="ml-1">{bracket.entryName || `Bracket #${index + 1}`}</span>
-                          <span className="ml-2">{getStatusText(bracket.status)}</span>
                         </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
-                        {/* Status column - now empty since it's combined with Entry Name */}
+                        <div 
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium cursor-pointer ${getStatusColor(bracket.status)}`}
+                          onClick={() => onEditBracket(bracket)}
+                        >
+                          <span>{getStatusText(bracket.status)}</span>
+                        </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-600">
