@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { getBracketById, Bracket } from '@/lib/secureDatabase';
+import { getBracketById, Bracket, getUserByEmail } from '@/lib/secureDatabase';
 import { emailService } from '@/lib/emailService';
 import { loadTournamentData } from '@/lib/tournamentLoader';
 import { generate64TeamBracket, updateBracketWithPicks } from '@/lib/bracketGenerator';
@@ -41,8 +41,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify user owns this bracket
-    if (bracket.playerEmail !== session.user.email) {
+    // Get user by email to verify ownership
+    const user = await getUserByEmail(session.user.email);
+    if (!user || bracket.userId !== user.id) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 403 }
