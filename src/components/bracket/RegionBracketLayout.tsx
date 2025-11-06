@@ -214,45 +214,23 @@ export default function RegionBracketLayout({
 
   // Extract region letters for vertical display (split by character, filter spaces, uppercase)
   const regionLetters = regionName.toUpperCase().split('').filter(char => char.trim() !== '');
-  
-  // Determine if we should use stacked (pages 1 & 3) or rotated (pages 2 & 4)
-  // Pages 1 & 3 = steps 0 & 2 (stacked horizontally)
-  // Pages 2 & 4 = steps 1 & 3 (rotated 90 degrees)
-  const useRotated = currentStep === 1 || currentStep === 3;
 
   return (
     <div className="flex items-center mx-auto" style={{ width: 'fit-content' }}>
       {/* Region Name - Vertical Letters in separate container to the left */}
-      <div className="flex items-center justify-center pr-4" style={{ height: '100%', minWidth: '2rem' }}>
-        {useRotated ? (
-          // Rotated 90 degrees (pages 2 & 4)
+      <div className="flex flex-col items-center justify-center pr-4" style={{ height: '100%', minWidth: '2rem' }}>
+        {regionLetters.map((letter, index) => (
           <div 
-            className="text-2xl font-bold text-gray-700 whitespace-nowrap"
+            key={index} 
+            className="text-2xl font-bold text-gray-700"
             style={{ 
-              transform: 'rotate(90deg)',
-              transformOrigin: 'center',
-              writingMode: 'horizontal-tb'
+              lineHeight: '1.2',
+              marginBottom: index < regionLetters.length - 1 ? '0.25rem' : '0'
             }}
           >
-            {regionName.toUpperCase()}
+            {letter}
           </div>
-        ) : (
-          // Stacked horizontally (pages 1 & 3)
-          <div className="flex flex-col items-center justify-center">
-            {regionLetters.map((letter, index) => (
-              <div 
-                key={index} 
-                className="text-2xl font-bold text-gray-700"
-                style={{ 
-                  lineHeight: '1.2',
-                  marginBottom: index < regionLetters.length - 1 ? '0.25rem' : '0'
-                }}
-              >
-                {letter}
-              </div>
-            ))}
-          </div>
-        )}
+        ))}
       </div>
 
       {/* Bracket Container */}
