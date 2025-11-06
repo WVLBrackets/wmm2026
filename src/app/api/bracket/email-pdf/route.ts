@@ -144,8 +144,28 @@ export async function POST(request: NextRequest) {
 }
 
 // Types for puppeteer (optional dependencies)
+interface Browser {
+  newPage: () => Promise<Page>;
+  close: () => Promise<void>;
+}
+
+interface Page {
+  setContent: (html: string, options?: { waitUntil?: string }) => Promise<void>;
+  pdf: (options: {
+    format?: string;
+    landscape?: boolean;
+    printBackground?: boolean;
+    margin?: {
+      top?: string;
+      right?: string;
+      bottom?: string;
+      left?: string;
+    };
+  }) => Promise<Buffer>;
+}
+
 interface PuppeteerType {
-  launch: (options: unknown) => Promise<unknown>;
+  launch: (options: unknown) => Promise<Browser>;
 }
 
 interface ChromiumType {
@@ -186,7 +206,7 @@ async function generateBracketPDF(
     throw new Error('PDF generation requires puppeteer-core and @sparticuz/chromium. Please install: npm install puppeteer-core @sparticuz/chromium');
   }
 
-  let browser;
+  let browser: Browser | null = null;
   
   try {
     // Launch browser with Chromium
@@ -199,7 +219,7 @@ async function generateBracketPDF(
         ? await chromium.executablePath() 
         : process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome',
       headless: chromium.headless,
-    });
+    }) as Browser;
 
     const page = await browser.newPage();
 
