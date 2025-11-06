@@ -407,7 +407,7 @@ export default function FinalFourChampionship({
             </div>
 
             {/* Row 4: Tie Breaker Input */}
-            <div className="flex items-center space-x-2 justify-end" style={{ paddingRight: '5px' }}>
+            <div className="flex items-center space-x-2 justify-end" style={{ paddingRight: '2px' }}>
               <label htmlFor="tieBreaker" className="text-xs font-medium text-gray-700 whitespace-nowrap">
                 Tie Breaker:
               </label>
@@ -434,12 +434,12 @@ export default function FinalFourChampionship({
 
       {/* Message Bar */}
       {!readOnly && (
-        <div className={`mt-4 p-3 rounded-lg border-2 ${
+        <div className={`mt-4 rounded-lg border-2 ${
           messageState.color === 'yellow' 
             ? 'bg-yellow-50 border-yellow-400 text-yellow-800' 
             : 'bg-green-50 border-green-400 text-green-800'
-        }`} style={{ width: '100%' }}>
-          <p className="text-sm font-medium text-left">{messageState.message}</p>
+        }`} style={{ width: '100%', paddingTop: '12px', paddingBottom: '12px', paddingLeft: '12px', paddingRight: '2px' }}>
+          <p className="text-sm font-medium text-right">{messageState.message}</p>
         </div>
       )}
 
