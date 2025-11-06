@@ -255,7 +255,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                   {/* Site Logo - Far Left */}
                   {siteConfig?.homePageLogo && (
                     <div className="flex-shrink-0 mr-4">
-                      <div className="w-20 h-20 flex items-center justify-center">
+                      <div className="h-32 w-auto flex items-center justify-center">
                         {logoError ? (
                           <div className="text-red-600 text-xs text-center">
                             Image not Found
@@ -264,7 +264,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                           <img
                             src={`/images/${siteConfig.homePageLogo}`}
                             alt="Site Logo"
-                            className="w-full h-full object-contain max-w-full max-h-full"
+                            className="h-full w-auto object-contain max-h-full"
                             onError={() => setLogoError(true)}
                           />
                         )}
