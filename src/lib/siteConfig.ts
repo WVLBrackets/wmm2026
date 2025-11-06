@@ -24,6 +24,13 @@ export interface SiteConfigData {
   // Welcome banner configuration
   welcomeGreeting: string;
   entryCost: number;
+  bracketsMessage?: string;
+  mobileBracketsMessage?: string;
+  welcomeNoBrackets?: string;
+  welcomeNoInProgress?: string;
+  welcomeNoSubmitted?: string;
+  welcomeYourBrackets?: string;
+  // Legacy fields (kept for backward compatibility)
   welcomeNoBracketsLine2: string;
   welcomeNoBracketsLine3: string;
   welcomeSubmittedText: string;
@@ -34,8 +41,6 @@ export interface SiteConfigData {
   entryPlural: string;
   // Sign-in page configuration
   signinFooter: string;
-  // Mobile brackets message
-  mobileBracketsMessage?: string;
   // Final Four validation messages
   finalMessageTeamsMissing?: string;
   finalMessageTieBreakerMissing?: string;
@@ -170,8 +175,23 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
           case 'signin_footer':
             config.signinFooter = value;
             break;
+          case 'brackets_message':
+            config.bracketsMessage = value;
+            break;
           case 'mobile_brackets_message':
             config.mobileBracketsMessage = value;
+            break;
+          case 'welcome_no_brackets':
+            config.welcomeNoBrackets = value;
+            break;
+          case 'welcome_no_in_progress':
+            config.welcomeNoInProgress = value;
+            break;
+          case 'welcome_no_submitted':
+            config.welcomeNoSubmitted = value;
+            break;
+          case 'welcome_your_brackets':
+            config.welcomeYourBrackets = value;
             break;
           case 'final_message_teams_missing':
             config.finalMessageTeamsMissing = value;

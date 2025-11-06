@@ -192,166 +192,143 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
     return { submittedCount, inProgressCount, totalCost };
   };
 
+  // Get dynamic message based on bracket counts
+  const getDynamicMessage = () => {
+    const { submittedCount, inProgressCount, totalCost } = getBracketsInfo();
+    const entryCost = siteConfig?.entryCost || 5;
+    
+    let message = '';
+    
+    // Determine which message to use based on counts
+    if (submittedCount === 0 && inProgressCount === 0) {
+      message = siteConfig?.welcomeNoBrackets || 'Click New Bracket to start your first entry';
+    } else if (submittedCount > 0 && inProgressCount === 0) {
+      message = siteConfig?.welcomeNoInProgress || `Your total cost so far is $${totalCost}. You can create a new entry and save it for later without submitting it now.`;
+    } else if (submittedCount === 0 && inProgressCount > 0) {
+      message = siteConfig?.welcomeNoSubmitted || 'You have not submitted any brackets yet. Please complete and submit your bracket(s) to be included in the contest.';
+    } else {
+      message = siteConfig?.welcomeYourBrackets || `Your total cost so far is $${totalCost}. In Progress brackets are not included in the contest until submitted.`;
+    }
+    
+    // Replace template variables
+    message = message
+      .replace(/{Submitted}/g, submittedCount.toString())
+      .replace(/{In Progress}/g, inProgressCount.toString())
+      .replace(/{cost}/g, totalCost.toString());
+    
+    return message;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-            {/* Compact Header */}
+            {/* Welcome Header */}
             <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
-              {/* Desktop: Logo and welcome in one row, buttons on right */}
-              <div className="hidden md:flex md:items-center md:justify-between">
-                <div className="flex items-center space-x-4">
-                  {/* WMM Logo - Desktop only */}
-                  <div className="flex-shrink-0">
-                    <Image 
-                      src="/images/warrens-march-madness.png" 
-                      alt="Warren's March Madness" 
-                      width={80} 
-                      height={40} 
-                      className="object-contain"
-                    />
+              {/* Desktop Layout */}
+              <div className="hidden md:block">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    {/* Line 1: Welcome message with full name */}
+                    <h1 className="text-2xl font-bold text-gray-900">
+                      Welcome {session?.user?.name || 'User'}
+                    </h1>
+                    
+                    {/* Line 2: Brackets message */}
+                    {siteConfig?.bracketsMessage && (
+                      <p className="text-sm text-gray-600 mt-1">
+                        {siteConfig.bracketsMessage}
+                      </p>
+                    )}
+                    
+                    {/* Line 3: Status bubbles - always shown */}
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
+                        Submitted {getBracketsInfo().submittedCount}
+                      </span>
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        <Clock className="h-4 w-4 text-yellow-500 mr-1" />
+                        In Progress {getBracketsInfo().inProgressCount}
+                      </span>
+                    </div>
+                    
+                    {/* Line 4: Dynamic message - always shown on desktop */}
+                    <p className="text-sm text-gray-600 mt-2">
+                      {getDynamicMessage()}
+                    </p>
                   </div>
                   
-                  {/* Welcome text - Desktop */}
-                  <div className="flex-1 min-w-0">
-                    <h1 className="text-2xl font-bold text-gray-900">
-                      {(siteConfig?.welcomeGreeting || 'Welcome back {name}').replace('{name}', session?.user?.name || 'User')}
-                    </h1>
-                    {(() => {
-                      const { submittedCount, inProgressCount, totalCost } = getBracketsInfo();
-                      
-                      // Helper functions to replace placeholders
-                      const replaceSubmittedPlaceholders = (text: string) => {
-                        return text
-                          .replace('{count}', submittedCount.toString())
-                          .replace('{cost}', totalCost.toString());
-                      };
-                      
-                      const replaceInProgressPlaceholders = (text: string) => {
-                        const entryText = inProgressCount === 1 
-                          ? (siteConfig?.entrySingular || 'this entry')
-                          : (siteConfig?.entryPlural || 'these entries');
-                        
-                        return text
-                          .replace('{count}', inProgressCount.toString())
-                          .replace('{entry_text}', entryText);
-                      };
-                      
-                      // Case 1: Both counts are 0
-                      if (submittedCount === 0 && inProgressCount === 0) {
-                        return (
-                          <>
-                            <p className="text-sm text-gray-600 mt-1">
-                              {siteConfig?.welcomeNoBracketsLine2 || 'Click New Bracket to start your entry'}
-                            </p>
-                            <p className="text-sm text-gray-600 mt-1">
-                              {siteConfig?.welcomeNoBracketsLine3 || 'You can start a new entry and save it for later without submitting it now'}
-                            </p>
-                          </>
-                        );
-                      }
-                      
-                      // Case 2: Submitted is non-zero and In Progress is zero
-                      if (submittedCount > 0 && inProgressCount === 0) {
-                        return (
-                          <>
-                            <p className="text-sm text-gray-600 mt-1">
-                              {replaceSubmittedPlaceholders(siteConfig?.welcomeSubmittedText || 'Submitted Count: {count} - your total cost is ${cost} so far')}
-                            </p>
-                            <p className="text-sm text-gray-600 mt-1">
-                              {siteConfig?.welcomeCanStartNew || 'You can start a new entry and save it for later without submitting it now'}
-                            </p>
-                            <div className="mt-2">
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
-                                Submitted {submittedCount}
-                              </span>
-                            </div>
-                          </>
-                        );
-                      }
-                      
-                      // Case 3: Submitted is zero and In Progress is non-zero
-                      if (submittedCount === 0 && inProgressCount > 0) {
-                        return (
-                          <>
-                            <p className="text-sm text-gray-600 mt-1">
-                              {siteConfig?.welcomeInprogressReminder || 'Be sure to submit your picks so they can be included in the contest'}
-                            </p>
-                            <p className="text-sm text-gray-600 mt-1">
-                              {replaceInProgressPlaceholders(siteConfig?.welcomeInprogressText || 'In Progress Count: {count} - be sure to \'Submit\' if you want {entry_text} to count')}
-                            </p>
-                            <div className="mt-2">
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                <Clock className="h-4 w-4 text-yellow-500 mr-1" />
-                                In Progress {inProgressCount}
-                              </span>
-                            </div>
-                          </>
-                        );
-                      }
-                      
-                      // Case 4: Both counts are non-zero (default case)
-                      return (
-                        <>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {replaceSubmittedPlaceholders(siteConfig?.welcomeSubmittedText || 'Submitted Count: {count} - your total cost is ${cost} so far')}
-                          </p>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {replaceInProgressPlaceholders(siteConfig?.welcomeInprogressText || 'In Progress Count: {count} - be sure to \'Submit\' if you want {entry_text} to count')}
-                          </p>
-                          <div className="mt-2 flex flex-col gap-2">
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 w-fit">
-                              <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
-                              Submitted {submittedCount}
-                            </span>
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 w-fit">
-                              <Clock className="h-4 w-4 text-yellow-500 mr-1" />
-                              In Progress {inProgressCount}
-                            </span>
-                          </div>
-                        </>
-                      );
-                    })()}
+                  {/* Action buttons */}
+                  <div className="flex items-center space-x-3 flex-shrink-0 ml-4">
+                    <button
+                      onClick={onCreateNew}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>New Bracket</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>Logout</span>
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center space-x-3 flex-shrink-0">
-              <button
-                onClick={onCreateNew}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
-              >
-                <Plus className="h-4 w-4" />
-                <span>New Bracket</span>
-              </button>
-              
-              <button
-                onClick={() => signOut({ callbackUrl: '/auth/signin' })}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Logout</span>
-              </button>
-            </div>
-          </div>
+              </div>
 
-              {/* Mobile: Welcome and buttons on same line, details below */}
+              {/* Mobile Layout */}
               <div className="flex flex-col md:hidden gap-3">
-                <div className="flex items-center justify-between">
-                  {/* Welcome text - Mobile */}
-                  <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    {/* Line 1: Welcome message with first name only */}
                     <h1 className="text-xl font-bold text-gray-900">
-                      Welcome {(() => {
-                        const fullName = session?.user?.name || 'User';
-                        const firstName = fullName.split(' ')[0];
-                        return firstName;
-                      })()}
+                      Welcome {getFirstName(session?.user?.name)}
                     </h1>
+                    
+                    {/* Line 2: Mobile brackets message */}
                     {siteConfig?.mobileBracketsMessage && (
                       <p className="text-sm text-gray-600 mt-1">
                         {siteConfig.mobileBracketsMessage}
                       </p>
                     )}
+                    
+                    {/* Line 3: Status bubbles with info icon - always shown */}
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
+                        Submitted {getBracketsInfo().submittedCount}
+                      </span>
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        <Clock className="h-4 w-4 text-yellow-500 mr-1" />
+                        In Progress {getBracketsInfo().inProgressCount}
+                      </span>
+                      <button
+                        onClick={() => setExpandedStatus(expandedStatus === 'info' ? null : 'info')}
+                        className="ml-auto text-blue-600 hover:text-blue-700 cursor-pointer"
+                      >
+                        <Info className="h-4 w-4" />
+                      </button>
+                    </div>
+                    
+                    {/* Line 4: Dynamic message - hidden by default, shown when info icon is clicked */}
+                    {expandedStatus === 'info' && (
+                      <div className="text-sm text-gray-600 mt-2 bg-blue-50 p-2 rounded relative">
+                        <button
+                          onClick={() => setExpandedStatus(null)}
+                          className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 cursor-pointer"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                        <p>{getDynamicMessage()}</p>
+                      </div>
+                    )}
                   </div>
+                  
+                  {/* Action buttons */}
                   <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
                     <button
                       onClick={onCreateNew}
@@ -368,113 +345,8 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                     </button>
                   </div>
                 </div>
-                
-                {/* Mobile: Simplified counts with info icon */}
-                {(() => {
-                  const { submittedCount, inProgressCount, totalCost } = getBracketsInfo();
-                  
-                  // Helper functions to replace placeholders
-                  const replaceSubmittedPlaceholders = (text: string) => {
-                    return text
-                      .replace('{count}', submittedCount.toString())
-                      .replace('{cost}', totalCost.toString());
-                  };
-                  
-                  const replaceInProgressPlaceholders = (text: string) => {
-                    const entryText = inProgressCount === 1 
-                      ? (siteConfig?.entrySingular || 'this entry')
-                      : (siteConfig?.entryPlural || 'these entries');
-                    
-                    return text
-                      .replace('{count}', inProgressCount.toString())
-                      .replace('{entry_text}', entryText);
-                  };
-                  
-                  // Case 1: Both counts are 0
-                  if (submittedCount === 0 && inProgressCount === 0) {
-                    return (
-                      <p className="text-sm text-gray-600">
-                        {siteConfig?.welcomeNoBracketsLine2 || 'Click New Bracket to start your entry'}
-                      </p>
-                    );
-                  }
-                  
-                  return (
-                    <div className="flex flex-col gap-2">
-                      {/* Simplified count line */}
-                      <div className="text-sm flex items-center gap-2">
-                        {submittedCount > 0 && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
-                            Submitted {submittedCount}
-                          </span>
-                        )}
-                        {inProgressCount > 0 && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                            <Clock className="h-4 w-4 text-yellow-500 mr-1" />
-                            In Progress {inProgressCount}
-                          </span>
-                        )}
-                        <button
-                          onClick={() => setExpandedStatus(expandedStatus === 'info' ? null : 'info')}
-                          className="ml-auto text-blue-600 hover:text-blue-700 cursor-pointer"
-                        >
-                          <Info className="h-4 w-4" />
-                        </button>
-                      </div>
-                      
-                      {/* Expanded details - showing same message as desktop */}
-                      {expandedStatus === 'info' && (
-                        <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded relative">
-                          <button
-                            onClick={() => setExpandedStatus(null)}
-                            className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 cursor-pointer"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                          
-                          {/* Case 2: Submitted is non-zero and In Progress is zero */}
-                          {submittedCount > 0 && inProgressCount === 0 && (
-                            <>
-                              <p>
-                                {replaceSubmittedPlaceholders(siteConfig?.welcomeSubmittedText || 'Submitted Count: {count} - your total cost is ${cost} so far')}
-                              </p>
-                              <p className="mt-1">
-                                {siteConfig?.welcomeCanStartNew || 'You can start a new entry and save it for later without submitting it now'}
-                              </p>
-                            </>
-                          )}
-                          
-                          {/* Case 3: Submitted is zero and In Progress is non-zero */}
-                          {submittedCount === 0 && inProgressCount > 0 && (
-                            <>
-                              <p>
-                                {siteConfig?.welcomeInprogressReminder || 'Be sure to submit your picks so they can be included in the contest'}
-                              </p>
-                              <p className="mt-1">
-                                {replaceInProgressPlaceholders(siteConfig?.welcomeInprogressText || 'In Progress Count: {count} - be sure to \'Submit\' if you want {entry_text} to count')}
-                              </p>
-                            </>
-                          )}
-                          
-                          {/* Case 4: Both counts are non-zero */}
-                          {submittedCount > 0 && inProgressCount > 0 && (
-                            <>
-                              <p>
-                                {replaceSubmittedPlaceholders(siteConfig?.welcomeSubmittedText || 'Submitted Count: {count} - your total cost is ${cost} so far')}
-                              </p>
-                              <p className="mt-1">
-                                {replaceInProgressPlaceholders(siteConfig?.welcomeInprogressText || 'In Progress Count: {count} - be sure to \'Submit\' if you want {entry_text} to count')}
-                              </p>
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
               </div>
-        </div>
+            </div>
 
 
         {/* Brackets List */}
