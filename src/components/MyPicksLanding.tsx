@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { Trophy, Plus, Edit, Eye, Clock, CheckCircle, LogOut, Trash2, Copy, Printer, Info, X } from 'lucide-react';
+import { Trophy, Plus, Edit, Eye, Clock, CheckCircle, LogOut, Trash2, Copy, Printer, Info, X, Mail } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { TournamentData, TournamentBracket } from '@/types/tournament';
 import { SiteConfigData } from '@/lib/siteConfig';
@@ -38,6 +38,10 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
   const { data: session } = useSession();
   const [expandedStatus, setExpandedStatus] = useState<'info' | null>(null);
   const [logoError, setLogoError] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [emailBracket, setEmailBracket] = useState<Bracket | null>(null);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailMessage, setEmailMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   
   // Get tournament year from config or tournament data
   const tournamentYear = siteConfig?.tournamentYear ? parseInt(siteConfig.tournamentYear) : (tournamentData?.year ? parseInt(tournamentData.year) : new Date().getFullYear());
@@ -137,6 +141,49 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
     sessionStorage.setItem('printBracketData', JSON.stringify(bracket));
     // Navigate to the print page (no URL parameters)
     window.open('/print-bracket', '_blank');
+  };
+
+  const handleEmailBracket = (bracket: Bracket) => {
+    if (bracket.status !== 'submitted') {
+      return; // Only allow emailing submitted brackets
+    }
+    setEmailBracket(bracket);
+    setEmailDialogOpen(true);
+  };
+
+  const confirmEmailBracket = async () => {
+    if (!emailBracket || !session?.user?.email) {
+      return;
+    }
+
+    setIsSendingEmail(true);
+    setEmailMessage(null);
+
+    try {
+      const response = await fetch('/api/bracket/email-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          bracketId: emailBracket.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setEmailMessage({ type: 'success', text: 'Email sent successfully! Check your inbox for your bracket PDF.' });
+        setEmailDialogOpen(false);
+        setTimeout(() => setEmailMessage(null), 5000);
+      } else {
+        setEmailMessage({ type: 'error', text: data.error || 'Failed to send email. Please try again.' });
+      }
+    } catch (error) {
+      setEmailMessage({ type: 'error', text: 'An error occurred while sending the email. Please try again.' });
+    } finally {
+      setIsSendingEmail(false);
+    }
   };
 
   const getStatusIcon = (status: string) => {
@@ -636,6 +683,13 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                               >
                                 <Printer className="h-4 w-4" />
                               </button>
+                              <button
+                                onClick={() => handleEmailBracket(bracket)}
+                                className="bg-indigo-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-indigo-700 cursor-pointer transition-colors"
+                                title="Email PDF"
+                              >
+                                <Mail className="h-4 w-4" />
+                              </button>
                             </>
                           )}
                         </div>
@@ -649,6 +703,58 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
           )}
         </div>
       </div>
+
+      {/* Email Confirmation Dialog */}
+      {emailDialogOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Email Bracket PDF</h3>
+            <p className="text-sm text-gray-600 mb-6">
+              Would you like to send yourself an email with a PDF of your bracket?
+            </p>
+            {emailMessage && (
+              <div className={`mb-4 p-3 rounded ${
+                emailMessage.type === 'success' 
+                  ? 'bg-green-50 text-green-800 border border-green-200' 
+                  : 'bg-red-50 text-red-800 border border-red-200'
+              }`}>
+                <p className="text-sm">{emailMessage.text}</p>
+              </div>
+            )}
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setEmailDialogOpen(false);
+                  setEmailBracket(null);
+                  setEmailMessage(null);
+                }}
+                disabled={isSendingEmail}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmEmailBracket}
+                disabled={isSendingEmail}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSendingEmail ? 'Sending...' : 'Send Email'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Email Status Message */}
+      {emailMessage && !emailDialogOpen && (
+        <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+          emailMessage.type === 'success' 
+            ? 'bg-green-50 text-green-800 border border-green-200' 
+            : 'bg-red-50 text-red-800 border border-red-200'
+        }`}>
+          <p className="text-sm font-medium">{emailMessage.text}</p>
+        </div>
+      )}
 
     </div>
   );

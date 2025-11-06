@@ -7,11 +7,18 @@ export interface EmailServiceConfig {
   apiKey?: string;
 }
 
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer | string;
+  contentType?: string;
+}
+
 export interface EmailOptions {
   to: string;
   subject: string;
   html: string;
   text?: string;
+  attachments?: EmailAttachment[];
 }
 
 class EmailService {
@@ -94,13 +101,22 @@ class EmailService {
             throw new Error('Email transporter not initialized');
           }
           
-          const mailOptions = {
+          const mailOptions: any = {
             from: `"Warren's March Madness" <${this.config.user || 'noreply@warrensmarchmadness.com'}>`,
             to: options.to,
             subject: options.subject,
             html: options.html,
             text: options.text,
           };
+
+          // Add attachments if provided
+          if (options.attachments && options.attachments.length > 0) {
+            mailOptions.attachments = options.attachments.map(att => ({
+              filename: att.filename,
+              content: att.content,
+              contentType: att.contentType || 'application/pdf',
+            }));
+          }
 
           const result = await this.transporter.sendMail(mailOptions);
           console.log('Email sent successfully:', result.messageId);
@@ -112,6 +128,13 @@ class EmailService {
           console.log('Subject:', options.subject);
           console.log('HTML:', options.html);
           console.log('Text:', options.text);
+          if (options.attachments && options.attachments.length > 0) {
+            console.log('Attachments:', options.attachments.map(att => ({
+              filename: att.filename,
+              contentType: att.contentType,
+              size: att.content instanceof Buffer ? att.content.length : att.content.length,
+            })));
+          }
           return true;
 
         case 'disabled':
