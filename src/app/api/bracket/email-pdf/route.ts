@@ -136,8 +136,15 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error sending bracket PDF email:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error('Error details:', { errorMessage, errorStack });
     return NextResponse.json(
-      { success: false, error: 'An error occurred while sending the email' },
+      { 
+        success: false, 
+        error: 'An error occurred while sending the email',
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+      },
       { status: 500 }
     );
   }
@@ -210,12 +217,15 @@ async function generateBracketPDF(
   
   try {
     // Launch browser with Chromium
-    const isProduction = process.env.VERCEL_ENV === 'production';
+    // Use Chromium for both production and preview (staging) environments
+    // Only use local Chrome for local development
+    const vercelEnv = process.env.VERCEL_ENV;
+    const isVercel = vercelEnv === 'production' || vercelEnv === 'preview';
     
     browser = await puppeteer.launch({
-      args: isProduction ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox'],
+      args: isVercel ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox'],
       defaultViewport: chromium.defaultViewport,
-      executablePath: isProduction 
+      executablePath: isVercel 
         ? await chromium.executablePath() 
         : process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome',
       headless: chromium.headless,
