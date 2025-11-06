@@ -705,12 +705,13 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
       </div>
 
       {/* Email Confirmation Dialog */}
+      {/* TODO: Change this message back to "Would you like to send yourself an email with a PDF of your bracket?" once PDF email feature is working */}
       {emailDialogOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Email Bracket PDF</h3>
             <p className="text-sm text-gray-600 mb-6">
-              Would you like to send yourself an email with a PDF of your bracket?
+              This isn't working yet, please cancel.
             </p>
             {emailMessage && (
               <div className={`mb-4 p-3 rounded ${
