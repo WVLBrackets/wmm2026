@@ -326,22 +326,44 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
 
               {/* Mobile Layout */}
               <div className="flex flex-col md:hidden gap-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    {/* Line 1: Welcome message with first name only */}
-                    <h1 className="text-xl font-bold text-gray-900">
-                      Welcome {getFirstName(session?.user?.name)}
-                    </h1>
+                <div className="flex flex-col">
+                  {/* Top row: Welcome message and buttons */}
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      {/* Line 1: Welcome message with first name only */}
+                      <h1 className="text-xl font-bold text-gray-900">
+                        Welcome {getFirstName(session?.user?.name)}
+                      </h1>
+                      
+                      {/* Line 2: Mobile brackets message */}
+                      {siteConfig?.mobileBracketsMessage && (
+                        <p className="text-sm text-gray-600 mt-1">
+                          {renderMessageWithLineBreaks(siteConfig.mobileBracketsMessage)}
+                        </p>
+                      )}
+                    </div>
                     
-                    {/* Line 2: Mobile brackets message */}
-                    {siteConfig?.mobileBracketsMessage && (
-                      <p className="text-sm text-gray-600 mt-1">
-                        {renderMessageWithLineBreaks(siteConfig.mobileBracketsMessage)}
-                      </p>
-                    )}
-                    
-                    {/* Line 3: Status bubbles with info icon - always shown */}
-                    <div className="flex items-center gap-2 mt-2">
+                    {/* Action buttons */}
+                    <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
+                      <button
+                        onClick={onCreateNew}
+                        className="bg-blue-600 text-white px-2 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                      
+                      <button
+                        onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+                        className="bg-blue-600 text-white px-2 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
+                      >
+                        <LogOut className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Line 3: Status bubbles with info icon on same line - always shown */}
+                  <div className="flex items-center justify-between mt-2">
+                    <div className="flex items-center gap-2">
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                         <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
                         Submitted {getBracketsInfo().submittedCount}
@@ -350,45 +372,34 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                         <Clock className="h-4 w-4 text-yellow-500 mr-1" />
                         In Progress {getBracketsInfo().inProgressCount}
                       </span>
-                      <button
-                        onClick={() => setExpandedStatus(expandedStatus === 'info' ? null : 'info')}
-                        className="ml-auto text-blue-600 hover:text-blue-700 cursor-pointer"
-                      >
-                        <Info className="h-4 w-4" />
-                      </button>
                     </div>
                     
-                    {/* Line 4: Dynamic message - hidden by default, shown when info icon is clicked */}
-                    {expandedStatus === 'info' && (
-                      <div className="text-sm text-gray-600 mt-2 bg-blue-50 p-2 rounded relative">
-                        <button
-                          onClick={() => setExpandedStatus(null)}
-                          className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 cursor-pointer"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                        <p>{renderMessageWithLineBreaks(getDynamicMessage())}</p>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Action buttons */}
-                  <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
+                    {/* Info icon - aligned with logout button */}
                     <button
-                      onClick={onCreateNew}
-                      className="bg-blue-600 text-white px-2 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
+                      onClick={() => setExpandedStatus(expandedStatus === 'info' ? null : 'info')}
+                      className="text-blue-600 hover:text-blue-700 cursor-pointer flex-shrink-0"
+                      style={{ width: '16px', marginLeft: '8px' }}
                     >
-                      <Plus className="h-4 w-4" />
-                    </button>
-                    
-                    <button
-                      onClick={() => signOut({ callbackUrl: '/auth/signin' })}
-                      className="bg-blue-600 text-white px-2 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
-                    >
-                      <LogOut className="h-4 w-4" />
+                      <Info className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
+                
+                {/* Line 4: Dynamic message - full width, hidden by default, shown when info icon is clicked */}
+                {expandedStatus === 'info' && (
+                  <div className="text-sm text-gray-600 bg-blue-50 p-2 rounded relative w-full">
+                    <button
+                      onClick={() => setExpandedStatus(null)}
+                      className="absolute top-2 text-gray-500 hover:text-gray-700 cursor-pointer"
+                      style={{ right: '8px' }}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                    <div className="pr-6">
+                      <p>{renderMessageWithLineBreaks(getDynamicMessage())}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
