@@ -438,7 +438,7 @@ export default function FinalFourChampionship({
           messageState.color === 'yellow' 
             ? 'bg-yellow-50 border-yellow-400 text-yellow-800' 
             : 'bg-green-50 border-green-400 text-green-800'
-        }`} style={{ width: '100%', paddingTop: '12px', paddingBottom: '12px', paddingLeft: '12px', paddingRight: '2px' }}>
+        }`} style={{ width: 'calc(100% - 4px)', marginLeft: '2px', marginRight: '2px', paddingTop: '12px', paddingBottom: '12px', paddingLeft: '12px', paddingRight: '10px' }}>
           <p className="text-sm font-medium text-right">{messageState.message}</p>
         </div>
       )}
