@@ -403,8 +403,16 @@ export default function RegionBracketLayout({
         <div className="flex items-center space-x-3 flex-shrink-0">
           {readOnly ? (
             <>
-              {/* View mode: Next (disabled on last page), and Close on all pages */}
+              {/* View mode: Close and Next buttons - Next on far right */}
               {/* Previous button is shown on the left side, not here */}
+              {onClose && (
+                <button
+                  onClick={onClose}
+                  className="flex items-center space-x-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer"
+                >
+                  <span>Close</span>
+                </button>
+              )}
               {onNext && (
                 <button
                   onClick={onNext}
@@ -419,14 +427,6 @@ export default function RegionBracketLayout({
                 >
                   <span>Next</span>
                   <ChevronRight className="w-4 h-4" />
-                </button>
-              )}
-              {onClose && (
-                <button
-                  onClick={onClose}
-                  className="flex items-center space-x-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer"
-                >
-                  <span>Close</span>
                 </button>
               )}
             </>
