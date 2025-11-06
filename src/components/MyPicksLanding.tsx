@@ -417,7 +417,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                       Status
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Bracket ID
+                      ID
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Progress
@@ -479,7 +479,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                     
                     return (
                     <tr key={bracket.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap text-center">
                         <div 
                           className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium cursor-pointer ${getStatusColor(bracket.status)}`}
                           onClick={() => onEditBracket(bracket)}
@@ -488,7 +488,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                           <span className="ml-1">{bracket.entryName || `Bracket #${index + 1}`}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap text-center">
                         <div 
                           className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium cursor-pointer ${getStatusColor(bracket.status)}`}
                           onClick={() => onEditBracket(bracket)}
@@ -496,13 +496,13 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                           <span>{getStatusText(bracket.status)}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap text-center">
                         <div className="text-sm font-medium text-gray-600">
                           {String(number).padStart(6, '0')}
                         </div>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-col space-y-1" style={{ width: 'fit-content' }}>
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex flex-col items-center space-y-1 mx-auto" style={{ width: 'fit-content' }}>
                           <div className="text-xs text-gray-600">
                             {progress.completed} / {progress.total} picks
                           </div>
@@ -514,15 +514,15 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 text-center">
                         <div className="flex justify-center">
                           <div className="w-12 h-8 flex items-center justify-center rounded border-2 border-gray-300 bg-gray-100 font-medium text-sm text-gray-700">
                             {bracket.tieBreaker || '?'}
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center space-x-1">
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center space-x-1">
                           {/* Top Left */}
                           <div className={`w-8 h-8 flex items-center justify-center bg-gray-100 rounded ${
                             finalFour.topLeftId && (finalFour.topLeftId === finalFour.finalist1Id || finalFour.topLeftId === finalFour.finalist2Id)
@@ -557,7 +557,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 text-center">
                         <div className="flex justify-center">
                           <div className={`w-10 h-10 flex items-center justify-center rounded border-2 ${
                             finalFour.champion
@@ -568,8 +568,8 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end space-x-2">
+                      <td className="px-4 py-3 whitespace-nowrap text-center text-sm font-medium">
+                        <div className="flex items-center justify-center space-x-2">
                           {/* Action buttons - icon-only squares with tooltips */}
                           {bracket.status === 'in_progress' ? (
                             <>
