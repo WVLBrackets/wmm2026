@@ -8,27 +8,7 @@ import { generate64TeamBracket, updateBracketWithPicks } from '@/lib/bracketGene
 import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
 // PDF generation using puppeteer
 // Install: npm install puppeteer-core @sparticuz/chromium
-// For now, using a placeholder that will need puppeteer-core and @sparticuz/chromium
-let puppeteer: any = null;
-let chromium: any = null;
-
-// Dynamically require puppeteer packages only if they exist (optional dependencies)
-if (typeof require !== 'undefined') {
-  try {
-    puppeteer = require('puppeteer-core');
-  } catch (e) {
-    // puppeteer-core not installed
-  }
-  
-  try {
-    chromium = require('@sparticuz/chromium');
-    if (chromium && typeof chromium.setGraphicsMode === 'function') {
-      chromium.setGraphicsMode(false);
-    }
-  } catch (e) {
-    // @sparticuz/chromium not installed
-  }
-}
+// Note: These packages are not installed yet, so PDF generation is disabled
 
 export async function POST(request: NextRequest) {
   try {
@@ -167,6 +147,26 @@ async function generateBracketPDF(
   tournamentData: any,
   siteConfig: any
 ): Promise<Buffer> {
+  // Dynamically require puppeteer packages only at runtime (optional dependencies)
+  let puppeteer: any = null;
+  let chromium: any = null;
+  
+  try {
+    // Use dynamic require to avoid build-time module resolution errors
+    puppeteer = eval('require')('puppeteer-core');
+  } catch (e) {
+    // puppeteer-core not installed
+  }
+  
+  try {
+    chromium = eval('require')('@sparticuz/chromium');
+    if (chromium && typeof chromium.setGraphicsMode === 'function') {
+      chromium.setGraphicsMode(false);
+    }
+  } catch (e) {
+    // @sparticuz/chromium not installed
+  }
+  
   if (!puppeteer || !chromium) {
     throw new Error('PDF generation requires puppeteer-core and @sparticuz/chromium. Please install: npm install puppeteer-core @sparticuz/chromium');
   }
