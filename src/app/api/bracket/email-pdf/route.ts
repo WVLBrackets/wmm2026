@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import { getBracketById } from '@/lib/secureDatabase';
 import { emailService } from '@/lib/emailService';
 import { loadTournamentData } from '@/lib/tournamentLoader';
@@ -9,18 +9,25 @@ import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
 // PDF generation using puppeteer
 // Install: npm install puppeteer-core @sparticuz/chromium
 // For now, using a placeholder that will need puppeteer-core and @sparticuz/chromium
-let puppeteer: any;
-let chromium: any;
+let puppeteer: any = null;
+let chromium: any = null;
 
-try {
-  puppeteer = require('puppeteer-core');
-  chromium = require('@sparticuz/chromium');
-  if (chromium) {
-    chromium.setGraphicsMode(false);
+// Dynamically require puppeteer packages only if they exist (optional dependencies)
+if (typeof require !== 'undefined') {
+  try {
+    puppeteer = require('puppeteer-core');
+  } catch (e) {
+    // puppeteer-core not installed
   }
-} catch (e) {
-  // puppeteer-core or @sparticuz/chromium not installed
-  console.warn('puppeteer-core or @sparticuz/chromium not installed. PDF generation will not work.');
+  
+  try {
+    chromium = require('@sparticuz/chromium');
+    if (chromium && typeof chromium.setGraphicsMode === 'function') {
+      chromium.setGraphicsMode(false);
+    }
+  } catch (e) {
+    // @sparticuz/chromium not installed
+  }
 }
 
 export async function POST(request: NextRequest) {
