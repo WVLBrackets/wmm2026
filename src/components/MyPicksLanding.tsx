@@ -711,7 +711,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Email Bracket PDF</h3>
             <p className="text-sm text-gray-600 mb-6">
-              This isn't working yet, please cancel.
+              This isn&apos;t working yet, please cancel.
             </p>
             {emailMessage && (
               <div className={`mb-4 p-3 rounded ${
