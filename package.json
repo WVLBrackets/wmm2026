@@ -13,6 +13,7 @@
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
     "@prisma/client": "^6.16.3",
+    "@sparticuz/chromium": "^141.0.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/nodemailer": "^7.0.3",
     "@vercel/postgres": "^0.10.0",
@@ -27,6 +28,7 @@
     "nodemailer": "^7.0.10",
     "pg": "^8.16.3",
     "prisma": "^6.16.3",
+    "puppeteer-core": "^24.29.0",
     "react": "19.1.0",
     "react-dom": "19.1.0"
   },
