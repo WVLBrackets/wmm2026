@@ -5,6 +5,7 @@ import { TournamentData } from '@/types/tournament';
  */
 /**
  * Get base URL for absolute paths in serverless environments
+ * Only used on server-side (API routes)
  */
 function getBaseUrl(): string {
   const vercelEnv = process.env.VERCEL_ENV;
@@ -22,9 +23,14 @@ function getBaseUrl(): string {
 
 export async function loadTournamentData(year: string = '2025'): Promise<TournamentData> {
   try {
-    // Use absolute URL for serverless environments (Vercel)
-    const baseUrl = getBaseUrl();
-    const tournamentUrl = `${baseUrl}/data/tournament-${year}.json`;
+    // Check if we're in a server environment (Node.js) or browser
+    // In serverless environments (Vercel API routes), we need absolute URLs
+    // In the browser, relative URLs work fine
+    const isServer = typeof window === 'undefined';
+    const tournamentUrl = isServer 
+      ? `${getBaseUrl()}/data/tournament-${year}.json`
+      : `/data/tournament-${year}.json`;
+    
     const response = await fetch(tournamentUrl);
     if (!response.ok) {
       throw new Error(`Failed to load tournament data for ${year}`);
