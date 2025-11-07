@@ -12,7 +12,9 @@ export async function loadTournamentData(year: string = '2025'): Promise<Tournam
     if (isServer) {
       // Server-side: Read directly from filesystem using dynamic require
       // This prevents fs from being bundled in client-side code
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const fs = require('fs');
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const path = require('path');
       
       const filePath = path.join(process.cwd(), 'public', 'data', `tournament-${year}.json`);
