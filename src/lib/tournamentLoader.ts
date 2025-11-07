@@ -3,9 +3,29 @@ import { TournamentData } from '@/types/tournament';
 /**
  * Load tournament data from JSON file
  */
+/**
+ * Get base URL for absolute paths in serverless environments
+ */
+function getBaseUrl(): string {
+  const vercelEnv = process.env.VERCEL_ENV;
+  
+  if (vercelEnv === 'production') {
+    return process.env.NEXTAUTH_URL || 'https://wmm2026.vercel.app';
+  } else if (vercelEnv === 'preview') {
+    return process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  } else {
+    return process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  }
+}
+
 export async function loadTournamentData(year: string = '2025'): Promise<TournamentData> {
   try {
-    const response = await fetch(`/data/tournament-${year}.json`);
+    // Use absolute URL for serverless environments (Vercel)
+    const baseUrl = getBaseUrl();
+    const tournamentUrl = `${baseUrl}/data/tournament-${year}.json`;
+    const response = await fetch(tournamentUrl);
     if (!response.ok) {
       throw new Error(`Failed to load tournament data for ${year}`);
     }
