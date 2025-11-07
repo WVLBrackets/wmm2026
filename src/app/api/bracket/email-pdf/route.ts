@@ -186,6 +186,8 @@ interface Browser {
 
 interface Page {
   setContent: (html: string, options?: { waitUntil?: string }) => Promise<void>;
+  setRequestInterception: (value: boolean) => Promise<void>;
+  on: (event: string, handler: (arg: any) => void) => void;
   pdf: (options: {
     format?: string;
     landscape?: boolean;
@@ -287,6 +289,28 @@ async function generateBracketPDF(
     console.log('[PDF Generation] HTML generated, length:', htmlContent.length);
     
     console.log('[PDF Generation] Setting page content...');
+    
+    // Set up request interception to log image loading
+    await page.setRequestInterception(true);
+    page.on('request', (request: any) => {
+      if (request.resourceType() === 'image') {
+        console.log(`[PDF Generation] Loading image: ${request.url()}`);
+      }
+      request.continue();
+    });
+    
+    page.on('response', (response: any) => {
+      if (response.request().resourceType() === 'image') {
+        const status = response.status();
+        const url = response.url();
+        if (status >= 200 && status < 300) {
+          console.log(`[PDF Generation] Image loaded successfully: ${url}`);
+        } else {
+          console.error(`[PDF Generation] Image failed to load (${status}): ${url}`);
+        }
+      }
+    });
+    
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
     console.log('[PDF Generation] Page content set');
 
@@ -322,16 +346,20 @@ async function generateBracketPDF(
  */
 function getBaseUrl(): string {
   const vercelEnv = process.env.VERCEL_ENV;
+  let baseUrl: string;
   
   if (vercelEnv === 'production') {
-    return process.env.NEXTAUTH_URL || 'https://wmm2026.vercel.app';
+    baseUrl = process.env.NEXTAUTH_URL || 'https://wmm2026.vercel.app';
   } else if (vercelEnv === 'preview') {
-    return process.env.VERCEL_URL 
+    baseUrl = process.env.VERCEL_URL 
       ? `https://${process.env.VERCEL_URL}` 
       : process.env.NEXTAUTH_URL || 'http://localhost:3000';
   } else {
-    return process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
   }
+  
+  console.log(`[PDF Generation] Base URL determined: ${baseUrl} (VERCEL_ENV: ${vercelEnv}, VERCEL_URL: ${process.env.VERCEL_URL}, NEXTAUTH_URL: ${process.env.NEXTAUTH_URL})`);
+  return baseUrl;
 }
 
 /**
@@ -342,7 +370,9 @@ function getAbsoluteLogoUrl(logoPath: string | null | undefined): string {
   const baseUrl = getBaseUrl();
   // Remove leading slash if present to avoid double slashes
   const cleanPath = logoPath.startsWith('/') ? logoPath : `/${logoPath}`;
-  return `${baseUrl}${cleanPath}`;
+  const fullUrl = `${baseUrl}${cleanPath}`;
+  console.log(`[PDF Generation] Logo URL: ${logoPath} -> ${fullUrl}`);
+  return fullUrl;
 }
 
 /**
