@@ -184,9 +184,22 @@ interface Browser {
   close: () => Promise<void>;
 }
 
+interface PuppeteerRequest {
+  resourceType: () => string;
+  url: () => string;
+  continue: () => void;
+}
+
+interface PuppeteerResponse {
+  status: () => number;
+  url: () => string;
+  request: () => PuppeteerRequest;
+}
+
 interface Page {
   setContent: (html: string, options?: { waitUntil?: string }) => Promise<void>;
   setRequestInterception: (value: boolean) => Promise<void>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   on: (event: string, handler: (arg: any) => void) => void;
   pdf: (options: {
     format?: string;
@@ -292,6 +305,7 @@ async function generateBracketPDF(
     
     // Set up request interception to log image loading
     await page.setRequestInterception(true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     page.on('request', (request: any) => {
       if (request.resourceType() === 'image') {
         console.log(`[PDF Generation] Loading image: ${request.url()}`);
@@ -299,6 +313,7 @@ async function generateBracketPDF(
       request.continue();
     });
     
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     page.on('response', (response: any) => {
       if (response.request().resourceType() === 'image') {
         const status = response.status();
