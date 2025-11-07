@@ -302,30 +302,7 @@ async function generateBracketPDF(
     console.log('[PDF Generation] HTML generated, length:', htmlContent.length);
     
     console.log('[PDF Generation] Setting page content...');
-    
-    // Set up request interception to log image loading
-    await page.setRequestInterception(true);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    page.on('request', (request: any) => {
-      if (request.resourceType() === 'image') {
-        console.log(`[PDF Generation] Loading image: ${request.url()}`);
-      }
-      request.continue();
-    });
-    
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    page.on('response', (response: any) => {
-      if (response.request().resourceType() === 'image') {
-        const status = response.status();
-        const url = response.url();
-        if (status >= 200 && status < 300) {
-          console.log(`[PDF Generation] Image loaded successfully: ${url}`);
-        } else {
-          console.error(`[PDF Generation] Image failed to load (${status}): ${url}`);
-        }
-      }
-    });
-    
+    // Images are embedded as base64 data URLs, so no HTTP requests needed
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
     console.log('[PDF Generation] Page content set');
 
@@ -378,16 +355,49 @@ function getBaseUrl(): string {
 }
 
 /**
- * Convert relative logo path to absolute URL
+ * Convert relative logo path to base64 data URL
+ * This avoids HTTP requests that might be blocked (401 errors)
  */
-function getAbsoluteLogoUrl(logoPath: string | null | undefined): string {
+function getLogoAsBase64(logoPath: string | null | undefined): string {
   if (!logoPath) return '';
-  const baseUrl = getBaseUrl();
-  // Remove leading slash if present to avoid double slashes
-  const cleanPath = logoPath.startsWith('/') ? logoPath : `/${logoPath}`;
-  const fullUrl = `${baseUrl}${cleanPath}`;
-  console.log(`[PDF Generation] Logo URL: ${logoPath} -> ${fullUrl}`);
-  return fullUrl;
+  
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const fs = require('fs');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const path = require('path');
+    
+    // Remove leading slash and construct file path
+    const cleanPath = logoPath.startsWith('/') ? logoPath.slice(1) : logoPath;
+    const filePath = path.join(process.cwd(), 'public', cleanPath);
+    
+    if (!fs.existsSync(filePath)) {
+      console.warn(`[PDF Generation] Logo file not found: ${filePath}`);
+      return '';
+    }
+    
+    // Read file and convert to base64
+    const imageBuffer = fs.readFileSync(filePath);
+    const base64 = imageBuffer.toString('base64');
+    
+    // Determine MIME type from file extension
+    const ext = path.extname(filePath).toLowerCase();
+    let mimeType = 'image/png'; // default
+    if (ext === '.jpg' || ext === '.jpeg') {
+      mimeType = 'image/jpeg';
+    } else if (ext === '.gif') {
+      mimeType = 'image/gif';
+    } else if (ext === '.webp') {
+      mimeType = 'image/webp';
+    }
+    
+    const dataUrl = `data:${mimeType};base64,${base64}`;
+    console.log(`[PDF Generation] Logo converted to base64: ${logoPath} (${imageBuffer.length} bytes)`);
+    return dataUrl;
+  } catch (error) {
+    console.error(`[PDF Generation] Error converting logo to base64 (${logoPath}):`, error);
+    return '';
+  }
 }
 
 /**
@@ -428,10 +438,10 @@ function renderTeamCell(
     `;
   }
 
-  const logoUrl = getAbsoluteLogoUrl(team.logo);
-  const logoHtml = showLogo && logoUrl ? `
+  const logoDataUrl = getLogoAsBase64(team.logo);
+  const logoHtml = showLogo && logoDataUrl ? `
     <img
-      src="${logoUrl}"
+      src="${logoDataUrl}"
       alt="${team.name} logo"
       width="${logoSize}"
       height="${logoSize}"
@@ -486,10 +496,10 @@ function renderVerticalTeamCell(
     `;
   }
 
-  const logoUrl = getAbsoluteLogoUrl(team.logo);
-  const logoHtml = logoUrl ? `
+  const logoDataUrl = getLogoAsBase64(team.logo);
+  const logoHtml = logoDataUrl ? `
     <img
-      src="${logoUrl}"
+      src="${logoDataUrl}"
       alt="${team.name} logo"
       width="${logoSize}"
       height="${logoSize}"
@@ -640,8 +650,8 @@ function renderFinalFourSection(
     ? tournamentData.regions.flatMap(r => r.teams).find(t => t.id === semifinal2Pick) 
     : null;
 
-  const finalist1Logo = getAbsoluteLogoUrl(finalist1?.logo);
-  const finalist2Logo = getAbsoluteLogoUrl(finalist2?.logo);
+  const finalist1Logo = getLogoAsBase64(finalist1?.logo);
+  const finalist2Logo = getLogoAsBase64(finalist2?.logo);
 
   return `
     <div style="
@@ -739,7 +749,7 @@ function generatePrintPageHTML(
   const championTeam = championshipPick 
     ? tournamentData.regions.flatMap(r => r.teams).find(t => t.id === championshipPick) 
     : null;
-  const championLogo = getAbsoluteLogoUrl(championTeam?.logo);
+  const championLogo = getLogoAsBase64(championTeam?.logo);
   
   return `
     <!DOCTYPE html>
