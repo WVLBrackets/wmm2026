@@ -226,7 +226,20 @@ async function generateBracketPDF(
   try {
     console.log('[PDF Generation] Loading puppeteer-core...');
     // Use dynamic require to avoid build-time module resolution errors
-    puppeteer = eval('require')('puppeteer-core') as PuppeteerType;
+    // Try multiple methods to ensure it works in different environments
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      puppeteer = require('puppeteer-core') as PuppeteerType;
+    } catch (e1) {
+      try {
+        // Fallback: use Function constructor (works in strict mode)
+        const requireFunc = new Function('moduleName', 'return require(moduleName)');
+        puppeteer = requireFunc('puppeteer-core') as PuppeteerType;
+      } catch (e2) {
+        // Last resort: eval
+        puppeteer = eval('require')('puppeteer-core') as PuppeteerType;
+      }
+    }
     console.log('[PDF Generation] puppeteer-core loaded');
   } catch (error) {
     console.error('[PDF Generation] Failed to load puppeteer-core:', error);
@@ -235,7 +248,20 @@ async function generateBracketPDF(
   
   try {
     console.log('[PDF Generation] Loading @sparticuz/chromium...');
-    chromium = eval('require')('@sparticuz/chromium') as ChromiumType;
+    // Use dynamic require to avoid build-time module resolution errors
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      chromium = require('@sparticuz/chromium') as ChromiumType;
+    } catch (e1) {
+      try {
+        // Fallback: use Function constructor (works in strict mode)
+        const requireFunc = new Function('moduleName', 'return require(moduleName)');
+        chromium = requireFunc('@sparticuz/chromium') as ChromiumType;
+      } catch (e2) {
+        // Last resort: eval
+        chromium = eval('require')('@sparticuz/chromium') as ChromiumType;
+      }
+    }
     if (chromium && typeof chromium.setGraphicsMode === 'function') {
       chromium.setGraphicsMode(false);
     }
