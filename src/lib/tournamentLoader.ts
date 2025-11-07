@@ -1,6 +1,4 @@
 import { TournamentData } from '@/types/tournament';
-import * as fs from 'fs';
-import * as path from 'path';
 
 /**
  * Load tournament data from JSON file
@@ -12,7 +10,11 @@ export async function loadTournamentData(year: string = '2025'): Promise<Tournam
     const isServer = typeof window === 'undefined';
     
     if (isServer) {
-      // Server-side: Read directly from filesystem
+      // Server-side: Read directly from filesystem using dynamic require
+      // This prevents fs from being bundled in client-side code
+      const fs = require('fs');
+      const path = require('path');
+      
       const filePath = path.join(process.cwd(), 'public', 'data', `tournament-${year}.json`);
       
       if (!fs.existsSync(filePath)) {
