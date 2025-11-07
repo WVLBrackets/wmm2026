@@ -1,41 +1,34 @@
 import { TournamentData } from '@/types/tournament';
+import * as fs from 'fs';
+import * as path from 'path';
 
 /**
  * Load tournament data from JSON file
+ * Uses fs.readFileSync on server-side, fetch in browser
  */
-/**
- * Get base URL for absolute paths in serverless environments
- * Only used on server-side (API routes)
- */
-function getBaseUrl(): string {
-  const vercelEnv = process.env.VERCEL_ENV;
-  
-  if (vercelEnv === 'production') {
-    return process.env.NEXTAUTH_URL || 'https://wmm2026.vercel.app';
-  } else if (vercelEnv === 'preview') {
-    return process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : process.env.NEXTAUTH_URL || 'http://localhost:3000';
-  } else {
-    return process.env.NEXTAUTH_URL || 'http://localhost:3000';
-  }
-}
-
 export async function loadTournamentData(year: string = '2025'): Promise<TournamentData> {
   try {
     // Check if we're in a server environment (Node.js) or browser
-    // In serverless environments (Vercel API routes), we need absolute URLs
-    // In the browser, relative URLs work fine
     const isServer = typeof window === 'undefined';
-    const tournamentUrl = isServer 
-      ? `${getBaseUrl()}/data/tournament-${year}.json`
-      : `/data/tournament-${year}.json`;
     
-    const response = await fetch(tournamentUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to load tournament data for ${year}`);
+    if (isServer) {
+      // Server-side: Read directly from filesystem
+      const filePath = path.join(process.cwd(), 'public', 'data', `tournament-${year}.json`);
+      
+      if (!fs.existsSync(filePath)) {
+        throw new Error(`Tournament data file not found: tournament-${year}.json`);
+      }
+      
+      const fileContent = fs.readFileSync(filePath, 'utf8');
+      return JSON.parse(fileContent) as TournamentData;
+    } else {
+      // Client-side: Use fetch with relative URL
+      const response = await fetch(`/data/tournament-${year}.json`);
+      if (!response.ok) {
+        throw new Error(`Failed to load tournament data for ${year}`);
+      }
+      return await response.json();
     }
-    return await response.json();
   } catch (error) {
     console.error('Error loading tournament data:', error);
     throw error;

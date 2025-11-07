@@ -177,10 +177,17 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
         setEmailDialogOpen(false);
         setTimeout(() => setEmailMessage(null), 5000);
       } else {
-        setEmailMessage({ type: 'error', text: data.error || 'Failed to send email. Please try again.' });
+        // Show detailed error message if available (staging/development)
+        const errorText = data.details 
+          ? `${data.error}: ${data.details}`
+          : data.error || 'Failed to send email. Please try again.';
+        setEmailMessage({ type: 'error', text: errorText });
+        console.error('Email error details:', data);
       }
     } catch (error) {
-      setEmailMessage({ type: 'error', text: 'An error occurred while sending the email. Please try again.' });
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setEmailMessage({ type: 'error', text: `An error occurred: ${errorMessage}` });
+      console.error('Email error:', error);
     } finally {
       setIsSendingEmail(false);
     }
