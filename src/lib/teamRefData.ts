@@ -25,16 +25,11 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
   // Check cache first (synchronously, no race condition)
   const now = Date.now();
   if (cachedTeamData && (now - lastFetchTime) < CACHE_DURATION) {
-    const cacheTime = performance.now() - startTime;
-    if (cacheTime > 1) { // Only log if it took more than 1ms (avoid spam)
-      console.log(`⚡ Using cached team reference data in ${cacheTime.toFixed(2)}ms`);
-    }
     return cachedTeamData;
   }
 
   // If there's already a request in flight, wait for it instead of making a new one
   if (inFlightRequest) {
-    console.log(`⏳ Waiting for in-flight team data request...`);
     return inFlightRequest;
   }
 
@@ -57,43 +52,35 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
                 name: teamInfo.name
               }));
             
-            console.log(`📋 Loaded ${teamData.length} active teams from database`);
-            
             cachedTeamData = teamData;
             lastFetchTime = Date.now();
             
             const totalTime = performance.now() - startTime;
-            console.log(`✅ Team reference data ready from database in ${totalTime.toFixed(2)}ms`);
+            console.log(`[Performance] Team data loaded from DB: ${totalTime.toFixed(2)}ms (${teamData.length} teams)`);
             return teamData;
           }
           
           // Database is empty - this shouldn't happen in production, but use fallback
-          console.warn('⚠️ Database has no team data, using fallback data');
-          const fallbackStart = performance.now();
+          console.warn('[TeamData] Database has no team data, using fallback');
           const fallbackData = getFallbackTeamData();
-          const fallbackEnd = performance.now();
-          console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
           
           cachedTeamData = fallbackData;
           lastFetchTime = Date.now();
           
           const totalTime = performance.now() - startTime;
-          console.log(`✅ Team reference data ready (fallback) in ${totalTime.toFixed(2)}ms`);
+          console.log(`[Performance] Team data (fallback): ${totalTime.toFixed(2)}ms`);
           return fallbackData;
           
         } catch (dbError) {
-          console.error('❌ Database error, using fallback:', dbError instanceof Error ? dbError.message : String(dbError));
+          console.error('[TeamData] Database error, using fallback:', dbError instanceof Error ? dbError.message : String(dbError));
           // Use hardcoded fallback data if database fails
-          const fallbackStart = performance.now();
           const fallbackData = getFallbackTeamData();
-          const fallbackEnd = performance.now();
-          console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
           
           cachedTeamData = fallbackData;
           lastFetchTime = Date.now();
           
           const totalTime = performance.now() - startTime;
-          console.log(`✅ Team reference data ready (fallback) in ${totalTime.toFixed(2)}ms`);
+          console.log(`[Performance] Team data (fallback after error): ${totalTime.toFixed(2)}ms`);
           return fallbackData;
         }
       }
@@ -115,12 +102,12 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
           lastFetchTime = Date.now();
           
           const totalTime = performance.now() - startTime;
-          console.log(`✅ Loaded ${result.data.length} teams from API in ${totalTime.toFixed(2)}ms`);
+          console.log(`[Performance] Team data loaded from API: ${totalTime.toFixed(2)}ms (${result.data.length} teams)`);
           return result.data;
         }
         
         // API returned empty data - this is an error, not a fallback case
-        console.error('❌ API returned empty data - database may be empty or inaccessible');
+        console.error('[TeamData] API returned empty data');
         throw new Error('Team reference data is unavailable. Please contact support.');
         
       } catch (apiError) {
@@ -130,12 +117,12 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
         
         // If it's a network/connection error, we might want to retry or show a different message
         if (errorMessage.includes('fetch') || errorMessage.includes('network') || errorMessage.includes('Failed to fetch')) {
-          console.error('❌ Network error fetching team data:', errorMessage);
+          console.error('[TeamData] Network error:', errorMessage);
           throw new Error('Unable to connect to server. Please check your connection and try again.');
         }
         
         // For other errors, throw them up - let the UI handle it
-        console.error('❌ Error fetching team data:', errorMessage);
+        console.error('[TeamData] Error:', errorMessage);
         throw apiError;
       }
     } finally {
@@ -161,9 +148,9 @@ export async function getTeamIdByAbbr(abbr: string): Promise<string | null> {
     }
     return team.id;
   } catch (error) {
-    // Only log errors, not warnings for missing teams
+    // Only log unexpected errors, not "not found" errors
     if (error instanceof Error && !error.message.includes('not found')) {
-      console.error(`Error getting team ID for ${abbr}:`, error);
+      console.error(`[TeamData] Error getting team ID for ${abbr}:`, error);
     }
     // Re-throw to let caller handle the error
     throw error;
@@ -496,7 +483,6 @@ export async function getTeamIdByName(teamName: string): Promise<string | null> 
     if (mappedAbbr) {
       team = teamData.find(t => t.abbr === mappedAbbr);
       if (team) {
-        console.log(`🏀 Mapped "${teamName}" -> "${mappedAbbr}" -> ID: ${team.id}`);
         return team.id;
       }
     }
@@ -504,7 +490,7 @@ export async function getTeamIdByName(teamName: string): Promise<string | null> 
     // Team not found - return null (not an error, just not found)
     return null;
   } catch (error) {
-    console.error(`Error getting team ID for ${teamName}:`, error);
+    console.error(`[TeamData] Error getting team ID for ${teamName}:`, error);
     // Re-throw to let caller handle the error
     throw error;
   }

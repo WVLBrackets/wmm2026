@@ -68,7 +68,10 @@ export async function getTeamInfo(teamName: string, size: number = 30): Promise<
     
     return teamInfo;
   } catch (error) {
-    console.error(`Error getting team info for ${teamName}:`, error);
+    // Only log unexpected errors (not "not found" errors which are expected)
+    if (error instanceof Error && !error.message.includes('not found')) {
+      console.error(`[TeamLogo] Error getting team info for ${teamName}:`, error);
+    }
     // Re-throw the error - let the UI component handle it
     throw error;
   }

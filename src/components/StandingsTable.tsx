@@ -48,7 +48,7 @@ function TeamLogo({
         setTeamInfo(info);
         setTeamError(null); // Clear any previous errors
       } catch (error: unknown) {
-        console.error('Error loading team info:', error);
+        // Error logging handled in teamLogos.ts
         const errorMessage = error instanceof Error ? error.message : 'Team not found';
         setTeamError(errorMessage);
         // Don't set placeholder - show error in UI instead
@@ -175,7 +175,6 @@ function TeamLogo({
         priority={size > 50} // Prioritize loading for larger logos
         sizes={`${size}px`} // Specify exact size for better optimization
         onError={() => {
-          console.warn(`Failed to load logo for ${teamInfo.name}:`, teamInfo.logoUrl);
           setImageError(true);
         }}
       />
@@ -224,7 +223,7 @@ export default function StandingsTable() {
           setStandingsYear(siteConfig.standingsYear);
         }
       } catch (error) {
-        console.error('Error loading standings year:', error);
+        // Error loading standings year - keep default fallback
         // Keep the default fallback value
       }
     };
@@ -243,7 +242,7 @@ export default function StandingsTable() {
           setDisplayDay(days[0]); // Also set display day
         }
       } catch (error) {
-        console.error('Error loading days:', error);
+        // Error loading days - will retry on next render
       }
     };
     loadDays();
@@ -251,8 +250,6 @@ export default function StandingsTable() {
 
   // Handle day selection with immediate UI update
   const handleDayChange = (day: string) => {
-    console.log(`🔄 Day change requested: ${day}`);
-    
     // Update both display and selected day immediately
     setDisplayDay(day);
     setSelectedDay(day);
@@ -267,33 +264,46 @@ export default function StandingsTable() {
     if (!selectedDay) return; // Don't load if no day is selected
     
     const loadStandings = async () => {
+      const pageLoadStart = performance.now();
       setLoading(true);
       setError(null);
       
       try {
         // Preload team data FIRST, before loading standings
         // This ensures the cache is populated before any TeamLogo components mount
+        const teamDataStart = performance.now();
         let teamRefData: { abbr: string; id: string }[] = [];
         try {
           teamRefData = await getTeamRefData();
-          console.log(`✅ Preloaded ${teamRefData.length} teams before standings render`);
+          const teamDataTime = performance.now() - teamDataStart;
+          console.log(`[Performance] Team data fetch: ${teamDataTime.toFixed(2)}ms`);
         } catch (error) {
-          console.error('Team data preload failed:', error);
+          console.error('[Standings] Team data preload failed:', error);
           // Continue anyway - individual logos will handle errors
         }
         
         // Now load standings data
+        const standingsStart = performance.now();
         const data = await getStandingsData(selectedDay);
-        setStandingsData(data);
-        setLoading(false);
+        const standingsTime = performance.now() - standingsStart;
+        console.log(`[Performance] Standings data fetch: ${standingsTime.toFixed(2)}ms`);
         
         // Populate cache with teams from standings
+        const preloadStart = performance.now();
         if (teamRefData.length > 0) {
           preloadTeamDataWithRef(data, teamRefData);
         }
+        const preloadTime = performance.now() - preloadStart;
+        console.log(`[Performance] Team cache preload: ${preloadTime.toFixed(2)}ms`);
+        
+        setStandingsData(data);
+        setLoading(false);
+        
+        const totalTime = performance.now() - pageLoadStart;
+        console.log(`[Performance] Total page load: ${totalTime.toFixed(2)}ms (${data.entries.length} entries)`);
       } catch (error) {
         setError('Failed to load standings data');
-        console.error('Error loading standings:', error);
+        console.error('[Standings] Error loading standings:', error);
         setLoading(false);
       }
     };
@@ -303,7 +313,6 @@ export default function StandingsTable() {
   // Optimized preload function that uses pre-fetched team reference data
   const preloadTeamDataWithRef = (data: StandingsData, teamRefData: { abbr: string; id: string }[]) => {
     const preloadStart = performance.now();
-    console.log(`🔄 Starting team preload for ${data.entries.length} entries`);
     
     const uniqueTeams = new Set<string>();
     
@@ -323,19 +332,13 @@ export default function StandingsTable() {
       }
     });
 
-    console.log(`📋 Found ${uniqueTeams.size} unique teams to preload`);
-
     // Check if we already have all teams in global cache
     const missingTeams = Array.from(uniqueTeams).filter(team => !globalTeamCache.has(team));
     
     if (missingTeams.length === 0) {
       // All teams already cached, no need to reload
-      const totalTime = performance.now() - preloadStart;
-      console.log(`⚡ All ${uniqueTeams.size} teams already cached, skipping preload in ${totalTime.toFixed(2)}ms`);
       return;
     }
-
-    console.log(`🔍 Processing ${missingTeams.length} missing teams`);
 
     // Add missing teams to global cache synchronously
     // Only cache teams that are found - let unknown teams use async lookup with proper fallback
@@ -346,13 +349,9 @@ export default function StandingsTable() {
       }
       // Don't cache unknown teams - let getTeamInfo() handle them with proper fallback to basketball icon
     });
-    const totalTime = performance.now() - preloadStart;
     
     // Update local state with global cache
     setTeamCache(new Map(globalTeamCache));
-    console.log(`✅ Added ${missingTeams.length} new teams to cache (${globalTeamCache.size} total) in ${totalTime.toFixed(2)}ms`);
-    
-    // Logo preloading is now handled automatically by the local file system
   };
 
   // Legacy preload function (kept for compatibility)
@@ -391,16 +390,6 @@ export default function StandingsTable() {
             standingsData.semifinalKey || [],
             standingsData.eliminatedTeams || []
           ) : undefined;
-          
-          // Debug logging for UNC and Houston specifically
-          if (team === 'UNC' || team === 'Hou') {
-            console.log(`🔍 ${team} Debug in renderFinalFour:`);
-            console.log(`  - isFinalsTeam: ${isFinalsTeam}`);
-            console.log(`  - semifinalWinners: [${(standingsData.semifinalWinners || []).join(', ')}]`);
-            console.log(`  - semifinalKey: [${(standingsData.semifinalKey || []).join(', ')}]`);
-            console.log(`  - eliminatedTeams: [${(standingsData.eliminatedTeams || []).join(', ')}]`);
-            console.log(`  - semifinalColor: ${semifinalColor}`);
-          }
           
           return (
             <TeamLogo
