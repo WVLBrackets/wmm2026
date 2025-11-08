@@ -44,12 +44,10 @@ async function getSheetLastModified(day: string): Promise<string | null> {
       
       // If the cell contains a valid timestamp, use it
       if (timestamp && timestamp !== '' && !timestamp.includes('Error')) {
-        console.log(`📅 Found sheet timestamp in A1: ${timestamp}`);
         return timestamp;
       }
     }
     
-    console.log('📅 No timestamp found in A1, using current time');
     return new Date().toISOString();
   } catch (error) {
     console.warn('Error fetching sheet modification time:', error);
@@ -62,13 +60,10 @@ async function getSheetLastModified(day: string): Promise<string | null> {
  */
 export async function getStandingsData(day: string = 'Day1'): Promise<StandingsData> {
   const startTime = performance.now();
-  console.log(`📊 getStandingsData started for ${day} at ${startTime.toFixed(2)}ms`);
   
   // Check cache first
   const cached = standingsCache.get(day);
   if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
-    const cacheTime = performance.now() - startTime;
-    console.log(`⚡ Using cached standings data for ${day} in ${cacheTime.toFixed(2)}ms`);
     return cached.data;
   }
 
@@ -79,29 +74,14 @@ export async function getStandingsData(day: string = 'Day1'): Promise<StandingsD
     const encodedSheetName = encodeURIComponent(sheetName);
     const csvUrl = `https://docs.google.com/spreadsheets/d/${STANDINGS_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodedSheetName}`;
     
-    console.log(`🌐 Fetching standings data for ${day} from:`, csvUrl);
-    const fetchStart = performance.now();
-    
     const response = await fetch(csvUrl);
-    const fetchEnd = performance.now();
-    console.log(`📡 Fetch completed in ${(fetchEnd - fetchStart).toFixed(2)}ms`);
     
     if (!response.ok) {
       throw new Error(`Failed to fetch standings data: ${response.status} ${response.statusText}`);
     }
     
     const csvText = await response.text();
-    const parseStart = performance.now();
-    console.log(`📄 Standings CSV response length: ${csvText.length}`);
-    console.log(`📄 Standings CSV preview:`, csvText.substring(0, 200));
-    
-        const { entries, quarterfinalWinners, semifinalWinners, semifinalKey, finalWinner, eliminatedTeams } = parseStandingsCSV(csvText);
-    const parseEnd = performance.now();
-    console.log(`🔍 CSV parsing completed in ${(parseEnd - parseStart).toFixed(2)}ms`);
-    console.log(`📊 Quarterfinal Winners: ${quarterfinalWinners.join(', ')}`);
-    console.log(`📊 Semifinal Winners: ${semifinalWinners.join(', ')}`);
-    console.log(`📊 Final Winner: ${finalWinner}`);
-    console.log(`📊 Eliminated Teams: ${eliminatedTeams.join(', ')}`);
+    const { entries, quarterfinalWinners, semifinalWinners, semifinalKey, finalWinner, eliminatedTeams } = parseStandingsCSV(csvText);
     
     // Get the sheet's last modified time
     const sheetLastModified = await getSheetLastModified(day);
@@ -122,11 +102,10 @@ export async function getStandingsData(day: string = 'Day1'): Promise<StandingsD
     standingsCache.set(day, { data: standingsData, timestamp: Date.now() });
     
     const totalTime = performance.now() - startTime;
-    console.log(`✅ Loaded ${entries.length} standings entries for ${day} in ${totalTime.toFixed(2)}ms`);
+    console.log(`[Performance] Standings data loaded: ${totalTime.toFixed(2)}ms (${entries.length} entries)`);
     return standingsData;
   } catch (error) {
-    console.error('Error fetching standings data:', error);
-    console.log('Falling back to fallback data for', day);
+    console.error('[Standings] Error fetching standings data:', error);
     // Return fallback data
     return getFallbackStandingsData(day);
   }
@@ -177,25 +156,18 @@ function parseStandingsCSV(csvText: string): { entries: StandingsEntry[]; quarte
         const teamName = row[14]?.trim(); // Column O: Team name
         const isEliminated = row[15]?.trim().toUpperCase(); // Column P: TRUE/FALSE
         
-        console.log(`🔍 Row ${rowIndex + 1}: Team="${teamName}", Eliminated="${isEliminated}"`);
-        
         // If we hit a blank team name, stop parsing
         if (!teamName || teamName === '') {
-          console.log(`🔍 Found blank team name in row ${rowIndex + 1}, stopping elimination parsing`);
           break;
         }
         
         // If Column P is TRUE, the team is eliminated
         if (isEliminated === 'TRUE') {
-          console.log(`🔍 Team "${teamName}" is eliminated (TRUE in Column P)`);
           eliminatedTeams.push(teamName);
-        } else {
-          console.log(`🔍 Team "${teamName}" is still in (FALSE in Column P)`);
         }
       }
     }
   }
-  console.log(`🔍 Final eliminated teams array: [${eliminatedTeams.join(', ')}]`);
   
   // Parse player entries starting from row 3
   for (let i = 2; i < lines.length; i++) {
@@ -283,10 +255,9 @@ export async function getAvailableDays(): Promise<string[]> {
       const finalResponse = await fetch(finalUrl);
       if (finalResponse.ok) {
         days.push('Final');
-        console.log('✅ Found "Final" tab - added as first option');
       }
     } catch {
-      console.log('ℹ️ "Final" tab not found or not accessible');
+      // Final tab not found, continue without it
     }
     
     // Generate days in descending order (Day 9, Day 8, etc.)
@@ -296,7 +267,6 @@ export async function getAvailableDays(): Promise<string[]> {
       days.push(`Day${i}`);
     }
     
-    console.log(`📊 Available days: ${days.join(', ')}`);
     return days;
   } catch (error) {
     console.error('Error getting available days:', error);
@@ -347,29 +317,21 @@ export function getQuarterfinalColor(
   quarterfinalWinners: string[],
   eliminatedTeams: string[]
 ): 'correct' | 'incorrect' | 'neutral' {
-  console.log(`🔍 Quarterfinal color check for "${team}":`);
-  console.log(`  - Quarterfinal winners: [${quarterfinalWinners.join(', ')}]`);
-  console.log(`  - Eliminated teams: [${eliminatedTeams.join(', ')}]`);
-  
   // PRIORITY: If there are quarterfinal results, use those (winners override eliminated status)
   if (quarterfinalWinners.length > 0) {
     if (quarterfinalWinners.includes(team)) {
-      console.log(`  - Result: CORRECT (team matches quarterfinal winner)`);
       return 'correct';
     } else {
-      console.log(`  - Result: INCORRECT (team doesn't match quarterfinal winners)`);
       return 'incorrect';
     }
   }
   
   // If no quarterfinal results yet, check if team is eliminated
   if (eliminatedTeams.includes(team)) {
-    console.log(`  - Result: INCORRECT (team is eliminated)`);
     return 'incorrect';
   }
-  
+
   // No results yet and team not eliminated, neutral
-  console.log(`  - Result: NEUTRAL (no results yet)`);
   return 'neutral';
 }
 
@@ -382,30 +344,21 @@ export function getSemifinalColor(
   semifinalKey: string[],
   eliminatedTeams: string[]
 ): 'correct' | 'incorrect' | 'neutral' {
-  console.log(`🔍 Semifinal color check for "${team}":`);
-  console.log(`  - Semifinal winners: [${semifinalWinners.join(', ')}]`);
-  console.log(`  - Semifinal key: [${semifinalKey.join(', ')}]`);
-  console.log(`  - Eliminated teams: [${eliminatedTeams.join(', ')}]`);
-  
   // Check if this team's semifinal game has been played (non-blank in KEY)
   const teamSemifinalPlayed = semifinalKey.includes(team);
   
   if (teamSemifinalPlayed) {
     // Team's semifinal has been played - check if they won
     if (semifinalWinners.includes(team)) {
-      console.log(`  - Result: CORRECT (team won their semifinal)`);
       return 'correct';
     } else {
-      console.log(`  - Result: INCORRECT (team lost their semifinal)`);
       return 'incorrect';
     }
   } else {
     // Team's semifinal hasn't been played yet
     if (eliminatedTeams.includes(team)) {
-      console.log(`  - Result: INCORRECT (team is eliminated)`);
       return 'incorrect';
     } else {
-      console.log(`  - Result: NEUTRAL (semifinal not played yet)`);
       return 'neutral';
     }
   }

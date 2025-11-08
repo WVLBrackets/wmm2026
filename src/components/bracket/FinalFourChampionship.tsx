@@ -295,23 +295,6 @@ export default function FinalFourChampionship({
     }
   }, [championshipGame.id, picks, scrollContainerRef, readOnly]);
 
-  // Debug logging for config parameter
-  useEffect(() => {
-    console.log('=== FinalFourChampionship Debug ===');
-    console.log('siteConfig object:', siteConfig);
-    console.log('siteConfig type:', typeof siteConfig);
-    console.log('siteConfig is null?', siteConfig === null);
-    console.log('siteConfig is undefined?', siteConfig === undefined);
-    if (siteConfig) {
-      console.log('All siteConfig keys:', Object.keys(siteConfig));
-      console.log('finalFourHeaderMessage value:', siteConfig.finalFourHeaderMessage);
-      console.log('finalFourHeaderMessage type:', typeof siteConfig.finalFourHeaderMessage);
-      console.log('finalFourHeaderMessage is undefined?', siteConfig.finalFourHeaderMessage === undefined);
-      console.log('finalFourHeaderMessage is empty string?', siteConfig.finalFourHeaderMessage === '');
-    }
-    console.log('Rendered value:', siteConfig?.finalFourHeaderMessage || '');
-    console.log('=== End Debug ===');
-  }, [siteConfig]);
 
   return (
     <div className="flex flex-col mx-auto border-2 border-gray-300 rounded-lg" style={{ width: 'fit-content' }}>
