@@ -3,7 +3,7 @@ import { getAllTeamReferenceData, initializeTeamDataTable } from '@/lib/secureDa
 
 // Cache team data in memory to avoid repeated database queries
 let cachedTeamData: { data: any[]; timestamp: number } | null = null;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes - shorter cache for faster new team visibility
 
 /**
  * GET /api/team-data - Get all team reference data (public read-only endpoint)
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       data: cachedTeamData.data,
     }, {
       headers: {
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600', // 5 min CDN cache, 10 min stale
+        'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=240', // 2 min CDN cache, 4 min stale
       },
     });
   }
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
       data: teamRefData,
     }, {
       headers: {
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600', // 5 min CDN cache, 10 min stale
+        'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=240', // 2 min CDN cache, 4 min stale
       },
     });
   } catch (error) {

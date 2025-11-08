@@ -10,7 +10,7 @@ export interface TeamRefData {
 // Cache for team reference data
 let cachedTeamData: TeamRefData[] | null = null;
 let lastFetchTime = 0;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes - shorter cache for faster new team visibility
 
 /**
  * Fetch team reference data (from database first, then JSON file fallback)
@@ -109,24 +109,24 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
       return result.data;
     }
     
-    // API returned empty data, use fallback
-    console.warn('⚠️ API returned empty data, using fallback');
-    throw new Error('API returned empty data');
+    // API returned empty data - this is an error, not a fallback case
+    console.error('❌ API returned empty data - database may be empty or inaccessible');
+    throw new Error('Team reference data is unavailable. Please contact support.');
     
   } catch (apiError) {
-    console.error('❌ API error, using fallback:', apiError instanceof Error ? apiError.message : String(apiError));
-    // Use hardcoded fallback data if API fails
-    const fallbackStart = performance.now();
-    const fallbackData = getFallbackTeamData();
-    const fallbackEnd = performance.now();
-    console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
+    // Only use fallback for critical system errors (database completely down)
+    // For missing teams, we should show errors in UI, not use fallback
+    const errorMessage = apiError instanceof Error ? apiError.message : String(apiError);
     
-    cachedTeamData = fallbackData;
-    lastFetchTime = now;
+    // If it's a network/connection error, we might want to retry or show a different message
+    if (errorMessage.includes('fetch') || errorMessage.includes('network') || errorMessage.includes('Failed to fetch')) {
+      console.error('❌ Network error fetching team data:', errorMessage);
+      throw new Error('Unable to connect to server. Please check your connection and try again.');
+    }
     
-    const totalTime = performance.now() - startTime;
-    console.log(`✅ Team reference data ready (fallback) in ${totalTime.toFixed(2)}ms`);
-    return fallbackData;
+    // For other errors, throw them up - let the UI handle it
+    console.error('❌ Error fetching team data:', errorMessage);
+    throw apiError;
   }
 }
 
@@ -138,12 +138,15 @@ export async function getTeamIdByAbbr(abbr: string): Promise<string | null> {
     const teamData = await getTeamRefData();
     const team = teamData.find(t => t.abbr === abbr);
     if (!team) {
-      console.warn(`⚠️ Team abbreviation not found: "${abbr}" - Please add to team reference data`);
+      // Don't log as warning - this is expected for some teams (like FF1, FF2, etc.)
+      // Return null and let the caller decide how to handle it
+      return null;
     }
-    return team ? team.id : null;
+    return team.id;
   } catch (error) {
     console.error(`Error getting team ID for ${abbr}:`, error);
-    return null;
+    // Re-throw to let caller handle the error
+    throw error;
   }
 }
 
@@ -478,11 +481,12 @@ export async function getTeamIdByName(teamName: string): Promise<string | null> 
       }
     }
     
-    console.warn(`⚠️ Team name not found: "${teamName}" - Please add to team name mapping`);
+    // Team not found - return null (not an error, just not found)
     return null;
   } catch (error) {
     console.error(`Error getting team ID for ${teamName}:`, error);
-    return null;
+    // Re-throw to let caller handle the error
+    throw error;
   }
 }
 

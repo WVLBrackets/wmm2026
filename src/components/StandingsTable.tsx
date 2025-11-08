@@ -29,6 +29,7 @@ function TeamLogo({
   const [teamInfo, setTeamInfo] = useState<{ id: string; name: string; logoUrl: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
+  const [teamError, setTeamError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadTeamInfo = async () => {
@@ -45,9 +46,13 @@ function TeamLogo({
         // Fallback to async lookup if not in cache
         const info = await getTeamInfo(teamName, size);
         setTeamInfo(info);
-        } catch (error: unknown) {
+        setTeamError(null); // Clear any previous errors
+      } catch (error: unknown) {
         console.error('Error loading team info:', error);
-          setTeamInfo({ id: 'placeholder', name: teamName, logoUrl: '/images/basketball icon.png' });
+        const errorMessage = error instanceof Error ? error.message : 'Team not found';
+        setTeamError(errorMessage);
+        // Don't set placeholder - show error in UI instead
+        setTeamInfo(null);
       } finally {
         setLoading(false);
       }
@@ -86,8 +91,28 @@ function TeamLogo({
     return `${bgClass} ${borderClass}`;
   };
 
+  // Show error if team not found in database
+  if (teamError) {
+    return (
+      <div className={`${className} ${getColorClasses()}`}>
+        <div 
+          className="relative flex flex-col items-center justify-center rounded border-2 border-red-300 bg-red-50"
+          style={{ width: size, height: size }}
+          title={`Error: ${teamError}`}
+        >
+          <div className="text-red-600 text-xs font-bold text-center px-1" style={{ fontSize: '8px' }}>
+            {teamName.substring(0, 6)}
+          </div>
+          <div className="text-red-500 text-xs" style={{ fontSize: '6px' }}>
+            ❌
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // If we have a team info but no logo URL, or if the image failed to load, show fallback
-  const shouldShowFallback = !teamInfo || !teamInfo.logoUrl || imageError || teamInfo.id === 'placeholder';
+  const shouldShowFallback = !teamInfo || !teamInfo.logoUrl || imageError;
 
   if (shouldShowFallback) {
     return (
@@ -251,11 +276,13 @@ export default function StandingsTable() {
         setLoading(false);
         
         // Preload team data in background
-        const teamRefData = await getTeamRefData();
         try {
+          const teamRefData = await getTeamRefData();
           preloadTeamDataWithRef(data, teamRefData);
         } catch (error) {
           console.error('Background team preload failed:', error);
+          // Don't fail the entire standings load if team data fails
+          // Individual team logos will handle their own errors
         }
       } catch (error) {
         setError('Failed to load standings data');

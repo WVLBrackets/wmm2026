@@ -51,15 +51,10 @@ export async function getTeamInfo(teamName: string, size: number = 30): Promise<
     console.log(`🔍 Looking up team "${teamName}" -> teamId: "${teamId}"`);
     
     if (!teamId) {
-      console.warn(`Team logo not found for: "${teamName}". Please add to team reference data.`);
-      // Return a placeholder that will show the basketball fallback
-      const placeholderInfo: TeamInfo = {
-        id: 'placeholder',
-        name: teamName,
-        logoUrl: '/images/basketball icon.png'
-      };
-      teamInfoCache.set(cacheKey, placeholderInfo);
-      return placeholderInfo;
+      // Team not found in database - throw error instead of using fallback
+      const error = new Error(`Team "${teamName}" not found in database. Please add it to the team reference data.`);
+      // Don't cache the error - allow retry if team is added later
+      throw error;
     }
     
     const logoUrl = getTeamLogoUrl(teamId);
@@ -76,14 +71,8 @@ export async function getTeamInfo(teamName: string, size: number = 30): Promise<
     return teamInfo;
   } catch (error) {
     console.error(`Error getting team info for ${teamName}:`, error);
-    // Return a placeholder that will show the basketball fallback
-    const errorInfo: TeamInfo = {
-      id: 'placeholder',
-      name: teamName,
-      logoUrl: '/images/basketball icon.png'
-    };
-    teamInfoCache.set(cacheKey, errorInfo);
-    return errorInfo;
+    // Re-throw the error - let the UI component handle it
+    throw error;
   }
 }
 
