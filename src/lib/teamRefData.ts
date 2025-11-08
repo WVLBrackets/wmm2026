@@ -100,11 +100,9 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
       
       // Client-side: fetch from API route which accesses the database
       try {
-        console.log('🌐 Client-side call: fetching team data from API');
         const apiStart = performance.now();
         const response = await fetch('/api/team-data?activeOnly=true');
         const apiEnd = performance.now();
-        console.log(`📡 API fetch completed in ${(apiEnd - apiStart).toFixed(2)}ms`);
         
         if (!response.ok) {
           throw new Error(`API returned ${response.status}: ${response.statusText}`);
@@ -113,13 +111,11 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
         const result = await response.json();
         
         if (result.success && result.data && Array.isArray(result.data) && result.data.length > 0) {
-          console.log(`📋 Loaded ${result.data.length} active teams from database via API`);
-          
           cachedTeamData = result.data;
           lastFetchTime = Date.now();
           
           const totalTime = performance.now() - startTime;
-          console.log(`✅ Team reference data ready from database (via API) in ${totalTime.toFixed(2)}ms`);
+          console.log(`✅ Loaded ${result.data.length} teams from API in ${totalTime.toFixed(2)}ms`);
           return result.data;
         }
         
@@ -165,7 +161,10 @@ export async function getTeamIdByAbbr(abbr: string): Promise<string | null> {
     }
     return team.id;
   } catch (error) {
-    console.error(`Error getting team ID for ${abbr}:`, error);
+    // Only log errors, not warnings for missing teams
+    if (error instanceof Error && !error.message.includes('not found')) {
+      console.error(`Error getting team ID for ${abbr}:`, error);
+    }
     // Re-throw to let caller handle the error
     throw error;
   }

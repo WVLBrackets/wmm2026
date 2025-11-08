@@ -48,8 +48,6 @@ export async function getTeamInfo(teamName: string, size: number = 30): Promise<
       teamId = await getTeamIdByAbbr(teamName);
     }
     
-    console.log(`🔍 Looking up team "${teamName}" -> teamId: "${teamId}"`);
-    
     if (!teamId) {
       // Team not found in database - throw error instead of using fallback
       const error = new Error(`Team "${teamName}" not found in database. Please add it to the team reference data.`);
