@@ -634,59 +634,54 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                         </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-center text-sm font-medium">
-                        <div className="flex items-center justify-center space-x-1 md:space-x-2 flex-wrap gap-1 md:gap-0">
-                          {/* Action buttons - icon + text on mobile, icon-only on desktop */}
+                        <div className="flex items-center justify-center space-x-2">
+                          {/* Action buttons - icon-only squares with tooltips */}
                           {bracket.status === 'in_progress' ? (
                             <>
                               {/* In Progress: Edit, Copy, Delete */}
                               <button
                                 onClick={() => onEditBracket(bracket)}
-                                className="bg-blue-600 text-white md:w-8 md:h-8 h-8 px-2 md:px-0 rounded flex items-center justify-center gap-1 md:gap-0 hover:bg-blue-700 cursor-pointer transition-colors"
+                                className="bg-blue-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-blue-700 cursor-pointer transition-colors"
                                 title="Edit"
                               >
-                                <Edit className="h-4 w-4 flex-shrink-0" />
-                                <span className="text-xs md:hidden">Edit</span>
+                                <Edit className="h-4 w-4" />
                               </button>
                               <button
                                 onClick={() => onCopyBracket(bracket)}
-                                className="bg-green-600 text-white md:w-8 md:h-8 h-8 px-2 md:px-0 rounded flex items-center justify-center gap-1 md:gap-0 hover:bg-green-700 cursor-pointer transition-colors"
+                                className="bg-green-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-green-700 cursor-pointer transition-colors"
                                 title="Copy"
                               >
-                                <Copy className="h-4 w-4 flex-shrink-0" />
-                                <span className="text-xs md:hidden">Copy</span>
+                                <Copy className="h-4 w-4" />
                               </button>
                               <button
                                 onClick={() => handleDeleteBracket(bracket.id)}
                                 disabled={deletingBracketId === bracket.id}
-                                className={`md:w-8 md:h-8 h-8 px-2 md:px-0 rounded flex items-center justify-center gap-1 md:gap-0 transition-colors ${
+                                className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
                                   deletingBracketId === bracket.id
                                     ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
                                     : 'bg-red-600 text-white hover:bg-red-700 cursor-pointer'
                                 }`}
                                 title={deletingBracketId === bracket.id ? 'Deleting...' : 'Delete'}
                               >
-                                <Trash2 className="h-4 w-4 flex-shrink-0" />
-                                <span className="text-xs md:hidden">Delete</span>
+                                <Trash2 className="h-4 w-4" />
                               </button>
                             </>
                           ) : (
                             <>
-                              {/* Submitted: View, Copy, Print (desktop only), Email */}
+                              {/* Submitted: View, Copy, Print, Email */}
                               <button
                                 onClick={() => onEditBracket(bracket)}
-                                className="bg-blue-600 text-white md:w-8 md:h-8 h-8 px-2 md:px-0 rounded flex items-center justify-center gap-1 md:gap-0 hover:bg-blue-700 cursor-pointer transition-colors"
+                                className="bg-blue-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-blue-700 cursor-pointer transition-colors"
                                 title="View"
                               >
-                                <Eye className="h-4 w-4 flex-shrink-0" />
-                                <span className="text-xs md:hidden">View</span>
+                                <Eye className="h-4 w-4" />
                               </button>
                               <button
                                 onClick={() => onCopyBracket(bracket)}
-                                className="bg-green-600 text-white md:w-8 md:h-8 h-8 px-2 md:px-0 rounded flex items-center justify-center gap-1 md:gap-0 hover:bg-green-700 cursor-pointer transition-colors"
+                                className="bg-green-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-green-700 cursor-pointer transition-colors"
                                 title="Copy"
                               >
-                                <Copy className="h-4 w-4 flex-shrink-0" />
-                                <span className="text-xs md:hidden">Copy</span>
+                                <Copy className="h-4 w-4" />
                               </button>
                               <button
                                 onClick={() => handlePrintBracket(bracket)}
@@ -697,11 +692,10 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                               </button>
                               <button
                                 onClick={() => handleEmailBracket(bracket)}
-                                className="bg-indigo-600 text-white md:w-8 md:h-8 h-8 px-2 md:px-0 rounded flex items-center justify-center gap-1 md:gap-0 hover:bg-indigo-700 cursor-pointer transition-colors"
+                                className="bg-indigo-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-indigo-700 cursor-pointer transition-colors"
                                 title="Email PDF"
                               >
-                                <Mail className="h-4 w-4 flex-shrink-0" />
-                                <span className="text-xs md:hidden">Email</span>
+                                <Mail className="h-4 w-4" />
                               </button>
                             </>
                           )}
