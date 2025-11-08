@@ -312,8 +312,6 @@ export default function StandingsTable() {
 
   // Optimized preload function that uses pre-fetched team reference data
   const preloadTeamDataWithRef = (data: StandingsData, teamRefData: { abbr: string; id: string }[]) => {
-    const preloadStart = performance.now();
-    
     const uniqueTeams = new Set<string>();
     
     // Collect all unique team names from standings
