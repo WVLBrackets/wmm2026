@@ -304,14 +304,13 @@ export default function StandingsTable() {
     console.log(`🔍 Processing ${missingTeams.length} missing teams`);
 
     // Add missing teams to global cache synchronously
+    // Only cache teams that are found - let unknown teams use async lookup with proper fallback
     missingTeams.forEach(teamName => {
       const teamRef = teamRefData.find(t => t.abbr === teamName);
       if (teamRef) {
         globalTeamCache.set(teamName, { id: teamRef.id, name: teamName });
-      } else {
-        // Fallback for unknown teams
-        globalTeamCache.set(teamName, { id: 'unknown', name: teamName });
       }
+      // Don't cache unknown teams - let getTeamInfo() handle them with proper fallback to basketball icon
     });
     const totalTime = performance.now() - preloadStart;
     
