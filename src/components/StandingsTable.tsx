@@ -271,18 +271,25 @@ export default function StandingsTable() {
       setError(null);
       
       try {
+        // Preload team data FIRST, before loading standings
+        // This ensures the cache is populated before any TeamLogo components mount
+        let teamRefData: { abbr: string; id: string }[] = [];
+        try {
+          teamRefData = await getTeamRefData();
+          console.log(`✅ Preloaded ${teamRefData.length} teams before standings render`);
+        } catch (error) {
+          console.error('Team data preload failed:', error);
+          // Continue anyway - individual logos will handle errors
+        }
+        
+        // Now load standings data
         const data = await getStandingsData(selectedDay);
         setStandingsData(data);
         setLoading(false);
         
-        // Preload team data in background
-        try {
-          const teamRefData = await getTeamRefData();
+        // Populate cache with teams from standings
+        if (teamRefData.length > 0) {
           preloadTeamDataWithRef(data, teamRefData);
-        } catch (error) {
-          console.error('Background team preload failed:', error);
-          // Don't fail the entire standings load if team data fails
-          // Individual team logos will handle their own errors
         }
       } catch (error) {
         setError('Failed to load standings data');

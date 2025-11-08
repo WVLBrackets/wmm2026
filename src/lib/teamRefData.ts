@@ -12,122 +12,143 @@ let cachedTeamData: TeamRefData[] | null = null;
 let lastFetchTime = 0;
 const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes - shorter cache for faster new team visibility
 
+// Request deduplication: track in-flight requests to prevent duplicate API calls
+let inFlightRequest: Promise<TeamRefData[]> | null = null;
+
 /**
  * Fetch team reference data (from database first, then JSON file fallback)
+ * Uses request deduplication to prevent multiple simultaneous API calls
  */
 export async function getTeamRefData(): Promise<TeamRefData[]> {
   const startTime = performance.now();
-  console.log(`🏈 getTeamRefData started at ${startTime.toFixed(2)}ms`);
   
-  // Check cache first
+  // Check cache first (synchronously, no race condition)
   const now = Date.now();
   if (cachedTeamData && (now - lastFetchTime) < CACHE_DURATION) {
     const cacheTime = performance.now() - startTime;
-    console.log(`⚡ Using cached team reference data in ${cacheTime.toFixed(2)}ms`);
+    if (cacheTime > 1) { // Only log if it took more than 1ms (avoid spam)
+      console.log(`⚡ Using cached team reference data in ${cacheTime.toFixed(2)}ms`);
+    }
     return cachedTeamData;
   }
 
-  // Try database (server-side only)
-  if (typeof window === 'undefined') {
+  // If there's already a request in flight, wait for it instead of making a new one
+  if (inFlightRequest) {
+    console.log(`⏳ Waiting for in-flight team data request...`);
+    return inFlightRequest;
+  }
+
+  // Create a new request promise and store it for deduplication
+  inFlightRequest = (async (): Promise<TeamRefData[]> => {
     try {
-      const { getAllTeamReferenceData } = await import('@/lib/secureDatabase');
-      // Only get active teams for public-facing calls
-      const dbTeams = await getAllTeamReferenceData(true);
-      
-      if (Object.keys(dbTeams).length > 0) {
-        const teamData: TeamRefData[] = Object.entries(dbTeams)
-          .filter(([_, teamInfo]) => teamInfo.active !== false)
-          .map(([abbr, teamInfo]) => ({
-            abbr,
-            id: teamInfo.id,
-            name: teamInfo.name
-          }));
-        
-        console.log(`📋 Loaded ${teamData.length} active teams from database`);
-        
-        cachedTeamData = teamData;
-        lastFetchTime = now;
-        
-        const totalTime = performance.now() - startTime;
-        console.log(`✅ Team reference data ready from database in ${totalTime.toFixed(2)}ms`);
-        return teamData;
+      // Try database (server-side only)
+      if (typeof window === 'undefined') {
+        try {
+          const { getAllTeamReferenceData } = await import('@/lib/secureDatabase');
+          // Only get active teams for public-facing calls
+          const dbTeams = await getAllTeamReferenceData(true);
+          
+          if (Object.keys(dbTeams).length > 0) {
+            const teamData: TeamRefData[] = Object.entries(dbTeams)
+              .filter(([_, teamInfo]) => teamInfo.active !== false)
+              .map(([abbr, teamInfo]) => ({
+                abbr,
+                id: teamInfo.id,
+                name: teamInfo.name
+              }));
+            
+            console.log(`📋 Loaded ${teamData.length} active teams from database`);
+            
+            cachedTeamData = teamData;
+            lastFetchTime = Date.now();
+            
+            const totalTime = performance.now() - startTime;
+            console.log(`✅ Team reference data ready from database in ${totalTime.toFixed(2)}ms`);
+            return teamData;
+          }
+          
+          // Database is empty - this shouldn't happen in production, but use fallback
+          console.warn('⚠️ Database has no team data, using fallback data');
+          const fallbackStart = performance.now();
+          const fallbackData = getFallbackTeamData();
+          const fallbackEnd = performance.now();
+          console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
+          
+          cachedTeamData = fallbackData;
+          lastFetchTime = Date.now();
+          
+          const totalTime = performance.now() - startTime;
+          console.log(`✅ Team reference data ready (fallback) in ${totalTime.toFixed(2)}ms`);
+          return fallbackData;
+          
+        } catch (dbError) {
+          console.error('❌ Database error, using fallback:', dbError instanceof Error ? dbError.message : String(dbError));
+          // Use hardcoded fallback data if database fails
+          const fallbackStart = performance.now();
+          const fallbackData = getFallbackTeamData();
+          const fallbackEnd = performance.now();
+          console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
+          
+          cachedTeamData = fallbackData;
+          lastFetchTime = Date.now();
+          
+          const totalTime = performance.now() - startTime;
+          console.log(`✅ Team reference data ready (fallback) in ${totalTime.toFixed(2)}ms`);
+          return fallbackData;
+        }
       }
       
-      // Database is empty - this shouldn't happen in production, but use fallback
-      console.warn('⚠️ Database has no team data, using fallback data');
-      const fallbackStart = performance.now();
-      const fallbackData = getFallbackTeamData();
-      const fallbackEnd = performance.now();
-      console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
-      
-      cachedTeamData = fallbackData;
-      lastFetchTime = now;
-      
-      const totalTime = performance.now() - startTime;
-      console.log(`✅ Team reference data ready (fallback) in ${totalTime.toFixed(2)}ms`);
-      return fallbackData;
-      
-    } catch (dbError) {
-      console.error('❌ Database error, using fallback:', dbError instanceof Error ? dbError.message : String(dbError));
-      // Use hardcoded fallback data if database fails
-      const fallbackStart = performance.now();
-      const fallbackData = getFallbackTeamData();
-      const fallbackEnd = performance.now();
-      console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
-      
-      cachedTeamData = fallbackData;
-      lastFetchTime = now;
-      
-      const totalTime = performance.now() - startTime;
-      console.log(`✅ Team reference data ready (fallback) in ${totalTime.toFixed(2)}ms`);
-      return fallbackData;
+      // Client-side: fetch from API route which accesses the database
+      try {
+        console.log('🌐 Client-side call: fetching team data from API');
+        const apiStart = performance.now();
+        const response = await fetch('/api/team-data?activeOnly=true');
+        const apiEnd = performance.now();
+        console.log(`📡 API fetch completed in ${(apiEnd - apiStart).toFixed(2)}ms`);
+        
+        if (!response.ok) {
+          throw new Error(`API returned ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success && result.data && Array.isArray(result.data) && result.data.length > 0) {
+          console.log(`📋 Loaded ${result.data.length} active teams from database via API`);
+          
+          cachedTeamData = result.data;
+          lastFetchTime = Date.now();
+          
+          const totalTime = performance.now() - startTime;
+          console.log(`✅ Team reference data ready from database (via API) in ${totalTime.toFixed(2)}ms`);
+          return result.data;
+        }
+        
+        // API returned empty data - this is an error, not a fallback case
+        console.error('❌ API returned empty data - database may be empty or inaccessible');
+        throw new Error('Team reference data is unavailable. Please contact support.');
+        
+      } catch (apiError) {
+        // Only use fallback for critical system errors (database completely down)
+        // For missing teams, we should show errors in UI, not use fallback
+        const errorMessage = apiError instanceof Error ? apiError.message : String(apiError);
+        
+        // If it's a network/connection error, we might want to retry or show a different message
+        if (errorMessage.includes('fetch') || errorMessage.includes('network') || errorMessage.includes('Failed to fetch')) {
+          console.error('❌ Network error fetching team data:', errorMessage);
+          throw new Error('Unable to connect to server. Please check your connection and try again.');
+        }
+        
+        // For other errors, throw them up - let the UI handle it
+        console.error('❌ Error fetching team data:', errorMessage);
+        throw apiError;
+      }
+    } finally {
+      // Clear the in-flight request so future calls can make new requests if cache expires
+      inFlightRequest = null;
     }
-  }
-  
-  // Client-side: fetch from API route which accesses the database
-  try {
-    console.log('🌐 Client-side call: fetching team data from API');
-    const apiStart = performance.now();
-    const response = await fetch('/api/team-data?activeOnly=true');
-    const apiEnd = performance.now();
-    console.log(`📡 API fetch completed in ${(apiEnd - apiStart).toFixed(2)}ms`);
-    
-    if (!response.ok) {
-      throw new Error(`API returned ${response.status}: ${response.statusText}`);
-    }
-    
-    const result = await response.json();
-    
-    if (result.success && result.data && Array.isArray(result.data) && result.data.length > 0) {
-      console.log(`📋 Loaded ${result.data.length} active teams from database via API`);
-      
-      cachedTeamData = result.data;
-      lastFetchTime = now;
-      
-      const totalTime = performance.now() - startTime;
-      console.log(`✅ Team reference data ready from database (via API) in ${totalTime.toFixed(2)}ms`);
-      return result.data;
-    }
-    
-    // API returned empty data - this is an error, not a fallback case
-    console.error('❌ API returned empty data - database may be empty or inaccessible');
-    throw new Error('Team reference data is unavailable. Please contact support.');
-    
-  } catch (apiError) {
-    // Only use fallback for critical system errors (database completely down)
-    // For missing teams, we should show errors in UI, not use fallback
-    const errorMessage = apiError instanceof Error ? apiError.message : String(apiError);
-    
-    // If it's a network/connection error, we might want to retry or show a different message
-    if (errorMessage.includes('fetch') || errorMessage.includes('network') || errorMessage.includes('Failed to fetch')) {
-      console.error('❌ Network error fetching team data:', errorMessage);
-      throw new Error('Unable to connect to server. Please check your connection and try again.');
-    }
-    
-    // For other errors, throw them up - let the UI handle it
-    console.error('❌ Error fetching team data:', errorMessage);
-    throw apiError;
-  }
+  })();
+
+  return inFlightRequest;
 }
 
 /**
