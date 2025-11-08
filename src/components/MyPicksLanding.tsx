@@ -685,7 +685,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                               </button>
                               <button
                                 onClick={() => handlePrintBracket(bracket)}
-                                className="bg-purple-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-purple-700 cursor-pointer transition-colors"
+                                className="hidden md:flex bg-purple-600 text-white w-8 h-8 rounded items-center justify-center hover:bg-purple-700 cursor-pointer transition-colors"
                                 title="Print"
                               >
                                 <Printer className="h-4 w-4" />
