@@ -85,52 +85,28 @@ export async function POST(request: NextRequest) {
     const pdfBuffer = await generateBracketPDF(bracket, updatedBracket, tournamentData, siteConfig);
     console.log('[Email PDF] PDF generated, size:', pdfBuffer.length, 'bytes');
 
-    // Send email with PDF attachment
+    // Generate email content from template
     const entryName = bracket.entryName || `Bracket ${bracket.id}`;
-    const emailHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Your Bracket - Warren's March Madness</title>
-      </head>
-      <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px;">
-          <h2 style="color: #2c3e50; text-align: center;">Your Bracket is Attached!</h2>
-          <p>Hi ${session.user.name || 'there'},</p>
-          <p>Great news! Your bracket "${entryName}" has been successfully submitted and is ready for the tournament!</p>
-          <p>We've attached a PDF copy of your bracket for your records. Good luck with your picks!</p>
-          <p>Let the madness begin! 🏀</p>
-          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-          <p style="font-size: 12px; color: #666; text-align: center;">
-            This is an automated email from Warren's March Madness.
-          </p>
-        </div>
-      </body>
-      </html>
-    `;
-
-    const emailText = `
-      Your Bracket is Attached!
-      
-      Hi ${session.user.name || 'there'},
-      
-      Great news! Your bracket "${entryName}" has been successfully submitted and is ready for the tournament!
-      
-      We've attached a PDF copy of your bracket for your records. Good luck with your picks!
-      
-      Let the madness begin! 🏀
-      
-      This is an automated email from Warren's March Madness.
-    `;
+    console.log('[Email PDF] Rendering email template...');
+    
+    // Import template renderer
+    const { renderEmailTemplate } = await import('@/lib/emailTemplate');
+    
+    const emailContent = await renderEmailTemplate(siteConfig, {
+      name: session.user.name || undefined,
+      entryName,
+      tournamentYear,
+      siteName: siteConfig?.siteName || 'Warren\'s March Madness',
+      bracketId: bracket.id.toString(),
+    });
 
     // Send email with PDF attachment
     console.log('[Email PDF] Sending email...');
     const emailSent = await emailService.sendEmail({
       to: session.user.email,
-      subject: `Your ${tournamentYear} Bracket - ${entryName}`,
-      html: emailHtml,
-      text: emailText,
+      subject: emailContent.subject,
+      html: emailContent.html,
+      text: emailContent.text,
       attachments: [
         {
           filename: `bracket-${bracket.id}.pdf`,

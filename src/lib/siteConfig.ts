@@ -50,6 +50,14 @@ export interface SiteConfigData {
   finalFourHeaderMessage?: string;
   // Home page logo
   homePageLogo?: string;
+  // Email PDF template content
+  emailPdfSubject?: string;
+  emailPdfHeading?: string;
+  emailPdfGreeting?: string;
+  emailPdfMessage1?: string;
+  emailPdfMessage2?: string;
+  emailPdfMessage3?: string;
+  emailPdfFooter?: string;
 }
 
 // Function to fetch site config from Google Sheets
@@ -206,6 +214,27 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
             break;
           case 'home_page_logo':
             config.homePageLogo = value;
+            break;
+          case 'email_pdf_subject':
+            config.emailPdfSubject = value;
+            break;
+          case 'email_pdf_heading':
+            config.emailPdfHeading = value;
+            break;
+          case 'email_pdf_greeting':
+            config.emailPdfGreeting = value;
+            break;
+          case 'email_pdf_message1':
+            config.emailPdfMessage1 = value;
+            break;
+          case 'email_pdf_message2':
+            config.emailPdfMessage2 = value;
+            break;
+          case 'email_pdf_message3':
+            config.emailPdfMessage3 = value;
+            break;
+          case 'email_pdf_footer':
+            config.emailPdfFooter = value;
             break;
           default:
             // Unknown parameter - skip it silently
