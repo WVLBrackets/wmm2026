@@ -84,19 +84,50 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
     }
   }
   
-  // Client-side: database operations aren't available, use fallback
-  console.warn('⚠️ Client-side call: using fallback data (database not available client-side)');
-  const fallbackStart = performance.now();
-  const fallbackData = getFallbackTeamData();
-  const fallbackEnd = performance.now();
-  console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
-  
-  cachedTeamData = fallbackData;
-  lastFetchTime = now;
-  
-  const totalTime = performance.now() - startTime;
-  console.log(`✅ Team reference data ready (fallback) in ${totalTime.toFixed(2)}ms`);
-  return fallbackData;
+  // Client-side: fetch from API route which accesses the database
+  try {
+    console.log('🌐 Client-side call: fetching team data from API');
+    const apiStart = performance.now();
+    const response = await fetch('/api/team-data?activeOnly=true');
+    const apiEnd = performance.now();
+    console.log(`📡 API fetch completed in ${(apiEnd - apiStart).toFixed(2)}ms`);
+    
+    if (!response.ok) {
+      throw new Error(`API returned ${response.status}: ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    
+    if (result.success && result.data && Array.isArray(result.data) && result.data.length > 0) {
+      console.log(`📋 Loaded ${result.data.length} active teams from database via API`);
+      
+      cachedTeamData = result.data;
+      lastFetchTime = now;
+      
+      const totalTime = performance.now() - startTime;
+      console.log(`✅ Team reference data ready from database (via API) in ${totalTime.toFixed(2)}ms`);
+      return result.data;
+    }
+    
+    // API returned empty data, use fallback
+    console.warn('⚠️ API returned empty data, using fallback');
+    throw new Error('API returned empty data');
+    
+  } catch (apiError) {
+    console.error('❌ API error, using fallback:', apiError instanceof Error ? apiError.message : String(apiError));
+    // Use hardcoded fallback data if API fails
+    const fallbackStart = performance.now();
+    const fallbackData = getFallbackTeamData();
+    const fallbackEnd = performance.now();
+    console.log(`📋 Fallback data generated in ${(fallbackEnd - fallbackStart).toFixed(2)}ms`);
+    
+    cachedTeamData = fallbackData;
+    lastFetchTime = now;
+    
+    const totalTime = performance.now() - startTime;
+    console.log(`✅ Team reference data ready (fallback) in ${totalTime.toFixed(2)}ms`);
+    return fallbackData;
+  }
 }
 
 /**
@@ -475,6 +506,7 @@ function getFallbackTeamData(): TeamRefData[] {
     { abbr: 'MicSt', id: '127', name: 'Michigan State' },     // Michigan State Spartans
     { abbr: 'Flo', id: '57', name: 'Florida' },        // Florida Gators
     { abbr: 'Bama', id: '333', name: 'Alabama' },      // Alabama Crimson Tide
+    { abbr: 'Aub', id: '2', name: 'Auburn' },        // Auburn Tigers (ESPN ID: 2)
     { abbr: 'NCSt', id: '152', name: 'NC State' },      // NC State Wolfpack
     { abbr: 'Gonz', id: '2250', name: 'Gonzaga' },     // Gonzaga Bulldogs
     { abbr: 'Marq', id: '269', name: 'Marquette' },      // Marquette Golden Eagles
