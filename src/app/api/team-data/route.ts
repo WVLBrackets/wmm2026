@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllTeamReferenceData, initializeTeamDataTable } from '@/lib/secureDatabase';
+import { TeamRefData } from '@/lib/teamRefData';
 
 // Cache team data in memory to avoid repeated database queries
-let cachedTeamData: { data: any[]; timestamp: number } | null = null;
+let cachedTeamData: { data: TeamRefData[]; timestamp: number } | null = null;
 const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes - shorter cache for faster new team visibility
 
 /**
