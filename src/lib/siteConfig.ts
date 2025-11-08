@@ -58,6 +58,10 @@ export interface SiteConfigData {
   emailPdfMessage2?: string;
   emailPdfMessage3?: string;
   emailPdfFooter?: string;
+  // Email modal window content
+  emailWindowTitle?: string;
+  emailWindowMessage?: string;
+  emailBracketTitle?: string;
 }
 
 // Function to fetch site config from Google Sheets
@@ -235,6 +239,15 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
             break;
           case 'email_pdf_footer':
             config.emailPdfFooter = value;
+            break;
+          case 'email_window_title':
+            config.emailWindowTitle = value;
+            break;
+          case 'email_window_message':
+            config.emailWindowMessage = value;
+            break;
+          case 'email_bracket_title':
+            config.emailBracketTitle = value;
             break;
           default:
             // Unknown parameter - skip it silently

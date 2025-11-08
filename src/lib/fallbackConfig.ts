@@ -57,6 +57,10 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   emailPdfMessage1: 'Great news! Your bracket "{entryName}" has been successfully submitted and is ready for the tournament!',
   emailPdfMessage2: 'We\'ve attached a PDF copy of your bracket for your records. Good luck with your picks!',
   emailPdfMessage3: 'Let the madness begin! 🏀',
-  emailPdfFooter: 'This is an automated email from Warren\'s March Madness.'
+  emailPdfFooter: 'This is an automated email from Warren\'s March Madness.',
+  // Email modal window defaults
+  emailWindowTitle: 'Email Bracket PDF',
+  emailWindowMessage: 'Would you like to send yourself an email with a PDF of your bracket "{Entry Name}"? The email will be sent to {email}.',
+  emailBracketTitle: 'Email Bracket PDF'
 };
 
