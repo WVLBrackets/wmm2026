@@ -202,7 +202,7 @@ interface ChromiumType {
   executablePath: () => Promise<string>;
 }
 
-async function generateBracketPDF(
+export async function generateBracketPDF(
   bracket: Bracket,
   updatedBracket: TournamentBracket,
   tournamentData: TournamentData,

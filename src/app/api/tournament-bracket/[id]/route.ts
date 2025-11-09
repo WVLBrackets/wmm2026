@@ -196,6 +196,29 @@ export async function PUT(
         // Get site config for email template
         const siteConfig = await getSiteConfigFromGoogleSheets();
         
+        // Generate PDF for attachment
+        let pdfBuffer: Buffer | null = null;
+        try {
+          const { loadTournamentData } = await import('@/lib/tournamentLoader');
+          const { generate64TeamBracket, updateBracketWithPicks } = await import('@/lib/bracketGenerator');
+          
+          // Load tournament data
+          const tournamentYear = updatedBracket.year?.toString() || new Date().getFullYear().toString();
+          const tournamentData = await loadTournamentData(tournamentYear);
+          
+          // Generate bracket structure
+          const generatedBracket = generate64TeamBracket(tournamentData);
+          const bracketWithPicks = updateBracketWithPicks(generatedBracket, updatedBracket.picks, tournamentData);
+          
+          // Generate PDF using the same function from email-pdf route
+          const { generateBracketPDF } = await import('@/app/api/bracket/email-pdf/route');
+          pdfBuffer = await generateBracketPDF(updatedBracket, bracketWithPicks, tournamentData, siteConfig);
+          console.log('[Submit Bracket] PDF generated, size:', pdfBuffer.length, 'bytes');
+        } catch (pdfError) {
+          console.error('[Submit Bracket] Error generating PDF:', pdfError);
+          // Continue without PDF - email will still be sent
+        }
+        
         // Render and send email
         const { renderEmailTemplate } = await import('@/lib/emailTemplate');
         const { emailService } = await import('@/lib/emailService');
@@ -210,14 +233,38 @@ export async function PUT(
           totalCost,
         }, 'submit');
         
-        await emailService.sendEmail({
+        // Prepare email with optional PDF attachment
+        const emailOptions: {
+          to: string;
+          subject: string;
+          html: string;
+          text: string;
+          attachments?: Array<{
+            filename: string;
+            content: Buffer;
+            contentType: string;
+          }>;
+        } = {
           to: user.email,
           subject: emailContent.subject,
           html: emailContent.html,
           text: emailContent.text,
-        });
+        };
         
-        console.log('[Submit Bracket] Confirmation email sent successfully');
+        // Add PDF attachment if generated successfully
+        if (pdfBuffer) {
+          emailOptions.attachments = [
+            {
+              filename: `bracket-${updatedBracket.id}.pdf`,
+              content: pdfBuffer,
+              contentType: 'application/pdf',
+            },
+          ];
+        }
+        
+        await emailService.sendEmail(emailOptions);
+        
+        console.log('[Submit Bracket] Confirmation email sent successfully' + (pdfBuffer ? ' with PDF attachment' : ''));
       } catch (emailError) {
         // Log error but don't fail the submission
         console.error('[Submit Bracket] Error sending confirmation email:', emailError);
