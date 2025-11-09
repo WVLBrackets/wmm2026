@@ -403,16 +403,56 @@ export async function generateBracketPDF(
     console.log('[PDF Generation] Environment:', vercelEnv, 'isVercel:', isVercel);
     
     console.log('[PDF Generation] Launching browser...');
-    const executablePath = isVercel ? await chromium.executablePath() : (process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome');
-    console.log('[PDF Generation] Executable path:', executablePath);
+    let executablePath: string;
+    if (isVercel) {
+      // Add timeout to executablePath call (10 seconds)
+      const execPathStartTime = Date.now();
+      try {
+        const execPathPromise = chromium.executablePath();
+        const execPathTimeout = new Promise<never>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error('chromium.executablePath() timed out after 10 seconds'));
+          }, 10000);
+        });
+        executablePath = await Promise.race([execPathPromise, execPathTimeout]) as string;
+        const execPathTime = Date.now() - execPathStartTime;
+        console.log(`[PDF Generation] Executable path retrieved in ${execPathTime}ms:`, executablePath);
+      } catch (execPathError) {
+        const execPathTime = Date.now() - execPathStartTime;
+        console.error(`[PDF Generation] Failed to get executable path after ${execPathTime}ms:`, execPathError);
+        throw execPathError;
+      }
+    } else {
+      executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome';
+      console.log('[PDF Generation] Executable path (local):', executablePath);
+    }
     
-    browser = await puppeteer.launch({
+    // Add timeout to browser launch (30 seconds) to prevent hanging
+    const launchTimeout = 30000;
+    const launchStartTime = Date.now();
+    
+    const launchPromise = puppeteer.launch({
       args: isVercel ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox'],
       defaultViewport: chromium.defaultViewport,
       executablePath: executablePath,
       headless: chromium.headless,
-    }) as Browser;
-    console.log('[PDF Generation] Browser launched');
+    }) as Promise<Browser>;
+    
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`Browser launch timed out after ${launchTimeout}ms`));
+      }, launchTimeout);
+    });
+    
+    try {
+      browser = await Promise.race([launchPromise, timeoutPromise]) as Browser;
+      const launchTime = Date.now() - launchStartTime;
+      console.log(`[PDF Generation] Browser launched successfully in ${launchTime}ms`);
+    } catch (launchError) {
+      const launchTime = Date.now() - launchStartTime;
+      console.error(`[PDF Generation] Browser launch failed after ${launchTime}ms:`, launchError);
+      throw launchError;
+    }
 
     const page = await browser.newPage();
     console.log('[PDF Generation] Page created');
