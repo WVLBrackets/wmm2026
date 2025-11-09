@@ -118,16 +118,27 @@ export async function POST(request: NextRequest) {
     
     // Process email asynchronously (fire-and-forget)
     // Don't await - let it run in the background
-    (async () => {
+    // Store the promise to prevent garbage collection
+    const emailProcessingPromise = (async () => {
+      console.log('[Email PDF] Background async function STARTED');
       try {
         // Load tournament data and site config
         console.log('[Email PDF] Step 1: Loading site config...');
         let siteConfig;
         try {
+          const configStartTime = Date.now();
           siteConfig = await getSiteConfigFromGoogleSheets();
-          console.log('[Email PDF] Step 1: Site config loaded successfully');
+          const configTime = Date.now() - configStartTime;
+          console.log(`[Email PDF] Step 1: Site config loaded successfully in ${configTime}ms`);
+          if (!siteConfig) {
+            throw new Error('Site config returned null');
+          }
         } catch (configError) {
-          console.error('[Email PDF] Step 1 ERROR: Failed to load site config:', configError);
+          console.error('[Email PDF] Step 1 ERROR: Failed to load site config');
+          console.error('[Email PDF] Step 1 ERROR details:', configError instanceof Error ? configError.message : String(configError));
+          if (configError instanceof Error && configError.stack) {
+            console.error('[Email PDF] Step 1 ERROR stack:', configError.stack);
+          }
           throw configError;
         }
         
@@ -221,6 +232,7 @@ export async function POST(request: NextRequest) {
         }
         
         console.log('[Email PDF] Background processing completed successfully');
+        console.log('[Email PDF] Background async function COMPLETED (success)');
       } catch (error) {
         // Log detailed error information
         console.error('[Email PDF] Background email processing FAILED');
@@ -233,9 +245,20 @@ export async function POST(request: NextRequest) {
           console.error('[Email PDF] Error cause:', error.cause);
         }
         // Log the full error object for debugging
-        console.error('[Email PDF] Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+        try {
+          console.error('[Email PDF] Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+        } catch (stringifyError) {
+          console.error('[Email PDF] Could not stringify error:', stringifyError);
+        }
+        console.log('[Email PDF] Background async function COMPLETED (with error)');
       }
     })();
+    
+    // Keep reference to prevent garbage collection
+    // In serverless, we need to ensure the promise continues
+    emailProcessingPromise.catch((error) => {
+      console.error('[Email PDF] Unhandled promise rejection in background processing:', error);
+    });
     return NextResponse.json({
       success: true,
       message: 'Email sent successfully',
