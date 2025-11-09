@@ -412,16 +412,29 @@ export async function generateBracketPDF(
         console.log('[PDF Generation] Calling chromium.executablePath()...');
         const execPathPromise = chromium.executablePath();
         console.log('[PDF Generation] chromium.executablePath() called, setting up timeout...');
+        let timeoutId: NodeJS.Timeout | null = null;
         const execPathTimeout = new Promise<never>((_, reject) => {
-          setTimeout(() => {
+          timeoutId = setTimeout(() => {
             console.error('[PDF Generation] TIMEOUT: chromium.executablePath() exceeded 10 seconds');
             reject(new Error('chromium.executablePath() timed out after 10 seconds'));
           }, 10000);
         });
         console.log('[PDF Generation] Racing executablePath promise with timeout...');
-        executablePath = await Promise.race([execPathPromise, execPathTimeout]) as string;
-        const execPathTime = Date.now() - execPathStartTime;
-        console.log(`[PDF Generation] Executable path retrieved in ${execPathTime}ms:`, executablePath);
+        try {
+          executablePath = await Promise.race([execPathPromise, execPathTimeout]) as string;
+          // Clear timeout if operation completed successfully
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
+          const execPathTime = Date.now() - execPathStartTime;
+          console.log(`[PDF Generation] Executable path retrieved in ${execPathTime}ms:`, executablePath);
+        } catch (raceError) {
+          // Clear timeout on error too
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
+          throw raceError;
+        }
       } catch (execPathError) {
         const execPathTime = Date.now() - execPathStartTime;
         console.error(`[PDF Generation] Failed to get executable path after ${execPathTime}ms:`, execPathError);
@@ -447,17 +460,26 @@ export async function generateBracketPDF(
       headless: chromium.headless,
     }) as Promise<Browser>;
     
+    let launchTimeoutId: NodeJS.Timeout | null = null;
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => {
+      launchTimeoutId = setTimeout(() => {
         reject(new Error(`Browser launch timed out after ${launchTimeout}ms`));
       }, launchTimeout);
     });
     
     try {
       browser = await Promise.race([launchPromise, timeoutPromise]) as Browser;
+      // Clear timeout if operation completed successfully
+      if (launchTimeoutId) {
+        clearTimeout(launchTimeoutId);
+      }
       const launchTime = Date.now() - launchStartTime;
       console.log(`[PDF Generation] Browser launched successfully in ${launchTime}ms`);
     } catch (launchError) {
+      // Clear timeout on error too
+      if (launchTimeoutId) {
+        clearTimeout(launchTimeoutId);
+      }
       const launchTime = Date.now() - launchStartTime;
       console.error(`[PDF Generation] Browser launch failed after ${launchTime}ms:`, launchError);
       throw launchError;
