@@ -61,7 +61,6 @@ export interface SiteConfigData {
   // Email modal window content
   emailWindowTitle?: string;
   emailWindowMessage?: string;
-  emailBracketTitle?: string;
   // Email submit (automated submission) template content
   emailSubmitSubject?: string;
   emailSubmitHeading?: string;
@@ -253,9 +252,6 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
             break;
           case 'email_window_message':
             config.emailWindowMessage = value;
-            break;
-          case 'email_bracket_title':
-            config.emailBracketTitle = value;
             break;
           case 'email_submit_subject':
             config.emailSubmitSubject = value;

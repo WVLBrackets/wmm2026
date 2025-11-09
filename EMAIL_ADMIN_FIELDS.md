@@ -142,13 +142,6 @@ These fields control the modal dialog that appears when a user clicks the "Email
 - **Variables Supported**: `{Entry Name}`, `{email}` (note: uses capital E in "Entry Name")
 - **Example**: `Would you like to send yourself an email with a PDF of your bracket "{Entry Name}"? The email will be sent to {email}.`
 
-### `email_bracket_title`
-- **Type**: String
-- **Description**: Alternative title for the email modal (currently used as fallback for email_window_title)
-- **Required**: No (defaults to "Email Bracket PDF")
-- **Variables Supported**: None (static text only)
-- **Example**: `Email Bracket PDF`
-
 ---
 
 ## Available Variables
@@ -199,7 +192,6 @@ These fields control the modal dialog that appears when a user clicks the "Email
 | `email_submit_footer` | Submit | Footer text | All + submission stats |
 | `email_window_title` | Modal | Modal title | None |
 | `email_window_message` | Modal | Modal message | `{Entry Name}`, `{email}` |
-| `email_bracket_title` | Modal | Alternative title | None |
 
 ---
 
@@ -249,7 +241,6 @@ email_submit_footer: This is an automated email from {siteName}.
 ```
 email_window_title: Email Bracket PDF
 email_window_message: Would you like to send yourself an email with a PDF of your bracket "{Entry Name}"? The email will be sent to {email}.
-email_bracket_title: Email Bracket PDF
 ```
 
 ---

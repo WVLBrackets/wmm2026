@@ -61,7 +61,6 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   // Email modal window defaults
   emailWindowTitle: 'Email Bracket PDF',
   emailWindowMessage: 'Would you like to send yourself an email with a PDF of your bracket "{Entry Name}"? The email will be sent to {email}.',
-  emailBracketTitle: 'Email Bracket PDF',
   // Email submit (automated submission) defaults
   emailSubmitSubject: 'Bracket Submitted Successfully - Warren\'s March Madness',
   emailSubmitHeading: 'Bracket Submitted Successfully!',
