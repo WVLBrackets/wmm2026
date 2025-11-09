@@ -253,9 +253,30 @@ export async function PUT(
         
         // Add PDF attachment if generated successfully
         if (pdfBuffer) {
+          // Generate filename: WMM-{tournamentYear}-{sanitizedEntryName}.pdf
+          const sanitizeEntryName = (name: string | null | undefined): string => {
+            let sanitized = name || `bracket-${updatedBracket.id}`;
+            sanitized = sanitized.toLowerCase();
+            sanitized = sanitized.replace(/[\s_]+/g, '-');
+            sanitized = sanitized.replace(/[^a-z0-9.-]/g, '');
+            sanitized = sanitized.replace(/-+/g, '-');
+            sanitized = sanitized.replace(/^[-.]+|[-.]+$/g, '');
+            if (!sanitized || sanitized.length === 0) {
+              sanitized = `bracket-${updatedBracket.id}`;
+            }
+            if (sanitized.length > 200) {
+              sanitized = sanitized.substring(0, 200);
+            }
+            return sanitized;
+          };
+          
+          const tournamentYear = updatedBracket.year?.toString() || new Date().getFullYear().toString();
+          const sanitizedEntryName = sanitizeEntryName(updatedBracket.entryName);
+          const pdfFilename = `WMM-${tournamentYear}-${sanitizedEntryName}.pdf`;
+          
           emailOptions.attachments = [
             {
-              filename: `bracket-${updatedBracket.id}.pdf`,
+              filename: pdfFilename,
               content: pdfBuffer,
               contentType: 'application/pdf',
             },

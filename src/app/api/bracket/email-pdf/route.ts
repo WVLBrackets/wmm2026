@@ -11,6 +11,42 @@ import { TournamentData, TournamentBracket, TournamentTeam } from '@/types/tourn
 // Install: npm install puppeteer-core @sparticuz/chromium
 // Note: These packages are not installed yet, so PDF generation is disabled
 
+/**
+ * Generate a sanitized filename for bracket PDF
+ * Format: WMM-{tournamentYear}-{sanitizedEntryName}.pdf
+ */
+function generateBracketFilename(entryName: string | null | undefined, tournamentYear: string, bracketId: string): string {
+  // Sanitize entry name: lowercase, remove special chars, replace spaces with hyphens
+  let sanitized = entryName || `bracket-${bracketId}`;
+  
+  // Convert to lowercase
+  sanitized = sanitized.toLowerCase();
+  
+  // Replace spaces and underscores with hyphens
+  sanitized = sanitized.replace(/[\s_]+/g, '-');
+  
+  // Remove all characters that aren't alphanumeric, hyphens, or dots
+  sanitized = sanitized.replace(/[^a-z0-9.-]/g, '');
+  
+  // Remove multiple consecutive hyphens
+  sanitized = sanitized.replace(/-+/g, '-');
+  
+  // Remove leading/trailing hyphens and dots
+  sanitized = sanitized.replace(/^[-.]+|[-.]+$/g, '');
+  
+  // If empty after sanitization, use bracket ID
+  if (!sanitized || sanitized.length === 0) {
+    sanitized = `bracket-${bracketId}`;
+  }
+  
+  // Limit length to avoid filesystem issues (max 200 chars for filename)
+  if (sanitized.length > 200) {
+    sanitized = sanitized.substring(0, 200);
+  }
+  
+  return `WMM-${tournamentYear}-${sanitized}.pdf`;
+}
+
 export async function POST(request: NextRequest) {
   try {
     console.log('[Email PDF] Starting request');
@@ -102,6 +138,7 @@ export async function POST(request: NextRequest) {
 
     // Send email with PDF attachment
     console.log('[Email PDF] Sending email...');
+    const pdfFilename = generateBracketFilename(bracket.entryName, tournamentYear, bracket.id.toString());
     const emailSent = await emailService.sendEmail({
       to: session.user.email,
       subject: emailContent.subject,
@@ -109,7 +146,7 @@ export async function POST(request: NextRequest) {
       text: emailContent.text,
       attachments: [
         {
-          filename: `bracket-${bracket.id}.pdf`,
+          filename: pdfFilename,
           content: pdfBuffer,
           contentType: 'application/pdf',
         },
