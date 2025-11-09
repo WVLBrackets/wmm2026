@@ -169,128 +169,130 @@ export async function PUT(
     }
 
     // Send automated submission confirmation email if bracket was just submitted
+    // Process asynchronously in background to prevent UI hang
     if (isBeingSubmitted) {
-      try {
-        const { getBracketsByUserId } = await import('@/lib/secureDatabase');
-        const { getSiteConfigFromGoogleSheets } = await import('@/lib/siteConfig');
-        const { FALLBACK_CONFIG } = await import('@/lib/fallbackConfig');
-        
-        // Get all submitted brackets for this user to calculate counts
-        const allUserBrackets = await getBracketsByUserId(user.id);
-        const submittedBrackets = allUserBrackets.filter(b => b.status === 'submitted' && b.year === updatedBracket.year);
-        const submissionCount = submittedBrackets.length;
-        
-        // Get entry cost from config
-        let entryCost = 5; // Default
+      (async () => {
         try {
-          const config = await getSiteConfigFromGoogleSheets();
-          if (config?.entryCost) {
-            entryCost = config.entryCost;
+          const { getBracketsByUserId } = await import('@/lib/secureDatabase');
+          const { getSiteConfigFromGoogleSheets } = await import('@/lib/siteConfig');
+          const { FALLBACK_CONFIG } = await import('@/lib/fallbackConfig');
+          
+          // Get all submitted brackets for this user to calculate counts
+          const allUserBrackets = await getBracketsByUserId(user.id);
+          const submittedBrackets = allUserBrackets.filter(b => b.status === 'submitted' && b.year === updatedBracket.year);
+          const submissionCount = submittedBrackets.length;
+          
+          // Get entry cost from config
+          let entryCost = 5; // Default
+          try {
+            const config = await getSiteConfigFromGoogleSheets();
+            if (config?.entryCost) {
+              entryCost = config.entryCost;
+            }
+          } catch (error) {
+            entryCost = FALLBACK_CONFIG.entryCost;
           }
-        } catch (error) {
-          entryCost = FALLBACK_CONFIG.entryCost;
-        }
-        
-        const totalCost = submissionCount * entryCost;
-        
-        // Get site config for email template
-        const siteConfig = await getSiteConfigFromGoogleSheets();
-        
-        // Generate PDF for attachment
-        let pdfBuffer: Buffer | null = null;
-        try {
-          const { loadTournamentData } = await import('@/lib/tournamentLoader');
-          const { generate64TeamBracket, updateBracketWithPicks } = await import('@/lib/bracketGenerator');
           
-          // Load tournament data
-          const tournamentYear = updatedBracket.year?.toString() || new Date().getFullYear().toString();
-          const tournamentData = await loadTournamentData(tournamentYear);
+          const totalCost = submissionCount * entryCost;
           
-          // Generate bracket structure
-          const generatedBracket = generate64TeamBracket(tournamentData);
-          const bracketWithPicks = updateBracketWithPicks(generatedBracket, updatedBracket.picks, tournamentData);
+          // Get site config for email template
+          const siteConfig = await getSiteConfigFromGoogleSheets();
           
-          // Generate PDF using the same function from email-pdf route
-          const { generateBracketPDF } = await import('@/app/api/bracket/email-pdf/route');
-          pdfBuffer = await generateBracketPDF(updatedBracket, bracketWithPicks, tournamentData, siteConfig);
-          console.log('[Submit Bracket] PDF generated, size:', pdfBuffer.length, 'bytes');
-        } catch (pdfError) {
-          console.error('[Submit Bracket] Error generating PDF:', pdfError);
-          // Continue without PDF - email will still be sent
-        }
-        
-        // Render and send email
-        const { renderEmailTemplate } = await import('@/lib/emailTemplate');
-        const { emailService } = await import('@/lib/emailService');
-        
-        const emailContent = await renderEmailTemplate(siteConfig, {
-          name: user.name || undefined,
-          entryName: updatedBracket.entryName,
-          tournamentYear: updatedBracket.year?.toString() || new Date().getFullYear().toString(),
-          siteName: siteConfig?.siteName || 'Warren\'s March Madness',
-          bracketId: updatedBracket.id.toString(),
-          submissionCount,
-          totalCost,
-        }, 'submit');
-        
-        // Prepare email with optional PDF attachment
-        const emailOptions: {
-          to: string;
-          subject: string;
-          html: string;
-          text: string;
-          attachments?: Array<{
-            filename: string;
-            content: Buffer;
-            contentType: string;
-          }>;
-        } = {
-          to: user.email,
-          subject: emailContent.subject,
-          html: emailContent.html,
-          text: emailContent.text,
-        };
-        
-        // Add PDF attachment if generated successfully
-        if (pdfBuffer) {
-          // Generate filename: WMM-{tournamentYear}-{sanitizedEntryName}.pdf
-          const sanitizeEntryName = (name: string | null | undefined): string => {
-            let sanitized = name || `bracket-${updatedBracket.id}`;
-            sanitized = sanitized.toLowerCase();
-            sanitized = sanitized.replace(/[\s_]+/g, '-');
-            sanitized = sanitized.replace(/[^a-z0-9.-]/g, '');
-            sanitized = sanitized.replace(/-+/g, '-');
-            sanitized = sanitized.replace(/^[-.]+|[-.]+$/g, '');
-            if (!sanitized || sanitized.length === 0) {
-              sanitized = `bracket-${updatedBracket.id}`;
-            }
-            if (sanitized.length > 200) {
-              sanitized = sanitized.substring(0, 200);
-            }
-            return sanitized;
+          // Generate PDF for attachment
+          let pdfBuffer: Buffer | null = null;
+          try {
+            const { loadTournamentData } = await import('@/lib/tournamentLoader');
+            const { generate64TeamBracket, updateBracketWithPicks } = await import('@/lib/bracketGenerator');
+            
+            // Load tournament data
+            const tournamentYear = updatedBracket.year?.toString() || new Date().getFullYear().toString();
+            const tournamentData = await loadTournamentData(tournamentYear);
+            
+            // Generate bracket structure
+            const generatedBracket = generate64TeamBracket(tournamentData);
+            const bracketWithPicks = updateBracketWithPicks(generatedBracket, updatedBracket.picks, tournamentData);
+            
+            // Generate PDF using the same function from email-pdf route
+            const { generateBracketPDF } = await import('@/app/api/bracket/email-pdf/route');
+            pdfBuffer = await generateBracketPDF(updatedBracket, bracketWithPicks, tournamentData, siteConfig);
+            console.log('[Submit Bracket] PDF generated, size:', pdfBuffer.length, 'bytes');
+          } catch (pdfError) {
+            console.error('[Submit Bracket] Error generating PDF:', pdfError);
+            // Continue without PDF - email will still be sent
+          }
+          
+          // Render and send email
+          const { renderEmailTemplate } = await import('@/lib/emailTemplate');
+          const { emailService } = await import('@/lib/emailService');
+          
+          const emailContent = await renderEmailTemplate(siteConfig, {
+            name: user.name || undefined,
+            entryName: updatedBracket.entryName,
+            tournamentYear: updatedBracket.year?.toString() || new Date().getFullYear().toString(),
+            siteName: siteConfig?.siteName || 'Warren\'s March Madness',
+            bracketId: updatedBracket.id.toString(),
+            submissionCount,
+            totalCost,
+          }, 'submit');
+          
+          // Prepare email with optional PDF attachment
+          const emailOptions: {
+            to: string;
+            subject: string;
+            html: string;
+            text: string;
+            attachments?: Array<{
+              filename: string;
+              content: Buffer;
+              contentType: string;
+            }>;
+          } = {
+            to: user.email,
+            subject: emailContent.subject,
+            html: emailContent.html,
+            text: emailContent.text,
           };
           
-          const tournamentYear = updatedBracket.year?.toString() || new Date().getFullYear().toString();
-          const sanitizedEntryName = sanitizeEntryName(updatedBracket.entryName);
-          const pdfFilename = `WMM-${tournamentYear}-${sanitizedEntryName}.pdf`;
+          // Add PDF attachment if generated successfully
+          if (pdfBuffer) {
+            // Generate filename: WMM-{tournamentYear}-{sanitizedEntryName}.pdf
+            const sanitizeEntryName = (name: string | null | undefined): string => {
+              let sanitized = name || `bracket-${updatedBracket.id}`;
+              sanitized = sanitized.toLowerCase();
+              sanitized = sanitized.replace(/[\s_]+/g, '-');
+              sanitized = sanitized.replace(/[^a-z0-9.-]/g, '');
+              sanitized = sanitized.replace(/-+/g, '-');
+              sanitized = sanitized.replace(/^[-.]+|[-.]+$/g, '');
+              if (!sanitized || sanitized.length === 0) {
+                sanitized = `bracket-${updatedBracket.id}`;
+              }
+              if (sanitized.length > 200) {
+                sanitized = sanitized.substring(0, 200);
+              }
+              return sanitized;
+            };
+            
+            const tournamentYear = updatedBracket.year?.toString() || new Date().getFullYear().toString();
+            const sanitizedEntryName = sanitizeEntryName(updatedBracket.entryName);
+            const pdfFilename = `WMM-${tournamentYear}-${sanitizedEntryName}.pdf`;
+            
+            emailOptions.attachments = [
+              {
+                filename: pdfFilename,
+                content: pdfBuffer,
+                contentType: 'application/pdf',
+              },
+            ];
+          }
           
-          emailOptions.attachments = [
-            {
-              filename: pdfFilename,
-              content: pdfBuffer,
-              contentType: 'application/pdf',
-            },
-          ];
+          await emailService.sendEmail(emailOptions);
+          
+          console.log('[Submit Bracket] Confirmation email sent successfully' + (pdfBuffer ? ' with PDF attachment' : ''));
+        } catch (emailError) {
+          // Log error but don't fail the submission (already returned success)
+          console.error('[Submit Bracket] Error sending confirmation email:', emailError);
         }
-        
-        await emailService.sendEmail(emailOptions);
-        
-        console.log('[Submit Bracket] Confirmation email sent successfully' + (pdfBuffer ? ' with PDF attachment' : ''));
-      } catch (emailError) {
-        // Log error but don't fail the submission
-        console.error('[Submit Bracket] Error sending confirmation email:', emailError);
-        // Continue - email failure shouldn't prevent bracket submission
-      }
+      })();
     }
 
     // Return updated bracket in frontend format

@@ -103,65 +103,74 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Load tournament data and site config
-    console.log('[Email PDF] Loading tournament data...');
-    const siteConfig = await getSiteConfigFromGoogleSheets();
-    const tournamentYear = siteConfig?.tournamentYear || '2025';
-    const tournamentData = await loadTournamentData(tournamentYear);
-    console.log('[Email PDF] Tournament data loaded');
-
-    // Generate bracket with picks
-    console.log('[Email PDF] Generating bracket structure...');
-    const generatedBracket = generate64TeamBracket(tournamentData);
-    const updatedBracket = updateBracketWithPicks(generatedBracket, bracket.picks, tournamentData);
-    console.log('[Email PDF] Bracket structure generated');
-
-    // Generate PDF using Puppeteer
-    console.log('[Email PDF] Generating PDF...');
-    const pdfBuffer = await generateBracketPDF(bracket, updatedBracket, tournamentData, siteConfig);
-    console.log('[Email PDF] PDF generated, size:', pdfBuffer.length, 'bytes');
-
-    // Generate email content from template
-    const entryName = bracket.entryName || `Bracket ${bracket.id}`;
-    console.log('[Email PDF] Rendering email template...');
+    // Return success immediately, process PDF generation and email in background
+    // This prevents UI hang while PDF is being generated
+    console.log('[Email PDF] Starting background email processing...');
     
-    // Import template renderer
-    const { renderEmailTemplate } = await import('@/lib/emailTemplate');
-    
-    const emailContent = await renderEmailTemplate(siteConfig, {
-      name: session.user.name || undefined,
-      entryName,
-      tournamentYear,
-      siteName: siteConfig?.siteName || 'Warren\'s March Madness',
-      bracketId: bracket.id.toString(),
-    }, 'pdf');
+    // Process email asynchronously (fire-and-forget)
+    // Don't await - let it run in the background
+    (async () => {
+      try {
+        // Load tournament data and site config
+        console.log('[Email PDF] Loading tournament data...');
+        const siteConfig = await getSiteConfigFromGoogleSheets();
+        const tournamentYear = siteConfig?.tournamentYear || '2025';
+        const tournamentData = await loadTournamentData(tournamentYear);
+        console.log('[Email PDF] Tournament data loaded');
 
-    // Send email with PDF attachment
-    console.log('[Email PDF] Sending email...');
-    const pdfFilename = generateBracketFilename(bracket.entryName, tournamentYear, bracket.id.toString());
-    const emailSent = await emailService.sendEmail({
-      to: session.user.email,
-      subject: emailContent.subject,
-      html: emailContent.html,
-      text: emailContent.text,
-      attachments: [
-        {
-          filename: pdfFilename,
-          content: pdfBuffer,
-          contentType: 'application/pdf',
-        },
-      ],
-    });
+        // Generate bracket with picks
+        console.log('[Email PDF] Generating bracket structure...');
+        const generatedBracket = generate64TeamBracket(tournamentData);
+        const updatedBracket = updateBracketWithPicks(generatedBracket, bracket.picks, tournamentData);
+        console.log('[Email PDF] Bracket structure generated');
 
-    if (!emailSent) {
-      console.error('[Email PDF] Email service returned false');
-      return NextResponse.json(
-        { success: false, error: 'Failed to send email. Please try again later.' },
-        { status: 500 }
-      );
-    }
+        // Generate PDF using Puppeteer
+        console.log('[Email PDF] Generating PDF...');
+        const pdfBuffer = await generateBracketPDF(bracket, updatedBracket, tournamentData, siteConfig);
+        console.log('[Email PDF] PDF generated, size:', pdfBuffer.length, 'bytes');
 
-    console.log('[Email PDF] Email sent successfully');
+        // Generate email content from template
+        const entryName = bracket.entryName || `Bracket ${bracket.id}`;
+        console.log('[Email PDF] Rendering email template...');
+        
+        // Import template renderer
+        const { renderEmailTemplate } = await import('@/lib/emailTemplate');
+        
+        const emailContent = await renderEmailTemplate(siteConfig, {
+          name: session.user.name || undefined,
+          entryName,
+          tournamentYear,
+          siteName: siteConfig?.siteName || 'Warren\'s March Madness',
+          bracketId: bracket.id.toString(),
+        }, 'pdf');
+
+        // Send email with PDF attachment
+        console.log('[Email PDF] Sending email...');
+        const pdfFilename = generateBracketFilename(bracket.entryName, tournamentYear, bracket.id.toString());
+        const emailSent = await emailService.sendEmail({
+          to: session.user.email,
+          subject: emailContent.subject,
+          html: emailContent.html,
+          text: emailContent.text,
+          attachments: [
+            {
+              filename: pdfFilename,
+              content: pdfBuffer,
+              contentType: 'application/pdf',
+            },
+          ],
+        });
+
+        if (!emailSent) {
+          console.error('[Email PDF] Email service returned false');
+        } else {
+          console.log('[Email PDF] Email sent successfully');
+        }
+      } catch (error) {
+        // Log error but don't fail the request (already returned success)
+        console.error('[Email PDF] Background email processing error:', error);
+      }
+    })();
     return NextResponse.json({
       success: true,
       message: 'Email sent successfully',
