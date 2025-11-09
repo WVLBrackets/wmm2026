@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { waitUntil } from '@vercel/functions';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getBracketById, Bracket, getUserByEmail } from '@/lib/secureDatabase';
@@ -135,17 +136,13 @@ export async function POST(request: NextRequest) {
       console.log('[Email PDF] Using site config provided by client (no fetch needed)');
     }
 
-    // Process PDF generation and email synchronously with overall timeout
-    // In Vercel serverless, background tasks after response return may be terminated
-    // So we'll process synchronously but with a timeout to prevent hanging
-    console.log('[Email PDF] Starting PDF generation and email processing...');
+    // Process PDF generation and email asynchronously using waitUntil
+    // This keeps the execution context alive after returning the response
+    console.log('[Email PDF] Starting background PDF generation and email processing...');
     
-    // Overall timeout for entire process (25 seconds)
-    const overallTimeout = 25000;
-    const processStartTime = Date.now();
-    
-    const emailProcessingPromise = Promise.race([
-      (async () => {
+    // Use waitUntil to keep execution context alive after response
+    // This is the proper way to handle async background tasks in Next.js/Vercel
+    const emailProcessingPromise = (async () => {
       console.log('[Email PDF] Background async function STARTED');
       try {
         // Use the site config we already have (loaded from client or fetched above)
@@ -261,40 +258,18 @@ export async function POST(request: NextRequest) {
           console.error('[Email PDF] Could not stringify error:', stringifyError);
         }
         console.log('[Email PDF] Background async function COMPLETED (with error)');
-        throw error; // Re-throw to be caught by Promise.race timeout
       }
-      })(),
-      new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          const elapsed = Date.now() - processStartTime;
-          console.error(`[Email PDF] Overall process timeout after ${elapsed}ms`);
-          reject(new Error(`PDF generation and email process timed out after ${overallTimeout}ms`));
-        }, overallTimeout);
-      })
-    ]);
+    })();
     
-    // Wait for the process to complete (with timeout)
-    try {
-      await emailProcessingPromise;
-      const totalTime = Date.now() - processStartTime;
-      console.log(`[Email PDF] Process completed successfully in ${totalTime}ms`);
-      return NextResponse.json({
-        success: true,
-        message: 'Email sent successfully',
-      });
-    } catch (error) {
-      const totalTime = Date.now() - processStartTime;
-      console.error(`[Email PDF] Process failed after ${totalTime}ms:`, error);
-      // Return error response so user knows it failed
-      return NextResponse.json(
-        {
-          success: false,
-          error: error instanceof Error ? error.message : 'Failed to send email',
-          details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : String(error)) : undefined,
-        },
-        { status: 500 }
-      );
-    }
+    // Use waitUntil to keep execution context alive after response
+    // This is Vercel's API for background tasks in serverless functions
+    waitUntil(emailProcessingPromise);
+    
+    // Return success immediately - background processing will continue
+    return NextResponse.json({
+      success: true,
+      message: 'Email is being processed and will be sent shortly',
+    });
   } catch (error) {
     console.error('[Email PDF] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
