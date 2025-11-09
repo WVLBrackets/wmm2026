@@ -77,7 +77,28 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
     // Use Google Sheets public CSV export
     const csvUrl = `https://docs.google.com/spreadsheets/d/${SITE_CONFIG_SHEET_ID}/export?format=csv&gid=0`;
     
-    const response = await fetch(csvUrl);
+    // Add timeout to prevent hanging (10 seconds)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    
+    let response;
+    try {
+      response = await fetch(csvUrl, { 
+        signal: controller.signal,
+        // Add headers to help with reliability
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
+      clearTimeout(timeoutId);
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        throw new Error('Site config fetch timed out after 10 seconds');
+      }
+      throw fetchError;
+    }
+    
     if (!response.ok) {
       throw new Error(`Failed to fetch site config: ${response.status}`);
     }

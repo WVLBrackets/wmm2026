@@ -103,10 +103,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Return success immediately, process PDF generation and email in background
-    // This prevents UI hang while PDF is being generated
-    console.log('[Email PDF] Starting background email processing...');
-    
     // Store email in a const for use in async function (TypeScript type narrowing)
     const userEmail = session.user.email;
     if (!userEmail) {
@@ -115,34 +111,59 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Load site config BEFORE background processing to avoid fetch issues in async context
+    // This ensures we have the config available and avoids timeout issues
+    console.log('[Email PDF] Loading site config (before background processing)...');
+    let siteConfig: SiteConfigData | null = null;
+    try {
+      const configStartTime = Date.now();
+      siteConfig = await getSiteConfigFromGoogleSheets();
+      const configTime = Date.now() - configStartTime;
+      console.log(`[Email PDF] Site config loaded successfully in ${configTime}ms`);
+      if (!siteConfig) {
+        console.warn('[Email PDF] Site config returned null, will use fallback values');
+      }
+    } catch (configError) {
+      console.error('[Email PDF] ERROR: Failed to load site config:', configError);
+      // Continue anyway - we'll use fallback values in the template
+      siteConfig = null;
+    }
+
+    // Return success immediately, process PDF generation and email in background
+    // This prevents UI hang while PDF is being generated
+    console.log('[Email PDF] Starting background email processing...');
     
     // Process email asynchronously (fire-and-forget)
     // Don't await - let it run in the background
     // Store the promise to prevent garbage collection
+    // Pass siteConfig to avoid re-fetching in background
     const emailProcessingPromise = (async () => {
       console.log('[Email PDF] Background async function STARTED');
       try {
-        // Load tournament data and site config
-        console.log('[Email PDF] Step 1: Loading site config...');
-        let siteConfig;
-        try {
-          const configStartTime = Date.now();
-          siteConfig = await getSiteConfigFromGoogleSheets();
-          const configTime = Date.now() - configStartTime;
-          console.log(`[Email PDF] Step 1: Site config loaded successfully in ${configTime}ms`);
-          if (!siteConfig) {
-            throw new Error('Site config returned null');
+        // Use the site config we already loaded, or fetch it if we don't have it
+        let finalSiteConfig = siteConfig;
+        if (!finalSiteConfig) {
+          console.log('[Email PDF] Step 1: Re-fetching site config (was null)...');
+          try {
+            const configStartTime = Date.now();
+            finalSiteConfig = await getSiteConfigFromGoogleSheets();
+            const configTime = Date.now() - configStartTime;
+            console.log(`[Email PDF] Step 1: Site config loaded successfully in ${configTime}ms`);
+          } catch (configError) {
+            console.error('[Email PDF] Step 1 ERROR: Failed to load site config');
+            console.error('[Email PDF] Step 1 ERROR details:', configError instanceof Error ? configError.message : String(configError));
+            if (configError instanceof Error && configError.stack) {
+              console.error('[Email PDF] Step 1 ERROR stack:', configError.stack);
+            }
+            // Continue with null - template will use fallback values
+            finalSiteConfig = null;
           }
-        } catch (configError) {
-          console.error('[Email PDF] Step 1 ERROR: Failed to load site config');
-          console.error('[Email PDF] Step 1 ERROR details:', configError instanceof Error ? configError.message : String(configError));
-          if (configError instanceof Error && configError.stack) {
-            console.error('[Email PDF] Step 1 ERROR stack:', configError.stack);
-          }
-          throw configError;
+        } else {
+          console.log('[Email PDF] Step 1: Using pre-loaded site config (skipped fetch)');
         }
         
-        const tournamentYear = siteConfig?.tournamentYear || '2025';
+        const tournamentYear = finalSiteConfig?.tournamentYear || '2025';
         console.log('[Email PDF] Step 2: Loading tournament data for year:', tournamentYear);
         let tournamentData;
         try {
@@ -169,7 +190,7 @@ export async function POST(request: NextRequest) {
         console.log('[Email PDF] Step 4: Generating PDF...');
         let pdfBuffer;
         try {
-          pdfBuffer = await generateBracketPDF(bracket, updatedBracket, tournamentData, siteConfig);
+          pdfBuffer = await generateBracketPDF(bracket, updatedBracket, tournamentData, finalSiteConfig);
           console.log('[Email PDF] Step 4: PDF generated successfully, size:', pdfBuffer.length, 'bytes');
         } catch (pdfError) {
           console.error('[Email PDF] Step 4 ERROR: Failed to generate PDF:', pdfError);
@@ -186,11 +207,11 @@ export async function POST(request: NextRequest) {
         let emailContent;
         try {
           const { renderEmailTemplate } = await import('@/lib/emailTemplate');
-          emailContent = await renderEmailTemplate(siteConfig, {
+          emailContent = await renderEmailTemplate(finalSiteConfig, {
             name: session.user.name || undefined,
             entryName,
             tournamentYear,
-            siteName: siteConfig?.siteName || 'Warren\'s March Madness',
+            siteName: finalSiteConfig?.siteName || 'Warren\'s March Madness',
             bracketId: bracket.id.toString(),
           }, 'pdf');
           console.log('[Email PDF] Step 5: Email template rendered successfully');
