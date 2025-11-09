@@ -133,6 +133,59 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Send automated submission confirmation email
+    try {
+      // Get all submitted brackets for this user to calculate counts
+      const allUserBrackets = await getBracketsByUserId(user.id);
+      const submittedBrackets = allUserBrackets.filter(b => b.status === 'submitted' && b.year === tournamentYear);
+      const submissionCount = submittedBrackets.length;
+      
+      // Get entry cost from config
+      let entryCost = 5; // Default
+      try {
+        const config = await getSiteConfigFromGoogleSheets();
+        if (config?.entryCost) {
+          entryCost = config.entryCost;
+        }
+      } catch (error) {
+        // Use default if config fails
+        const { FALLBACK_CONFIG } = await import('@/lib/fallbackConfig');
+        entryCost = FALLBACK_CONFIG.entryCost;
+      }
+      
+      const totalCost = submissionCount * entryCost;
+      
+      // Get site config for email template
+      const siteConfig = await getSiteConfigFromGoogleSheets();
+      
+      // Render and send email
+      const { renderEmailTemplate } = await import('@/lib/emailTemplate');
+      const { emailService } = await import('@/lib/emailService');
+      
+      const emailContent = await renderEmailTemplate(siteConfig, {
+        name: user.name || undefined,
+        entryName: updatedBracket.entryName,
+        tournamentYear: tournamentYear.toString(),
+        siteName: siteConfig?.siteName || 'Warren\'s March Madness',
+        bracketId: updatedBracket.id.toString(),
+        submissionCount,
+        totalCost,
+      }, 'submit');
+      
+      await emailService.sendEmail({
+        to: user.email,
+        subject: emailContent.subject,
+        html: emailContent.html,
+        text: emailContent.text,
+      });
+      
+      console.log('[Submit Bracket] Confirmation email sent successfully');
+    } catch (emailError) {
+      // Log error but don't fail the submission
+      console.error('[Submit Bracket] Error sending confirmation email:', emailError);
+      // Continue - email failure shouldn't prevent bracket submission
+    }
+
     // Return bracket in the format expected by the frontend
     return NextResponse.json({
       success: true,

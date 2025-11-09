@@ -62,6 +62,14 @@ export interface SiteConfigData {
   emailWindowTitle?: string;
   emailWindowMessage?: string;
   emailBracketTitle?: string;
+  // Email submit (automated submission) template content
+  emailSubmitSubject?: string;
+  emailSubmitHeading?: string;
+  emailSubmitGreeting?: string;
+  emailSubmitMessage1?: string;
+  emailSubmitMessage2?: string;
+  emailSubmitMessage3?: string;
+  emailSubmitFooter?: string;
 }
 
 // Function to fetch site config from Google Sheets
@@ -248,6 +256,27 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
             break;
           case 'email_bracket_title':
             config.emailBracketTitle = value;
+            break;
+          case 'email_submit_subject':
+            config.emailSubmitSubject = value;
+            break;
+          case 'email_submit_heading':
+            config.emailSubmitHeading = value;
+            break;
+          case 'email_submit_greeting':
+            config.emailSubmitGreeting = value;
+            break;
+          case 'email_submit_message1':
+            config.emailSubmitMessage1 = value;
+            break;
+          case 'email_submit_message2':
+            config.emailSubmitMessage2 = value;
+            break;
+          case 'email_submit_message3':
+            config.emailSubmitMessage3 = value;
+            break;
+          case 'email_submit_footer':
+            config.emailSubmitFooter = value;
             break;
           default:
             // Unknown parameter - skip it silently

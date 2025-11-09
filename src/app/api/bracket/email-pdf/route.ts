@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
       tournamentYear,
       siteName: siteConfig?.siteName || 'Warren\'s March Madness',
       bracketId: bracket.id.toString(),
-    });
+    }, 'pdf');
 
     // Send email with PDF attachment
     console.log('[Email PDF] Sending email...');

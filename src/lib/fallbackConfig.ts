@@ -61,6 +61,14 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   // Email modal window defaults
   emailWindowTitle: 'Email Bracket PDF',
   emailWindowMessage: 'Would you like to send yourself an email with a PDF of your bracket "{Entry Name}"? The email will be sent to {email}.',
-  emailBracketTitle: 'Email Bracket PDF'
+  emailBracketTitle: 'Email Bracket PDF',
+  // Email submit (automated submission) defaults
+  emailSubmitSubject: 'Bracket Submitted Successfully - Warren\'s March Madness',
+  emailSubmitHeading: 'Bracket Submitted Successfully!',
+  emailSubmitGreeting: 'Hi {name},',
+  emailSubmitMessage1: 'Congratulations! Your bracket "{entryName}" has been successfully submitted for the {tournamentYear} tournament.',
+  emailSubmitMessage2: 'You currently have {submissionCount} submitted bracket(s) with a total cost of ${totalCost}.',
+  emailSubmitMessage3: 'Want to increase your chances? Submit more brackets and invite your friends to join the fun!',
+  emailSubmitFooter: 'This is an automated email from Warren\'s March Madness.'
 };
 
