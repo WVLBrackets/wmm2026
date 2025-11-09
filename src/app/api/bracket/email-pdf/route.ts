@@ -107,6 +107,15 @@ export async function POST(request: NextRequest) {
     // This prevents UI hang while PDF is being generated
     console.log('[Email PDF] Starting background email processing...');
     
+    // Store email in a const for use in async function (TypeScript type narrowing)
+    const userEmail = session.user.email;
+    if (!userEmail) {
+      return NextResponse.json(
+        { success: false, error: 'User email not available' },
+        { status: 400 }
+      );
+    }
+    
     // Process email asynchronously (fire-and-forget)
     // Don't await - let it run in the background
     (async () => {
@@ -148,7 +157,7 @@ export async function POST(request: NextRequest) {
         console.log('[Email PDF] Sending email...');
         const pdfFilename = generateBracketFilename(bracket.entryName, tournamentYear, bracket.id.toString());
         const emailSent = await emailService.sendEmail({
-          to: session.user.email,
+          to: userEmail,
           subject: emailContent.subject,
           html: emailContent.html,
           text: emailContent.text,
