@@ -135,15 +135,17 @@ export async function POST(request: NextRequest) {
       console.log('[Email PDF] Using site config provided by client (no fetch needed)');
     }
 
-    // Return success immediately, process PDF generation and email in background
-    // This prevents UI hang while PDF is being generated
-    console.log('[Email PDF] Starting background email processing...');
+    // Process PDF generation and email synchronously with overall timeout
+    // In Vercel serverless, background tasks after response return may be terminated
+    // So we'll process synchronously but with a timeout to prevent hanging
+    console.log('[Email PDF] Starting PDF generation and email processing...');
     
-    // Process email asynchronously (fire-and-forget)
-    // Don't await - let it run in the background
-    // Store the promise to prevent garbage collection
-    // Use the siteConfig we already have (from client or fetched above)
-    const emailProcessingPromise = (async () => {
+    // Overall timeout for entire process (25 seconds)
+    const overallTimeout = 25000;
+    const processStartTime = Date.now();
+    
+    const emailProcessingPromise = Promise.race([
+      (async () => {
       console.log('[Email PDF] Background async function STARTED');
       try {
         // Use the site config we already have (loaded from client or fetched above)
@@ -259,18 +261,40 @@ export async function POST(request: NextRequest) {
           console.error('[Email PDF] Could not stringify error:', stringifyError);
         }
         console.log('[Email PDF] Background async function COMPLETED (with error)');
+        throw error; // Re-throw to be caught by Promise.race timeout
       }
-    })();
+      })(),
+      new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          const elapsed = Date.now() - processStartTime;
+          console.error(`[Email PDF] Overall process timeout after ${elapsed}ms`);
+          reject(new Error(`PDF generation and email process timed out after ${overallTimeout}ms`));
+        }, overallTimeout);
+      })
+    ]);
     
-    // Keep reference to prevent garbage collection
-    // In serverless, we need to ensure the promise continues
-    emailProcessingPromise.catch((error) => {
-      console.error('[Email PDF] Unhandled promise rejection in background processing:', error);
-    });
-    return NextResponse.json({
-      success: true,
-      message: 'Email sent successfully',
-    });
+    // Wait for the process to complete (with timeout)
+    try {
+      await emailProcessingPromise;
+      const totalTime = Date.now() - processStartTime;
+      console.log(`[Email PDF] Process completed successfully in ${totalTime}ms`);
+      return NextResponse.json({
+        success: true,
+        message: 'Email sent successfully',
+      });
+    } catch (error) {
+      const totalTime = Date.now() - processStartTime;
+      console.error(`[Email PDF] Process failed after ${totalTime}ms:`, error);
+      // Return error response so user knows it failed
+      return NextResponse.json(
+        {
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to send email',
+          details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : String(error)) : undefined,
+        },
+        { status: 500 }
+      );
+    }
   } catch (error) {
     console.error('[Email PDF] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -403,23 +427,33 @@ export async function generateBracketPDF(
     console.log('[PDF Generation] Environment:', vercelEnv, 'isVercel:', isVercel);
     
     console.log('[PDF Generation] Launching browser...');
+    console.log('[PDF Generation] About to call chromium.executablePath()...');
     let executablePath: string;
     if (isVercel) {
       // Add timeout to executablePath call (10 seconds)
       const execPathStartTime = Date.now();
+      console.log('[PDF Generation] Setting up executablePath timeout...');
       try {
+        console.log('[PDF Generation] Calling chromium.executablePath()...');
         const execPathPromise = chromium.executablePath();
+        console.log('[PDF Generation] chromium.executablePath() called, setting up timeout...');
         const execPathTimeout = new Promise<never>((_, reject) => {
           setTimeout(() => {
+            console.error('[PDF Generation] TIMEOUT: chromium.executablePath() exceeded 10 seconds');
             reject(new Error('chromium.executablePath() timed out after 10 seconds'));
           }, 10000);
         });
+        console.log('[PDF Generation] Racing executablePath promise with timeout...');
         executablePath = await Promise.race([execPathPromise, execPathTimeout]) as string;
         const execPathTime = Date.now() - execPathStartTime;
         console.log(`[PDF Generation] Executable path retrieved in ${execPathTime}ms:`, executablePath);
       } catch (execPathError) {
         const execPathTime = Date.now() - execPathStartTime;
         console.error(`[PDF Generation] Failed to get executable path after ${execPathTime}ms:`, execPathError);
+        if (execPathError instanceof Error) {
+          console.error('[PDF Generation] Error message:', execPathError.message);
+          console.error('[PDF Generation] Error stack:', execPathError.stack);
+        }
         throw execPathError;
       }
     } else {
