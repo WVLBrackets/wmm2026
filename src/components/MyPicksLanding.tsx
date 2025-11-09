@@ -167,6 +167,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
         },
         body: JSON.stringify({
           bracketId: emailBracket.id,
+          siteConfig: siteConfig, // Pass the already-loaded config to avoid re-fetching
         }),
       });
 

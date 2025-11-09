@@ -61,8 +61,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { bracketId } = await request.json();
+    const { bracketId, siteConfig: providedSiteConfig } = await request.json();
     console.log('[Email PDF] Bracket ID:', bracketId);
+    console.log('[Email PDF] Site config provided:', !!providedSiteConfig);
 
     if (!bracketId) {
       return NextResponse.json(
@@ -112,22 +113,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Load site config BEFORE background processing to avoid fetch issues in async context
-    // This ensures we have the config available and avoids timeout issues
-    console.log('[Email PDF] Loading site config (before background processing)...');
-    let siteConfig: SiteConfigData | null = null;
-    try {
-      const configStartTime = Date.now();
-      siteConfig = await getSiteConfigFromGoogleSheets();
-      const configTime = Date.now() - configStartTime;
-      console.log(`[Email PDF] Site config loaded successfully in ${configTime}ms`);
-      if (!siteConfig) {
-        console.warn('[Email PDF] Site config returned null, will use fallback values');
+    // Use provided site config from client (already loaded on page), or fetch if not provided
+    // This avoids unnecessary fetch calls and timeout issues
+    let siteConfig: SiteConfigData | null = providedSiteConfig || null;
+    if (!siteConfig) {
+      console.log('[Email PDF] Site config not provided, fetching from Google Sheets...');
+      try {
+        const configStartTime = Date.now();
+        siteConfig = await getSiteConfigFromGoogleSheets();
+        const configTime = Date.now() - configStartTime;
+        console.log(`[Email PDF] Site config loaded successfully in ${configTime}ms`);
+        if (!siteConfig) {
+          console.warn('[Email PDF] Site config returned null, will use fallback values');
+        }
+      } catch (configError) {
+        console.error('[Email PDF] ERROR: Failed to load site config:', configError);
+        // Continue anyway - we'll use fallback values in the template
+        siteConfig = null;
       }
-    } catch (configError) {
-      console.error('[Email PDF] ERROR: Failed to load site config:', configError);
-      // Continue anyway - we'll use fallback values in the template
-      siteConfig = null;
+    } else {
+      console.log('[Email PDF] Using site config provided by client (no fetch needed)');
     }
 
     // Return success immediately, process PDF generation and email in background
@@ -137,31 +142,13 @@ export async function POST(request: NextRequest) {
     // Process email asynchronously (fire-and-forget)
     // Don't await - let it run in the background
     // Store the promise to prevent garbage collection
-    // Pass siteConfig to avoid re-fetching in background
+    // Use the siteConfig we already have (from client or fetched above)
     const emailProcessingPromise = (async () => {
       console.log('[Email PDF] Background async function STARTED');
       try {
-        // Use the site config we already loaded, or fetch it if we don't have it
-        let finalSiteConfig = siteConfig;
-        if (!finalSiteConfig) {
-          console.log('[Email PDF] Step 1: Re-fetching site config (was null)...');
-          try {
-            const configStartTime = Date.now();
-            finalSiteConfig = await getSiteConfigFromGoogleSheets();
-            const configTime = Date.now() - configStartTime;
-            console.log(`[Email PDF] Step 1: Site config loaded successfully in ${configTime}ms`);
-          } catch (configError) {
-            console.error('[Email PDF] Step 1 ERROR: Failed to load site config');
-            console.error('[Email PDF] Step 1 ERROR details:', configError instanceof Error ? configError.message : String(configError));
-            if (configError instanceof Error && configError.stack) {
-              console.error('[Email PDF] Step 1 ERROR stack:', configError.stack);
-            }
-            // Continue with null - template will use fallback values
-            finalSiteConfig = null;
-          }
-        } else {
-          console.log('[Email PDF] Step 1: Using pre-loaded site config (skipped fetch)');
-        }
+        // Use the site config we already have (loaded from client or fetched above)
+        const finalSiteConfig = siteConfig;
+        console.log('[Email PDF] Step 1: Using site config (already loaded, no fetch needed)');
         
         const tournamentYear = finalSiteConfig?.tournamentYear || '2025';
         console.log('[Email PDF] Step 2: Loading tournament data for year:', tournamentYear);
