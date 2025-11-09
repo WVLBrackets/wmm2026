@@ -212,6 +212,7 @@ interface PuppeteerResponse {
 interface Page {
   setContent: (html: string, options?: { waitUntil?: string }) => Promise<void>;
   setRequestInterception: (value: boolean) => Promise<void>;
+  setViewport: (viewport: { width: number; height: number; deviceScaleFactor?: number }) => Promise<void>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   on: (event: string, handler: (arg: any) => void) => void;
   pdf: (options: {
@@ -224,6 +225,8 @@ interface Page {
       bottom?: string;
       left?: string;
     };
+    preferCSSPageSize?: boolean;
+    displayHeaderFooter?: boolean;
   }) => Promise<Buffer>;
 }
 
@@ -308,6 +311,14 @@ export async function generateBracketPDF(
 
     const page = await browser.newPage();
     console.log('[PDF Generation] Page created');
+    
+    // Set viewport to A4 landscape dimensions (297mm x 210mm = 1123px x 794px at 96 DPI)
+    await page.setViewport({
+      width: 1123,
+      height: 794,
+      deviceScaleFactor: 1,
+    });
+    console.log('[PDF Generation] Viewport set to A4 landscape');
 
     // Generate HTML content for the bracket
     console.log('[PDF Generation] Generating HTML...');
@@ -331,6 +342,8 @@ export async function generateBracketPDF(
         bottom: '10mm',
         left: '10mm',
       },
+      preferCSSPageSize: false,
+      displayHeaderFooter: false,
     });
     console.log('[PDF Generation] PDF generated, size:', pdf.length, 'bytes');
 
@@ -772,9 +785,24 @@ function generatePrintPageHTML(
       <title>${entryName} - ${tournamentYear} Bracket</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
+        html, body { 
           font-family: Arial, sans-serif; 
           background: white;
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+        }
+        @page {
+          size: A4 landscape;
+          margin: 0;
+        }
+        body {
+          height: 210mm;
+          max-height: 210mm;
+          overflow: hidden;
+          page-break-inside: avoid;
+          page-break-after: avoid;
+          page-break-before: avoid;
         }
       </style>
     </head>
