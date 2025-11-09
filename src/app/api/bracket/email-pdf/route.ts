@@ -121,63 +121,119 @@ export async function POST(request: NextRequest) {
     (async () => {
       try {
         // Load tournament data and site config
-        console.log('[Email PDF] Loading tournament data...');
-        const siteConfig = await getSiteConfigFromGoogleSheets();
+        console.log('[Email PDF] Step 1: Loading site config...');
+        let siteConfig;
+        try {
+          siteConfig = await getSiteConfigFromGoogleSheets();
+          console.log('[Email PDF] Step 1: Site config loaded successfully');
+        } catch (configError) {
+          console.error('[Email PDF] Step 1 ERROR: Failed to load site config:', configError);
+          throw configError;
+        }
+        
         const tournamentYear = siteConfig?.tournamentYear || '2025';
-        const tournamentData = await loadTournamentData(tournamentYear);
-        console.log('[Email PDF] Tournament data loaded');
+        console.log('[Email PDF] Step 2: Loading tournament data for year:', tournamentYear);
+        let tournamentData;
+        try {
+          tournamentData = await loadTournamentData(tournamentYear);
+          console.log('[Email PDF] Step 2: Tournament data loaded successfully');
+        } catch (tournamentError) {
+          console.error('[Email PDF] Step 2 ERROR: Failed to load tournament data:', tournamentError);
+          throw tournamentError;
+        }
 
         // Generate bracket with picks
-        console.log('[Email PDF] Generating bracket structure...');
-        const generatedBracket = generate64TeamBracket(tournamentData);
-        const updatedBracket = updateBracketWithPicks(generatedBracket, bracket.picks, tournamentData);
-        console.log('[Email PDF] Bracket structure generated');
+        console.log('[Email PDF] Step 3: Generating bracket structure...');
+        let generatedBracket, updatedBracket;
+        try {
+          generatedBracket = generate64TeamBracket(tournamentData);
+          updatedBracket = updateBracketWithPicks(generatedBracket, bracket.picks, tournamentData);
+          console.log('[Email PDF] Step 3: Bracket structure generated successfully');
+        } catch (bracketError) {
+          console.error('[Email PDF] Step 3 ERROR: Failed to generate bracket structure:', bracketError);
+          throw bracketError;
+        }
 
         // Generate PDF using Puppeteer
-        console.log('[Email PDF] Generating PDF...');
-        const pdfBuffer = await generateBracketPDF(bracket, updatedBracket, tournamentData, siteConfig);
-        console.log('[Email PDF] PDF generated, size:', pdfBuffer.length, 'bytes');
+        console.log('[Email PDF] Step 4: Generating PDF...');
+        let pdfBuffer;
+        try {
+          pdfBuffer = await generateBracketPDF(bracket, updatedBracket, tournamentData, siteConfig);
+          console.log('[Email PDF] Step 4: PDF generated successfully, size:', pdfBuffer.length, 'bytes');
+        } catch (pdfError) {
+          console.error('[Email PDF] Step 4 ERROR: Failed to generate PDF:', pdfError);
+          if (pdfError instanceof Error) {
+            console.error('[Email PDF] Step 4 ERROR details:', pdfError.message);
+            console.error('[Email PDF] Step 4 ERROR stack:', pdfError.stack);
+          }
+          throw pdfError;
+        }
 
         // Generate email content from template
         const entryName = bracket.entryName || `Bracket ${bracket.id}`;
-        console.log('[Email PDF] Rendering email template...');
-        
-        // Import template renderer
-        const { renderEmailTemplate } = await import('@/lib/emailTemplate');
-        
-        const emailContent = await renderEmailTemplate(siteConfig, {
-          name: session.user.name || undefined,
-          entryName,
-          tournamentYear,
-          siteName: siteConfig?.siteName || 'Warren\'s March Madness',
-          bracketId: bracket.id.toString(),
-        }, 'pdf');
+        console.log('[Email PDF] Step 5: Rendering email template...');
+        let emailContent;
+        try {
+          const { renderEmailTemplate } = await import('@/lib/emailTemplate');
+          emailContent = await renderEmailTemplate(siteConfig, {
+            name: session.user.name || undefined,
+            entryName,
+            tournamentYear,
+            siteName: siteConfig?.siteName || 'Warren\'s March Madness',
+            bracketId: bracket.id.toString(),
+          }, 'pdf');
+          console.log('[Email PDF] Step 5: Email template rendered successfully');
+        } catch (templateError) {
+          console.error('[Email PDF] Step 5 ERROR: Failed to render email template:', templateError);
+          throw templateError;
+        }
 
         // Send email with PDF attachment
-        console.log('[Email PDF] Sending email...');
-        const pdfFilename = generateBracketFilename(bracket.entryName, tournamentYear, bracket.id.toString());
-        const emailSent = await emailService.sendEmail({
-          to: userEmail,
-          subject: emailContent.subject,
-          html: emailContent.html,
-          text: emailContent.text,
-          attachments: [
-            {
-              filename: pdfFilename,
-              content: pdfBuffer,
-              contentType: 'application/pdf',
-            },
-          ],
-        });
+        console.log('[Email PDF] Step 6: Sending email...');
+        try {
+          const pdfFilename = generateBracketFilename(bracket.entryName, tournamentYear, bracket.id.toString());
+          const emailSent = await emailService.sendEmail({
+            to: userEmail,
+            subject: emailContent.subject,
+            html: emailContent.html,
+            text: emailContent.text,
+            attachments: [
+              {
+                filename: pdfFilename,
+                content: pdfBuffer,
+                contentType: 'application/pdf',
+              },
+            ],
+          });
 
-        if (!emailSent) {
-          console.error('[Email PDF] Email service returned false');
-        } else {
-          console.log('[Email PDF] Email sent successfully');
+          if (!emailSent) {
+            console.error('[Email PDF] Step 6 ERROR: Email service returned false');
+          } else {
+            console.log('[Email PDF] Step 6: Email sent successfully to:', userEmail);
+          }
+        } catch (emailError) {
+          console.error('[Email PDF] Step 6 ERROR: Failed to send email:', emailError);
+          if (emailError instanceof Error) {
+            console.error('[Email PDF] Step 6 ERROR details:', emailError.message);
+            console.error('[Email PDF] Step 6 ERROR stack:', emailError.stack);
+          }
+          throw emailError;
         }
+        
+        console.log('[Email PDF] Background processing completed successfully');
       } catch (error) {
-        // Log error but don't fail the request (already returned success)
-        console.error('[Email PDF] Background email processing error:', error);
+        // Log detailed error information
+        console.error('[Email PDF] Background email processing FAILED');
+        console.error('[Email PDF] Error type:', error instanceof Error ? error.constructor.name : typeof error);
+        console.error('[Email PDF] Error message:', error instanceof Error ? error.message : String(error));
+        if (error instanceof Error && error.stack) {
+          console.error('[Email PDF] Error stack:', error.stack);
+        }
+        if (error instanceof Error && 'cause' in error) {
+          console.error('[Email PDF] Error cause:', error.cause);
+        }
+        // Log the full error object for debugging
+        console.error('[Email PDF] Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
       }
     })();
     return NextResponse.json({
