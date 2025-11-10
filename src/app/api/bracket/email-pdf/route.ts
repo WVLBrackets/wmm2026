@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { getBracketById, Bracket, getUserByEmail } from '@/lib/secureDatabase';
 import { getSiteConfigFromGoogleSheets, SiteConfigData } from '@/lib/siteConfig';
 import { sendOnDemandPdfEmail, processEmailAsync } from '@/lib/bracketEmailService';
-import { TournamentData, TournamentBracket } from '@/types/tournament';
+import { TournamentData, TournamentBracket, TournamentTeam } from '@/types/tournament';
 // PDF generation using puppeteer
 // Install: npm install puppeteer-core @sparticuz/chromium
 
