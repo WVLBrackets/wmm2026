@@ -1,52 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { waitUntil } from '@vercel/functions';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getBracketById, Bracket, getUserByEmail } from '@/lib/secureDatabase';
-import { emailService } from '@/lib/emailService';
-import { loadTournamentData } from '@/lib/tournamentLoader';
-import { generate64TeamBracket, updateBracketWithPicks } from '@/lib/bracketGenerator';
 import { getSiteConfigFromGoogleSheets, SiteConfigData } from '@/lib/siteConfig';
-import { TournamentData, TournamentBracket, TournamentTeam } from '@/types/tournament';
+import { sendOnDemandPdfEmail, processEmailAsync } from '@/lib/bracketEmailService';
 // PDF generation using puppeteer
 // Install: npm install puppeteer-core @sparticuz/chromium
-// Note: These packages are not installed yet, so PDF generation is disabled
-
-/**
- * Generate a sanitized filename for bracket PDF
- * Format: WMM-{tournamentYear}-{sanitizedEntryName}.pdf
- */
-function generateBracketFilename(entryName: string | null | undefined, tournamentYear: string, bracketId: string): string {
-  // Sanitize entry name: lowercase, remove special chars, replace spaces with hyphens
-  let sanitized = entryName || `bracket-${bracketId}`;
-  
-  // Convert to lowercase
-  sanitized = sanitized.toLowerCase();
-  
-  // Replace spaces and underscores with hyphens
-  sanitized = sanitized.replace(/[\s_]+/g, '-');
-  
-  // Remove all characters that aren't alphanumeric, hyphens, or dots
-  sanitized = sanitized.replace(/[^a-z0-9.-]/g, '');
-  
-  // Remove multiple consecutive hyphens
-  sanitized = sanitized.replace(/-+/g, '-');
-  
-  // Remove leading/trailing hyphens and dots
-  sanitized = sanitized.replace(/^[-.]+|[-.]+$/g, '');
-  
-  // If empty after sanitization, use bracket ID
-  if (!sanitized || sanitized.length === 0) {
-    sanitized = `bracket-${bracketId}`;
-  }
-  
-  // Limit length to avoid filesystem issues (max 200 chars for filename)
-  if (sanitized.length > 200) {
-    sanitized = sanitized.substring(0, 200);
-  }
-  
-  return `WMM-${tournamentYear}-${sanitized}.pdf`;
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -136,134 +95,18 @@ export async function POST(request: NextRequest) {
       console.log('[Email PDF] Using site config provided by client (no fetch needed)');
     }
 
-    // Process PDF generation and email asynchronously using waitUntil
+    // Process PDF generation and email asynchronously using centralized service
     // This keeps the execution context alive after returning the response
     console.log('[Email PDF] Starting background PDF generation and email processing...');
     
-    // Use waitUntil to keep execution context alive after response
-    // This is the proper way to handle async background tasks in Next.js/Vercel
-    const emailProcessingPromise = (async () => {
-      console.log('[Email PDF] Background async function STARTED');
-      try {
-        // Use the site config we already have (loaded from client or fetched above)
-        const finalSiteConfig = siteConfig;
-        console.log('[Email PDF] Step 1: Using site config (already loaded, no fetch needed)');
-        
-        const tournamentYear = finalSiteConfig?.tournamentYear || '2025';
-        console.log('[Email PDF] Step 2: Loading tournament data for year:', tournamentYear);
-        let tournamentData;
-        try {
-          tournamentData = await loadTournamentData(tournamentYear);
-          console.log('[Email PDF] Step 2: Tournament data loaded successfully');
-        } catch (tournamentError) {
-          console.error('[Email PDF] Step 2 ERROR: Failed to load tournament data:', tournamentError);
-          throw tournamentError;
-        }
-
-        // Generate bracket with picks
-        console.log('[Email PDF] Step 3: Generating bracket structure...');
-        let generatedBracket, updatedBracket;
-        try {
-          generatedBracket = generate64TeamBracket(tournamentData);
-          updatedBracket = updateBracketWithPicks(generatedBracket, bracket.picks, tournamentData);
-          console.log('[Email PDF] Step 3: Bracket structure generated successfully');
-        } catch (bracketError) {
-          console.error('[Email PDF] Step 3 ERROR: Failed to generate bracket structure:', bracketError);
-          throw bracketError;
-        }
-
-        // Generate PDF using Puppeteer
-        console.log('[Email PDF] Step 4: Generating PDF...');
-        let pdfBuffer;
-        try {
-          pdfBuffer = await generateBracketPDF(bracket, updatedBracket, tournamentData, finalSiteConfig);
-          console.log('[Email PDF] Step 4: PDF generated successfully, size:', pdfBuffer.length, 'bytes');
-        } catch (pdfError) {
-          console.error('[Email PDF] Step 4 ERROR: Failed to generate PDF:', pdfError);
-          if (pdfError instanceof Error) {
-            console.error('[Email PDF] Step 4 ERROR details:', pdfError.message);
-            console.error('[Email PDF] Step 4 ERROR stack:', pdfError.stack);
-          }
-          throw pdfError;
-        }
-
-        // Generate email content from template
-        const entryName = bracket.entryName || `Bracket ${bracket.id}`;
-        console.log('[Email PDF] Step 5: Rendering email template...');
-        let emailContent;
-        try {
-          const { renderEmailTemplate } = await import('@/lib/emailTemplate');
-          emailContent = await renderEmailTemplate(finalSiteConfig, {
-            name: session.user.name || undefined,
-            entryName,
-            tournamentYear,
-            siteName: finalSiteConfig?.siteName || 'Warren\'s March Madness',
-            bracketId: bracket.id.toString(),
-          }, 'pdf');
-          console.log('[Email PDF] Step 5: Email template rendered successfully');
-        } catch (templateError) {
-          console.error('[Email PDF] Step 5 ERROR: Failed to render email template:', templateError);
-          throw templateError;
-        }
-
-        // Send email with PDF attachment
-        console.log('[Email PDF] Step 6: Sending email...');
-        try {
-          const pdfFilename = generateBracketFilename(bracket.entryName, tournamentYear, bracket.id.toString());
-          const emailSent = await emailService.sendEmail({
-            to: userEmail,
-            subject: emailContent.subject,
-            html: emailContent.html,
-            text: emailContent.text,
-            attachments: [
-              {
-                filename: pdfFilename,
-                content: pdfBuffer,
-                contentType: 'application/pdf',
-              },
-            ],
-          });
-
-          if (!emailSent) {
-            console.error('[Email PDF] Step 6 ERROR: Email service returned false');
-          } else {
-            console.log('[Email PDF] Step 6: Email sent successfully to:', userEmail);
-          }
-        } catch (emailError) {
-          console.error('[Email PDF] Step 6 ERROR: Failed to send email:', emailError);
-          if (emailError instanceof Error) {
-            console.error('[Email PDF] Step 6 ERROR details:', emailError.message);
-            console.error('[Email PDF] Step 6 ERROR stack:', emailError.stack);
-          }
-          throw emailError;
-        }
-        
-        console.log('[Email PDF] Background processing completed successfully');
-        console.log('[Email PDF] Background async function COMPLETED (success)');
-      } catch (error) {
-        // Log detailed error information
-        console.error('[Email PDF] Background email processing FAILED');
-        console.error('[Email PDF] Error type:', error instanceof Error ? error.constructor.name : typeof error);
-        console.error('[Email PDF] Error message:', error instanceof Error ? error.message : String(error));
-        if (error instanceof Error && error.stack) {
-          console.error('[Email PDF] Error stack:', error.stack);
-        }
-        if (error instanceof Error && 'cause' in error) {
-          console.error('[Email PDF] Error cause:', error.cause);
-        }
-        // Log the full error object for debugging
-        try {
-          console.error('[Email PDF] Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
-        } catch (stringifyError) {
-          console.error('[Email PDF] Could not stringify error:', stringifyError);
-        }
-        console.log('[Email PDF] Background async function COMPLETED (with error)');
-      }
-    })();
+    const emailPromise = sendOnDemandPdfEmail(
+      bracket,
+      { name: session.user.name, email: userEmail },
+      siteConfig
+    );
     
     // Use waitUntil to keep execution context alive after response
-    // This is Vercel's API for background tasks in serverless functions
-    waitUntil(emailProcessingPromise);
+    processEmailAsync(emailPromise);
     
     // Return success immediately - background processing will continue
     return NextResponse.json({

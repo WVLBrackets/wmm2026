@@ -9,6 +9,7 @@ import {
   getAllBrackets 
 } from '@/lib/secureDatabase';
 import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
+import { sendSubmissionConfirmationEmail, processEmailAsync } from '@/lib/bracketEmailService';
 
 /**
  * POST /api/tournament-bracket - Create a new tournament bracket (submit)
@@ -134,8 +135,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Send automated submission confirmation email in background
-    // Process asynchronously to prevent UI hang
-    (async () => {
+    // Process asynchronously using centralized service with waitUntil
+    const emailPromise = (async () => {
       try {
         // Get all submitted brackets for this user to calculate counts
         const allUserBrackets = await getBracketsByUserId(user.id);
@@ -144,10 +145,11 @@ export async function POST(request: NextRequest) {
         
         // Get entry cost from config
         let entryCost = 5; // Default
+        let siteConfig = null;
         try {
-          const config = await getSiteConfigFromGoogleSheets();
-          if (config?.entryCost) {
-            entryCost = config.entryCost;
+          siteConfig = await getSiteConfigFromGoogleSheets();
+          if (siteConfig?.entryCost) {
+            entryCost = siteConfig.entryCost;
           }
         } catch (error) {
           // Use default if config fails
@@ -157,102 +159,22 @@ export async function POST(request: NextRequest) {
         
         const totalCost = submissionCount * entryCost;
         
-        // Get site config for email template
-        const siteConfig = await getSiteConfigFromGoogleSheets();
-        
-        // Generate PDF for attachment
-        let pdfBuffer: Buffer | null = null;
-        try {
-          const { loadTournamentData } = await import('@/lib/tournamentLoader');
-          const { generate64TeamBracket, updateBracketWithPicks } = await import('@/lib/bracketGenerator');
-          
-          // Load tournament data
-          const tournamentData = await loadTournamentData(tournamentYear.toString());
-          
-          // Generate bracket structure
-          const generatedBracket = generate64TeamBracket(tournamentData);
-          const bracketWithPicks = updateBracketWithPicks(generatedBracket, updatedBracket.picks, tournamentData);
-          
-          // Generate PDF using the same function from email-pdf route
-          const { generateBracketPDF } = await import('@/app/api/bracket/email-pdf/route');
-          pdfBuffer = await generateBracketPDF(updatedBracket, bracketWithPicks, tournamentData, siteConfig);
-          console.log('[Submit Bracket] PDF generated, size:', pdfBuffer.length, 'bytes');
-        } catch (pdfError) {
-          console.error('[Submit Bracket] Error generating PDF:', pdfError);
-          // Continue without PDF - email will still be sent
-        }
-        
-        // Render and send email
-        const { renderEmailTemplate } = await import('@/lib/emailTemplate');
-        const { emailService } = await import('@/lib/emailService');
-        
-        const emailContent = await renderEmailTemplate(siteConfig, {
-          name: user.name || undefined,
-          entryName: updatedBracket.entryName,
-          tournamentYear: tournamentYear.toString(),
-          siteName: siteConfig?.siteName || 'Warren\'s March Madness',
-          bracketId: updatedBracket.id.toString(),
+        // Use centralized email service
+        await sendSubmissionConfirmationEmail(
+          updatedBracket,
+          user,
+          siteConfig,
           submissionCount,
-          totalCost,
-        }, 'submit');
-        
-        // Prepare email with optional PDF attachment
-        const emailOptions: {
-          to: string;
-          subject: string;
-          html: string;
-          text: string;
-          attachments?: Array<{
-            filename: string;
-            content: Buffer;
-            contentType: string;
-          }>;
-        } = {
-          to: user.email,
-          subject: emailContent.subject,
-          html: emailContent.html,
-          text: emailContent.text,
-        };
-        
-        // Add PDF attachment if generated successfully
-        if (pdfBuffer) {
-          // Generate filename: WMM-{tournamentYear}-{sanitizedEntryName}.pdf
-          const sanitizeEntryName = (name: string | null | undefined): string => {
-            let sanitized = name || `bracket-${updatedBracket.id}`;
-            sanitized = sanitized.toLowerCase();
-            sanitized = sanitized.replace(/[\s_]+/g, '-');
-            sanitized = sanitized.replace(/[^a-z0-9.-]/g, '');
-            sanitized = sanitized.replace(/-+/g, '-');
-            sanitized = sanitized.replace(/^[-.]+|[-.]+$/g, '');
-            if (!sanitized || sanitized.length === 0) {
-              sanitized = `bracket-${updatedBracket.id}`;
-            }
-            if (sanitized.length > 200) {
-              sanitized = sanitized.substring(0, 200);
-            }
-            return sanitized;
-          };
-          
-          const sanitizedEntryName = sanitizeEntryName(updatedBracket.entryName);
-          const pdfFilename = `WMM-${tournamentYear}-${sanitizedEntryName}.pdf`;
-          
-          emailOptions.attachments = [
-            {
-              filename: pdfFilename,
-              content: pdfBuffer,
-              contentType: 'application/pdf',
-            },
-          ];
-        }
-        
-        await emailService.sendEmail(emailOptions);
-        
-        console.log('[Submit Bracket] Confirmation email sent successfully' + (pdfBuffer ? ' with PDF attachment' : ''));
+          totalCost
+        );
       } catch (emailError) {
         // Log error but don't fail the submission (already returned success)
         console.error('[Submit Bracket] Error sending confirmation email:', emailError);
       }
     })();
+    
+    // Use waitUntil to keep execution context alive after response
+    processEmailAsync(emailPromise);
 
     // Return bracket in the format expected by the frontend
     return NextResponse.json({
