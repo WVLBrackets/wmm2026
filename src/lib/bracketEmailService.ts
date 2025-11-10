@@ -133,7 +133,7 @@ export async function sendSubmissionConfirmationEmail(
  */
 export async function sendOnDemandPdfEmail(
   bracket: Bracket,
-  user: { name: string | null; email: string },
+  user: { name: string | null | undefined; email: string },
   siteConfig: SiteConfigData | null
 ): Promise<void> {
   console.log('[Bracket Email] Starting on-demand PDF email process...');

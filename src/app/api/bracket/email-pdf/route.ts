@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
     
     const emailPromise = sendOnDemandPdfEmail(
       bracket,
-      { name: session.user.name, email: userEmail },
+      { name: session.user.name ?? null, email: userEmail },
       siteConfig
     );
     
