@@ -871,7 +871,7 @@ async function generatePrintPageHTML(
           <span>${entryName}</span>
         </div>
         <div style="flex: 1; display: flex; justify-content: center; align-items: center;">
-          <span>Warren's March Madness ${tournamentYear}</span>
+          <span>${tournamentYear}</span>
         </div>
         <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center; gap: 6px; padding-right: 20px;">
           ${championTeam ? `

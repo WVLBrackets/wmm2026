@@ -726,9 +726,9 @@ export default function PrintBracketPage() {
           <span>{bracketData?.entryName as string || ''}</span>
         </div>
         
-        {/* Center: Warren's March Madness + Year */}
+        {/* Center: Year only */}
         <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <span>Warren&apos;s March Madness {siteConfig?.tournamentYear || ''}</span>
+          <span>{siteConfig?.tournamentYear || ''}</span>
         </div>
         
         {/* Right: Champ: Team Mascot Logo */}
