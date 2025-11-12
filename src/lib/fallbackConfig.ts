@@ -68,6 +68,8 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   emailSubmitMessage1: 'Congratulations! Your bracket "{entryName}" has been successfully submitted for the {tournamentYear} tournament.',
   emailSubmitMessage2: 'You currently have {submissionCount} submitted bracket(s) with a total cost of ${totalCost}.',
   emailSubmitMessage3: 'Want to increase your chances? Submit more brackets and invite your friends to join the fun!',
-  emailSubmitFooter: 'This is an automated email from Warren\'s March Madness.'
+  emailSubmitFooter: 'This is an automated email from Warren\'s March Madness.',
+  // Print bracket trophy icon (default to trophy-icon.png)
+  printBracketTrophy: 'trophy-icon.png'
 };
 

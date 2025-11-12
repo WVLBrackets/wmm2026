@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Trash2, Edit, Save, X, Users, Trophy, CheckCircle, Key, Edit3, LogOut, Link2, Table, Plus, Download, AlertCircle, Power, PowerOff } from 'lucide-react';
+import { Trash2, Edit, Save, X, Users, Trophy, CheckCircle, Key, Edit3, LogOut, Link2, Table, Plus, Download, AlertCircle, Power, PowerOff, Zap } from 'lucide-react';
 import { useBracketMode } from '@/contexts/BracketModeContext';
 
 interface User {
@@ -61,6 +61,9 @@ export default function AdminPage() {
   const [editingTeam, setEditingTeam] = useState<string | null>(null);
   const [editingTeamData, setEditingTeamData] = useState<{ key: string; id: string; name: string; mascot?: string; logo: string; active?: boolean } | null>(null);
   const [isAddingTeam, setIsAddingTeam] = useState(false);
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+  const [syncTeamId, setSyncTeamId] = useState('');
+  const [syncResult, setSyncResult] = useState<{ report: { id?: string; action?: string; dbName?: string; espnName?: string; mascot?: string; logoUrl?: string; message?: string; details?: string } | null; loading: boolean } | null>(null);
   const [newTeamData, setNewTeamData] = useState<{ key: string; id: string; name: string; mascot?: string; logo: string; active?: boolean }>({ key: '', id: '', name: '', mascot: '', logo: '', active: true });
   const [teamDataError, setTeamDataError] = useState('');
   const [teamFilters, setTeamFilters] = useState<{ key: string; id: string; name: string; mascot: string; logo: string }>({ key: '', id: '', name: '', mascot: '', logo: '' });
@@ -452,6 +455,40 @@ export default function AdminPage() {
   const handleCancelAddTeam = () => {
     setIsAddingTeam(false);
     setNewTeamData({ key: '', id: '', name: '', mascot: '', logo: '', active: true });
+  };
+
+  const handleSyncTeam = async (mode: 'report' | 'update') => {
+    const teamId = parseInt(syncTeamId);
+    if (!teamId || teamId < 1 || teamId > 9999) {
+      setSyncResult({ report: { message: 'Invalid team ID. Must be a number between 1 and 9999' }, loading: false });
+      return;
+    }
+
+    setSyncResult({ report: null, loading: true });
+
+    try {
+      const response = await fetch('/api/admin/sync-team-from-espn', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ teamId, mode }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setSyncResult({ report: data.report, loading: false });
+        // If update mode and successful, reload team data
+        if (mode === 'update') {
+          await loadTeamData();
+        }
+      } else {
+        setSyncResult({ report: { message: data.error || 'Failed to sync team', details: data.details }, loading: false });
+      }
+    } catch (error) {
+      setSyncResult({ report: { message: 'Error syncing team', details: error instanceof Error ? error.message : 'Unknown error' }, loading: false });
+    }
   };
 
   const handleSaveNewTeam = async () => {
@@ -1697,10 +1734,21 @@ export default function AdminPage() {
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={handleAddTeam}
-                    className="flex items-center space-x-1 px-3 py-1.5 text-sm bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                    className="flex items-center justify-center w-8 h-8 text-sm bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                    title="Add Team"
                   >
                     <Plus className="h-4 w-4" />
-                    <span>Add Team</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsSyncModalOpen(true);
+                      setSyncTeamId('');
+                      setSyncResult(null);
+                    }}
+                    className="flex items-center justify-center w-8 h-8 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    title="Sync Team from ESPN"
+                  >
+                    <Zap className="h-4 w-4" />
                   </button>
                   <button
                     onClick={handleActivateFilteredTeams}
@@ -1874,6 +1922,112 @@ export default function AdminPage() {
                 >
                   Save
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* Sync Team from ESPN Modal */}
+          {isSyncModalOpen && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Sync Team from ESPN</h3>
+                  <button
+                    onClick={() => {
+                      setIsSyncModalOpen(false);
+                      setSyncTeamId('');
+                      setSyncResult(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Team ID (1-9999)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="9999"
+                    value={syncTeamId}
+                    onChange={(e) => setSyncTeamId(e.target.value)}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                    placeholder="Enter team ID"
+                    disabled={syncResult?.loading}
+                  />
+                </div>
+
+                {syncResult && (
+                  <div className={`mb-4 p-3 rounded ${
+                    syncResult.report?.action === 'match' 
+                      ? 'bg-green-50 text-green-800 border border-green-200'
+                      : syncResult.report?.action === 'error' || syncResult.report?.action === 'not_found'
+                      ? 'bg-red-50 text-red-800 border border-red-200'
+                      : syncResult.report?.action === 'mismatch' || syncResult.report?.action === 'created'
+                      ? 'bg-yellow-50 text-yellow-800 border border-yellow-200'
+                      : 'bg-gray-50 text-gray-800 border border-gray-200'
+                  }`}>
+                    {syncResult.loading ? (
+                      <p className="text-sm">Loading...</p>
+                    ) : (
+                      <div className="text-sm">
+                        <p className="font-semibold mb-2">
+                          {syncResult.report?.action === 'match' && '✓ Match'}
+                          {syncResult.report?.action === 'mismatch' && '⚠ Mismatch'}
+                          {syncResult.report?.action === 'created' && '➕ New Team'}
+                          {syncResult.report?.action === 'not_found' && '❌ Not Found'}
+                          {syncResult.report?.action === 'error' && '❌ Error'}
+                        </p>
+                        {syncResult.report?.dbName && (
+                          <p><strong>DB:</strong> {syncResult.report.dbName}</p>
+                        )}
+                        {syncResult.report?.espnName && (
+                          <p><strong>ESPN:</strong> {syncResult.report.espnName}</p>
+                        )}
+                        {syncResult.report?.mascot && (
+                          <p><strong>Mascot:</strong> {syncResult.report.mascot}</p>
+                        )}
+                        {syncResult.report?.message && (
+                          <p className="mt-2">{syncResult.report.message}</p>
+                        )}
+                        {syncResult.report?.details && (
+                          <p className="mt-2 text-xs">{syncResult.report.details}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() => {
+                      setIsSyncModalOpen(false);
+                      setSyncTeamId('');
+                      setSyncResult(null);
+                    }}
+                    disabled={syncResult?.loading}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Close
+                  </button>
+                  <button
+                    onClick={() => handleSyncTeam('report')}
+                    disabled={syncResult?.loading || !syncTeamId}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {syncResult?.loading ? 'Loading...' : 'Report'}
+                  </button>
+                  <button
+                    onClick={() => handleSyncTeam('update')}
+                    disabled={syncResult?.loading || !syncTeamId}
+                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {syncResult?.loading ? 'Loading...' : 'Update'}
+                  </button>
+                </div>
               </div>
             </div>
           )}

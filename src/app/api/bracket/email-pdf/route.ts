@@ -811,10 +811,21 @@ async function generatePrintPageHTML(
     }
   }
   
-  // Trophy icon SVG (gold color #d4af37)
-  const trophyIconSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
-    <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 18v4a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-4M6 18h12" stroke="#d4af37" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>`;
+  // Trophy icon PNG - get filename from config, convert to base64 for embedding in PDF
+  const trophyIconFilename = siteConfig?.printBracketTrophy || 'trophy-icon.png';
+  const trophyIconPath = `/images/${trophyIconFilename}`;
+  const trophyIconBase64 = getLogoAsBase64(trophyIconPath);
+  const trophyIconHTML = trophyIconBase64 
+    ? `<img src="${trophyIconBase64}" alt="Trophy" width="20" height="20" style="object-fit: contain; flex-shrink: 0;" />`
+    : '';
+  
+  // WMM Logo - convert to base64 for embedding in PDF, absolutely positioned to overlay content
+  const wmmLogoBase64 = getLogoAsBase64('/images/WMM Logo.png');
+  const wmmLogoHTML = wmmLogoBase64
+    ? `<div style="position: absolute; top: 60px; left: 50%; transform: translateX(-50%); z-index: 10; pointer-events: none;">
+        <img src="${wmmLogoBase64}" alt="WMM Logo" width="120" height="60" style="object-fit: contain;" />
+      </div>`
+    : '';
   
   return `
     <!DOCTYPE html>
@@ -842,6 +853,7 @@ async function generatePrintPageHTML(
           page-break-inside: avoid;
           page-break-after: avoid;
           page-break-before: avoid;
+          position: relative;
         }
       </style>
     </head>
@@ -859,17 +871,20 @@ async function generatePrintPageHTML(
           <span>${entryName}</span>
         </div>
         <div style="flex: 1; display: flex; justify-content: center; align-items: center;">
-          <span>Warren's March Madness ${tournamentYear}</span>
+          <span>${tournamentYear}</span>
         </div>
         <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center; gap: 6px; padding-right: 20px;">
           ${championTeam ? `
-            ${trophyIconSVG}
+            ${trophyIconHTML}
             <span>${championTeam.name}</span>
             ${championMascot ? `<span>${championMascot}</span>` : ''}
             ${championLogo ? `<img src="${championLogo}" alt="${championTeam.name} logo" width="24" height="24" style="object-fit: contain; flex-shrink: 0;" />` : ''}
           ` : ''}
         </div>
       </div>
+      
+      <!-- WMM Logo - Absolutely positioned, overlaying content -->
+      ${wmmLogoHTML}
       
       <!-- Bracket Content -->
       <div style="padding: 10px;">

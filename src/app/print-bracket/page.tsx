@@ -7,15 +7,16 @@ import { loadTournamentData } from '@/lib/tournamentLoader';
 import { getTeamInfo } from '@/lib/teamLogos';
 import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
 import { TournamentTeam, TournamentData } from '@/types/tournament';
+import { SiteConfigData } from '@/lib/siteConfig';
 import Image from 'next/image';
-import { Trophy } from 'lucide-react';
+// Trophy icon is now a PNG image, no longer using lucide-react Trophy
 
 export default function PrintBracketPage() {
   const [bracketData, setBracketData] = useState<Record<string, unknown> | null>(null);
   const [bracket, setBracket] = useState<Record<string, unknown> | null>(null);
   const [tournamentData, setTournamentData] = useState<Record<string, unknown> | null>(null);
   const [championTeam, setChampionTeam] = useState<TournamentTeam | null>(null);
-  const [siteConfig, setSiteConfig] = useState<{ tournamentYear?: string } | null>(null);
+  const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
   const [championMascot, setChampionMascot] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { setInPrintMode } = useBracketMode();
@@ -710,7 +711,7 @@ export default function PrintBracketPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white" style={{ position: 'relative' }}>
       {/* Header */}
       <div style={{ 
         padding: '8px 0px', 
@@ -725,14 +726,22 @@ export default function PrintBracketPage() {
           <span>{bracketData?.entryName as string || ''}</span>
         </div>
         
-        {/* Center: Warren's March Madness + Year */}
+        {/* Center: Year only */}
         <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <span>Warren&apos;s March Madness {siteConfig?.tournamentYear || ''}</span>
+          <span>{siteConfig?.tournamentYear || ''}</span>
         </div>
         
         {/* Right: Champ: Team Mascot Logo */}
         <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '6px', paddingRight: '20px' }}>
-          <Trophy size={20} color="#d4af37" style={{ flexShrink: 0 }} />
+          {siteConfig?.printBracketTrophy && (
+            <Image
+              src={`/images/${siteConfig.printBracketTrophy}`}
+              alt="Trophy"
+              width={20}
+              height={20}
+              style={{ objectFit: 'contain', flexShrink: 0 }}
+            />
+          )}
           {championTeam && (
             <>
               <span>{championTeam.name}</span>
@@ -749,6 +758,24 @@ export default function PrintBracketPage() {
             </>
           )}
         </div>
+      </div>
+      
+      {/* WMM Logo - Absolutely positioned, overlaying content */}
+      <div style={{
+        position: 'absolute',
+        top: '60px', // Position just below header (header is ~40px + padding)
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 10,
+        pointerEvents: 'none' // Allow clicks to pass through
+      }}>
+        <Image
+          src="/images/WMM Logo.png"
+          alt="WMM Logo"
+          width={120}
+          height={60}
+          style={{ objectFit: 'contain' }}
+        />
       </div>
       
       {/* Print/Close Buttons */}
