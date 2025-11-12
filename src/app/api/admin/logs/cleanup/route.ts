@@ -42,8 +42,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      deletedUsageLogs: usageResult.count || 0,
-      deletedErrorLogs: errorResult.count || 0,
+      deletedUsageLogs: usageResult.rowCount || 0,
+      deletedErrorLogs: errorResult.rowCount || 0,
       cutoffDate: cutoffDate.toISOString(),
     });
   } catch (error) {
