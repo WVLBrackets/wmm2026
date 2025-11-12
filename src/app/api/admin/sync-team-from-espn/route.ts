@@ -9,16 +9,6 @@ import { URL } from 'url';
 import * as fs from 'fs';
 import * as path from 'path';
 
-interface SyncReport {
-  id: string;
-  action: 'match' | 'mismatch' | 'created' | 'not_found' | 'error';
-  dbName?: string;
-  espnName?: string;
-  message?: string;
-  mascot?: string;
-  logoUrl?: string;
-}
-
 /**
  * Fetch ESPN team page
  */

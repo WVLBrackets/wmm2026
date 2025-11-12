@@ -63,7 +63,7 @@ export default function AdminPage() {
   const [isAddingTeam, setIsAddingTeam] = useState(false);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [syncTeamId, setSyncTeamId] = useState('');
-  const [syncResult, setSyncResult] = useState<{ report: any; loading: boolean } | null>(null);
+  const [syncResult, setSyncResult] = useState<{ report: { id?: string; action?: string; dbName?: string; espnName?: string; mascot?: string; logoUrl?: string; message?: string; details?: string } | null; loading: boolean } | null>(null);
   const [newTeamData, setNewTeamData] = useState<{ key: string; id: string; name: string; mascot?: string; logo: string; active?: boolean }>({ key: '', id: '', name: '', mascot: '', logo: '', active: true });
   const [teamDataError, setTeamDataError] = useState('');
   const [teamFilters, setTeamFilters] = useState<{ key: string; id: string; name: string; mascot: string; logo: string }>({ key: '', id: '', name: '', mascot: '', logo: '' });
