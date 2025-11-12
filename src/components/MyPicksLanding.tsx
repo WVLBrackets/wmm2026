@@ -649,7 +649,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                               <LoggedButton
                                 onClick={() => onEditBracket(bracket)}
                                 logLocation="Edit"
-                                bracketId={bracket.id}
+                                bracketId={number ? String(number).padStart(6, '0') : null}
                                 className="bg-blue-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-blue-700 cursor-pointer transition-colors"
                                 title="Edit"
                               >
@@ -658,7 +658,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                               <LoggedButton
                                 onClick={() => onCopyBracket(bracket)}
                                 logLocation="Copy"
-                                bracketId={bracket.id}
+                                bracketId={number ? String(number).padStart(6, '0') : null}
                                 className="bg-green-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-green-700 cursor-pointer transition-colors"
                                 title="Copy"
                               >
@@ -667,7 +667,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                               <LoggedButton
                                 onClick={() => handleDeleteBracket(bracket.id)}
                                 logLocation="Delete"
-                                bracketId={bracket.id}
+                                bracketId={number ? String(number).padStart(6, '0') : null}
                                 disabled={deletingBracketId === bracket.id}
                                 className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
                                   deletingBracketId === bracket.id
@@ -685,7 +685,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                               <LoggedButton
                                 onClick={() => onEditBracket(bracket)}
                                 logLocation="View"
-                                bracketId={bracket.id}
+                                bracketId={number ? String(number).padStart(6, '0') : null}
                                 className="bg-blue-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-blue-700 cursor-pointer transition-colors"
                                 title="View"
                               >
@@ -694,7 +694,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                               <LoggedButton
                                 onClick={() => onCopyBracket(bracket)}
                                 logLocation="Copy"
-                                bracketId={bracket.id}
+                                bracketId={number ? String(number).padStart(6, '0') : null}
                                 className="bg-green-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-green-700 cursor-pointer transition-colors"
                                 title="Copy"
                               >
@@ -703,7 +703,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                               <LoggedButton
                                 onClick={() => handlePrintBracket(bracket)}
                                 logLocation="Print"
-                                bracketId={bracket.id}
+                                bracketId={number ? String(number).padStart(6, '0') : null}
                                 className="hidden md:flex bg-purple-600 text-white w-8 h-8 rounded items-center justify-center hover:bg-purple-700 cursor-pointer transition-colors"
                                 title="Print"
                               >
@@ -712,7 +712,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                               <LoggedButton
                                 onClick={() => handleEmailBracket(bracket)}
                                 logLocation="Email"
-                                bracketId={bracket.id}
+                                bracketId={number ? String(number).padStart(6, '0') : null}
                                 className="bg-indigo-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-indigo-700 cursor-pointer transition-colors"
                                 title="Email PDF"
                               >

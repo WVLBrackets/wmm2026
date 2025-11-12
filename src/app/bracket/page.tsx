@@ -586,10 +586,12 @@ function BracketContent() {
       };
 
       let response;
+      let bracketNumber: number | undefined;
       
       if (editingBracket) {
         // Update existing bracket
         const bracket = editingBracket as Record<string, unknown>;
+        bracketNumber = bracket.bracketNumber as number | undefined;
         const endpoint = isAdminMode 
           ? `/api/admin/brackets/${bracket.id}`
           : `/api/tournament-bracket/${bracket.id}`;
@@ -615,6 +617,16 @@ function BracketContent() {
       const data = await response.json();
       
       if (data.success) {
+        // Get bracket number from response if creating new bracket
+        if (!editingBracket && data.data) {
+          const newBracket = data.data as Record<string, unknown>;
+          bracketNumber = newBracket.bracketNumber as number | undefined;
+        }
+        
+        // Log the save action
+        const { usageLogger } = await import('@/lib/usageLogger');
+        usageLogger.log('Click', 'Save', bracketNumber ? String(bracketNumber).padStart(6, '0') : null);
+        
         // Reload brackets to show the updated bracket
         await loadSubmittedBrackets();
         handleBackToLanding();
