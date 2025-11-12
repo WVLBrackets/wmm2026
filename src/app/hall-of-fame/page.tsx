@@ -140,6 +140,8 @@ export default async function HallOfFamePage() {
     .sort((a, b) => b.points - a.points)
     .slice(0, 25);
   return (
+    <>
+    <PageLogger location="Hall of Fame" />
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
@@ -449,7 +451,6 @@ export default async function HallOfFamePage() {
 
       </div>
     </div>
-    <PageLogger location="Hall of Fame" />
     </>
   );
 }
