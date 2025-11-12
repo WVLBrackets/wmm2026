@@ -175,14 +175,16 @@ export default function AdminPage() {
       const response = await fetch('/api/admin/logs/usage?limit=100');
       const data = await response.json();
       
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to load usage logs');
+      if (!response.ok || !data.success) {
+        const errorMsg = data.error || data.details || 'Failed to load usage logs';
+        throw new Error(errorMsg);
       }
       
       setUsageLogs(data.logs || []);
     } catch (error) {
       console.error('Error loading usage logs:', error);
-      setLogsError(error instanceof Error ? error.message : 'Failed to load usage logs');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load usage logs';
+      setLogsError(errorMessage);
     } finally {
       setLogsLoading(false);
     }
@@ -196,14 +198,16 @@ export default function AdminPage() {
       const response = await fetch('/api/admin/logs/error?limit=100');
       const data = await response.json();
       
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to load error logs');
+      if (!response.ok || !data.success) {
+        const errorMsg = data.error || data.details || 'Failed to load error logs';
+        throw new Error(errorMsg);
       }
       
       setErrorLogs(data.logs || []);
     } catch (error) {
       console.error('Error loading error logs:', error);
-      setLogsError(error instanceof Error ? error.message : 'Failed to load error logs');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load error logs';
+      setLogsError(errorMessage);
     } finally {
       setLogsLoading(false);
     }
