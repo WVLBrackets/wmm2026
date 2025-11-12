@@ -22,17 +22,18 @@ function fetchESPNTeamPage(teamId: number): Promise<{ html: string; statusCode: 
       path: parsedUrl.pathname + parsedUrl.search,
       method: 'GET',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
       }
     };
 
-    const req = https.request(options, (res) => {
-      let html = '';
+    const client = parsedUrl.protocol === 'https:' ? https : http;
+    const req = client.request(options, (res) => {
+      let data = '';
       res.on('data', (chunk) => {
-        html += chunk;
+        data += chunk;
       });
       res.on('end', () => {
-        resolve({ html, statusCode: res.statusCode || 200 });
+        resolve({ html: data, statusCode: res.statusCode || 200 });
       });
     });
 
@@ -54,21 +55,30 @@ function fetchESPNTeamPage(teamId: number): Promise<{ html: string; statusCode: 
  */
 function extractTeamNameFromHTML(html: string): string | null {
   // Method 1: Try to extract from embedded JSON data (most reliable)
+  // ESPN embeds team data in JSON with "displayName" field
   try {
+    // Look for "displayName" in various JSON contexts
+    // ESPN uses nested JSON, so we need to match flexibly
     const displayNamePatterns = [
+      // Pattern 1: "teamData":{"id":"1",...,"displayName":"Team Name"
       /"teamData"\s*:\s*\{[^}]{0,2000}?"displayName"\s*:\s*"([^"]+)"/,
+      // Pattern 2: "clubhouse":{"teamHeader":{...,"displayName":"Team Name"
       /"clubhouse"\s*:\s*\{[^}]{0,500}?"teamHeader"\s*:\s*\{[^}]{0,500}?"displayName"\s*:\s*"([^"]+)"/,
+      // Pattern 3: "subNavigation":{...,"text":"Team Name"
       /"subNavigation"\s*:\s*\{[^}]{0,500}?"text"\s*:\s*"([^"]+)"/,
+      // Pattern 4: Any "displayName":"Team Name" (more flexible)
       /"displayName"\s*:\s*"([^"]+)"/g,
     ];
     
     for (const pattern of displayNamePatterns) {
+      // Use matchAll for global patterns, match for non-global
       const isGlobal = pattern.global;
       if (isGlobal) {
         const matches = html.matchAll(pattern);
         for (const match of matches) {
           if (match[1]) {
             const name = match[1].trim();
+            // Filter out ESPN, generic terms, and invalid names
             const lowerName = name.toLowerCase();
             if (name.length > 5 && 
                 !lowerName.includes('espn') &&
@@ -76,6 +86,7 @@ function extractTeamNameFromHTML(html: string): string | null {
                 !lowerName.includes('highlights') &&
                 !lowerName.includes('basketball') &&
                 !lowerName.includes('page not found') &&
+                !lowerName.match(/^(espn|scores|stats|highlights|basketball)$/i) &&
                 name !== 'ESPN' &&
                 !name.match(/^\s*[|,\-]\s*$/)) {
               return name;
@@ -86,6 +97,7 @@ function extractTeamNameFromHTML(html: string): string | null {
         const match = html.match(pattern);
         if (match && match[1]) {
           const name = match[1].trim();
+          // Filter out ESPN, generic terms, and invalid names
           const lowerName = name.toLowerCase();
           if (name.length > 5 && 
               !lowerName.includes('espn') &&
@@ -93,6 +105,7 @@ function extractTeamNameFromHTML(html: string): string | null {
               !lowerName.includes('highlights') &&
               !lowerName.includes('basketball') &&
               !lowerName.includes('page not found') &&
+              !lowerName.match(/^(espn|scores|stats|highlights|basketball)$/i) &&
               name !== 'ESPN' &&
               !name.match(/^\s*[|,\-]\s*$/)) {
             return name;
@@ -101,16 +114,19 @@ function extractTeamNameFromHTML(html: string): string | null {
       }
     }
   } catch (error) {
-    // Continue to other methods
+    // If JSON parsing fails, continue to other methods
   }
 
-  // Method 2: Try to find in page title
+  // Method 2: Try to find the team name in the page title
+  // ESPN titles are typically "TeamName Scores, Stats and Highlights - ESPN"
   const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
   if (titleMatch) {
     const title = titleMatch[1].trim();
+    // Extract everything before "Scores" or dash or pipe
     const teamNameMatch = title.match(/^([^-|]+?)(?:\s+Scores|\s+-|\s*\|)/i) || title.match(/^([^-|]+)/);
     if (teamNameMatch) {
       let teamName = teamNameMatch[1].trim();
+      // Clean up common ESPN suffixes
       teamName = teamName
         .replace(/Scores, Stats and Highlights/i, '')
         .replace(/Men's College Basketball/i, '')
@@ -126,18 +142,25 @@ function extractTeamNameFromHTML(html: string): string | null {
     }
   }
 
-  // Method 3: Try h1 tags
+  // Method 3: Try to find in h1 tag (common on ESPN team pages)
   const h1Match = html.match(/<h1[^>]*class="[^"]*TeamHeader[^"]*"[^>]*>([^<]+)<\/h1>/i);
   if (h1Match) {
     return h1Match[1].trim();
   }
-
+  
+  // Method 4: Try generic h1
   const h1GenericMatch = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
   if (h1GenericMatch) {
     const name = h1GenericMatch[1].trim();
     if (name.length > 2 && !name.includes('404') && !name.includes('Not Found')) {
       return name;
     }
+  }
+
+  // Method 5: Look for data attributes with team name
+  const dataNameMatch = html.match(/data-name=["']([^"']+)["']/i);
+  if (dataNameMatch) {
+    return dataNameMatch[1].trim();
   }
 
   return null;
@@ -301,16 +324,43 @@ async function downloadAndSaveLogo(logoUrl: string, teamId: string): Promise<str
  * Check if ESPN page is valid
  */
 function isValidTeamPage(html: string, statusCode: number): boolean {
-  if (statusCode !== 200) {
-    return false;
-  }
-  
-  // Check for common 404 indicators
-  if (html.includes('Page Not Found') || html.includes('404')) {
+  // Check status code first
+  if (statusCode === 404) {
     return false;
   }
 
-  return true;
+  // Check for ESPN 404 indicators (but be careful - "404" might appear in other contexts)
+  const lowerHtml = html.toLowerCase();
+  if (lowerHtml.includes('page not found') || 
+      lowerHtml.includes('error 404') || 
+      lowerHtml.match(/404\s+error/i) ||
+      (lowerHtml.includes('not found') && lowerHtml.includes('404'))) {
+    return false;
+  }
+
+  // Check if page has team-related content indicators
+  // ESPN team pages typically have these in the embedded JSON
+  if (html.includes('"teamData"') || 
+      html.includes('"teamHeader"') || 
+      html.includes('"clubhouse"') ||
+      html.includes('TeamHeader') || 
+      html.includes('team-header') || 
+      html.includes('Team__Header')) {
+    return true;
+  }
+
+  // If we can extract a team name, consider it valid
+  const teamName = extractTeamNameFromHTML(html);
+  if (teamName && teamName.length > 2 && !teamName.includes('404')) {
+    return true;
+  }
+
+  // If status code is 200 and page has substantial content, likely valid
+  if (statusCode === 200 && html.length > 10000) {
+    return true;
+  }
+
+  return false;
 }
 
 /**
@@ -379,42 +429,44 @@ export async function POST(request: NextRequest) {
 
     const { html, statusCode } = response;
 
-    // Check if page is valid
-    if (!isValidTeamPage(html, statusCode)) {
-      if (existingTeam) {
-        return NextResponse.json({
-          success: true,
-          report: {
-            id: idString,
-            action: 'not_found',
-            dbName: existingTeam.name,
-            message: `Team exists in DB (${existingTeam.name}) but not found on ESPN`
-          }
-        });
+    // Extract team name from ESPN first - this is the most reliable way to validate
+    const espnTeamName = extractTeamNameFromHTML(html);
+    
+    // If we can't extract a team name, check if page is clearly invalid
+    if (!espnTeamName || espnTeamName.trim().toUpperCase() === 'ESPN') {
+      // Double-check with validation function
+      if (!isValidTeamPage(html, statusCode)) {
+        if (existingTeam) {
+          return NextResponse.json({
+            success: true,
+            report: {
+              id: idString,
+              action: 'not_found',
+              dbName: existingTeam.name,
+              message: `Team exists in DB (${existingTeam.name}) but not found on ESPN`
+            }
+          });
+        } else {
+          return NextResponse.json({
+            success: true,
+            report: {
+              id: idString,
+              action: 'not_found',
+              message: 'Team not found on ESPN and not in database'
+            }
+          });
+        }
       } else {
+        // Page seems valid but we can't extract name - this is an error
         return NextResponse.json({
           success: true,
           report: {
             id: idString,
-            action: 'not_found',
-            message: 'Team not found on ESPN and not in database'
+            action: 'error',
+            message: 'Could not extract team name from ESPN page'
           }
         });
       }
-    }
-
-    // Extract team name from ESPN
-    const espnTeamName = extractTeamNameFromHTML(html);
-    
-    if (!espnTeamName || espnTeamName.trim().toUpperCase() === 'ESPN') {
-      return NextResponse.json({
-        success: true,
-        report: {
-          id: idString,
-          action: 'not_found',
-          message: 'Could not extract team name from ESPN page or page is invalid'
-        }
-      });
     }
 
     // Extract mascot and logo
