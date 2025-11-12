@@ -2,6 +2,7 @@ import { getSiteConfig } from '@/config/site';
 import { Star, Trophy, Crown, Calendar, Users, Medal, Shield } from 'lucide-react';
 import { getHallOfFameData } from '@/lib/googleSheets';
 import TeamLogo from './TeamLogo';
+import { PageLogger } from '@/components/PageLogger';
 
 export default async function HallOfFamePage() {
   const siteConfig = await getSiteConfig();
@@ -448,5 +449,7 @@ export default async function HallOfFamePage() {
 
       </div>
     </div>
+    <PageLogger location="Hall of Fame" />
+    </>
   );
 }

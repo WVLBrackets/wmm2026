@@ -12,9 +12,11 @@ import MyPicksLanding from '@/components/MyPicksLanding';
 import { useBracketMode } from '@/contexts/BracketModeContext';
 import { Trophy, Users, Calendar, Plus, Eye, LogOut, Save, CheckCircle, ArrowLeft } from 'lucide-react';
 import { signOut } from 'next-auth/react';
+import { useUsageLogger } from '@/hooks/useUsageLogger';
 
 function BracketContent() {
   const { data: session, status } = useSession();
+  useUsageLogger('Pick');
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setInBracketMode } = useBracketMode();

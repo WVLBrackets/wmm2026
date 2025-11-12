@@ -7,6 +7,8 @@ import { signOut } from 'next-auth/react';
 import { TournamentData, TournamentBracket } from '@/types/tournament';
 import { SiteConfigData } from '@/lib/siteConfig';
 import Image from 'next/image';
+import { LoggedButton } from '@/components/LoggedButton';
+import { usageLogger } from '@/lib/usageLogger';
 
 interface Bracket {
   id: string;
@@ -360,21 +362,23 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                   
                   {/* Action buttons */}
                   <div className="flex items-center space-x-3 flex-shrink-0 ml-4">
-                    <button
+                    <LoggedButton
                       onClick={onCreateNew}
+                      logLocation="New Bracket"
                       className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
                     >
                       <Plus className="h-4 w-4" />
                       <span>New Bracket</span>
-                    </button>
+                    </LoggedButton>
                     
-                    <button
+                    <LoggedButton
                       onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+                      logLocation="Logout"
                       className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
                     >
                       <LogOut className="h-4 w-4" />
                       <span>Logout</span>
-                    </button>
+                    </LoggedButton>
                   </div>
                 </div>
               </div>
@@ -400,19 +404,21 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                     
                     {/* Action buttons */}
                     <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
-                      <button
+                      <LoggedButton
                         onClick={onCreateNew}
+                        logLocation="New Bracket"
                         className="bg-blue-600 text-white px-2 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
                       >
                         <Plus className="h-4 w-4" />
-                      </button>
+                      </LoggedButton>
                       
-                      <button
+                      <LoggedButton
                         onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+                        logLocation="Logout"
                         className="bg-blue-600 text-white px-2 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
                       >
                         <LogOut className="h-4 w-4" />
-                      </button>
+                      </LoggedButton>
                     </div>
                   </div>
                   
@@ -640,22 +646,28 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                           {bracket.status === 'in_progress' ? (
                             <>
                               {/* In Progress: Edit, Copy, Delete */}
-                              <button
+                              <LoggedButton
                                 onClick={() => onEditBracket(bracket)}
+                                logLocation="Edit"
+                                bracketId={bracket.id}
                                 className="bg-blue-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-blue-700 cursor-pointer transition-colors"
                                 title="Edit"
                               >
                                 <Edit className="h-4 w-4" />
-                              </button>
-                              <button
+                              </LoggedButton>
+                              <LoggedButton
                                 onClick={() => onCopyBracket(bracket)}
+                                logLocation="Copy"
+                                bracketId={bracket.id}
                                 className="bg-green-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-green-700 cursor-pointer transition-colors"
                                 title="Copy"
                               >
                                 <Copy className="h-4 w-4" />
-                              </button>
-                              <button
+                              </LoggedButton>
+                              <LoggedButton
                                 onClick={() => handleDeleteBracket(bracket.id)}
+                                logLocation="Delete"
+                                bracketId={bracket.id}
                                 disabled={deletingBracketId === bracket.id}
                                 className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
                                   deletingBracketId === bracket.id
@@ -665,39 +677,47 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                                 title={deletingBracketId === bracket.id ? 'Deleting...' : 'Delete'}
                               >
                                 <Trash2 className="h-4 w-4" />
-                              </button>
+                              </LoggedButton>
                             </>
                           ) : (
                             <>
                               {/* Submitted: View, Copy, Print, Email */}
-                              <button
+                              <LoggedButton
                                 onClick={() => onEditBracket(bracket)}
+                                logLocation="View"
+                                bracketId={bracket.id}
                                 className="bg-blue-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-blue-700 cursor-pointer transition-colors"
                                 title="View"
                               >
                                 <Eye className="h-4 w-4" />
-                              </button>
-                              <button
+                              </LoggedButton>
+                              <LoggedButton
                                 onClick={() => onCopyBracket(bracket)}
+                                logLocation="Copy"
+                                bracketId={bracket.id}
                                 className="bg-green-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-green-700 cursor-pointer transition-colors"
                                 title="Copy"
                               >
                                 <Copy className="h-4 w-4" />
-                              </button>
-                              <button
+                              </LoggedButton>
+                              <LoggedButton
                                 onClick={() => handlePrintBracket(bracket)}
+                                logLocation="Print"
+                                bracketId={bracket.id}
                                 className="hidden md:flex bg-purple-600 text-white w-8 h-8 rounded items-center justify-center hover:bg-purple-700 cursor-pointer transition-colors"
                                 title="Print"
                               >
                                 <Printer className="h-4 w-4" />
-                              </button>
-                              <button
+                              </LoggedButton>
+                              <LoggedButton
                                 onClick={() => handleEmailBracket(bracket)}
+                                logLocation="Email"
+                                bracketId={bracket.id}
                                 className="bg-indigo-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-indigo-700 cursor-pointer transition-colors"
                                 title="Email PDF"
                               >
                                 <Mail className="h-4 w-4" />
-                              </button>
+                              </LoggedButton>
                             </>
                           )}
                         </div>

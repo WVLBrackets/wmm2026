@@ -46,7 +46,12 @@ export default function AdminPage() {
   const [filteredBrackets, setFilteredBrackets] = useState<Bracket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'brackets' | 'users' | 'data'>('users');
+  const [activeTab, setActiveTab] = useState<'brackets' | 'users' | 'data' | 'logs'>('users');
+  const [logsTab, setLogsTab] = useState<'usage' | 'error'>('usage');
+  const [usageLogs, setUsageLogs] = useState<any[]>([]);
+  const [errorLogs, setErrorLogs] = useState<any[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsError, setLogsError] = useState('');
   const [editingBracket, setEditingBracket] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Bracket>>({});
   const [filterUser, setFilterUser] = useState<string>('all');
@@ -132,6 +137,48 @@ export default function AdminPage() {
       setError('Failed to load admin data');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadUsageLogs = async () => {
+    try {
+      setLogsLoading(true);
+      setLogsError('');
+      
+      const response = await fetch('/api/admin/logs/usage?limit=100');
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to load usage logs');
+      }
+      
+      setUsageLogs(data.logs || []);
+    } catch (error) {
+      console.error('Error loading usage logs:', error);
+      setLogsError(error instanceof Error ? error.message : 'Failed to load usage logs');
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  const loadErrorLogs = async () => {
+    try {
+      setLogsLoading(true);
+      setLogsError('');
+      
+      const response = await fetch('/api/admin/logs/error?limit=100');
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to load error logs');
+      }
+      
+      setErrorLogs(data.logs || []);
+    } catch (error) {
+      console.error('Error loading error logs:', error);
+      setLogsError(error instanceof Error ? error.message : 'Failed to load error logs');
+    } finally {
+      setLogsLoading(false);
     }
   };
 
@@ -333,8 +380,14 @@ export default function AdminPage() {
     // Load team data when Data tab is active
     if (activeTab === 'data') {
       loadTeamDataRef.current?.();
+    } else if (activeTab === 'logs') {
+      if (logsTab === 'usage') {
+        loadUsageLogs();
+      } else {
+        loadErrorLogs();
+      }
     }
-  }, [activeTab]);
+  }, [activeTab, logsTab]);
 
   // Reload team data when filter changes
   useEffect(() => {
@@ -2393,6 +2446,170 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+        {/* Logs Tab */}
+        {activeTab === 'logs' && (
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <div className="mb-6 border-b border-gray-200">
+              <nav className="flex -mb-px">
+                <button
+                  onClick={() => setLogsTab('usage')}
+                  className={`px-4 py-2 border-b-2 font-medium text-sm ${
+                    logsTab === 'usage'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Usage Logs ({usageLogs.length})
+                </button>
+                <button
+                  onClick={() => setLogsTab('error')}
+                  className={`px-4 py-2 border-b-2 font-medium text-sm ${
+                    logsTab === 'error'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Error Logs ({errorLogs.length})
+                </button>
+              </nav>
+            </div>
+
+            {logsTab === 'usage' && (
+              <div>
+                <div className="mb-4 flex justify-between items-center">
+                  <h3 className="text-lg font-semibold">Usage Logs</h3>
+                  <button
+                    onClick={loadUsageLogs}
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    disabled={logsLoading}
+                  >
+                    {logsLoading ? 'Loading...' : 'Refresh'}
+                  </button>
+                </div>
+                {logsError && (
+                  <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+                    {logsError}
+                  </div>
+                )}
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Timestamp</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Environment</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Logged In</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Event Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bracket ID</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {usageLogs.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                            {logsLoading ? 'Loading logs...' : 'No usage logs found'}
+                          </td>
+                        </tr>
+                      ) : (
+                        usageLogs.map((log) => (
+                          <tr key={log.id}>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {new Date(log.timestamp).toLocaleString()}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{log.environment}</td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {log.isLoggedIn ? 'Yes' : 'No'}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {log.username || '—'}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{log.eventType}</td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{log.location}</td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {log.bracketId || '—'}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {logsTab === 'error' && (
+              <div>
+                <div className="mb-4 flex justify-between items-center">
+                  <h3 className="text-lg font-semibold">Error Logs</h3>
+                  <button
+                    onClick={loadErrorLogs}
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    disabled={logsLoading}
+                  >
+                    {logsLoading ? 'Loading...' : 'Refresh'}
+                  </button>
+                </div>
+                {logsError && (
+                  <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+                    {logsError}
+                  </div>
+                )}
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Timestamp</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Environment</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Logged In</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Error Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Message</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {errorLogs.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                            {logsLoading ? 'Loading logs...' : 'No error logs found'}
+                          </td>
+                        </tr>
+                      ) : (
+                        errorLogs.map((log) => (
+                          <tr key={log.id}>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {new Date(log.timestamp).toLocaleString()}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{log.environment}</td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {log.isLoggedIn ? 'Yes' : 'No'}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {log.username || '—'}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {log.errorType || '—'}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {log.location || '—'}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900">
+                              <div className="max-w-md truncate" title={log.errorMessage}>
+                                {log.errorMessage}
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

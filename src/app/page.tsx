@@ -3,11 +3,14 @@ import CountdownClock from '@/components/CountdownClock';
 import Announcements from '@/components/Announcements';
 import { getSiteConfig } from '@/config/site';
 import HomePageLogo from '@/components/HomePageLogo';
+import { PageLogger } from '@/components/PageLogger';
 
 export default async function Home() {
   const siteConfig = await getSiteConfig();
 
   return (
+    <>
+      <PageLogger location="Home" />
     <div 
       className="min-h-screen flex flex-col relative"
       style={{
@@ -62,5 +65,6 @@ export default async function Home() {
       </main>
 
     </div>
+    </>
   );
 }
