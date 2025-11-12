@@ -609,9 +609,9 @@ export async function POST(request: NextRequest) {
           logoPath = await downloadAndSaveLogo(espnLogoUrl, idString) || '';
         }
 
-        // Create new team - use team name as key (normalized)
-        // Generate a unique key by normalizing the team name
-        let teamKey = espnTeamName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        // Create new team - use school name as key (normalized)
+        // Generate a unique key by normalizing the school name
+        let teamKey = schoolName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
         // If key already exists, append the ID to make it unique
         if (existingTeams[teamKey]) {
           teamKey = `${teamKey}${idString}`;
@@ -620,7 +620,7 @@ export async function POST(request: NextRequest) {
         const updatedTeams = { ...existingTeams };
         updatedTeams[teamKey] = {
           id: idString,
-          name: espnTeamName,
+          name: schoolName,
           mascot: espnMascot || undefined,
           logo: logoPath,
           active: false
@@ -633,10 +633,10 @@ export async function POST(request: NextRequest) {
           report: {
             id: idString,
             action: 'created',
-            espnName: espnTeamName,
+            espnName: schoolName,
             mascot: espnMascot,
             logoUrl: espnLogoUrl,
-            message: `New team created: ${espnTeamName}${espnMascot ? ` (${espnMascot})` : ''}${logoPath ? ' (Logo saved)' : ''}`
+            message: `New team created: ${schoolName}${espnMascot ? ` (${espnMascot})` : ''}${logoPath ? ' (Logo saved)' : ''}`
           }
         });
       } else {
@@ -645,10 +645,10 @@ export async function POST(request: NextRequest) {
           report: {
             id: idString,
             action: 'created',
-            espnName: espnTeamName,
+            espnName: schoolName,
             mascot: espnMascot,
             logoUrl: espnLogoUrl,
-            message: `Team found on ESPN but not in DB: ${espnTeamName}${espnMascot ? ` (${espnMascot})` : ''}${espnLogoUrl ? ' (Logo available)' : ''}`
+            message: `Team found on ESPN but not in DB: ${schoolName}${espnMascot ? ` (${espnMascot})` : ''}${espnLogoUrl ? ' (Logo available)' : ''}`
           }
         });
       }
