@@ -819,6 +819,14 @@ async function generatePrintPageHTML(
     ? `<img src="${trophyIconBase64}" alt="Trophy" width="20" height="20" style="object-fit: contain; flex-shrink: 0;" />`
     : '';
   
+  // WMM Logo - convert to base64 for embedding in PDF
+  const wmmLogoBase64 = getLogoAsBase64('/images/WMM Logo.png');
+  const wmmLogoHTML = wmmLogoBase64
+    ? `<div style="display: flex; justify-content: center; align-items: center; padding: 8px 0; width: 100%;">
+        <img src="${wmmLogoBase64}" alt="WMM Logo" width="120" height="60" style="object-fit: contain;" />
+      </div>`
+    : '';
+  
   return `
     <!DOCTYPE html>
     <html>
@@ -873,6 +881,9 @@ async function generatePrintPageHTML(
           ` : ''}
         </div>
       </div>
+      
+      <!-- WMM Logo - Centered below header -->
+      ${wmmLogoHTML}
       
       <!-- Bracket Content -->
       <div style="padding: 10px;">

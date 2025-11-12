@@ -760,6 +760,23 @@ export default function PrintBracketPage() {
         </div>
       </div>
       
+      {/* WMM Logo - Centered below header */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: '8px 0',
+        width: '100%'
+      }}>
+        <Image
+          src="/images/WMM Logo.png"
+          alt="WMM Logo"
+          width={120}
+          height={60}
+          style={{ objectFit: 'contain' }}
+        />
+      </div>
+      
       {/* Print/Close Buttons */}
       <div style={{ 
         padding: '5px 10px', 
