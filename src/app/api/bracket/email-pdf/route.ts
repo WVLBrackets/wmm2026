@@ -811,20 +811,11 @@ async function generatePrintPageHTML(
     }
   }
   
-  // Trophy icon SVG (gold color #d4af37) - filled trophy matching lucide-react Trophy icon
-  // This matches the Trophy icon from lucide-react which is a filled cup/trophy shape
-  const trophyIconSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
-    <!-- Trophy top rim -->
-    <path d="M6 9V2h12v7" stroke="#d4af37" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="#d4af37"/>
-    <!-- Trophy cup body (filled) -->
-    <path d="M6 9h12v9H6V9z" fill="#d4af37"/>
-    <!-- Trophy cup outline -->
-    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" stroke="#d4af37" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <!-- Trophy base -->
-    <path d="M6 18v4a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-4" stroke="#d4af37" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="#d4af37"/>
-    <!-- Trophy base divider -->
-    <path d="M6 18h12" stroke="#d4af37" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>`;
+  // Trophy icon PNG - convert to base64 for embedding in PDF
+  const trophyIconBase64 = getLogoAsBase64('/images/trophy-icon.png');
+  const trophyIconHTML = trophyIconBase64 
+    ? `<img src="${trophyIconBase64}" alt="Trophy" width="20" height="20" style="object-fit: contain; flex-shrink: 0;" />`
+    : '';
   
   return `
     <!DOCTYPE html>
@@ -873,7 +864,7 @@ async function generatePrintPageHTML(
         </div>
         <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center; gap: 6px; padding-right: 20px;">
           ${championTeam ? `
-            ${trophyIconSVG}
+            ${trophyIconHTML}
             <span>${championTeam.name}</span>
             ${championMascot ? `<span>${championMascot}</span>` : ''}
             ${championLogo ? `<img src="${championLogo}" alt="${championTeam.name} logo" width="24" height="24" style="object-fit: contain; flex-shrink: 0;" />` : ''}

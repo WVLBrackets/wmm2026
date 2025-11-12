@@ -8,7 +8,7 @@ import { getTeamInfo } from '@/lib/teamLogos';
 import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
 import { TournamentTeam, TournamentData } from '@/types/tournament';
 import Image from 'next/image';
-import { Trophy } from 'lucide-react';
+// Trophy icon is now a PNG image, no longer using lucide-react Trophy
 
 export default function PrintBracketPage() {
   const [bracketData, setBracketData] = useState<Record<string, unknown> | null>(null);
@@ -732,7 +732,13 @@ export default function PrintBracketPage() {
         
         {/* Right: Champ: Team Mascot Logo */}
         <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '6px', paddingRight: '20px' }}>
-          <Trophy size={20} color="#d4af37" style={{ flexShrink: 0 }} />
+          <Image
+            src="/images/trophy-icon.png"
+            alt="Trophy"
+            width={20}
+            height={20}
+            style={{ objectFit: 'contain', flexShrink: 0 }}
+          />
           {championTeam && (
             <>
               <span>{championTeam.name}</span>
