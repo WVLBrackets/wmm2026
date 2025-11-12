@@ -612,10 +612,21 @@ export async function POST(request: NextRequest) {
         // Import update functions
         const { updateTeamReferenceData } = await import('@/lib/secureDatabase');
         
-        // Download logo
+        // Download logo - try extracted URL first, then fallback to ESPN CDN pattern
         let logoPath = '';
         if (espnLogoUrl) {
           logoPath = await downloadAndSaveLogo(espnLogoUrl, idString) || '';
+        }
+        
+        // If logo download failed, try ESPN CDN pattern as fallback
+        if (!logoPath) {
+          const espnCdnUrl = `https://a.espncdn.com/combiner/i?img=/i/teamlogos/ncaa/500/${idString}.png`;
+          logoPath = await downloadAndSaveLogo(espnCdnUrl, idString) || '';
+        }
+        
+        // If still no logo, set the path anyway (file may not exist, but path is standard)
+        if (!logoPath) {
+          logoPath = `/logos/teams/${idString}.png`;
         }
 
         // Create new team - use school name as key (normalized)
@@ -632,7 +643,7 @@ export async function POST(request: NextRequest) {
           name: schoolName,
           mascot: espnMascot || undefined,
           logo: logoPath,
-          active: false
+          active: true
         };
 
         await updateTeamReferenceData(updatedTeams);
