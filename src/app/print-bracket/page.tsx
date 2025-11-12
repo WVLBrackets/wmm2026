@@ -7,6 +7,7 @@ import { loadTournamentData } from '@/lib/tournamentLoader';
 import { getTeamInfo } from '@/lib/teamLogos';
 import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
 import { TournamentTeam, TournamentData } from '@/types/tournament';
+import { SiteConfigData } from '@/lib/siteConfig';
 import Image from 'next/image';
 // Trophy icon is now a PNG image, no longer using lucide-react Trophy
 
@@ -15,7 +16,7 @@ export default function PrintBracketPage() {
   const [bracket, setBracket] = useState<Record<string, unknown> | null>(null);
   const [tournamentData, setTournamentData] = useState<Record<string, unknown> | null>(null);
   const [championTeam, setChampionTeam] = useState<TournamentTeam | null>(null);
-  const [siteConfig, setSiteConfig] = useState<{ tournamentYear?: string } | null>(null);
+  const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
   const [championMascot, setChampionMascot] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { setInPrintMode } = useBracketMode();
