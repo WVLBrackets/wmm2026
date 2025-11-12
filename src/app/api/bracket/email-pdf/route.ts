@@ -811,8 +811,10 @@ async function generatePrintPageHTML(
     }
   }
   
-  // Trophy icon PNG - convert to base64 for embedding in PDF
-  const trophyIconBase64 = getLogoAsBase64('/images/trophy-icon.png');
+  // Trophy icon PNG - get filename from config, convert to base64 for embedding in PDF
+  const trophyIconFilename = siteConfig?.printBracketTrophy || 'trophy-icon.png';
+  const trophyIconPath = `/images/${trophyIconFilename}`;
+  const trophyIconBase64 = getLogoAsBase64(trophyIconPath);
   const trophyIconHTML = trophyIconBase64 
     ? `<img src="${trophyIconBase64}" alt="Trophy" width="20" height="20" style="object-fit: contain; flex-shrink: 0;" />`
     : '';

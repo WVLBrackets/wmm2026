@@ -69,6 +69,8 @@ export interface SiteConfigData {
   emailSubmitMessage2?: string;
   emailSubmitMessage3?: string;
   emailSubmitFooter?: string;
+  // Print bracket trophy icon
+  printBracketTrophy?: string;
 }
 
 // Function to fetch site config from Google Sheets
@@ -294,6 +296,9 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
             break;
           case 'email_submit_footer':
             config.emailSubmitFooter = value;
+            break;
+          case 'print_bracket_trophy':
+            config.printBracketTrophy = value;
             break;
           default:
             // Unknown parameter - skip it silently

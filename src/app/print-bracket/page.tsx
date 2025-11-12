@@ -732,13 +732,15 @@ export default function PrintBracketPage() {
         
         {/* Right: Champ: Team Mascot Logo */}
         <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '6px', paddingRight: '20px' }}>
-          <Image
-            src="/images/trophy-icon.png"
-            alt="Trophy"
-            width={20}
-            height={20}
-            style={{ objectFit: 'contain', flexShrink: 0 }}
-          />
+          {siteConfig?.printBracketTrophy && (
+            <Image
+              src={`/images/${siteConfig.printBracketTrophy}`}
+              alt="Trophy"
+              width={20}
+              height={20}
+              style={{ objectFit: 'contain', flexShrink: 0 }}
+            />
+          )}
           {championTeam && (
             <>
               <span>{championTeam.name}</span>
