@@ -470,13 +470,73 @@ export async function POST(request: NextRequest) {
     }
 
     // Extract mascot and logo
-    const espnMascot = extractMascotFromHTML(html, espnTeamName);
+    let espnMascot = extractMascotFromHTML(html, espnTeamName);
     const espnLogoUrl = extractLogoURLFromHTML(html);
+
+    // Split team name and mascot
+    // ESPN typically provides "School Name Mascot" format
+    let schoolName = espnTeamName;
+    
+    // If we extracted a mascot, remove it from the school name
+    if (espnMascot) {
+      // Remove the mascot from the end of the team name
+      const mascotRegex = new RegExp(`\\s+${espnMascot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+      schoolName = espnTeamName.replace(mascotRegex, '').trim();
+      
+      // If removal didn't work (mascot might be multi-word or not at the end), try manual splitting
+      if (schoolName === espnTeamName) {
+        const nameParts = espnTeamName.trim().split(/\s+/);
+        const mascotParts = espnMascot.trim().split(/\s+/);
+        
+        // Check if the last N words match the mascot
+        if (nameParts.length >= mascotParts.length) {
+          const lastNWords = nameParts.slice(-mascotParts.length).join(' ');
+          if (lastNWords.toLowerCase() === espnMascot.toLowerCase()) {
+            schoolName = nameParts.slice(0, -mascotParts.length).join(' ');
+          }
+        }
+      }
+    } else {
+      // No mascot extracted, try to infer it from the name structure
+      const nameParts = espnTeamName.trim().split(/\s+/);
+      if (nameParts.length >= 3) {
+        // Likely format: "Alaska Anchorage Seawolves" -> "Alaska Anchorage" / "Seawolves"
+        // Or "North Carolina Tar Heels" -> "North Carolina" / "Tar Heels"
+        const lastWord = nameParts[nameParts.length - 1];
+        const secondLastWord = nameParts[nameParts.length - 2];
+        
+        // Check if last two words together might be mascot (e.g., "Tar Heels")
+        const potentialMascot = `${secondLastWord} ${lastWord}`;
+        const schoolEndings = ['State', 'University', 'College', 'Tech', 'A&M'];
+        
+        // If last word looks like a mascot (not a school ending) and we have multiple words
+        if (!schoolEndings.includes(lastWord) && 
+            !schoolEndings.includes(secondLastWord) &&
+            lastWord.length > 3) {
+          espnMascot = potentialMascot;
+          schoolName = nameParts.slice(0, -2).join(' ');
+        } else if (!schoolEndings.includes(lastWord) && lastWord.length > 3) {
+          espnMascot = lastWord;
+          schoolName = nameParts.slice(0, -1).join(' ');
+        }
+      } else if (nameParts.length === 2) {
+        // Two word format: might be "School Mascot" or just "School Name"
+        const lastWord = nameParts[1];
+        const schoolEndings = ['State', 'University', 'College', 'Tech', 'A&M'];
+        if (!schoolEndings.includes(lastWord) && lastWord.length > 3) {
+          // Last word might be mascot
+          espnMascot = lastWord;
+          schoolName = nameParts[0];
+        }
+      }
+    }
 
     // Compare with database
     if (existingTeam) {
       // Team exists in DB
-      const nameMatch = existingTeam.name === espnTeamName;
+      // Compare school name (without mascot) for matching
+      const dbName = existingTeam.name.replace(' ERROR', ''); // Remove existing ERROR tag for comparison
+      const nameMatch = dbName === schoolName;
       const mascotMatch = existingTeam.mascot === espnMascot;
       const logoMatch = existingTeam.logo && existingTeam.logo !== '';
 
@@ -488,7 +548,7 @@ export async function POST(request: NextRequest) {
             id: idString,
             action: 'match',
             dbName: existingTeam.name,
-            espnName: espnTeamName,
+            espnName: schoolName,
             mascot: espnMascot,
             message: 'Team matches between DB and ESPN'
           }
@@ -496,7 +556,7 @@ export async function POST(request: NextRequest) {
       } else {
         // Mismatch - report differences
         const differences: string[] = [];
-        if (!nameMatch) differences.push(`Name: DB="${existingTeam.name}" vs ESPN="${espnTeamName}"`);
+        if (!nameMatch) differences.push(`Name: DB="${existingTeam.name}" vs ESPN="${schoolName}"`);
         if (!mascotMatch) differences.push(`Mascot: DB="${existingTeam.mascot || 'none'}" vs ESPN="${espnMascot || 'none'}"`);
         if (!logoMatch && espnLogoUrl) differences.push(`Logo: DB has no logo, ESPN has logo`);
 
@@ -516,7 +576,7 @@ export async function POST(request: NextRequest) {
           if (existingTeamKey) {
             updatedTeams[existingTeamKey] = {
               ...existingTeam,
-              name: espnTeamName,
+              name: schoolName,
               mascot: espnMascot || existingTeam.mascot,
               logo: logoPath || existingTeam.logo
             };
@@ -530,7 +590,7 @@ export async function POST(request: NextRequest) {
             id: idString,
             action: 'mismatch',
             dbName: existingTeam.name,
-            espnName: espnTeamName,
+            espnName: schoolName,
             mascot: espnMascot,
             logoUrl: espnLogoUrl,
             message: `Differences found: ${differences.join('; ')}${updateMode ? ' (Updated in DB)' : ''}`
