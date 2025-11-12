@@ -535,7 +535,16 @@ export async function POST(request: NextRequest) {
     if (existingTeam) {
       // Team exists in DB
       // Compare school name (without mascot) for matching
-      const dbName = existingTeam.name.replace(' ERROR', ''); // Remove existing ERROR tag for comparison
+      let dbName = existingTeam.name.replace(' ERROR', ''); // Remove existing ERROR tag for comparison
+      
+      // If DB name includes the mascot, remove it for comparison
+      // This handles cases where DB has "Auburn Tigers" but we want to compare just "Auburn"
+      if (existingTeam.mascot && dbName.includes(existingTeam.mascot)) {
+        // Remove mascot from end of name
+        const dbMascotRegex = new RegExp(`\\s+${existingTeam.mascot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+        dbName = dbName.replace(dbMascotRegex, '').trim();
+      }
+      
       const nameMatch = dbName === schoolName;
       const mascotMatch = existingTeam.mascot === espnMascot;
       const logoMatch = existingTeam.logo && existingTeam.logo !== '';
