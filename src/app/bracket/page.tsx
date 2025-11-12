@@ -445,7 +445,11 @@ function BracketContent() {
   };
 
   // Landing page handlers
-  const handleCreateNew = () => {
+  const handleCreateNew = async () => {
+    // Log New Bracket click (bracket ID will be logged after creation in handleSaveBracket)
+    const { usageLogger } = await import('@/lib/usageLogger');
+    usageLogger.log('Click', 'New Bracket', null);
+    
     setEditingBracket(null);
     setPicks({});
     setEntryName(session?.user?.name || '');
@@ -621,6 +625,12 @@ function BracketContent() {
         if (!editingBracket && data.data) {
           const newBracket = data.data as Record<string, unknown>;
           bracketNumber = newBracket.bracketNumber as number | undefined;
+          
+          // Log New Bracket with bracket ID after creation
+          if (bracketNumber) {
+            const { usageLogger } = await import('@/lib/usageLogger');
+            usageLogger.log('Click', 'New Bracket', String(bracketNumber).padStart(6, '0'));
+          }
         }
         
         // Log the save action
