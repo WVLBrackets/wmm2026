@@ -127,7 +127,19 @@ export async function GET(request: NextRequest) {
     }
 
     // Map environment to display format
-    const logs = result.rows.map((row: any) => ({
+    interface UsageLogRow {
+      id: string;
+      environment: string;
+      timestamp: string;
+      is_logged_in: boolean;
+      username: string | null;
+      event_type: string;
+      location: string;
+      bracket_id: string | null;
+      user_agent: string | null;
+      created_at: string;
+    }
+    const logs = result.rows.map((row: UsageLogRow) => ({
       id: row.id,
       environment: row.environment === 'production' ? 'Prod' : 'Preview',
       timestamp: row.timestamp,

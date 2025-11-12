@@ -21,6 +21,33 @@ interface User {
   };
 }
 
+interface UsageLog {
+  id: string;
+  environment: string;
+  timestamp: string;
+  isLoggedIn: boolean;
+  username: string | null;
+  eventType: string;
+  location: string;
+  bracketId: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}
+
+interface ErrorLog {
+  id: string;
+  environment: string;
+  timestamp: string;
+  isLoggedIn: boolean;
+  username: string | null;
+  errorMessage: string;
+  errorStack: string | null;
+  errorType: string | null;
+  location: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}
+
 interface Bracket {
   id: string;
   userId: string;
@@ -48,8 +75,8 @@ export default function AdminPage() {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'brackets' | 'users' | 'data' | 'logs'>('users');
   const [logsTab, setLogsTab] = useState<'usage' | 'error'>('usage');
-  const [usageLogs, setUsageLogs] = useState<any[]>([]);
-  const [errorLogs, setErrorLogs] = useState<any[]>([]);
+  const [usageLogs, setUsageLogs] = useState<UsageLog[]>([]);
+  const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [logsError, setLogsError] = useState('');
   const [editingBracket, setEditingBracket] = useState<string | null>(null);
