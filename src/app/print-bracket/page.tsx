@@ -711,7 +711,7 @@ export default function PrintBracketPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white" style={{ position: 'relative' }}>
       {/* Header */}
       <div style={{ 
         padding: '8px 0px', 
@@ -760,13 +760,14 @@ export default function PrintBracketPage() {
         </div>
       </div>
       
-      {/* WMM Logo - Centered below header */}
+      {/* WMM Logo - Absolutely positioned, overlaying content */}
       <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: '8px 0',
-        width: '100%'
+        position: 'absolute',
+        top: '60px', // Position just below header (header is ~40px + padding)
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 10,
+        pointerEvents: 'none' // Allow clicks to pass through
       }}>
         <Image
           src="/images/WMM Logo.png"
