@@ -7,6 +7,7 @@ import {
   deleteBracket,
   getUserByEmail 
 } from '@/lib/secureDatabase';
+import { sendSubmissionConfirmationEmail, processEmailAsync } from '@/lib/bracketEmailService';
 
 /**
  * GET /api/tournament-bracket/[id] - Get a specific bracket
@@ -150,6 +151,9 @@ export async function PUT(
       }
     }
     
+    // Check if status is being changed to submitted (was previously in_progress)
+    const isBeingSubmitted = body.status === 'submitted' && bracket.status === 'in_progress';
+    
     // Update the bracket
     const updatedBracket = await updateBracket(id, {
       entryName: body.entryName,
@@ -163,6 +167,52 @@ export async function PUT(
         { success: false, error: 'Failed to update bracket' },
         { status: 500 }
       );
+    }
+
+    // Send automated submission confirmation email if bracket was just submitted
+    // Process asynchronously using centralized service with waitUntil
+    if (isBeingSubmitted) {
+      const emailPromise = (async () => {
+        try {
+          const { getBracketsByUserId } = await import('@/lib/secureDatabase');
+          const { getSiteConfigFromGoogleSheets } = await import('@/lib/siteConfig');
+          const { FALLBACK_CONFIG } = await import('@/lib/fallbackConfig');
+          
+          // Get all submitted brackets for this user to calculate counts
+          const allUserBrackets = await getBracketsByUserId(user.id);
+          const submittedBrackets = allUserBrackets.filter(b => b.status === 'submitted' && b.year === updatedBracket.year);
+          const submissionCount = submittedBrackets.length;
+          
+          // Get entry cost from config
+          let entryCost = 5; // Default
+          let siteConfig = null;
+          try {
+            siteConfig = await getSiteConfigFromGoogleSheets();
+            if (siteConfig?.entryCost) {
+              entryCost = siteConfig.entryCost;
+            }
+          } catch (error) {
+            entryCost = FALLBACK_CONFIG.entryCost;
+          }
+          
+          const totalCost = submissionCount * entryCost;
+          
+          // Use centralized email service
+          await sendSubmissionConfirmationEmail(
+            updatedBracket,
+            user,
+            siteConfig,
+            submissionCount,
+            totalCost
+          );
+        } catch (emailError) {
+          // Log error but don't fail the submission (already returned success)
+          console.error('[Submit Bracket] Error sending confirmation email:', emailError);
+        }
+      })();
+      
+      // Use waitUntil to keep execution context alive after response
+      processEmailAsync(emailPromise);
     }
 
     // Return updated bracket in frontend format

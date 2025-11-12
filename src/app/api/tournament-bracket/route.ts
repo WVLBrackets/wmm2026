@@ -9,6 +9,7 @@ import {
   getAllBrackets 
 } from '@/lib/secureDatabase';
 import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
+import { sendSubmissionConfirmationEmail, processEmailAsync } from '@/lib/bracketEmailService';
 
 /**
  * POST /api/tournament-bracket - Create a new tournament bracket (submit)
@@ -132,6 +133,48 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Send automated submission confirmation email in background
+    // Process asynchronously using centralized service with waitUntil
+    const emailPromise = (async () => {
+      try {
+        // Get all submitted brackets for this user to calculate counts
+        const allUserBrackets = await getBracketsByUserId(user.id);
+        const submittedBrackets = allUserBrackets.filter(b => b.status === 'submitted' && b.year === tournamentYear);
+        const submissionCount = submittedBrackets.length;
+        
+        // Get entry cost from config
+        let entryCost = 5; // Default
+        let siteConfig = null;
+        try {
+          siteConfig = await getSiteConfigFromGoogleSheets();
+          if (siteConfig?.entryCost) {
+            entryCost = siteConfig.entryCost;
+          }
+        } catch (error) {
+          // Use default if config fails
+          const { FALLBACK_CONFIG } = await import('@/lib/fallbackConfig');
+          entryCost = FALLBACK_CONFIG.entryCost;
+        }
+        
+        const totalCost = submissionCount * entryCost;
+        
+        // Use centralized email service
+        await sendSubmissionConfirmationEmail(
+          updatedBracket,
+          user,
+          siteConfig,
+          submissionCount,
+          totalCost
+        );
+      } catch (emailError) {
+        // Log error but don't fail the submission (already returned success)
+        console.error('[Submit Bracket] Error sending confirmation email:', emailError);
+      }
+    })();
+    
+    // Use waitUntil to keep execution context alive after response
+    processEmailAsync(emailPromise);
 
     // Return bracket in the format expected by the frontend
     return NextResponse.json({

@@ -49,6 +49,25 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   finalMessageTieBreakerInvalid: 'Tie breaker must be between 100 and 300.',
   finalMessageDuplicateName: 'An entry with this name already exists for this year. Please choose a different name.',
   finalMessageReadyToSubmit: 'Your bracket is complete and ready to submit!',
-  finalFourHeaderMessage: 'Final Four & Championship'
+  finalFourHeaderMessage: 'Final Four & Championship',
+  // Email PDF template defaults
+  emailPdfSubject: 'Your Bracket - Warren\'s March Madness',
+  emailPdfHeading: 'Your Bracket is Attached!',
+  emailPdfGreeting: 'Hi {name},',
+  emailPdfMessage1: 'Great news! Your bracket "{entryName}" has been successfully submitted and is ready for the tournament!',
+  emailPdfMessage2: 'We\'ve attached a PDF copy of your bracket for your records. Good luck with your picks!',
+  emailPdfMessage3: 'Let the madness begin! 🏀',
+  emailPdfFooter: 'This is an automated email from Warren\'s March Madness.',
+  // Email modal window defaults
+  emailWindowTitle: 'Email Bracket PDF',
+  emailWindowMessage: 'Would you like to send yourself an email with a PDF of your bracket "{Entry Name}"? The email will be sent to {email}.',
+  // Email submit (automated submission) defaults
+  emailSubmitSubject: 'Bracket Submitted Successfully - Warren\'s March Madness',
+  emailSubmitHeading: 'Bracket Submitted Successfully!',
+  emailSubmitGreeting: 'Hi {name},',
+  emailSubmitMessage1: 'Congratulations! Your bracket "{entryName}" has been successfully submitted for the {tournamentYear} tournament.',
+  emailSubmitMessage2: 'You currently have {submissionCount} submitted bracket(s) with a total cost of ${totalCost}.',
+  emailSubmitMessage3: 'Want to increase your chances? Submit more brackets and invite your friends to join the fun!',
+  emailSubmitFooter: 'This is an automated email from Warren\'s March Madness.'
 };
 

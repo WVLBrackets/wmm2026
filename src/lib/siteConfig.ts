@@ -50,6 +50,25 @@ export interface SiteConfigData {
   finalFourHeaderMessage?: string;
   // Home page logo
   homePageLogo?: string;
+  // Email PDF template content
+  emailPdfSubject?: string;
+  emailPdfHeading?: string;
+  emailPdfGreeting?: string;
+  emailPdfMessage1?: string;
+  emailPdfMessage2?: string;
+  emailPdfMessage3?: string;
+  emailPdfFooter?: string;
+  // Email modal window content
+  emailWindowTitle?: string;
+  emailWindowMessage?: string;
+  // Email submit (automated submission) template content
+  emailSubmitSubject?: string;
+  emailSubmitHeading?: string;
+  emailSubmitGreeting?: string;
+  emailSubmitMessage1?: string;
+  emailSubmitMessage2?: string;
+  emailSubmitMessage3?: string;
+  emailSubmitFooter?: string;
 }
 
 // Function to fetch site config from Google Sheets
@@ -58,7 +77,28 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
     // Use Google Sheets public CSV export
     const csvUrl = `https://docs.google.com/spreadsheets/d/${SITE_CONFIG_SHEET_ID}/export?format=csv&gid=0`;
     
-    const response = await fetch(csvUrl);
+    // Add timeout to prevent hanging (10 seconds)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    
+    let response;
+    try {
+      response = await fetch(csvUrl, { 
+        signal: controller.signal,
+        // Add headers to help with reliability
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
+      clearTimeout(timeoutId);
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        throw new Error('Site config fetch timed out after 10 seconds');
+      }
+      throw fetchError;
+    }
+    
     if (!response.ok) {
       throw new Error(`Failed to fetch site config: ${response.status}`);
     }
@@ -206,6 +246,54 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
             break;
           case 'home_page_logo':
             config.homePageLogo = value;
+            break;
+          case 'email_pdf_subject':
+            config.emailPdfSubject = value;
+            break;
+          case 'email_pdf_heading':
+            config.emailPdfHeading = value;
+            break;
+          case 'email_pdf_greeting':
+            config.emailPdfGreeting = value;
+            break;
+          case 'email_pdf_message1':
+            config.emailPdfMessage1 = value;
+            break;
+          case 'email_pdf_message2':
+            config.emailPdfMessage2 = value;
+            break;
+          case 'email_pdf_message3':
+            config.emailPdfMessage3 = value;
+            break;
+          case 'email_pdf_footer':
+            config.emailPdfFooter = value;
+            break;
+          case 'email_window_title':
+            config.emailWindowTitle = value;
+            break;
+          case 'email_window_message':
+            config.emailWindowMessage = value;
+            break;
+          case 'email_submit_subject':
+            config.emailSubmitSubject = value;
+            break;
+          case 'email_submit_heading':
+            config.emailSubmitHeading = value;
+            break;
+          case 'email_submit_greeting':
+            config.emailSubmitGreeting = value;
+            break;
+          case 'email_submit_message1':
+            config.emailSubmitMessage1 = value;
+            break;
+          case 'email_submit_message2':
+            config.emailSubmitMessage2 = value;
+            break;
+          case 'email_submit_message3':
+            config.emailSubmitMessage3 = value;
+            break;
+          case 'email_submit_footer':
+            config.emailSubmitFooter = value;
             break;
           default:
             // Unknown parameter - skip it silently

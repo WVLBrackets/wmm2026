@@ -167,6 +167,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
         },
         body: JSON.stringify({
           bracketId: emailBracket.id,
+          siteConfig: siteConfig, // Pass the already-loaded config to avoid re-fetching
         }),
       });
 
@@ -712,13 +713,16 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
       </div>
 
       {/* Email Confirmation Dialog */}
-      {/* TODO: Change this message back to "Would you like to send yourself an email with a PDF of your bracket?" once PDF email feature is working */}
-      {emailDialogOpen && (
+      {emailDialogOpen && emailBracket && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Email Bracket PDF</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              {siteConfig?.emailWindowTitle || 'Email Bracket PDF'}
+            </h3>
             <p className="text-sm text-gray-600 mb-6">
-              This isn&apos;t working yet, please cancel.
+              {(siteConfig?.emailWindowMessage || 'Would you like to send yourself an email with a PDF of your bracket?')
+                .replace(/\{Entry Name\}/g, emailBracket.entryName || `Bracket ${emailBracket.id}`)
+                .replace(/\{email\}/g, session?.user?.email || 'your email address')}
             </p>
             {emailMessage && (
               <div className={`mb-4 p-3 rounded ${

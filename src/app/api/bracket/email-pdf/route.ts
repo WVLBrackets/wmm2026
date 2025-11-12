@@ -2,14 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getBracketById, Bracket, getUserByEmail } from '@/lib/secureDatabase';
-import { emailService } from '@/lib/emailService';
-import { loadTournamentData } from '@/lib/tournamentLoader';
-import { generate64TeamBracket, updateBracketWithPicks } from '@/lib/bracketGenerator';
 import { getSiteConfigFromGoogleSheets, SiteConfigData } from '@/lib/siteConfig';
+import { sendOnDemandPdfEmail, processEmailAsync } from '@/lib/bracketEmailService';
 import { TournamentData, TournamentBracket, TournamentTeam } from '@/types/tournament';
 // PDF generation using puppeteer
 // Install: npm install puppeteer-core @sparticuz/chromium
-// Note: These packages are not installed yet, so PDF generation is disabled
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,8 +22,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { bracketId } = await request.json();
+    const { bracketId, siteConfig: providedSiteConfig } = await request.json();
     console.log('[Email PDF] Bracket ID:', bracketId);
+    console.log('[Email PDF] Site config provided:', !!providedSiteConfig);
 
     if (!bracketId) {
       return NextResponse.json(
@@ -67,91 +65,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Load tournament data and site config
-    console.log('[Email PDF] Loading tournament data...');
-    const siteConfig = await getSiteConfigFromGoogleSheets();
-    const tournamentYear = siteConfig?.tournamentYear || '2025';
-    const tournamentData = await loadTournamentData(tournamentYear);
-    console.log('[Email PDF] Tournament data loaded');
-
-    // Generate bracket with picks
-    console.log('[Email PDF] Generating bracket structure...');
-    const generatedBracket = generate64TeamBracket(tournamentData);
-    const updatedBracket = updateBracketWithPicks(generatedBracket, bracket.picks, tournamentData);
-    console.log('[Email PDF] Bracket structure generated');
-
-    // Generate PDF using Puppeteer
-    console.log('[Email PDF] Generating PDF...');
-    const pdfBuffer = await generateBracketPDF(bracket, updatedBracket, tournamentData, siteConfig);
-    console.log('[Email PDF] PDF generated, size:', pdfBuffer.length, 'bytes');
-
-    // Send email with PDF attachment
-    const entryName = bracket.entryName || `Bracket ${bracket.id}`;
-    const emailHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Your Bracket - Warren's March Madness</title>
-      </head>
-      <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px;">
-          <h2 style="color: #2c3e50; text-align: center;">Your Bracket is Attached!</h2>
-          <p>Hi ${session.user.name || 'there'},</p>
-          <p>Great news! Your bracket "${entryName}" has been successfully submitted and is ready for the tournament!</p>
-          <p>We've attached a PDF copy of your bracket for your records. Good luck with your picks!</p>
-          <p>Let the madness begin! 🏀</p>
-          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-          <p style="font-size: 12px; color: #666; text-align: center;">
-            This is an automated email from Warren's March Madness.
-          </p>
-        </div>
-      </body>
-      </html>
-    `;
-
-    const emailText = `
-      Your Bracket is Attached!
-      
-      Hi ${session.user.name || 'there'},
-      
-      Great news! Your bracket "${entryName}" has been successfully submitted and is ready for the tournament!
-      
-      We've attached a PDF copy of your bracket for your records. Good luck with your picks!
-      
-      Let the madness begin! 🏀
-      
-      This is an automated email from Warren's March Madness.
-    `;
-
-    // Send email with PDF attachment
-    console.log('[Email PDF] Sending email...');
-    const emailSent = await emailService.sendEmail({
-      to: session.user.email,
-      subject: `Your ${tournamentYear} Bracket - ${entryName}`,
-      html: emailHtml,
-      text: emailText,
-      attachments: [
-        {
-          filename: `bracket-${bracket.id}.pdf`,
-          content: pdfBuffer,
-          contentType: 'application/pdf',
-        },
-      ],
-    });
-
-    if (!emailSent) {
-      console.error('[Email PDF] Email service returned false');
+    // Store email in a const for use in async function (TypeScript type narrowing)
+    const userEmail = session.user.email;
+    if (!userEmail) {
       return NextResponse.json(
-        { success: false, error: 'Failed to send email. Please try again later.' },
-        { status: 500 }
+        { success: false, error: 'User email not available' },
+        { status: 400 }
       );
     }
 
-    console.log('[Email PDF] Email sent successfully');
+    // Use provided site config from client (already loaded on page), or fetch if not provided
+    // This avoids unnecessary fetch calls and timeout issues
+    let siteConfig: SiteConfigData | null = providedSiteConfig || null;
+    if (!siteConfig) {
+      console.log('[Email PDF] Site config not provided, fetching from Google Sheets...');
+      try {
+        const configStartTime = Date.now();
+        siteConfig = await getSiteConfigFromGoogleSheets();
+        const configTime = Date.now() - configStartTime;
+        console.log(`[Email PDF] Site config loaded successfully in ${configTime}ms`);
+        if (!siteConfig) {
+          console.warn('[Email PDF] Site config returned null, will use fallback values');
+        }
+      } catch (configError) {
+        console.error('[Email PDF] ERROR: Failed to load site config:', configError);
+        // Continue anyway - we'll use fallback values in the template
+        siteConfig = null;
+      }
+    } else {
+      console.log('[Email PDF] Using site config provided by client (no fetch needed)');
+    }
+
+    // Process PDF generation and email asynchronously using centralized service
+    // This keeps the execution context alive after returning the response
+    console.log('[Email PDF] Starting background PDF generation and email processing...');
+    
+    const emailPromise = sendOnDemandPdfEmail(
+      bracket,
+      { name: session.user.name ?? null, email: userEmail },
+      siteConfig
+    );
+    
+    // Use waitUntil to keep execution context alive after response
+    processEmailAsync(emailPromise);
+    
+    // Return success immediately - background processing will continue
     return NextResponse.json({
       success: true,
-      message: 'Email sent successfully',
+      message: 'Email is being processed and will be sent shortly',
     });
   } catch (error) {
     console.error('[Email PDF] Error:', error);
@@ -199,6 +160,7 @@ interface PuppeteerResponse {
 interface Page {
   setContent: (html: string, options?: { waitUntil?: string }) => Promise<void>;
   setRequestInterception: (value: boolean) => Promise<void>;
+  setViewport: (viewport: { width: number; height: number; deviceScaleFactor?: number }) => Promise<void>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   on: (event: string, handler: (arg: any) => void) => void;
   pdf: (options: {
@@ -211,6 +173,8 @@ interface Page {
       bottom?: string;
       left?: string;
     };
+    preferCSSPageSize?: boolean;
+    displayHeaderFooter?: boolean;
   }) => Promise<Buffer>;
 }
 
@@ -226,7 +190,7 @@ interface ChromiumType {
   executablePath: () => Promise<string>;
 }
 
-async function generateBracketPDF(
+export async function generateBracketPDF(
   bracket: Bracket,
   updatedBracket: TournamentBracket,
   tournamentData: TournamentData,
@@ -282,23 +246,103 @@ async function generateBracketPDF(
     console.log('[PDF Generation] Environment:', vercelEnv, 'isVercel:', isVercel);
     
     console.log('[PDF Generation] Launching browser...');
-    const executablePath = isVercel ? await chromium.executablePath() : (process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome');
-    console.log('[PDF Generation] Executable path:', executablePath);
+    console.log('[PDF Generation] About to call chromium.executablePath()...');
+    let executablePath: string;
+    if (isVercel) {
+      // Add timeout to executablePath call (10 seconds)
+      const execPathStartTime = Date.now();
+      console.log('[PDF Generation] Setting up executablePath timeout...');
+      try {
+        console.log('[PDF Generation] Calling chromium.executablePath()...');
+        const execPathPromise = chromium.executablePath();
+        console.log('[PDF Generation] chromium.executablePath() called, setting up timeout...');
+        let timeoutId: NodeJS.Timeout | null = null;
+        const execPathTimeout = new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => {
+            console.error('[PDF Generation] TIMEOUT: chromium.executablePath() exceeded 10 seconds');
+            reject(new Error('chromium.executablePath() timed out after 10 seconds'));
+          }, 10000);
+        });
+        console.log('[PDF Generation] Racing executablePath promise with timeout...');
+        try {
+          executablePath = await Promise.race([execPathPromise, execPathTimeout]) as string;
+          // Clear timeout if operation completed successfully
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
+          const execPathTime = Date.now() - execPathStartTime;
+          console.log(`[PDF Generation] Executable path retrieved in ${execPathTime}ms:`, executablePath);
+        } catch (raceError) {
+          // Clear timeout on error too
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
+          throw raceError;
+        }
+      } catch (execPathError) {
+        const execPathTime = Date.now() - execPathStartTime;
+        console.error(`[PDF Generation] Failed to get executable path after ${execPathTime}ms:`, execPathError);
+        if (execPathError instanceof Error) {
+          console.error('[PDF Generation] Error message:', execPathError.message);
+          console.error('[PDF Generation] Error stack:', execPathError.stack);
+        }
+        throw execPathError;
+      }
+    } else {
+      executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome';
+      console.log('[PDF Generation] Executable path (local):', executablePath);
+    }
     
-    browser = await puppeteer.launch({
+    // Add timeout to browser launch (30 seconds) to prevent hanging
+    const launchTimeout = 30000;
+    const launchStartTime = Date.now();
+    
+    const launchPromise = puppeteer.launch({
       args: isVercel ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox'],
       defaultViewport: chromium.defaultViewport,
       executablePath: executablePath,
       headless: chromium.headless,
-    }) as Browser;
-    console.log('[PDF Generation] Browser launched');
+    }) as Promise<Browser>;
+    
+    let launchTimeoutId: NodeJS.Timeout | null = null;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      launchTimeoutId = setTimeout(() => {
+        reject(new Error(`Browser launch timed out after ${launchTimeout}ms`));
+      }, launchTimeout);
+    });
+    
+    try {
+      browser = await Promise.race([launchPromise, timeoutPromise]) as Browser;
+      // Clear timeout if operation completed successfully
+      if (launchTimeoutId) {
+        clearTimeout(launchTimeoutId);
+      }
+      const launchTime = Date.now() - launchStartTime;
+      console.log(`[PDF Generation] Browser launched successfully in ${launchTime}ms`);
+    } catch (launchError) {
+      // Clear timeout on error too
+      if (launchTimeoutId) {
+        clearTimeout(launchTimeoutId);
+      }
+      const launchTime = Date.now() - launchStartTime;
+      console.error(`[PDF Generation] Browser launch failed after ${launchTime}ms:`, launchError);
+      throw launchError;
+    }
 
     const page = await browser.newPage();
     console.log('[PDF Generation] Page created');
+    
+    // Set viewport to A4 landscape dimensions (297mm x 210mm = 1123px x 794px at 96 DPI)
+    await page.setViewport({
+      width: 1123,
+      height: 794,
+      deviceScaleFactor: 1,
+    });
+    console.log('[PDF Generation] Viewport set to A4 landscape');
 
     // Generate HTML content for the bracket
     console.log('[PDF Generation] Generating HTML...');
-    const htmlContent = generatePrintPageHTML(bracket, updatedBracket, tournamentData, siteConfig);
+    const htmlContent = await generatePrintPageHTML(bracket, updatedBracket, tournamentData, siteConfig);
     console.log('[PDF Generation] HTML generated, length:', htmlContent.length);
     
     console.log('[PDF Generation] Setting page content...');
@@ -318,6 +362,8 @@ async function generateBracketPDF(
         bottom: '10mm',
         left: '10mm',
       },
+      preferCSSPageSize: false,
+      displayHeaderFooter: false,
     });
     console.log('[PDF Generation] PDF generated, size:', pdf.length, 'bytes');
 
@@ -707,12 +753,12 @@ function renderFinalFourSection(
 /**
  * Generate complete HTML for print bracket page
  */
-function generatePrintPageHTML(
+async function generatePrintPageHTML(
   bracket: Bracket,
   updatedBracket: TournamentBracket,
   tournamentData: TournamentData,
   siteConfig: SiteConfigData | null
-): string {
+): Promise<string> {
   const entryName = bracket.entryName || `Bracket ${bracket.id}`;
   const tournamentYear = siteConfig?.tournamentYear || '2025';
   const picks = bracket.picks || {};
@@ -751,6 +797,25 @@ function generatePrintPageHTML(
     : null;
   const championLogo = getLogoAsBase64(championTeam?.logo);
   
+  // Get champion mascot from team reference data
+  let championMascot: string | null = null;
+  if (championTeam) {
+    try {
+      const { getAllTeamReferenceData } = await import('@/lib/secureDatabase');
+      const allTeams = await getAllTeamReferenceData(false);
+      const teamMatch = Object.values(allTeams).find(team => team.id === championTeam.id);
+      championMascot = teamMatch?.mascot || null;
+    } catch (error) {
+      console.error('[PDF Generation] Error loading champion mascot:', error);
+      // Continue without mascot if lookup fails
+    }
+  }
+  
+  // Trophy icon SVG (gold color #d4af37)
+  const trophyIconSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
+    <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 18v4a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-4M6 18h12" stroke="#d4af37" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+  
   return `
     <!DOCTYPE html>
     <html>
@@ -759,9 +824,24 @@ function generatePrintPageHTML(
       <title>${entryName} - ${tournamentYear} Bracket</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
+        html, body { 
           font-family: Arial, sans-serif; 
           background: white;
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+        }
+        @page {
+          size: A4 landscape;
+          margin: 0;
+        }
+        body {
+          height: 210mm;
+          max-height: 210mm;
+          overflow: hidden;
+          page-break-inside: avoid;
+          page-break-after: avoid;
+          page-break-before: avoid;
         }
       </style>
     </head>
@@ -783,7 +863,9 @@ function generatePrintPageHTML(
         </div>
         <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center; gap: 6px; padding-right: 20px;">
           ${championTeam ? `
+            ${trophyIconSVG}
             <span>${championTeam.name}</span>
+            ${championMascot ? `<span>${championMascot}</span>` : ''}
             ${championLogo ? `<img src="${championLogo}" alt="${championTeam.name} logo" width="24" height="24" style="object-fit: contain; flex-shrink: 0;" />` : ''}
           ` : ''}
         </div>
