@@ -284,10 +284,18 @@ async function downloadAndSaveLogo(logoUrl: string, teamId: string): Promise<str
       
       const req = protocol.get(logoUrl, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
       }, (res) => {
+        // Check if we got a valid image response
         if (res.statusCode !== 200) {
+          resolve(null);
+          return;
+        }
+        
+        // Check content type to ensure it's an image
+        const contentType = res.headers['content-type'];
+        if (contentType && !contentType.startsWith('image/')) {
           resolve(null);
           return;
         }
@@ -297,15 +305,22 @@ async function downloadAndSaveLogo(logoUrl: string, teamId: string): Promise<str
 
         fileStream.on('finish', () => {
           fileStream.close();
-          resolve(`/logos/teams/${filename}`);
+          // Verify file was actually written
+          if (fs.existsSync(filePath)) {
+            resolve(`/logos/teams/${filename}`);
+          } else {
+            resolve(null);
+          }
         });
 
-        fileStream.on('error', () => {
+        fileStream.on('error', (err) => {
+          console.error(`Error writing logo file for team ${teamId}:`, err);
           resolve(null);
         });
       });
 
-      req.on('error', () => {
+      req.on('error', (err) => {
+        console.error(`Error downloading logo for team ${teamId} from ${logoUrl}:`, err);
         resolve(null);
       });
 
