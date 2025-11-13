@@ -36,8 +36,10 @@ export default async function Home() {
           </div>
 
           {/* Countdown Clock */}
-          <div className="bg-blue-900 rounded-lg shadow-lg p-6 h-full flex flex-col justify-center min-h-[200px]">
-            <CountdownClock />
+          <div className="bg-white rounded-lg shadow-lg p-4 h-full flex flex-col justify-center min-h-[200px]">
+            <div className="bg-blue-800 rounded h-full flex flex-col justify-center p-4">
+              <CountdownClock />
+            </div>
           </div>
         </div>
 
@@ -51,8 +53,10 @@ export default async function Home() {
           </div>
 
           {/* Countdown Clock */}
-          <div className="bg-blue-900 rounded-lg shadow-lg p-6 flex flex-col justify-center">
-            <CountdownClock />
+          <div className="bg-white rounded-lg shadow-lg p-4 flex flex-col justify-center">
+            <div className="bg-blue-800 rounded h-full flex flex-col justify-center p-4">
+              <CountdownClock />
+            </div>
           </div>
         </div>
 
