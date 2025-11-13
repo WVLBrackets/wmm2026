@@ -74,9 +74,10 @@ export default function AdminPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'brackets' | 'users' | 'data' | 'logs'>('users');
-  const [logsTab, setLogsTab] = useState<'usage' | 'error'>('usage');
+  const [logsTab, setLogsTab] = useState<'summary' | 'usage' | 'error'>('summary');
   const [usageLogs, setUsageLogs] = useState<UsageLog[]>([]);
   const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
+  const [usageSummary, setUsageSummary] = useState<{ pageVisits: Array<{ location: string; count: number }>; clicks: Array<{ location: string; count: number }> }>({ pageVisits: [], clicks: [] });
   const [logsLoading, setLogsLoading] = useState(false);
   const [logsError, setLogsError] = useState('');
   const [logStartDate, setLogStartDate] = useState<string>('');
@@ -239,6 +240,43 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Error loading error logs:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to load error logs';
+      setLogsError(errorMessage);
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  const loadUsageSummary = async () => {
+    try {
+      setLogsLoading(true);
+      setLogsError('');
+      
+      const params = new URLSearchParams();
+      if (logStartDate) {
+        // Convert datetime-local (user's local time) to UTC ISO string
+        const localDate = new Date(logStartDate);
+        params.append('startDate', localDate.toISOString());
+      }
+      if (logEndDate) {
+        // Convert datetime-local (user's local time) to UTC ISO string
+        const localDate = new Date(logEndDate);
+        // For end date, include the entire second
+        localDate.setMilliseconds(999);
+        params.append('endDate', localDate.toISOString());
+      }
+      
+      const response = await fetch(`/api/admin/logs/usage/summary?${params.toString()}`);
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
+        const errorMsg = data.error || data.details || 'Failed to load usage summary';
+        throw new Error(errorMsg);
+      }
+      
+      setUsageSummary(data.summary || { pageVisits: [], clicks: [] });
+    } catch (error) {
+      console.error('Error loading usage summary:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load usage summary';
       setLogsError(errorMessage);
     } finally {
       setLogsLoading(false);
@@ -499,7 +537,9 @@ export default function AdminPage() {
     if (activeTab === 'data') {
       loadTeamDataRef.current?.();
     } else if (activeTab === 'logs') {
-      if (logsTab === 'usage') {
+      if (logsTab === 'summary') {
+        loadUsageSummary();
+      } else if (logsTab === 'usage') {
         loadUsageLogs();
       } else {
         loadErrorLogs();
@@ -2579,8 +2619,57 @@ export default function AdminPage() {
         {/* Logs Tab */}
         {activeTab === 'logs' && (
           <div className="bg-white rounded-lg shadow-lg p-6">
+            {/* Date Filters - Top Level */}
+            <div className="mb-6 pb-4 border-b border-gray-200">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <label className="text-sm font-medium text-gray-700">Low End:</label>
+                  <input
+                    type="datetime-local"
+                    value={logStartDate}
+                    onChange={(e) => setLogStartDate(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded text-sm"
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <label className="text-sm font-medium text-gray-700">High End:</label>
+                  <input
+                    type="datetime-local"
+                    value={logEndDate}
+                    onChange={(e) => setLogEndDate(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded text-sm"
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    if (logsTab === 'summary') {
+                      loadUsageSummary();
+                    } else if (logsTab === 'usage') {
+                      loadUsageLogs();
+                    } else {
+                      loadErrorLogs();
+                    }
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  disabled={logsLoading}
+                >
+                  {logsLoading ? 'Loading...' : 'Refresh'}
+                </button>
+              </div>
+            </div>
+
             <div className="mb-6 border-b border-gray-200">
               <nav className="flex -mb-px">
+                <button
+                  onClick={() => setLogsTab('summary')}
+                  className={`px-4 py-2 border-b-2 font-medium text-sm ${
+                    logsTab === 'summary'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Usage Summary
+                </button>
                 <button
                   onClick={() => setLogsTab('usage')}
                   className={`px-4 py-2 border-b-2 font-medium text-sm ${
@@ -2604,48 +2693,87 @@ export default function AdminPage() {
               </nav>
             </div>
 
+            {logsTab === 'summary' && (
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Usage Summary</h3>
+                {logsError && (
+                  <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+                    {logsError}
+                  </div>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Page Visits Section */}
+                  <div>
+                    <h4 className="text-md font-semibold mb-3 text-gray-800">Page Visits</h4>
+                    {logsLoading ? (
+                      <div className="text-gray-500">Loading...</div>
+                    ) : usageSummary.pageVisits.length === 0 ? (
+                      <div className="text-gray-500">No page visits found</div>
+                    ) : (
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <table className="min-w-full">
+                          <thead>
+                            <tr className="border-b border-gray-300">
+                              <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Location</th>
+                              <th className="text-right py-2 px-3 text-sm font-medium text-gray-700">Count</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {usageSummary.pageVisits.map((item, index) => (
+                              <tr key={index} className="border-b border-gray-200">
+                                <td className="py-2 px-3 text-sm text-gray-900">{item.location}</td>
+                                <td className="py-2 px-3 text-sm text-gray-900 text-right">{item.count}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Clicks Section */}
+                  <div>
+                    <h4 className="text-md font-semibold mb-3 text-gray-800">Clicks</h4>
+                    {logsLoading ? (
+                      <div className="text-gray-500">Loading...</div>
+                    ) : usageSummary.clicks.length === 0 ? (
+                      <div className="text-gray-500">No clicks found</div>
+                    ) : (
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <table className="min-w-full">
+                          <thead>
+                            <tr className="border-b border-gray-300">
+                              <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Location</th>
+                              <th className="text-right py-2 px-3 text-sm font-medium text-gray-700">Count</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {usageSummary.clicks.map((item, index) => (
+                              <tr key={index} className="border-b border-gray-200">
+                                <td className="py-2 px-3 text-sm text-gray-900">{item.location}</td>
+                                <td className="py-2 px-3 text-sm text-gray-900 text-right">{item.count}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {logsTab === 'usage' && (
               <div>
-                <div className="mb-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-lg font-semibold">Usage Logs</h3>
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={loadUsageLogs}
-                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                        disabled={logsLoading}
-                      >
-                        {logsLoading ? 'Loading...' : 'Refresh'}
-                      </button>
-                      <button
-                        onClick={handleDeleteLogs}
-                        className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-                        disabled={logsLoading || deletingLogs || usageLogs.length === 0}
-                      >
-                        {deletingLogs ? 'Deleting...' : 'Delete'}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                      <label className="text-sm font-medium text-gray-700">Low End:</label>
-                      <input
-                        type="datetime-local"
-                        value={logStartDate}
-                        onChange={(e) => setLogStartDate(e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded text-sm"
-                      />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <label className="text-sm font-medium text-gray-700">High End:</label>
-                      <input
-                        type="datetime-local"
-                        value={logEndDate}
-                        onChange={(e) => setLogEndDate(e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded text-sm"
-                      />
-                    </div>
-                  </div>
+                <div className="mb-4 flex justify-between items-center">
+                  <h3 className="text-lg font-semibold">Usage Logs</h3>
+                  <button
+                    onClick={handleDeleteLogs}
+                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                    disabled={logsLoading || deletingLogs || usageLogs.length === 0}
+                  >
+                    {deletingLogs ? 'Deleting...' : 'Delete'}
+                  </button>
                 </div>
                 {logsError && (
                   <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
@@ -2701,46 +2829,15 @@ export default function AdminPage() {
 
             {logsTab === 'error' && (
               <div>
-                <div className="mb-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-lg font-semibold">Error Logs</h3>
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={loadErrorLogs}
-                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                        disabled={logsLoading}
-                      >
-                        {logsLoading ? 'Loading...' : 'Refresh'}
-                      </button>
-                      <button
-                        onClick={handleDeleteLogs}
-                        className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-                        disabled={logsLoading || deletingLogs || errorLogs.length === 0}
-                      >
-                        {deletingLogs ? 'Deleting...' : 'Delete'}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                      <label className="text-sm font-medium text-gray-700">Low End:</label>
-                      <input
-                        type="datetime-local"
-                        value={logStartDate}
-                        onChange={(e) => setLogStartDate(e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded text-sm"
-                      />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <label className="text-sm font-medium text-gray-700">High End:</label>
-                      <input
-                        type="datetime-local"
-                        value={logEndDate}
-                        onChange={(e) => setLogEndDate(e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded text-sm"
-                      />
-                    </div>
-                  </div>
+                <div className="mb-4 flex justify-between items-center">
+                  <h3 className="text-lg font-semibold">Error Logs</h3>
+                  <button
+                    onClick={handleDeleteLogs}
+                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                    disabled={logsLoading || deletingLogs || errorLogs.length === 0}
+                  >
+                    {deletingLogs ? 'Deleting...' : 'Delete'}
+                  </button>
                 </div>
                 {logsError && (
                   <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
