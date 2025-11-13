@@ -125,9 +125,13 @@ export async function GET(request: NextRequest) {
       
       if (startDate) {
         // Parse the datetime-local string (format: YYYY-MM-DDTHH:mm)
-        // Create a Date object treating it as local time, then convert to ISO (UTC)
+        // The datetime-local input provides local time without timezone info
+        // We need to treat it as local time and convert to UTC for database comparison
+        // Note: new Date() with a string like "2025-11-12T19:36" interprets it as LOCAL time
         const localDate = new Date(startDate);
+        // Convert to UTC ISO string for database comparison
         startDateISO = localDate.toISOString();
+        console.log(`[DEBUG] startDate input: ${startDate}, converted to UTC: ${startDateISO}`);
       }
       
       if (endDate) {
@@ -135,6 +139,7 @@ export async function GET(request: NextRequest) {
         const localDate = new Date(endDate);
         localDate.setMilliseconds(999);
         endDateISO = localDate.toISOString();
+        console.log(`[DEBUG] endDate input: ${endDate}, converted to UTC: ${endDateISO}`);
       }
       
       if (startDate && endDate) {
