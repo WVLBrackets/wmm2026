@@ -2824,7 +2824,7 @@ export default function AdminPage() {
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                     >
                       <option value="">All Usernames</option>
-                      {Array.from(new Set(usageLogs.map(log => log.username).filter(Boolean))).sort().map((username) => (
+                      {Array.from(new Set(usageLogs.map(log => log.username).filter((u): u is string => Boolean(u)))).sort().map((username) => (
                         <option key={username} value={username}>
                           {username}
                         </option>
