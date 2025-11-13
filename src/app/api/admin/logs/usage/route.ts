@@ -37,21 +37,419 @@ export async function GET(request: NextRequest) {
     const startDateISO = startDate || null;
     const endDateISO = endDate || null;
     
-    // Build query with conditional WHERE clauses
-    const result = await sql`
-      SELECT 
-        id, environment, timestamp, is_logged_in, username,
-        event_type, location, bracket_id, user_agent, created_at
-      FROM usage_logs
-      WHERE environment = ${environment}
-        ${startDateISO ? sql`AND timestamp >= ${startDateISO}` : sql``}
-        ${endDateISO ? sql`AND timestamp <= ${endDateISO}` : sql``}
-        ${username ? sql`AND username = ${username}` : sql``}
-        ${eventType ? sql`AND event_type = ${eventType}` : sql``}
-        ${location ? sql`AND location ILIKE ${'%' + location + '%'}` : sql``}
-      ORDER BY timestamp DESC
-      LIMIT ${limit} OFFSET ${offset}
-    `;
+    // Build query with all possible filter combinations
+    let result;
+    
+    // Check which filters are active
+    const hasDateRange = startDateISO && endDateISO;
+    const hasStartDate = startDateISO && !endDateISO;
+    const hasEndDate = endDateISO && !startDateISO;
+    const hasUsername = !!username;
+    const hasEventType = !!eventType;
+    const hasLocation = !!location;
+    
+    // Build query based on filter combinations
+    if (hasUsername && hasEventType && hasLocation && hasDateRange) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND username = ${username}
+          AND event_type = ${eventType}
+          AND location ILIKE ${'%' + location + '%'}
+          AND timestamp >= ${startDateISO}
+          AND timestamp <= ${endDateISO}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasUsername && hasEventType && hasLocation && hasStartDate) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND username = ${username}
+          AND event_type = ${eventType}
+          AND location ILIKE ${'%' + location + '%'}
+          AND timestamp >= ${startDateISO}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasUsername && hasEventType && hasLocation && hasEndDate) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND username = ${username}
+          AND event_type = ${eventType}
+          AND location ILIKE ${'%' + location + '%'}
+          AND timestamp <= ${endDateISO}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasUsername && hasEventType && hasLocation) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND username = ${username}
+          AND event_type = ${eventType}
+          AND location ILIKE ${'%' + location + '%'}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasUsername && hasEventType && hasDateRange) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND username = ${username}
+          AND event_type = ${eventType}
+          AND timestamp >= ${startDateISO}
+          AND timestamp <= ${endDateISO}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasUsername && hasEventType && hasStartDate) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND username = ${username}
+          AND event_type = ${eventType}
+          AND timestamp >= ${startDateISO}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasUsername && hasEventType && hasEndDate) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND username = ${username}
+          AND event_type = ${eventType}
+          AND timestamp <= ${endDateISO}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasUsername && hasEventType) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND username = ${username}
+          AND event_type = ${eventType}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasUsername && hasLocation && hasDateRange) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND username = ${username}
+          AND location ILIKE ${'%' + location + '%'}
+          AND timestamp >= ${startDateISO}
+          AND timestamp <= ${endDateISO}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasUsername && hasLocation && hasStartDate) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND username = ${username}
+          AND location ILIKE ${'%' + location + '%'}
+          AND timestamp >= ${startDateISO}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasUsername && hasLocation && hasEndDate) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND username = ${username}
+          AND location ILIKE ${'%' + location + '%'}
+          AND timestamp <= ${endDateISO}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasUsername && hasLocation) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND username = ${username}
+          AND location ILIKE ${'%' + location + '%'}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasUsername && hasDateRange) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND username = ${username}
+          AND timestamp >= ${startDateISO}
+          AND timestamp <= ${endDateISO}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasUsername && hasStartDate) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND username = ${username}
+          AND timestamp >= ${startDateISO}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasUsername && hasEndDate) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND username = ${username}
+          AND timestamp <= ${endDateISO}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasUsername) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND username = ${username}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasEventType && hasLocation && hasDateRange) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND event_type = ${eventType}
+          AND location ILIKE ${'%' + location + '%'}
+          AND timestamp >= ${startDateISO}
+          AND timestamp <= ${endDateISO}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasEventType && hasLocation && hasStartDate) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND event_type = ${eventType}
+          AND location ILIKE ${'%' + location + '%'}
+          AND timestamp >= ${startDateISO}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasEventType && hasLocation && hasEndDate) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND event_type = ${eventType}
+          AND location ILIKE ${'%' + location + '%'}
+          AND timestamp <= ${endDateISO}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasEventType && hasLocation) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND event_type = ${eventType}
+          AND location ILIKE ${'%' + location + '%'}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasEventType && hasDateRange) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND event_type = ${eventType}
+          AND timestamp >= ${startDateISO}
+          AND timestamp <= ${endDateISO}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasEventType && hasStartDate) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND event_type = ${eventType}
+          AND timestamp >= ${startDateISO}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasEventType && hasEndDate) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND event_type = ${eventType}
+          AND timestamp <= ${endDateISO}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasEventType) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND event_type = ${eventType}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasLocation && hasDateRange) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND location ILIKE ${'%' + location + '%'}
+          AND timestamp >= ${startDateISO}
+          AND timestamp <= ${endDateISO}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasLocation && hasStartDate) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND location ILIKE ${'%' + location + '%'}
+          AND timestamp >= ${startDateISO}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasLocation && hasEndDate) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND location ILIKE ${'%' + location + '%'}
+          AND timestamp <= ${endDateISO}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasLocation) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND location ILIKE ${'%' + location + '%'}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasDateRange) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND timestamp >= ${startDateISO}
+          AND timestamp <= ${endDateISO}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasStartDate) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND timestamp >= ${startDateISO}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else if (hasEndDate) {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+          AND timestamp <= ${endDateISO}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else {
+      result = await sql`
+        SELECT 
+          id, environment, timestamp, is_logged_in, username,
+          event_type, location, bracket_id, user_agent, created_at
+        FROM usage_logs
+        WHERE environment = ${environment}
+        ORDER BY timestamp DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    }
 
     // Map environment to display format
     interface UsageLogRow {
