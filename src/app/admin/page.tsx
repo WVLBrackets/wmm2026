@@ -86,6 +86,8 @@ export default function AdminPage() {
   const [logEventTypeFilter, setLogEventTypeFilter] = useState<string>('');
   const [logLocationFilter, setLogLocationFilter] = useState<string>('');
   const [deletingLogs, setDeletingLogs] = useState(false);
+  const [initializingDatabase, setInitializingDatabase] = useState(false);
+  const [databaseInitMessage, setDatabaseInitMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [editingBracket, setEditingBracket] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Bracket>>({});
   const [filterUser, setFilterUser] = useState<string>('all');
@@ -347,6 +349,43 @@ export default function AdminPage() {
       alert(error instanceof Error ? error.message : 'Failed to delete logs');
     } finally {
       setDeletingLogs(false);
+    }
+  };
+
+  const handleInitializeDatabase = async () => {
+    if (!confirm('This will create the usage_logs and error_logs tables if they don\'t exist. Continue?')) {
+      return;
+    }
+
+    try {
+      setInitializingDatabase(true);
+      setDatabaseInitMessage(null);
+      setLogsError('');
+
+      const response = await fetch('/api/init-database', {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setDatabaseInitMessage({ type: 'success', text: 'Database tables initialized successfully!' });
+        // Reload logs after initialization
+        if (logsTab === 'summary') {
+          await loadUsageSummary();
+        } else if (logsTab === 'usage') {
+          await loadUsageLogs();
+        } else {
+          await loadErrorLogs();
+        }
+      } else {
+        setDatabaseInitMessage({ type: 'error', text: data.error || 'Failed to initialize database' });
+      }
+    } catch (error) {
+      console.error('Error initializing database:', error);
+      setDatabaseInitMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to initialize database' });
+    } finally {
+      setInitializingDatabase(false);
     }
   };
 
@@ -2633,7 +2672,7 @@ export default function AdminPage() {
           <div className="bg-white rounded-lg shadow-lg p-6">
             {/* Date Filters - Top Level */}
             <div className="mb-6 pb-4 border-b border-gray-200">
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-4 flex-wrap">
                 <div className="flex items-center space-x-2">
                   <label className="text-sm font-medium text-gray-700">Low End:</label>
                   <input
@@ -2662,12 +2701,30 @@ export default function AdminPage() {
                       loadErrorLogs();
                     }
                   }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
                   disabled={logsLoading}
                 >
                   {logsLoading ? 'Loading...' : 'Refresh'}
                 </button>
+                <button
+                  onClick={handleInitializeDatabase}
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400 flex items-center space-x-2"
+                  disabled={initializingDatabase}
+                  title="Create usage_logs and error_logs tables if they don't exist"
+                >
+                  <Power className="h-4 w-4" />
+                  <span>{initializingDatabase ? 'Initializing...' : 'Initialize Tables'}</span>
+                </button>
               </div>
+              {databaseInitMessage && (
+                <div className={`mt-3 p-3 rounded ${
+                  databaseInitMessage.type === 'success' 
+                    ? 'bg-green-100 text-green-700' 
+                    : 'bg-red-100 text-red-700'
+                }`}>
+                  {databaseInitMessage.text}
+                </div>
+              )}
             </div>
 
             <div className="mb-6 border-b border-gray-200">
