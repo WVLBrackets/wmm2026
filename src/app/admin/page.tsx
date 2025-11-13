@@ -21,6 +21,33 @@ interface User {
   };
 }
 
+interface UsageLog {
+  id: string;
+  environment: string;
+  timestamp: string;
+  isLoggedIn: boolean;
+  username: string | null;
+  eventType: string;
+  location: string;
+  bracketId: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}
+
+interface ErrorLog {
+  id: string;
+  environment: string;
+  timestamp: string;
+  isLoggedIn: boolean;
+  username: string | null;
+  errorMessage: string;
+  errorStack: string | null;
+  errorType: string | null;
+  location: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}
+
 interface Bracket {
   id: string;
   userId: string;
@@ -46,7 +73,19 @@ export default function AdminPage() {
   const [filteredBrackets, setFilteredBrackets] = useState<Bracket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'brackets' | 'users' | 'data'>('users');
+  const [activeTab, setActiveTab] = useState<'brackets' | 'users' | 'data' | 'logs'>('users');
+  const [logsTab, setLogsTab] = useState<'summary' | 'usage' | 'error'>('summary');
+  const [usageLogs, setUsageLogs] = useState<UsageLog[]>([]);
+  const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
+  const [usageSummary, setUsageSummary] = useState<{ pageVisits: Array<{ location: string; count: number }>; clicks: Array<{ location: string; count: number }> }>({ pageVisits: [], clicks: [] });
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsError, setLogsError] = useState('');
+  const [logStartDate, setLogStartDate] = useState<string>('');
+  const [logEndDate, setLogEndDate] = useState<string>('');
+  const [logUsernameFilter, setLogUsernameFilter] = useState<string>('');
+  const [logEventTypeFilter, setLogEventTypeFilter] = useState<string>('');
+  const [logLocationFilter, setLogLocationFilter] = useState<string>('');
+  const [deletingLogs, setDeletingLogs] = useState(false);
   const [editingBracket, setEditingBracket] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Bracket>>({});
   const [filterUser, setFilterUser] = useState<string>('all');
@@ -132,6 +171,182 @@ export default function AdminPage() {
       setError('Failed to load admin data');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadUsageLogs = async () => {
+    try {
+      setLogsLoading(true);
+      setLogsError('');
+      
+      const params = new URLSearchParams({ limit: '100' });
+      if (logStartDate) {
+        // Convert datetime-local (user's local time) to UTC ISO string
+        // datetime-local format: "YYYY-MM-DDTHH:mm"
+        const localDate = new Date(logStartDate);
+        params.append('startDate', localDate.toISOString());
+      }
+      if (logEndDate) {
+        // Convert datetime-local (user's local time) to UTC ISO string
+        const localDate = new Date(logEndDate);
+        // For end date, include the entire second
+        localDate.setMilliseconds(999);
+        params.append('endDate', localDate.toISOString());
+      }
+      if (logUsernameFilter) {
+        params.append('username', logUsernameFilter);
+      }
+      if (logEventTypeFilter) {
+        params.append('eventType', logEventTypeFilter);
+      }
+      if (logLocationFilter) {
+        params.append('location', logLocationFilter);
+      }
+      
+      const response = await fetch(`/api/admin/logs/usage?${params.toString()}`);
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
+        const errorMsg = data.error || data.details || 'Failed to load usage logs';
+        throw new Error(errorMsg);
+      }
+      
+      setUsageLogs(data.logs || []);
+    } catch (error) {
+      console.error('Error loading usage logs:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load usage logs';
+      setLogsError(errorMessage);
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  const loadErrorLogs = async () => {
+    try {
+      setLogsLoading(true);
+      setLogsError('');
+      
+      const params = new URLSearchParams({ limit: '100' });
+      if (logStartDate) {
+        // Convert datetime-local (user's local time) to UTC ISO string
+        const localDate = new Date(logStartDate);
+        params.append('startDate', localDate.toISOString());
+      }
+      if (logEndDate) {
+        // Convert datetime-local (user's local time) to UTC ISO string
+        const localDate = new Date(logEndDate);
+        // For end date, include the entire second
+        localDate.setMilliseconds(999);
+        params.append('endDate', localDate.toISOString());
+      }
+      
+      const response = await fetch(`/api/admin/logs/error?${params.toString()}`);
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
+        const errorMsg = data.error || data.details || 'Failed to load error logs';
+        throw new Error(errorMsg);
+      }
+      
+      setErrorLogs(data.logs || []);
+    } catch (error) {
+      console.error('Error loading error logs:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load error logs';
+      setLogsError(errorMessage);
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  const loadUsageSummary = async () => {
+    try {
+      setLogsLoading(true);
+      setLogsError('');
+      
+      const params = new URLSearchParams();
+      if (logStartDate) {
+        // Convert datetime-local (user's local time) to UTC ISO string
+        const localDate = new Date(logStartDate);
+        params.append('startDate', localDate.toISOString());
+      }
+      if (logEndDate) {
+        // Convert datetime-local (user's local time) to UTC ISO string
+        const localDate = new Date(logEndDate);
+        // For end date, include the entire second
+        localDate.setMilliseconds(999);
+        params.append('endDate', localDate.toISOString());
+      }
+      
+      const response = await fetch(`/api/admin/logs/usage/summary?${params.toString()}`);
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
+        const errorMsg = data.error || data.details || 'Failed to load usage summary';
+        throw new Error(errorMsg);
+      }
+      
+      setUsageSummary(data.summary || { pageVisits: [], clicks: [] });
+    } catch (error) {
+      console.error('Error loading usage summary:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load usage summary';
+      setLogsError(errorMessage);
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  const handleDeleteLogs = async () => {
+    const logType = logsTab === 'usage' ? 'usage' : 'error';
+    const count = logsTab === 'usage' ? usageLogs.length : errorLogs.length;
+    
+    if (count === 0) {
+      alert('No logs to delete');
+      return;
+    }
+    
+    // SECURITY: Require both date filters to prevent accidental deletion of all logs
+    if (!logStartDate || !logEndDate) {
+      alert('Please select both start and end date filters before deleting logs. This prevents accidental deletion of all logs.');
+      return;
+    }
+    
+    const dateRange = `${logStartDate} to ${logEndDate}`;
+    const confirmMessage = `Are you sure you want to delete ${count} ${logType} log${count !== 1 ? 's' : ''} from ${dateRange}? This action cannot be undone.`;
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+    
+    try {
+      setDeletingLogs(true);
+      
+      const params = new URLSearchParams();
+      // Convert datetime-local to UTC ISO strings for server
+      const startDateUTC = new Date(logStartDate).toISOString();
+      const endDateUTC = new Date(logEndDate).toISOString();
+      params.append('startDate', startDateUTC);
+      params.append('endDate', endDateUTC);
+      
+      const response = await fetch(`/api/admin/logs/${logType}/delete?${params.toString()}`, {
+        method: 'DELETE',
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to delete logs');
+      }
+      
+      // Reload logs after deletion
+      if (logsTab === 'usage') {
+        await loadUsageLogs();
+      } else {
+        await loadErrorLogs();
+      }
+    } catch (error) {
+      console.error('Error deleting logs:', error);
+      alert(error instanceof Error ? error.message : 'Failed to delete logs');
+    } finally {
+      setDeletingLogs(false);
     }
   };
 
@@ -333,8 +548,16 @@ export default function AdminPage() {
     // Load team data when Data tab is active
     if (activeTab === 'data') {
       loadTeamDataRef.current?.();
+    } else if (activeTab === 'logs') {
+      if (logsTab === 'summary') {
+        loadUsageSummary();
+      } else if (logsTab === 'usage') {
+        loadUsageLogs();
+      } else {
+        loadErrorLogs();
+      }
     }
-  }, [activeTab]);
+  }, [activeTab, logsTab, logStartDate, logEndDate, logUsernameFilter, logEventTypeFilter, logLocationFilter]);
 
   // Reload team data when filter changes
   useEffect(() => {
@@ -1323,6 +1546,17 @@ export default function AdminPage() {
                   <span>Team Data ({Object.keys(teamData).length})</span>
                 </button>
               )}
+              <button
+                onClick={() => setActiveTab('logs')}
+                className={`flex items-center space-x-2 px-6 py-4 border-b-2 font-medium text-sm ${
+                  activeTab === 'logs'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <AlertCircle className="w-5 h-5" />
+                <span>Logs</span>
+              </button>
             </nav>
           </div>
         </div>
@@ -2393,6 +2627,363 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+        {/* Logs Tab */}
+        {activeTab === 'logs' && (
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            {/* Date Filters - Top Level */}
+            <div className="mb-6 pb-4 border-b border-gray-200">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <label className="text-sm font-medium text-gray-700">Low End:</label>
+                  <input
+                    type="datetime-local"
+                    value={logStartDate}
+                    onChange={(e) => setLogStartDate(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded text-sm"
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <label className="text-sm font-medium text-gray-700">High End:</label>
+                  <input
+                    type="datetime-local"
+                    value={logEndDate}
+                    onChange={(e) => setLogEndDate(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded text-sm"
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    if (logsTab === 'summary') {
+                      loadUsageSummary();
+                    } else if (logsTab === 'usage') {
+                      loadUsageLogs();
+                    } else {
+                      loadErrorLogs();
+                    }
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  disabled={logsLoading}
+                >
+                  {logsLoading ? 'Loading...' : 'Refresh'}
+                </button>
+              </div>
+            </div>
+
+            <div className="mb-6 border-b border-gray-200">
+              <nav className="flex -mb-px">
+                <button
+                  onClick={() => setLogsTab('summary')}
+                  className={`px-4 py-2 border-b-2 font-medium text-sm ${
+                    logsTab === 'summary'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Usage Summary
+                </button>
+                <button
+                  onClick={() => setLogsTab('usage')}
+                  className={`px-4 py-2 border-b-2 font-medium text-sm ${
+                    logsTab === 'usage'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Usage Logs ({usageLogs.length})
+                </button>
+                <button
+                  onClick={() => setLogsTab('error')}
+                  className={`px-4 py-2 border-b-2 font-medium text-sm ${
+                    logsTab === 'error'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Error Logs ({errorLogs.length})
+                </button>
+              </nav>
+            </div>
+
+            {logsTab === 'summary' && (
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Usage Summary</h3>
+                {logsError && (
+                  <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+                    {logsError}
+                  </div>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Page Visits Section */}
+                  <div>
+                    <h4 className="text-md font-semibold mb-3 text-gray-800">Page Visits</h4>
+                    {logsLoading ? (
+                      <div className="text-gray-500">Loading...</div>
+                    ) : usageSummary.pageVisits.length === 0 ? (
+                      <div className="text-gray-500">No page visits found</div>
+                    ) : (
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <table className="min-w-full">
+                          <thead>
+                            <tr className="border-b border-gray-300">
+                              <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Location</th>
+                              <th className="text-right py-2 px-3 text-sm font-medium text-gray-700">Count</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {usageSummary.pageVisits.map((item, index) => (
+                              <tr key={index} className="border-b border-gray-200">
+                                <td className="py-2 px-3 text-sm text-gray-900">{item.location}</td>
+                                <td className="py-2 px-3 text-sm text-gray-900 text-right">{item.count}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Clicks Section */}
+                  <div>
+                    <h4 className="text-md font-semibold mb-3 text-gray-800">Clicks</h4>
+                    {logsLoading ? (
+                      <div className="text-gray-500">Loading...</div>
+                    ) : usageSummary.clicks.length === 0 ? (
+                      <div className="text-gray-500">No clicks found</div>
+                    ) : (
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <table className="min-w-full">
+                          <thead>
+                            <tr className="border-b border-gray-300">
+                              <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Location</th>
+                              <th className="text-right py-2 px-3 text-sm font-medium text-gray-700">Count</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {usageSummary.clicks.map((item, index) => (
+                              <tr key={index} className="border-b border-gray-200">
+                                <td className="py-2 px-3 text-sm text-gray-900">{item.location}</td>
+                                <td className="py-2 px-3 text-sm text-gray-900 text-right">{item.count}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Subtotals */}
+                {!logsLoading && (usageSummary.pageVisits.length > 0 || usageSummary.clicks.length > 0) && (
+                  <div className="mt-6 pt-4 border-t border-gray-300">
+                    <div className="flex justify-end space-x-8">
+                      <div className="text-right">
+                        <span className="text-sm font-medium text-gray-700">Total Page Visits: </span>
+                        <span className="text-sm font-semibold text-gray-900">
+                          {usageSummary.pageVisits.reduce((sum, item) => sum + item.count, 0).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-medium text-gray-700">Total Clicks: </span>
+                        <span className="text-sm font-semibold text-gray-900">
+                          {usageSummary.clicks.reduce((sum, item) => sum + item.count, 0).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {logsTab === 'usage' && (
+              <div>
+                <div className="mb-4 flex justify-between items-center">
+                  <h3 className="text-lg font-semibold">Usage Logs</h3>
+                  <button
+                    onClick={handleDeleteLogs}
+                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                    disabled={logsLoading || deletingLogs || usageLogs.length === 0}
+                  >
+                    {deletingLogs ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
+                {logsError && (
+                  <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+                    {logsError}
+                  </div>
+                )}
+                {/* Filter Dropdowns */}
+                <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Username
+                    </label>
+                    <select
+                      value={logUsernameFilter}
+                      onChange={(e) => setLogUsernameFilter(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    >
+                      <option value="">All Usernames</option>
+                      {Array.from(new Set(usageLogs.map(log => log.username).filter((u): u is string => Boolean(u)))).sort().map((username) => (
+                        <option key={username} value={username}>
+                          {username}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Event Type
+                    </label>
+                    <select
+                      value={logEventTypeFilter}
+                      onChange={(e) => setLogEventTypeFilter(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    >
+                      <option value="">All Event Types</option>
+                      {Array.from(new Set(usageLogs.map(log => log.eventType))).sort().map((eventType) => (
+                        <option key={eventType} value={eventType}>
+                          {eventType}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Location
+                    </label>
+                    <select
+                      value={logLocationFilter}
+                      onChange={(e) => setLogLocationFilter(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    >
+                      <option value="">All Locations</option>
+                      {Array.from(new Set(usageLogs.map(log => log.location))).sort().map((location) => (
+                        <option key={location} value={location}>
+                          {location}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Timestamp</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Environment</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Logged In</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Event Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bracket ID</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {usageLogs.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                            {logsLoading ? 'Loading logs...' : 'No usage logs found'}
+                          </td>
+                        </tr>
+                      ) : (
+                        usageLogs.map((log) => (
+                          <tr key={log.id}>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {new Date(log.timestamp).toLocaleString()}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{log.environment}</td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {log.isLoggedIn ? 'Yes' : 'No'}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {log.username || '—'}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{log.eventType}</td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{log.location}</td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {log.bracketId || '—'}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {logsTab === 'error' && (
+              <div>
+                <div className="mb-4 flex justify-between items-center">
+                  <h3 className="text-lg font-semibold">Error Logs</h3>
+                  <button
+                    onClick={handleDeleteLogs}
+                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                    disabled={logsLoading || deletingLogs || errorLogs.length === 0}
+                  >
+                    {deletingLogs ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
+                {logsError && (
+                  <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+                    {logsError}
+                  </div>
+                )}
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Timestamp</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Environment</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Logged In</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Error Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Message</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {errorLogs.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                            {logsLoading ? 'Loading logs...' : 'No error logs found'}
+                          </td>
+                        </tr>
+                      ) : (
+                        errorLogs.map((log) => (
+                          <tr key={log.id}>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {new Date(log.timestamp).toLocaleString()}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{log.environment}</td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {log.isLoggedIn ? 'Yes' : 'No'}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {log.username || '—'}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {log.errorType || '—'}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {log.location || '—'}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900">
+                              <div className="max-w-md truncate" title={log.errorMessage}>
+                                {log.errorMessage}
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

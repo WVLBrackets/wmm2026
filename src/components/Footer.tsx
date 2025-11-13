@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getSiteConfig } from '@/config/site';
 import { Mail } from 'lucide-react';
+import { usageLogger } from '@/lib/usageLogger';
 
 export default function Footer() {
   const [footerText, setFooterText] = useState<string>('© 2001 Warren\'s March Madness | All rights reserved');
@@ -33,6 +34,7 @@ export default function Footer() {
             <span className="text-gray-400">Questions?</span>
             <a 
               href={`mailto:${contactEmail}`} 
+              onClick={() => usageLogger.log('Click', 'Contact Us')}
               className="flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors"
             >
               <Mail className="h-4 w-4" />

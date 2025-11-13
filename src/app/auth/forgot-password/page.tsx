@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
+import { usageLogger } from '@/lib/usageLogger';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -16,6 +17,9 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+
+    // Log the Send Reset Instructions click with email
+    usageLogger.log('Click', 'Send Reset Instructions', null, email);
 
     try {
       const response = await fetch('/api/auth/forgot-password', {

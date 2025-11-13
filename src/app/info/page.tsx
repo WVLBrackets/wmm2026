@@ -6,8 +6,10 @@ import { useState, useEffect } from 'react';
 import { getSiteConfig } from '@/config/site';
 import { SiteConfigData } from '@/lib/siteConfig';
 import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
+import { useUsageLogger } from '@/hooks/useUsageLogger';
 
 export default function InfoPage() {
+  useUsageLogger('Info');
   const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 

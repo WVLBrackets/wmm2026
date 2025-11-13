@@ -12,9 +12,12 @@ import MyPicksLanding from '@/components/MyPicksLanding';
 import { useBracketMode } from '@/contexts/BracketModeContext';
 import { Trophy, Users, Calendar, Plus, Eye, LogOut, Save, CheckCircle, ArrowLeft } from 'lucide-react';
 import { signOut } from 'next-auth/react';
+import { useUsageLogger } from '@/hooks/useUsageLogger';
+import { LoggedButton } from '@/components/LoggedButton';
 
 function BracketContent() {
   const { data: session, status } = useSession();
+  useUsageLogger('Pick');
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setInBracketMode } = useBracketMode();
@@ -36,6 +39,7 @@ function BracketContent() {
   const [submittedBrackets, setSubmittedBrackets] = useState<BracketSubmission[]>([]);
   const [bracketResetKey, setBracketResetKey] = useState(0);
   const [deletingBracketId, setDeletingBracketId] = useState<string | null>(null);
+  const [pendingDeleteBracketId, setPendingDeleteBracketId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string>('');
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
@@ -422,6 +426,20 @@ function BracketContent() {
       const data = await response.json();
       
       if (data.success) {
+        // Get bracket number for logging
+        let bracketNumber: number | undefined;
+        if (editingBracket) {
+          const bracket = editingBracket as Record<string, unknown>;
+          bracketNumber = bracket.bracketNumber as number | undefined;
+        } else if (data.data) {
+          const newBracket = data.data as Record<string, unknown>;
+          bracketNumber = newBracket.bracketNumber as number | undefined;
+        }
+        
+        // Log the submit action
+        const { usageLogger } = await import('@/lib/usageLogger');
+        usageLogger.log('Click', 'Submit', bracketNumber ? String(bracketNumber).padStart(6, '0') : null);
+        
         // Return to landing page without popup
         handleBackToLanding();
       } else {
@@ -584,10 +602,12 @@ function BracketContent() {
       };
 
       let response;
+      let bracketNumber: number | undefined;
       
       if (editingBracket) {
         // Update existing bracket
         const bracket = editingBracket as Record<string, unknown>;
+        bracketNumber = bracket.bracketNumber as number | undefined;
         const endpoint = isAdminMode 
           ? `/api/admin/brackets/${bracket.id}`
           : `/api/tournament-bracket/${bracket.id}`;
@@ -613,6 +633,22 @@ function BracketContent() {
       const data = await response.json();
       
       if (data.success) {
+        // Get bracket number from response if creating new bracket
+        if (!editingBracket && data.data) {
+          const newBracket = data.data as Record<string, unknown>;
+          bracketNumber = newBracket.bracketNumber as number | undefined;
+          
+          // Log New Bracket with bracket ID after creation
+          if (bracketNumber) {
+            const { usageLogger } = await import('@/lib/usageLogger');
+            usageLogger.log('Click', 'New Bracket', String(bracketNumber).padStart(6, '0'));
+          }
+        }
+        
+        // Log the save action
+        const { usageLogger } = await import('@/lib/usageLogger');
+        usageLogger.log('Click', 'Save', bracketNumber ? String(bracketNumber).padStart(6, '0') : null);
+        
         // Reload brackets to show the updated bracket
         await loadSubmittedBrackets();
         handleBackToLanding();
@@ -625,7 +661,25 @@ function BracketContent() {
     }
   };
 
-  const handleDeleteBracket = async (bracketId: string) => {
+  const handleDeleteBracket = (bracketId: string) => {
+    // For in_progress brackets, show embedded confirmation
+    // For submitted brackets, still use popup (hard delete is more serious)
+    const bracketToDelete = submittedBrackets.find(b => b.id === bracketId);
+    const isInProgress = bracketToDelete && 'status' in bracketToDelete && bracketToDelete.status === 'in_progress';
+    
+    if (isInProgress) {
+      // Show embedded confirmation for in_progress brackets
+      setPendingDeleteBracketId(bracketId);
+    } else {
+      // For submitted brackets, still use popup confirmation
+      const confirmMessage = 'Are you sure you want to delete this submitted bracket? This action cannot be undone.';
+      if (confirm(confirmMessage)) {
+        confirmDeleteBracket(bracketId);
+      }
+    }
+  };
+
+  const confirmDeleteBracket = async (bracketId: string) => {
     // Find the bracket to check its status
     const bracketToDelete = submittedBrackets.find(b => b.id === bracketId);
     
@@ -633,14 +687,7 @@ function BracketContent() {
     // For submitted brackets, hard delete (actual removal)
     const isInProgress = bracketToDelete && 'status' in bracketToDelete && bracketToDelete.status === 'in_progress';
     
-    const confirmMessage = isInProgress 
-      ? 'Are you sure you want to delete this in-progress bracket?'
-      : 'Are you sure you want to delete this submitted bracket? This action cannot be undone.';
-    
-    if (!confirm(confirmMessage)) {
-      return;
-    }
-
+    setPendingDeleteBracketId(null);
     setDeletingBracketId(bracketId);
 
     try {
@@ -749,18 +796,20 @@ function BracketContent() {
                 Sign in to view and submit your tournament picks.
               </p>
               <div className="space-y-3">
-                <button
+                <LoggedButton
                   onClick={() => router.push('/auth/signin')}
+                  logLocation="Sign In"
                   className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 cursor-pointer"
                 >
                   Sign In
-                </button>
-                <button
+                </LoggedButton>
+                <LoggedButton
                   onClick={() => router.push('/auth/signup')}
+                  logLocation="Create Account"
                   className="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 cursor-pointer"
                 >
                   Create Account
-                </button>
+                </LoggedButton>
               </div>
             </div>
           </div>
@@ -776,7 +825,10 @@ function BracketContent() {
             brackets={submittedBrackets}
             onCreateNew={handleCreateNew}
             onEditBracket={handleEditBracket}
-            onDeleteBracket={handleDeleteBracket}
+              onDeleteBracket={handleDeleteBracket}
+              pendingDeleteBracketId={pendingDeleteBracketId}
+              onConfirmDelete={confirmDeleteBracket}
+              onCancelDelete={() => setPendingDeleteBracketId(null)}
             onCopyBracket={handleCopyBracket}
             deletingBracketId={deletingBracketId}
             tournamentData={tournamentData}

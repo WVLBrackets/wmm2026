@@ -143,6 +143,39 @@ export async function initializeDatabase() {
       )
     `;
 
+    // Create usage logs table for tracking user interactions
+    await sql`
+      CREATE TABLE IF NOT EXISTS usage_logs (
+        id VARCHAR(36) PRIMARY KEY,
+        environment VARCHAR(50) NOT NULL,
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_logged_in BOOLEAN NOT NULL,
+        username VARCHAR(255),
+        event_type VARCHAR(20) NOT NULL,
+        location VARCHAR(255) NOT NULL,
+        bracket_id VARCHAR(36),
+        user_agent TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
+    // Create error logs table for tracking application errors
+    await sql`
+      CREATE TABLE IF NOT EXISTS error_logs (
+        id VARCHAR(36) PRIMARY KEY,
+        environment VARCHAR(50) NOT NULL,
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_logged_in BOOLEAN NOT NULL,
+        username VARCHAR(255),
+        error_message TEXT NOT NULL,
+        error_stack TEXT,
+        error_type VARCHAR(100),
+        location VARCHAR(255),
+        user_agent TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
     // Create team_reference_data table for managing team data
     // Note: This table is created in PROD database and accessed by both staging and prod
     // No environment column needed since all environments share the same data
@@ -168,6 +201,12 @@ export async function initializeDatabase() {
     await sql`CREATE INDEX IF NOT EXISTS idx_tokens_expires ON tokens(expires)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_brackets_user_id_env ON brackets(user_id, environment)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_brackets_environment ON brackets(environment)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_usage_logs_environment ON usage_logs(environment)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_usage_logs_timestamp ON usage_logs(timestamp)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_usage_logs_username ON usage_logs(username)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_error_logs_environment ON error_logs(environment)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_error_logs_timestamp ON error_logs(timestamp)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_error_logs_username ON error_logs(username)`;
 
     // Add environment constraints (PostgreSQL doesn't support IF NOT EXISTS with ADD CONSTRAINT)
     try {

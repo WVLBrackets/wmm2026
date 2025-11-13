@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
+import { usageLogger } from '@/lib/usageLogger';
 
 export default function SignUpPage() {
   const [name, setName] = useState('');
@@ -23,6 +24,9 @@ export default function SignUpPage() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+
+    // Log the Create Account click with email
+    usageLogger.log('Click', 'Create Account', null, email);
 
     // Validation
     if (password !== confirmPassword) {

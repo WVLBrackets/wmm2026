@@ -3,26 +3,17 @@ import CountdownClock from '@/components/CountdownClock';
 import Announcements from '@/components/Announcements';
 import { getSiteConfig } from '@/config/site';
 import HomePageLogo from '@/components/HomePageLogo';
+import { PageLogger } from '@/components/PageLogger';
 
 export default async function Home() {
   const siteConfig = await getSiteConfig();
 
   return (
-    <div 
-      className="min-h-screen flex flex-col relative"
-      style={{
-        backgroundImage: 'url(/images/WMM Wood Floor Large.png)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed'
-      }}
-    >
-      {/* Optional overlay for better text readability if needed */}
-      <div className="absolute inset-0 bg-black/5 pointer-events-none"></div>
-
+    <>
+      <PageLogger location="Home" />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 relative z-10">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1">
         {/* Row 1: Logo and Countdown Clock */}
         <div className="hidden lg:grid lg:grid-cols-2 gap-6 mb-8">
           {/* Home Page Logo */}
@@ -33,9 +24,10 @@ export default async function Home() {
           </div>
 
           {/* Countdown Clock */}
-          <div className="bg-white rounded-lg shadow-lg p-3 h-full flex flex-col justify-center min-h-[200px]">
-            <Calendar className="h-5 w-5 text-blue-600 mx-auto mb-1" />
-            <CountdownClock />
+          <div className="bg-white rounded-lg shadow-lg p-4 h-full flex flex-col justify-center min-h-[200px]">
+            <div className="rounded h-full flex flex-col justify-center p-4" style={{ backgroundColor: '#022749' }}>
+              <CountdownClock />
+            </div>
           </div>
         </div>
 
@@ -49,9 +41,10 @@ export default async function Home() {
           </div>
 
           {/* Countdown Clock */}
-          <div className="bg-white rounded-lg shadow-lg p-3 flex flex-col justify-center">
-            <Calendar className="h-5 w-5 text-blue-600 mx-auto mb-1" />
-            <CountdownClock />
+          <div className="bg-white rounded-lg shadow-lg p-4 flex flex-col justify-center">
+            <div className="rounded h-full flex flex-col justify-center p-4" style={{ backgroundColor: '#022749' }}>
+              <CountdownClock />
+            </div>
           </div>
         </div>
 
@@ -62,5 +55,6 @@ export default async function Home() {
       </main>
 
     </div>
+    </>
   );
 }

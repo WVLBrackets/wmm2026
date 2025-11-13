@@ -7,6 +7,8 @@ import { signOut } from 'next-auth/react';
 import { TournamentData, TournamentBracket } from '@/types/tournament';
 import { SiteConfigData } from '@/lib/siteConfig';
 import Image from 'next/image';
+import { LoggedButton } from '@/components/LoggedButton';
+import { usageLogger } from '@/lib/usageLogger';
 
 interface Bracket {
   id: string;
@@ -29,12 +31,15 @@ interface MyPicksLandingProps {
   onDeleteBracket: (bracketId: string) => void;
   onCopyBracket: (bracket: Bracket) => void;
   deletingBracketId?: string | null;
+  pendingDeleteBracketId?: string | null;
+  onConfirmDelete?: (bracketId: string) => void;
+  onCancelDelete?: () => void;
   tournamentData?: TournamentData | null;
   bracket?: TournamentBracket | null;
   siteConfig?: SiteConfigData | null;
 }
 
-export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBracket, onDeleteBracket, onCopyBracket, deletingBracketId, tournamentData, bracket, siteConfig }: MyPicksLandingProps) {
+export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBracket, onDeleteBracket, onCopyBracket, deletingBracketId, pendingDeleteBracketId, onConfirmDelete, onCancelDelete, tournamentData, bracket, siteConfig }: MyPicksLandingProps) {
   const { data: session } = useSession();
   const [expandedStatus, setExpandedStatus] = useState<'info' | null>(null);
   const [logoError, setLogoError] = useState(false);
@@ -368,13 +373,14 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                       <span>New Bracket</span>
                     </button>
                     
-                    <button
+                    <LoggedButton
                       onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+                      logLocation="Logout"
                       className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
                     >
                       <LogOut className="h-4 w-4" />
                       <span>Logout</span>
-                    </button>
+                    </LoggedButton>
                   </div>
                 </div>
               </div>
@@ -407,12 +413,13 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                         <Plus className="h-4 w-4" />
                       </button>
                       
-                      <button
+                      <LoggedButton
                         onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+                        logLocation="Logout"
                         className="bg-blue-600 text-white px-2 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
                       >
                         <LogOut className="h-4 w-4" />
-                      </button>
+                      </LoggedButton>
                     </div>
                   </div>
                   
@@ -639,65 +646,104 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                           {/* Action buttons - icon-only squares with tooltips */}
                           {bracket.status === 'in_progress' ? (
                             <>
-                              {/* In Progress: Edit, Copy, Delete */}
-                              <button
-                                onClick={() => onEditBracket(bracket)}
-                                className="bg-blue-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-blue-700 cursor-pointer transition-colors"
-                                title="Edit"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => onCopyBracket(bracket)}
-                                className="bg-green-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-green-700 cursor-pointer transition-colors"
-                                title="Copy"
-                              >
-                                <Copy className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteBracket(bracket.id)}
-                                disabled={deletingBracketId === bracket.id}
-                                className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
-                                  deletingBracketId === bracket.id
-                                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                                    : 'bg-red-600 text-white hover:bg-red-700 cursor-pointer'
-                                }`}
-                                title={deletingBracketId === bracket.id ? 'Deleting...' : 'Delete'}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                              {pendingDeleteBracketId === bracket.id ? (
+                                <>
+                                  {/* Confirmation UI - embedded in the table */}
+                                  <div className="flex items-center space-x-2 bg-red-50 border border-red-200 rounded px-2 py-1">
+                                    <span className="text-xs text-red-700 font-medium whitespace-nowrap">Delete?</span>
+                                    <button
+                                      onClick={() => onConfirmDelete && onConfirmDelete(bracket.id)}
+                                      disabled={deletingBracketId === bracket.id}
+                                      className="bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      Yes
+                                    </button>
+                                    <button
+                                      onClick={() => onCancelDelete && onCancelDelete()}
+                                      disabled={deletingBracketId === bracket.id}
+                                      className="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      No
+                                    </button>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  {/* In Progress: Edit, Copy, Delete */}
+                                  <LoggedButton
+                                    onClick={() => onEditBracket(bracket)}
+                                    logLocation="Edit"
+                                    bracketId={number ? String(number).padStart(6, '0') : null}
+                                    className="bg-blue-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-blue-700 cursor-pointer transition-colors"
+                                    title="Edit"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </LoggedButton>
+                                  <LoggedButton
+                                    onClick={() => onCopyBracket(bracket)}
+                                    logLocation="Copy"
+                                    bracketId={number ? String(number).padStart(6, '0') : null}
+                                    className="bg-green-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-green-700 cursor-pointer transition-colors"
+                                    title="Copy"
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </LoggedButton>
+                                  <LoggedButton
+                                    onClick={() => onDeleteBracket(bracket.id)}
+                                    logLocation="Delete"
+                                    bracketId={number ? String(number).padStart(6, '0') : null}
+                                    disabled={deletingBracketId === bracket.id || pendingDeleteBracketId === bracket.id}
+                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
+                                      deletingBracketId === bracket.id || pendingDeleteBracketId === bracket.id
+                                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                        : 'bg-red-600 text-white hover:bg-red-700 cursor-pointer'
+                                    }`}
+                                    title={deletingBracketId === bracket.id ? 'Deleting...' : 'Delete'}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </LoggedButton>
+                                </>
+                              )}
                             </>
                           ) : (
                             <>
                               {/* Submitted: View, Copy, Print, Email */}
-                              <button
+                              <LoggedButton
                                 onClick={() => onEditBracket(bracket)}
+                                logLocation="View"
+                                bracketId={number ? String(number).padStart(6, '0') : null}
                                 className="bg-blue-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-blue-700 cursor-pointer transition-colors"
                                 title="View"
                               >
                                 <Eye className="h-4 w-4" />
-                              </button>
-                              <button
+                              </LoggedButton>
+                              <LoggedButton
                                 onClick={() => onCopyBracket(bracket)}
+                                logLocation="Copy"
+                                bracketId={number ? String(number).padStart(6, '0') : null}
                                 className="bg-green-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-green-700 cursor-pointer transition-colors"
                                 title="Copy"
                               >
                                 <Copy className="h-4 w-4" />
-                              </button>
-                              <button
+                              </LoggedButton>
+                              <LoggedButton
                                 onClick={() => handlePrintBracket(bracket)}
+                                logLocation="Print"
+                                bracketId={number ? String(number).padStart(6, '0') : null}
                                 className="hidden md:flex bg-purple-600 text-white w-8 h-8 rounded items-center justify-center hover:bg-purple-700 cursor-pointer transition-colors"
                                 title="Print"
                               >
                                 <Printer className="h-4 w-4" />
-                              </button>
-                              <button
+                              </LoggedButton>
+                              <LoggedButton
                                 onClick={() => handleEmailBracket(bracket)}
+                                logLocation="Email"
+                                bracketId={number ? String(number).padStart(6, '0') : null}
                                 className="bg-indigo-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-indigo-700 cursor-pointer transition-colors"
                                 title="Email PDF"
                               >
                                 <Mail className="h-4 w-4" />
-                              </button>
+                              </LoggedButton>
                             </>
                           )}
                         </div>
