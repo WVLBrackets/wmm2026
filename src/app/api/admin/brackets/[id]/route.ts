@@ -10,15 +10,11 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    console.log('Admin brackets GET endpoint hit for bracket:', id);
     const session = await getServerSession(authOptions);
-    console.log('Session user:', session?.user?.email);
     
     const adminCheck = session?.user?.email ? await isAdmin(session.user.email) : false;
-    console.log('Is admin:', adminCheck);
 
     if (!session?.user?.email || !adminCheck) {
-      console.log('Admin check failed - returning unauthorized');
       return NextResponse.json(
         { success: false, error: 'Unauthorized - Admin access required' },
         { status: 403 }
