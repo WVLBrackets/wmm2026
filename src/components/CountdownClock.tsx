@@ -82,16 +82,16 @@ export default function CountdownClock() {
   return (
     <div className="text-center w-full">
       <div className="flex items-center justify-center mb-4">
-        <Calendar className="h-5 w-5 text-orange-500 mr-2 drop-shadow-sm" />
-        <h3 className="text-xl font-bold text-gray-900 drop-shadow-sm">
+        <Calendar className="h-5 w-5 text-white mr-2 drop-shadow-sm" />
+        <h3 className="text-xl font-bold text-white drop-shadow-sm">
           Countdown to {siteConfig.tournamentYear} Tipoff
         </h3>
       </div>
       
       {isTournamentStarted ? (
         <div className="py-4">
-          <p className="text-3xl font-bold text-green-600 mb-3 drop-shadow-md">Tournament Started!</p>
-          <p className="text-base text-gray-700">
+          <p className="text-3xl font-bold text-green-400 mb-3 drop-shadow-md">Tournament Started!</p>
+          <p className="text-base text-white">
             {tournamentDate.toLocaleDateString('en-US', {
               month: 'long',
               day: 'numeric',
@@ -131,7 +131,7 @@ export default function CountdownClock() {
               </div>
             </div>
           </div>
-          <p className="text-sm text-gray-700 font-medium">
+          <p className="text-sm text-white font-medium">
             {tournamentDate.toLocaleDateString('en-US', {
               month: 'long',
               day: 'numeric',
