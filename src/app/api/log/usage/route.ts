@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
 
     // Get user info (optional - user may not be logged in)
     const isLoggedIn = !!session?.user?.email;
-    const username = session?.user?.email || null;
+    const sessionUsername = session?.user?.email || null;
 
     const body = await request.json();
     const { entries } = body as { entries: UsageLogEntry[] };
@@ -35,6 +35,11 @@ export async function POST(request: NextRequest) {
     // Insert all entries in a single transaction
     const values = entries.map((entry) => {
       const id = crypto.randomUUID();
+      // Use email from entry if provided (for non-logged-in users), otherwise use session username
+      const username = entry.email || sessionUsername;
+      // User is logged in if we have session username, or if entry has email (they're in the process of creating account/resetting password)
+      const entryIsLoggedIn = !!sessionUsername;
+      
       return sql`
         INSERT INTO usage_logs (
           id, environment, timestamp, is_logged_in, username,
@@ -43,7 +48,7 @@ export async function POST(request: NextRequest) {
           ${id},
           ${environment},
           ${entry.timestamp},
-          ${isLoggedIn},
+          ${entryIsLoggedIn},
           ${username},
           ${entry.eventType},
           ${entry.location},

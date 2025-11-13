@@ -82,6 +82,9 @@ export default function AdminPage() {
   const [logsError, setLogsError] = useState('');
   const [logStartDate, setLogStartDate] = useState<string>('');
   const [logEndDate, setLogEndDate] = useState<string>('');
+  const [logUsernameFilter, setLogUsernameFilter] = useState<string>('');
+  const [logEventTypeFilter, setLogEventTypeFilter] = useState<string>('');
+  const [logLocationFilter, setLogLocationFilter] = useState<string>('');
   const [deletingLogs, setDeletingLogs] = useState(false);
   const [editingBracket, setEditingBracket] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Bracket>>({});
@@ -189,6 +192,15 @@ export default function AdminPage() {
         // For end date, include the entire second
         localDate.setMilliseconds(999);
         params.append('endDate', localDate.toISOString());
+      }
+      if (logUsernameFilter) {
+        params.append('username', logUsernameFilter);
+      }
+      if (logEventTypeFilter) {
+        params.append('eventType', logEventTypeFilter);
+      }
+      if (logLocationFilter) {
+        params.append('location', logLocationFilter);
       }
       
       const response = await fetch(`/api/admin/logs/usage?${params.toString()}`);
@@ -545,7 +557,7 @@ export default function AdminPage() {
         loadErrorLogs();
       }
     }
-  }, [activeTab, logsTab, logStartDate, logEndDate]);
+  }, [activeTab, logsTab, logStartDate, logEndDate, logUsernameFilter, logEventTypeFilter, logLocationFilter]);
 
   // Reload team data when filter changes
   useEffect(() => {

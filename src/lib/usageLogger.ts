@@ -11,6 +11,7 @@ export interface UsageLogEntry {
   location: Location;
   bracketId?: string | null;
   timestamp: Date;
+  email?: string | null; // Optional email for logging when user is not logged in
 }
 
 class UsageLogger {
@@ -23,12 +24,13 @@ class UsageLogger {
   /**
    * Add a log entry to the queue
    */
-  log(eventType: EventType, location: Location, bracketId?: string | null): void {
+  log(eventType: EventType, location: Location, bracketId?: string | null, email?: string | null): void {
     const entry: UsageLogEntry = {
       eventType,
       location,
       bracketId: bracketId || null,
       timestamp: new Date(),
+      email: email || null,
     };
 
     this.queue.push(entry);
