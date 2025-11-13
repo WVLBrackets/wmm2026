@@ -1,8 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { isAdmin } from '@/lib/adminAuth';
 import { InMemoryUserRepository } from '@/lib/repositories/userRepository';
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.email || !(await isAdmin(session.user.email))) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 403 }
+      );
+    }
+
     const { email, newPassword } = await request.json();
 
     if (!email || !newPassword) {
