@@ -7,11 +7,27 @@ import { getCurrentEnvironment } from '@/lib/databaseConfig';
 
 /**
  * DELETE /api/admin/logs/error/delete - Delete error logs (admin only)
+<<<<<<< HEAD
  */
 export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
+=======
+ * 
+ * SECURITY: This endpoint is protected by:
+ * 1. Session authentication (getServerSession)
+ * 2. Admin authorization (isAdmin check)
+ * 3. Returns 403 if unauthorized
+ * 4. Requires date parameter to prevent accidental deletion of all logs
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    // SECURITY: Require authenticated session
+    const session = await getServerSession(authOptions);
+    
+    // SECURITY: Require admin authorization
+>>>>>>> security
     if (!session?.user?.email || !(await isAdmin(session.user.email))) {
       return NextResponse.json(
         { 
@@ -26,6 +42,7 @@ export async function DELETE(request: NextRequest) {
     const environment = searchParams.get('environment') || getCurrentEnvironment();
     const date = searchParams.get('date');
 
+<<<<<<< HEAD
     let result;
     if (date) {
       // Delete logs for a specific date
@@ -48,6 +65,32 @@ export async function DELETE(request: NextRequest) {
       `;
     }
 
+=======
+    // SECURITY: Require date parameter to prevent accidental deletion of all logs
+    if (!date) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Date parameter is required for safety'
+        },
+        { status: 400 }
+      );
+    }
+
+    // Delete logs for a specific date
+    const dateStart = new Date(date);
+    dateStart.setHours(0, 0, 0, 0);
+    const dateEnd = new Date(date);
+    dateEnd.setHours(23, 59, 59, 999);
+    
+    const result = await sql`
+      DELETE FROM error_logs
+      WHERE environment = ${environment}
+        AND timestamp >= ${dateStart.toISOString()}
+        AND timestamp <= ${dateEnd.toISOString()}
+    `;
+
+>>>>>>> security
     return NextResponse.json({
       success: true,
       deletedCount: result.rowCount || 0,

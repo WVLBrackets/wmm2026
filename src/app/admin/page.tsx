@@ -234,7 +234,13 @@ export default function AdminPage() {
       return;
     }
     
-    const confirmMessage = `Are you sure you want to delete ${count} ${logType} log${count !== 1 ? 's' : ''}? This action cannot be undone.`;
+    // SECURITY: Require date filter to prevent accidental deletion of all logs
+    if (!logDateFilter) {
+      alert('Please select a date filter before deleting logs. This prevents accidental deletion of all logs.');
+      return;
+    }
+    
+    const confirmMessage = `Are you sure you want to delete ${count} ${logType} log${count !== 1 ? 's' : ''} for ${logDateFilter}? This action cannot be undone.`;
     if (!confirm(confirmMessage)) {
       return;
     }
@@ -243,9 +249,7 @@ export default function AdminPage() {
       setDeletingLogs(true);
       
       const params = new URLSearchParams();
-      if (logDateFilter) {
-        params.append('date', logDateFilter);
-      }
+      params.append('date', logDateFilter);
       
       const response = await fetch(`/api/admin/logs/${logType}/delete?${params.toString()}`, {
         method: 'DELETE',
@@ -1407,7 +1411,7 @@ export default function AdminPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">GET</td>
                     <td className="px-6 py-4 text-sm text-gray-500">
-                      Check if current user is an admin (Public, returns boolean)
+                      Check if current authenticated user is an admin (Requires authentication, returns boolean)
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <a
