@@ -2760,6 +2760,26 @@ export default function AdminPage() {
                     )}
                   </div>
                 </div>
+                
+                {/* Subtotals */}
+                {!logsLoading && (usageSummary.pageVisits.length > 0 || usageSummary.clicks.length > 0) && (
+                  <div className="mt-6 pt-4 border-t border-gray-300">
+                    <div className="flex justify-end space-x-8">
+                      <div className="text-right">
+                        <span className="text-sm font-medium text-gray-700">Total Page Visits: </span>
+                        <span className="text-sm font-semibold text-gray-900">
+                          {usageSummary.pageVisits.reduce((sum, item) => sum + item.count, 0).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-medium text-gray-700">Total Clicks: </span>
+                        <span className="text-sm font-semibold text-gray-900">
+                          {usageSummary.clicks.reduce((sum, item) => sum + item.count, 0).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
