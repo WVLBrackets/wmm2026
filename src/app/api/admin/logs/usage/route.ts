@@ -38,14 +38,13 @@ export async function GET(request: NextRequest) {
     const endDateISO = endDate || null;
     
     // Build WHERE conditions dynamically
-    const conditions: string[] = [`environment = '${environment}'`];
-    const params: any[] = [];
+    const conditions: string[] = [`environment = '${environment.replace(/'/g, "''")}'`];
     
     if (startDateISO) {
-      conditions.push(`timestamp >= '${startDateISO}'`);
+      conditions.push(`timestamp >= '${startDateISO.replace(/'/g, "''")}'`);
     }
     if (endDateISO) {
-      conditions.push(`timestamp <= '${endDateISO}'`);
+      conditions.push(`timestamp <= '${endDateISO.replace(/'/g, "''")}'`);
     }
     if (username) {
       conditions.push(`username = '${username.replace(/'/g, "''")}'`);
