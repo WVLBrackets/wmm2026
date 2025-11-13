@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Calendar } from 'lucide-react';
 import { getSiteConfig } from '@/config/site';
 import { SiteConfigData } from '@/lib/siteConfig';
 import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
@@ -79,15 +80,18 @@ export default function CountdownClock() {
   const isTournamentStarted = timeLeft.days === 0 && timeLeft.hours === 0 && timeLeft.minutes === 0 && timeLeft.seconds === 0;
 
   return (
-    <div className="text-center">
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-        Countdown to {siteConfig.tournamentYear} Tipoff
-      </h3>
+    <div className="text-center w-full">
+      <div className="flex items-center justify-center mb-4">
+        <Calendar className="h-5 w-5 text-blue-600 mr-2" />
+        <h3 className="text-xl font-bold text-gray-900">
+          Countdown to {siteConfig.tournamentYear} Tipoff
+        </h3>
+      </div>
       
       {isTournamentStarted ? (
-        <div>
-          <p className="text-2xl font-bold text-green-600 mb-2">Tournament Started!</p>
-          <p className="text-sm text-gray-600">
+        <div className="py-4">
+          <p className="text-3xl font-bold text-green-600 mb-3">Tournament Started!</p>
+          <p className="text-base text-gray-700">
             {tournamentDate.toLocaleDateString('en-US', {
               month: 'long',
               day: 'numeric',
@@ -96,26 +100,26 @@ export default function CountdownClock() {
           </p>
         </div>
       ) : (
-        <div>
-          <div className="grid grid-cols-2 gap-2 mb-2">
-            <div className="bg-blue-50 rounded p-2">
-              <div className="text-2xl font-bold text-blue-600">{timeLeft.days}</div>
-              <div className="text-xs text-gray-600">Days</div>
+        <div className="w-full">
+          <div className="grid grid-cols-2 gap-3 mb-4 max-w-xs mx-auto">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 shadow-sm border border-blue-200/50">
+              <div className="text-4xl font-bold text-blue-700 mb-1 tabular-nums">{timeLeft.days}</div>
+              <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">Days</div>
             </div>
-            <div className="bg-blue-50 rounded p-2">
-              <div className="text-2xl font-bold text-blue-600">{timeLeft.hours}</div>
-              <div className="text-xs text-gray-600">Hours</div>
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 shadow-sm border border-blue-200/50">
+              <div className="text-4xl font-bold text-blue-700 mb-1 tabular-nums">{String(timeLeft.hours).padStart(2, '0')}</div>
+              <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">Hours</div>
             </div>
-            <div className="bg-blue-50 rounded p-2">
-              <div className="text-2xl font-bold text-blue-600">{timeLeft.minutes}</div>
-              <div className="text-xs text-gray-600">Minutes</div>
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 shadow-sm border border-blue-200/50">
+              <div className="text-4xl font-bold text-blue-700 mb-1 tabular-nums">{String(timeLeft.minutes).padStart(2, '0')}</div>
+              <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">Minutes</div>
             </div>
-            <div className="bg-blue-50 rounded p-2">
-              <div className="text-2xl font-bold text-blue-600">{timeLeft.seconds}</div>
-              <div className="text-xs text-gray-600">Seconds</div>
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 shadow-sm border border-blue-200/50">
+              <div className="text-4xl font-bold text-blue-700 mb-1 tabular-nums">{String(timeLeft.seconds).padStart(2, '0')}</div>
+              <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">Seconds</div>
             </div>
           </div>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 font-medium">
             {tournamentDate.toLocaleDateString('en-US', {
               month: 'long',
               day: 'numeric',
