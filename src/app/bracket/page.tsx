@@ -39,6 +39,7 @@ function BracketContent() {
   const [submittedBrackets, setSubmittedBrackets] = useState<BracketSubmission[]>([]);
   const [bracketResetKey, setBracketResetKey] = useState(0);
   const [deletingBracketId, setDeletingBracketId] = useState<string | null>(null);
+  const [pendingDeleteBracketId, setPendingDeleteBracketId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string>('');
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
@@ -660,7 +661,25 @@ function BracketContent() {
     }
   };
 
-  const handleDeleteBracket = async (bracketId: string) => {
+  const handleDeleteBracket = (bracketId: string) => {
+    // For in_progress brackets, show embedded confirmation
+    // For submitted brackets, still use popup (hard delete is more serious)
+    const bracketToDelete = submittedBrackets.find(b => b.id === bracketId);
+    const isInProgress = bracketToDelete && 'status' in bracketToDelete && bracketToDelete.status === 'in_progress';
+    
+    if (isInProgress) {
+      // Show embedded confirmation for in_progress brackets
+      setPendingDeleteBracketId(bracketId);
+    } else {
+      // For submitted brackets, still use popup confirmation
+      const confirmMessage = 'Are you sure you want to delete this submitted bracket? This action cannot be undone.';
+      if (confirm(confirmMessage)) {
+        confirmDeleteBracket(bracketId);
+      }
+    }
+  };
+
+  const confirmDeleteBracket = async (bracketId: string) => {
     // Find the bracket to check its status
     const bracketToDelete = submittedBrackets.find(b => b.id === bracketId);
     
@@ -668,14 +687,7 @@ function BracketContent() {
     // For submitted brackets, hard delete (actual removal)
     const isInProgress = bracketToDelete && 'status' in bracketToDelete && bracketToDelete.status === 'in_progress';
     
-    const confirmMessage = isInProgress 
-      ? 'Are you sure you want to delete this in-progress bracket?'
-      : 'Are you sure you want to delete this submitted bracket? This action cannot be undone.';
-    
-    if (!confirm(confirmMessage)) {
-      return;
-    }
-
+    setPendingDeleteBracketId(null);
     setDeletingBracketId(bracketId);
 
     try {
@@ -813,7 +825,10 @@ function BracketContent() {
             brackets={submittedBrackets}
             onCreateNew={handleCreateNew}
             onEditBracket={handleEditBracket}
-            onDeleteBracket={handleDeleteBracket}
+              onDeleteBracket={handleDeleteBracket}
+              pendingDeleteBracketId={pendingDeleteBracketId}
+              onConfirmDelete={confirmDeleteBracket}
+              onCancelDelete={() => setPendingDeleteBracketId(null)}
             onCopyBracket={handleCopyBracket}
             deletingBracketId={deletingBracketId}
             tournamentData={tournamentData}

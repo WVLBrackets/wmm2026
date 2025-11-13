@@ -31,12 +31,15 @@ interface MyPicksLandingProps {
   onDeleteBracket: (bracketId: string) => void;
   onCopyBracket: (bracket: Bracket) => void;
   deletingBracketId?: string | null;
+  pendingDeleteBracketId?: string | null;
+  onConfirmDelete?: (bracketId: string) => void;
+  onCancelDelete?: () => void;
   tournamentData?: TournamentData | null;
   bracket?: TournamentBracket | null;
   siteConfig?: SiteConfigData | null;
 }
 
-export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBracket, onDeleteBracket, onCopyBracket, deletingBracketId, tournamentData, bracket, siteConfig }: MyPicksLandingProps) {
+export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBracket, onDeleteBracket, onCopyBracket, deletingBracketId, pendingDeleteBracketId, onConfirmDelete, onCancelDelete, tournamentData, bracket, siteConfig }: MyPicksLandingProps) {
   const { data: session } = useSession();
   const [expandedStatus, setExpandedStatus] = useState<'info' | null>(null);
   const [logoError, setLogoError] = useState(false);
