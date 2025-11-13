@@ -29,7 +29,8 @@ export async function GET(request: NextRequest) {
     const username = searchParams.get('username');
     const eventType = searchParams.get('eventType');
     const location = searchParams.get('location');
-    const date = searchParams.get('date');
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
 
     // Build query with dynamic conditions using template literals
     let result;
@@ -116,24 +117,59 @@ export async function GET(request: NextRequest) {
         LIMIT ${limit} OFFSET ${offset}
       `;
     } else {
-      if (date) {
-        // Filter by date (timestamp is on the specified date)
-        const dateStart = new Date(date);
-        dateStart.setHours(0, 0, 0, 0);
-        const dateEnd = new Date(date);
-        dateEnd.setHours(23, 59, 59, 999);
+      // Build date range filtering
+      let dateConditions = '';
+      const dateParams: string[] = [];
+      
+      if (startDate) {
+        dateConditions += ' AND timestamp >= $' + (dateParams.length + 1);
+        dateParams.push(new Date(startDate).toISOString());
+      }
+      if (endDate) {
+        dateConditions += ' AND timestamp <= $' + (dateParams.length + 1);
+        dateParams.push(new Date(endDate).toISOString());
+      }
+      
+      if (startDate || endDate) {
+        // Use parameterized query for date range
+        const startDateISO = startDate ? new Date(startDate).toISOString() : null;
+        const endDateISO = endDate ? new Date(endDate).toISOString() : null;
         
-        result = await sql`
-          SELECT 
-            id, environment, timestamp, is_logged_in, username,
-            event_type, location, bracket_id, user_agent, created_at
-          FROM usage_logs
-          WHERE environment = ${environment}
-            AND timestamp >= ${dateStart.toISOString()}
-            AND timestamp <= ${dateEnd.toISOString()}
-          ORDER BY timestamp DESC
-          LIMIT ${limit} OFFSET ${offset}
-        `;
+        if (startDate && endDate) {
+          result = await sql`
+            SELECT 
+              id, environment, timestamp, is_logged_in, username,
+              event_type, location, bracket_id, user_agent, created_at
+            FROM usage_logs
+            WHERE environment = ${environment}
+              AND timestamp >= ${startDateISO}
+              AND timestamp <= ${endDateISO}
+            ORDER BY timestamp DESC
+            LIMIT ${limit} OFFSET ${offset}
+          `;
+        } else if (startDate) {
+          result = await sql`
+            SELECT 
+              id, environment, timestamp, is_logged_in, username,
+              event_type, location, bracket_id, user_agent, created_at
+            FROM usage_logs
+            WHERE environment = ${environment}
+              AND timestamp >= ${startDateISO}
+            ORDER BY timestamp DESC
+            LIMIT ${limit} OFFSET ${offset}
+          `;
+        } else if (endDate) {
+          result = await sql`
+            SELECT 
+              id, environment, timestamp, is_logged_in, username,
+              event_type, location, bracket_id, user_agent, created_at
+            FROM usage_logs
+            WHERE environment = ${environment}
+              AND timestamp <= ${endDateISO}
+            ORDER BY timestamp DESC
+            LIMIT ${limit} OFFSET ${offset}
+          `;
+        }
       } else {
         result = await sql`
           SELECT 

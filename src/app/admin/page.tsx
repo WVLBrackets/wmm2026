@@ -79,7 +79,8 @@ export default function AdminPage() {
   const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [logsError, setLogsError] = useState('');
-  const [logDateFilter, setLogDateFilter] = useState<string>('');
+  const [logStartDate, setLogStartDate] = useState<string>('');
+  const [logEndDate, setLogEndDate] = useState<string>('');
   const [deletingLogs, setDeletingLogs] = useState(false);
   const [editingBracket, setEditingBracket] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Bracket>>({});
@@ -175,8 +176,11 @@ export default function AdminPage() {
       setLogsError('');
       
       const params = new URLSearchParams({ limit: '100' });
-      if (logDateFilter) {
-        params.append('date', logDateFilter);
+      if (logStartDate) {
+        params.append('startDate', logStartDate);
+      }
+      if (logEndDate) {
+        params.append('endDate', logEndDate);
       }
       
       const response = await fetch(`/api/admin/logs/usage?${params.toString()}`);
@@ -203,8 +207,11 @@ export default function AdminPage() {
       setLogsError('');
       
       const params = new URLSearchParams({ limit: '100' });
-      if (logDateFilter) {
-        params.append('date', logDateFilter);
+      if (logStartDate) {
+        params.append('startDate', logStartDate);
+      }
+      if (logEndDate) {
+        params.append('endDate', logEndDate);
       }
       
       const response = await fetch(`/api/admin/logs/error?${params.toString()}`);
@@ -234,13 +241,14 @@ export default function AdminPage() {
       return;
     }
     
-    // SECURITY: Require date filter to prevent accidental deletion of all logs
-    if (!logDateFilter) {
-      alert('Please select a date filter before deleting logs. This prevents accidental deletion of all logs.');
+    // SECURITY: Require both date filters to prevent accidental deletion of all logs
+    if (!logStartDate || !logEndDate) {
+      alert('Please select both start and end date filters before deleting logs. This prevents accidental deletion of all logs.');
       return;
     }
     
-    const confirmMessage = `Are you sure you want to delete ${count} ${logType} log${count !== 1 ? 's' : ''} for ${logDateFilter}? This action cannot be undone.`;
+    const dateRange = `${logStartDate} to ${logEndDate}`;
+    const confirmMessage = `Are you sure you want to delete ${count} ${logType} log${count !== 1 ? 's' : ''} from ${dateRange}? This action cannot be undone.`;
     if (!confirm(confirmMessage)) {
       return;
     }
@@ -249,7 +257,8 @@ export default function AdminPage() {
       setDeletingLogs(true);
       
       const params = new URLSearchParams();
-      params.append('date', logDateFilter);
+      params.append('startDate', logStartDate);
+      params.append('endDate', logEndDate);
       
       const response = await fetch(`/api/admin/logs/${logType}/delete?${params.toString()}`, {
         method: 'DELETE',
@@ -480,7 +489,7 @@ export default function AdminPage() {
         loadErrorLogs();
       }
     }
-  }, [activeTab, logsTab, logDateFilter]);
+  }, [activeTab, logsTab, logStartDate, logEndDate]);
 
   // Reload team data when filter changes
   useEffect(() => {
@@ -2581,29 +2590,45 @@ export default function AdminPage() {
 
             {logsTab === 'usage' && (
               <div>
-                <div className="mb-4 flex justify-between items-center">
-                  <h3 className="text-lg font-semibold">Usage Logs</h3>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="date"
-                      value={logDateFilter}
-                      onChange={(e) => setLogDateFilter(e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded text-sm"
-                    />
-                    <button
-                      onClick={loadUsageLogs}
-                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                      disabled={logsLoading}
-                    >
-                      {logsLoading ? 'Loading...' : 'Refresh'}
-                    </button>
-                    <button
-                      onClick={handleDeleteLogs}
-                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-                      disabled={logsLoading || deletingLogs || usageLogs.length === 0}
-                    >
-                      {deletingLogs ? 'Deleting...' : 'Delete'}
-                    </button>
+                <div className="mb-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-lg font-semibold">Usage Logs</h3>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={loadUsageLogs}
+                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                        disabled={logsLoading}
+                      >
+                        {logsLoading ? 'Loading...' : 'Refresh'}
+                      </button>
+                      <button
+                        onClick={handleDeleteLogs}
+                        className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                        disabled={logsLoading || deletingLogs || usageLogs.length === 0}
+                      >
+                        {deletingLogs ? 'Deleting...' : 'Delete'}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <label className="text-sm font-medium text-gray-700">Low End:</label>
+                      <input
+                        type="datetime-local"
+                        value={logStartDate}
+                        onChange={(e) => setLogStartDate(e.target.value)}
+                        className="px-3 py-2 border border-gray-300 rounded text-sm"
+                      />
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <label className="text-sm font-medium text-gray-700">High End:</label>
+                      <input
+                        type="datetime-local"
+                        value={logEndDate}
+                        onChange={(e) => setLogEndDate(e.target.value)}
+                        className="px-3 py-2 border border-gray-300 rounded text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
                 {logsError && (
@@ -2660,29 +2685,45 @@ export default function AdminPage() {
 
             {logsTab === 'error' && (
               <div>
-                <div className="mb-4 flex justify-between items-center">
-                  <h3 className="text-lg font-semibold">Error Logs</h3>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="date"
-                      value={logDateFilter}
-                      onChange={(e) => setLogDateFilter(e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded text-sm"
-                    />
-                    <button
-                      onClick={loadErrorLogs}
-                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                      disabled={logsLoading}
-                    >
-                      {logsLoading ? 'Loading...' : 'Refresh'}
-                    </button>
-                    <button
-                      onClick={handleDeleteLogs}
-                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-                      disabled={logsLoading || deletingLogs || errorLogs.length === 0}
-                    >
-                      {deletingLogs ? 'Deleting...' : 'Delete'}
-                    </button>
+                <div className="mb-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-lg font-semibold">Error Logs</h3>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={loadErrorLogs}
+                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                        disabled={logsLoading}
+                      >
+                        {logsLoading ? 'Loading...' : 'Refresh'}
+                      </button>
+                      <button
+                        onClick={handleDeleteLogs}
+                        className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                        disabled={logsLoading || deletingLogs || errorLogs.length === 0}
+                      >
+                        {deletingLogs ? 'Deleting...' : 'Delete'}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <label className="text-sm font-medium text-gray-700">Low End:</label>
+                      <input
+                        type="datetime-local"
+                        value={logStartDate}
+                        onChange={(e) => setLogStartDate(e.target.value)}
+                        className="px-3 py-2 border border-gray-300 rounded text-sm"
+                      />
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <label className="text-sm font-medium text-gray-700">High End:</label>
+                      <input
+                        type="datetime-local"
+                        value={logEndDate}
+                        onChange={(e) => setLogEndDate(e.target.value)}
+                        className="px-3 py-2 border border-gray-300 rounded text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
                 {logsError && (

@@ -29,7 +29,8 @@ export async function GET(request: NextRequest) {
     const username = searchParams.get('username');
     const errorType = searchParams.get('errorType');
     const location = searchParams.get('location');
-    const date = searchParams.get('date');
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
 
     // Build query with dynamic conditions using template literals
     let result;
@@ -116,21 +117,41 @@ export async function GET(request: NextRequest) {
         LIMIT ${limit} OFFSET ${offset}
       `;
     } else {
-      if (date) {
-        // Filter by date (timestamp is on the specified date)
-        const dateStart = new Date(date);
-        dateStart.setHours(0, 0, 0, 0);
-        const dateEnd = new Date(date);
-        dateEnd.setHours(23, 59, 59, 999);
-        
+      // Build date range filtering
+      const startDateISO = startDate ? new Date(startDate).toISOString() : null;
+      const endDateISO = endDate ? new Date(endDate).toISOString() : null;
+      
+      if (startDate && endDate) {
         result = await sql`
           SELECT 
             id, environment, timestamp, is_logged_in, username,
             error_message, error_stack, error_type, location, user_agent, created_at
           FROM error_logs
           WHERE environment = ${environment}
-            AND timestamp >= ${dateStart.toISOString()}
-            AND timestamp <= ${dateEnd.toISOString()}
+            AND timestamp >= ${startDateISO}
+            AND timestamp <= ${endDateISO}
+          ORDER BY timestamp DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `;
+      } else if (startDate) {
+        result = await sql`
+          SELECT 
+            id, environment, timestamp, is_logged_in, username,
+            error_message, error_stack, error_type, location, user_agent, created_at
+          FROM error_logs
+          WHERE environment = ${environment}
+            AND timestamp >= ${startDateISO}
+          ORDER BY timestamp DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `;
+      } else if (endDate) {
+        result = await sql`
+          SELECT 
+            id, environment, timestamp, is_logged_in, username,
+            error_message, error_stack, error_type, location, user_agent, created_at
+          FROM error_logs
+          WHERE environment = ${environment}
+            AND timestamp <= ${endDateISO}
           ORDER BY timestamp DESC
           LIMIT ${limit} OFFSET ${offset}
         `;
