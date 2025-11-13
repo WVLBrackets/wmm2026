@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
     const username = searchParams.get('username');
     const errorType = searchParams.get('errorType');
     const location = searchParams.get('location');
+    const date = searchParams.get('date');
 
     // Build query with dynamic conditions using template literals
     let result;
@@ -115,15 +116,35 @@ export async function GET(request: NextRequest) {
         LIMIT ${limit} OFFSET ${offset}
       `;
     } else {
-      result = await sql`
-        SELECT 
-          id, environment, timestamp, is_logged_in, username,
-          error_message, error_stack, error_type, location, user_agent, created_at
-        FROM error_logs
-        WHERE environment = ${environment}
-        ORDER BY timestamp DESC
-        LIMIT ${limit} OFFSET ${offset}
-      `;
+      if (date) {
+        // Filter by date (timestamp is on the specified date)
+        const dateStart = new Date(date);
+        dateStart.setHours(0, 0, 0, 0);
+        const dateEnd = new Date(date);
+        dateEnd.setHours(23, 59, 59, 999);
+        
+        result = await sql`
+          SELECT 
+            id, environment, timestamp, is_logged_in, username,
+            error_message, error_stack, error_type, location, user_agent, created_at
+          FROM error_logs
+          WHERE environment = ${environment}
+            AND timestamp >= ${dateStart.toISOString()}
+            AND timestamp <= ${dateEnd.toISOString()}
+          ORDER BY timestamp DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `;
+      } else {
+        result = await sql`
+          SELECT 
+            id, environment, timestamp, is_logged_in, username,
+            error_message, error_stack, error_type, location, user_agent, created_at
+          FROM error_logs
+          WHERE environment = ${environment}
+          ORDER BY timestamp DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `;
+      }
     }
 
     // Map environment to display format

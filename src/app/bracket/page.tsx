@@ -424,6 +424,20 @@ function BracketContent() {
       const data = await response.json();
       
       if (data.success) {
+        // Get bracket number for logging
+        let bracketNumber: number | undefined;
+        if (editingBracket) {
+          const bracket = editingBracket as Record<string, unknown>;
+          bracketNumber = bracket.bracketNumber as number | undefined;
+        } else if (data.data) {
+          const newBracket = data.data as Record<string, unknown>;
+          bracketNumber = newBracket.bracketNumber as number | undefined;
+        }
+        
+        // Log the submit action
+        const { usageLogger } = await import('@/lib/usageLogger');
+        usageLogger.log('Click', 'Submit', bracketNumber ? String(bracketNumber).padStart(6, '0') : null);
+        
         // Return to landing page without popup
         handleBackToLanding();
       } else {

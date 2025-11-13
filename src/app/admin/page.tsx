@@ -79,6 +79,8 @@ export default function AdminPage() {
   const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [logsError, setLogsError] = useState('');
+  const [logDateFilter, setLogDateFilter] = useState<string>('');
+  const [deletingLogs, setDeletingLogs] = useState(false);
   const [editingBracket, setEditingBracket] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Bracket>>({});
   const [filterUser, setFilterUser] = useState<string>('all');
@@ -172,7 +174,12 @@ export default function AdminPage() {
       setLogsLoading(true);
       setLogsError('');
       
-      const response = await fetch('/api/admin/logs/usage?limit=100');
+      const params = new URLSearchParams({ limit: '100' });
+      if (logDateFilter) {
+        params.append('date', logDateFilter);
+      }
+      
+      const response = await fetch(`/api/admin/logs/usage?${params.toString()}`);
       const data = await response.json();
       
       if (!response.ok || !data.success) {
@@ -195,7 +202,12 @@ export default function AdminPage() {
       setLogsLoading(true);
       setLogsError('');
       
-      const response = await fetch('/api/admin/logs/error?limit=100');
+      const params = new URLSearchParams({ limit: '100' });
+      if (logDateFilter) {
+        params.append('date', logDateFilter);
+      }
+      
+      const response = await fetch(`/api/admin/logs/error?${params.toString()}`);
       const data = await response.json();
       
       if (!response.ok || !data.success) {
@@ -210,6 +222,52 @@ export default function AdminPage() {
       setLogsError(errorMessage);
     } finally {
       setLogsLoading(false);
+    }
+  };
+
+  const handleDeleteLogs = async () => {
+    const logType = logsTab === 'usage' ? 'usage' : 'error';
+    const count = logsTab === 'usage' ? usageLogs.length : errorLogs.length;
+    
+    if (count === 0) {
+      alert('No logs to delete');
+      return;
+    }
+    
+    const confirmMessage = `Are you sure you want to delete ${count} ${logType} log${count !== 1 ? 's' : ''}? This action cannot be undone.`;
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+    
+    try {
+      setDeletingLogs(true);
+      
+      const params = new URLSearchParams();
+      if (logDateFilter) {
+        params.append('date', logDateFilter);
+      }
+      
+      const response = await fetch(`/api/admin/logs/${logType}/delete?${params.toString()}`, {
+        method: 'DELETE',
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to delete logs');
+      }
+      
+      // Reload logs after deletion
+      if (logsTab === 'usage') {
+        await loadUsageLogs();
+      } else {
+        await loadErrorLogs();
+      }
+    } catch (error) {
+      console.error('Error deleting logs:', error);
+      alert(error instanceof Error ? error.message : 'Failed to delete logs');
+    } finally {
+      setDeletingLogs(false);
     }
   };
 
@@ -406,6 +464,17 @@ export default function AdminPage() {
     
     loadDataRef.current?.();
   }, [status, router]);
+
+  // Load logs when switching to logs tab or when date filter changes
+  useEffect(() => {
+    if (activeTab === 'logs') {
+      if (logsTab === 'usage') {
+        loadUsageLogs();
+      } else {
+        loadErrorLogs();
+      }
+    }
+  }, [activeTab, logsTab, logDateFilter]);
 
   useEffect(() => {
     // Load team data when Data tab is active
@@ -2521,13 +2590,28 @@ export default function AdminPage() {
               <div>
                 <div className="mb-4 flex justify-between items-center">
                   <h3 className="text-lg font-semibold">Usage Logs</h3>
-                  <button
-                    onClick={loadUsageLogs}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                    disabled={logsLoading}
-                  >
-                    {logsLoading ? 'Loading...' : 'Refresh'}
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="date"
+                      value={logDateFilter}
+                      onChange={(e) => setLogDateFilter(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded text-sm"
+                    />
+                    <button
+                      onClick={loadUsageLogs}
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                      disabled={logsLoading}
+                    >
+                      {logsLoading ? 'Loading...' : 'Refresh'}
+                    </button>
+                    <button
+                      onClick={handleDeleteLogs}
+                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                      disabled={logsLoading || deletingLogs || usageLogs.length === 0}
+                    >
+                      {deletingLogs ? 'Deleting...' : 'Delete'}
+                    </button>
+                  </div>
                 </div>
                 {logsError && (
                   <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
@@ -2585,13 +2669,28 @@ export default function AdminPage() {
               <div>
                 <div className="mb-4 flex justify-between items-center">
                   <h3 className="text-lg font-semibold">Error Logs</h3>
-                  <button
-                    onClick={loadErrorLogs}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                    disabled={logsLoading}
-                  >
-                    {logsLoading ? 'Loading...' : 'Refresh'}
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="date"
+                      value={logDateFilter}
+                      onChange={(e) => setLogDateFilter(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded text-sm"
+                    />
+                    <button
+                      onClick={loadErrorLogs}
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                      disabled={logsLoading}
+                    >
+                      {logsLoading ? 'Loading...' : 'Refresh'}
+                    </button>
+                    <button
+                      onClick={handleDeleteLogs}
+                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                      disabled={logsLoading || deletingLogs || errorLogs.length === 0}
+                    >
+                      {deletingLogs ? 'Deleting...' : 'Delete'}
+                    </button>
+                  </div>
                 </div>
                 {logsError && (
                   <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
