@@ -2812,6 +2812,60 @@ export default function AdminPage() {
                     {logsError}
                   </div>
                 )}
+                {/* Filter Dropdowns */}
+                <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Username
+                    </label>
+                    <select
+                      value={logUsernameFilter}
+                      onChange={(e) => setLogUsernameFilter(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    >
+                      <option value="">All Usernames</option>
+                      {Array.from(new Set(usageLogs.map(log => log.username).filter(Boolean))).sort().map((username) => (
+                        <option key={username} value={username}>
+                          {username}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Event Type
+                    </label>
+                    <select
+                      value={logEventTypeFilter}
+                      onChange={(e) => setLogEventTypeFilter(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    >
+                      <option value="">All Event Types</option>
+                      {Array.from(new Set(usageLogs.map(log => log.eventType))).sort().map((eventType) => (
+                        <option key={eventType} value={eventType}>
+                          {eventType}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Location
+                    </label>
+                    <select
+                      value={logLocationFilter}
+                      onChange={(e) => setLogLocationFilter(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    >
+                      <option value="">All Locations</option>
+                      {Array.from(new Set(usageLogs.map(log => log.location))).sort().map((location) => (
+                        <option key={location} value={location}>
+                          {location}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">

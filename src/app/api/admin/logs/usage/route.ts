@@ -32,142 +32,42 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
-    // Build query with dynamic conditions using template literals
-    let result;
-    if (username && eventType && location) {
-      result = await sql`
-        SELECT 
-          id, environment, timestamp, is_logged_in, username,
-          event_type, location, bracket_id, user_agent, created_at
-        FROM usage_logs
-        WHERE environment = ${environment}
-          AND username = ${username}
-          AND event_type = ${eventType}
-          AND location ILIKE ${'%' + location + '%'}
-        ORDER BY timestamp DESC
-        LIMIT ${limit} OFFSET ${offset}
-      `;
-    } else if (username && eventType) {
-      result = await sql`
-        SELECT 
-          id, environment, timestamp, is_logged_in, username,
-          event_type, location, bracket_id, user_agent, created_at
-        FROM usage_logs
-        WHERE environment = ${environment}
-          AND username = ${username}
-          AND event_type = ${eventType}
-        ORDER BY timestamp DESC
-        LIMIT ${limit} OFFSET ${offset}
-      `;
-    } else if (username && location) {
-      result = await sql`
-        SELECT 
-          id, environment, timestamp, is_logged_in, username,
-          event_type, location, bracket_id, user_agent, created_at
-        FROM usage_logs
-        WHERE environment = ${environment}
-          AND username = ${username}
-          AND location ILIKE ${'%' + location + '%'}
-        ORDER BY timestamp DESC
-        LIMIT ${limit} OFFSET ${offset}
-      `;
-    } else if (eventType && location) {
-      result = await sql`
-        SELECT 
-          id, environment, timestamp, is_logged_in, username,
-          event_type, location, bracket_id, user_agent, created_at
-        FROM usage_logs
-        WHERE environment = ${environment}
-          AND event_type = ${eventType}
-          AND location ILIKE ${'%' + location + '%'}
-        ORDER BY timestamp DESC
-        LIMIT ${limit} OFFSET ${offset}
-      `;
-    } else if (username) {
-      result = await sql`
-        SELECT 
-          id, environment, timestamp, is_logged_in, username,
-          event_type, location, bracket_id, user_agent, created_at
-        FROM usage_logs
-        WHERE environment = ${environment}
-          AND username = ${username}
-        ORDER BY timestamp DESC
-        LIMIT ${limit} OFFSET ${offset}
-      `;
-    } else if (eventType) {
-      result = await sql`
-        SELECT 
-          id, environment, timestamp, is_logged_in, username,
-          event_type, location, bracket_id, user_agent, created_at
-        FROM usage_logs
-        WHERE environment = ${environment}
-          AND event_type = ${eventType}
-        ORDER BY timestamp DESC
-        LIMIT ${limit} OFFSET ${offset}
-      `;
-    } else if (location) {
-      result = await sql`
-        SELECT 
-          id, environment, timestamp, is_logged_in, username,
-          event_type, location, bracket_id, user_agent, created_at
-        FROM usage_logs
-        WHERE environment = ${environment}
-          AND location ILIKE ${'%' + location + '%'}
-        ORDER BY timestamp DESC
-        LIMIT ${limit} OFFSET ${offset}
-      `;
-    } else {
-      // Build date range filtering
-      // Client now sends UTC ISO strings, so we can use them directly
-      const startDateISO = startDate || null;
-      const endDateISO = endDate || null;
-      
-      if (startDate && endDate) {
-        result = await sql`
-          SELECT 
-            id, environment, timestamp, is_logged_in, username,
-            event_type, location, bracket_id, user_agent, created_at
-          FROM usage_logs
-          WHERE environment = ${environment}
-            AND timestamp >= ${startDateISO}
-            AND timestamp <= ${endDateISO}
-          ORDER BY timestamp DESC
-          LIMIT ${limit} OFFSET ${offset}
-        `;
-      } else if (startDate) {
-        result = await sql`
-          SELECT 
-            id, environment, timestamp, is_logged_in, username,
-            event_type, location, bracket_id, user_agent, created_at
-          FROM usage_logs
-          WHERE environment = ${environment}
-            AND timestamp >= ${startDateISO}
-          ORDER BY timestamp DESC
-          LIMIT ${limit} OFFSET ${offset}
-        `;
-      } else if (endDate) {
-        result = await sql`
-          SELECT 
-            id, environment, timestamp, is_logged_in, username,
-            event_type, location, bracket_id, user_agent, created_at
-          FROM usage_logs
-          WHERE environment = ${environment}
-            AND timestamp <= ${endDateISO}
-          ORDER BY timestamp DESC
-          LIMIT ${limit} OFFSET ${offset}
-        `;
-      } else {
-        result = await sql`
-          SELECT 
-            id, environment, timestamp, is_logged_in, username,
-            event_type, location, bracket_id, user_agent, created_at
-          FROM usage_logs
-          WHERE environment = ${environment}
-          ORDER BY timestamp DESC
-          LIMIT ${limit} OFFSET ${offset}
-        `;
-      }
+    // Build date range filtering
+    // Client now sends UTC ISO strings, so we can use them directly
+    const startDateISO = startDate || null;
+    const endDateISO = endDate || null;
+    
+    // Build WHERE conditions dynamically
+    const conditions: string[] = [`environment = '${environment}'`];
+    const params: any[] = [];
+    
+    if (startDateISO) {
+      conditions.push(`timestamp >= '${startDateISO}'`);
     }
+    if (endDateISO) {
+      conditions.push(`timestamp <= '${endDateISO}'`);
+    }
+    if (username) {
+      conditions.push(`username = '${username.replace(/'/g, "''")}'`);
+    }
+    if (eventType) {
+      conditions.push(`event_type = '${eventType.replace(/'/g, "''")}'`);
+    }
+    if (location) {
+      conditions.push(`location ILIKE '%${location.replace(/'/g, "''")}%'`);
+    }
+    
+    const whereClause = conditions.join(' AND ');
+    
+    const result = await sql`
+      SELECT 
+        id, environment, timestamp, is_logged_in, username,
+        event_type, location, bracket_id, user_agent, created_at
+      FROM usage_logs
+      WHERE ${sql.raw(whereClause)}
+      ORDER BY timestamp DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `;
 
     // Map environment to display format
     interface UsageLogRow {
