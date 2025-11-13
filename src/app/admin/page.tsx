@@ -177,10 +177,17 @@ export default function AdminPage() {
       
       const params = new URLSearchParams({ limit: '100' });
       if (logStartDate) {
-        params.append('startDate', logStartDate);
+        // Convert datetime-local (user's local time) to UTC ISO string
+        // datetime-local format: "YYYY-MM-DDTHH:mm"
+        const localDate = new Date(logStartDate);
+        params.append('startDate', localDate.toISOString());
       }
       if (logEndDate) {
-        params.append('endDate', logEndDate);
+        // Convert datetime-local (user's local time) to UTC ISO string
+        const localDate = new Date(logEndDate);
+        // For end date, include the entire second
+        localDate.setMilliseconds(999);
+        params.append('endDate', localDate.toISOString());
       }
       
       const response = await fetch(`/api/admin/logs/usage?${params.toString()}`);
@@ -208,10 +215,16 @@ export default function AdminPage() {
       
       const params = new URLSearchParams({ limit: '100' });
       if (logStartDate) {
-        params.append('startDate', logStartDate);
+        // Convert datetime-local (user's local time) to UTC ISO string
+        const localDate = new Date(logStartDate);
+        params.append('startDate', localDate.toISOString());
       }
       if (logEndDate) {
-        params.append('endDate', logEndDate);
+        // Convert datetime-local (user's local time) to UTC ISO string
+        const localDate = new Date(logEndDate);
+        // For end date, include the entire second
+        localDate.setMilliseconds(999);
+        params.append('endDate', localDate.toISOString());
       }
       
       const response = await fetch(`/api/admin/logs/error?${params.toString()}`);
@@ -257,8 +270,11 @@ export default function AdminPage() {
       setDeletingLogs(true);
       
       const params = new URLSearchParams();
-      params.append('startDate', logStartDate);
-      params.append('endDate', logEndDate);
+      // Convert datetime-local to UTC ISO strings for server
+      const startDateUTC = new Date(logStartDate).toISOString();
+      const endDateUTC = new Date(logEndDate).toISOString();
+      params.append('startDate', startDateUTC);
+      params.append('endDate', endDateUTC);
       
       const response = await fetch(`/api/admin/logs/${logType}/delete?${params.toString()}`, {
         method: 'DELETE',

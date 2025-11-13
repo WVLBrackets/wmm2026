@@ -118,29 +118,9 @@ export async function GET(request: NextRequest) {
       `;
     } else {
       // Build date range filtering
-      // datetime-local inputs are in local time, but database timestamps are in UTC
-      // We need to convert the local datetime to UTC for proper comparison
-      let startDateISO: string | null = null;
-      let endDateISO: string | null = null;
-      
-      if (startDate) {
-        // Parse the datetime-local string (format: YYYY-MM-DDTHH:mm)
-        // The datetime-local input provides local time without timezone info
-        // We need to treat it as local time and convert to UTC for database comparison
-        // Note: new Date() with a string like "2025-11-12T19:36" interprets it as LOCAL time
-        const localDate = new Date(startDate);
-        // Convert to UTC ISO string for database comparison
-        startDateISO = localDate.toISOString();
-        console.log(`[DEBUG] startDate input: ${startDate}, converted to UTC: ${startDateISO}`);
-      }
-      
-      if (endDate) {
-        // For end date, we want to include the entire second, so add 999ms
-        const localDate = new Date(endDate);
-        localDate.setMilliseconds(999);
-        endDateISO = localDate.toISOString();
-        console.log(`[DEBUG] endDate input: ${endDate}, converted to UTC: ${endDateISO}`);
-      }
+      // Client now sends UTC ISO strings, so we can use them directly
+      const startDateISO = startDate || null;
+      const endDateISO = endDate || null;
       
       if (startDate && endDate) {
         result = await sql`
