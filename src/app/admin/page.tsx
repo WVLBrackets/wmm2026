@@ -1265,7 +1265,7 @@ export default function AdminPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">GET</td>
                     <td className="px-6 py-4 text-sm text-gray-500">
-                      Check if current user is an admin (Public, returns boolean)
+                      Check if current authenticated user is an admin (Requires authentication, returns boolean)
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <a
