@@ -362,14 +362,13 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                   
                   {/* Action buttons */}
                   <div className="flex items-center space-x-3 flex-shrink-0 ml-4">
-                    <LoggedButton
+                    <button
                       onClick={onCreateNew}
-                      logLocation="New Bracket"
                       className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
                     >
                       <Plus className="h-4 w-4" />
                       <span>New Bracket</span>
-                    </LoggedButton>
+                    </button>
                     
                     <LoggedButton
                       onClick={() => signOut({ callbackUrl: '/auth/signin' })}
@@ -404,13 +403,12 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                     
                     {/* Action buttons */}
                     <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
-                      <LoggedButton
+                      <button
                         onClick={onCreateNew}
-                        logLocation="New Bracket"
                         className="bg-blue-600 text-white px-2 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
                       >
                         <Plus className="h-4 w-4" />
-                      </LoggedButton>
+                      </button>
                       
                       <LoggedButton
                         onClick={() => signOut({ callbackUrl: '/auth/signin' })}

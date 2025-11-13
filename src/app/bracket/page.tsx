@@ -445,11 +445,7 @@ function BracketContent() {
   };
 
   // Landing page handlers
-  const handleCreateNew = async () => {
-    // Log New Bracket click (bracket ID will be logged after creation in handleSaveBracket)
-    const { usageLogger } = await import('@/lib/usageLogger');
-    usageLogger.log('Click', 'New Bracket', null);
-    
+  const handleCreateNew = () => {
     setEditingBracket(null);
     setPicks({});
     setEntryName(session?.user?.name || '');
