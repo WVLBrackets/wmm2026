@@ -37,33 +37,18 @@ export async function GET(request: NextRequest) {
     const startDateISO = startDate || null;
     const endDateISO = endDate || null;
     
-    // Build WHERE conditions dynamically
-    const conditions: string[] = [`environment = '${environment.replace(/'/g, "''")}'`];
-    
-    if (startDateISO) {
-      conditions.push(`timestamp >= '${startDateISO.replace(/'/g, "''")}'`);
-    }
-    if (endDateISO) {
-      conditions.push(`timestamp <= '${endDateISO.replace(/'/g, "''")}'`);
-    }
-    if (username) {
-      conditions.push(`username = '${username.replace(/'/g, "''")}'`);
-    }
-    if (eventType) {
-      conditions.push(`event_type = '${eventType.replace(/'/g, "''")}'`);
-    }
-    if (location) {
-      conditions.push(`location ILIKE '%${location.replace(/'/g, "''")}%'`);
-    }
-    
-    const whereClause = conditions.join(' AND ');
-    
+    // Build query with conditional WHERE clauses
     const result = await sql`
       SELECT 
         id, environment, timestamp, is_logged_in, username,
         event_type, location, bracket_id, user_agent, created_at
       FROM usage_logs
-      WHERE ${sql.raw(whereClause)}
+      WHERE environment = ${environment}
+        ${startDateISO ? sql`AND timestamp >= ${startDateISO}` : sql``}
+        ${endDateISO ? sql`AND timestamp <= ${endDateISO}` : sql``}
+        ${username ? sql`AND username = ${username}` : sql``}
+        ${eventType ? sql`AND event_type = ${eventType}` : sql``}
+        ${location ? sql`AND location ILIKE ${'%' + location + '%'}` : sql``}
       ORDER BY timestamp DESC
       LIMIT ${limit} OFFSET ${offset}
     `;
