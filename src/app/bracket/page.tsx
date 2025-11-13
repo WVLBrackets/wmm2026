@@ -13,6 +13,7 @@ import { useBracketMode } from '@/contexts/BracketModeContext';
 import { Trophy, Users, Calendar, Plus, Eye, LogOut, Save, CheckCircle, ArrowLeft } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { useUsageLogger } from '@/hooks/useUsageLogger';
+import { LoggedButton } from '@/components/LoggedButton';
 
 function BracketContent() {
   const { data: session, status } = useSession();
@@ -783,18 +784,20 @@ function BracketContent() {
                 Sign in to view and submit your tournament picks.
               </p>
               <div className="space-y-3">
-                <button
+                <LoggedButton
                   onClick={() => router.push('/auth/signin')}
+                  logLocation="Sign In"
                   className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 cursor-pointer"
                 >
                   Sign In
-                </button>
-                <button
+                </LoggedButton>
+                <LoggedButton
                   onClick={() => router.push('/auth/signup')}
+                  logLocation="Create Account"
                   className="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 cursor-pointer"
                 >
                   Create Account
-                </button>
+                </LoggedButton>
               </div>
             </div>
           </div>
