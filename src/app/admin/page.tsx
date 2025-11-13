@@ -465,17 +465,6 @@ export default function AdminPage() {
     loadDataRef.current?.();
   }, [status, router]);
 
-  // Load logs when switching to logs tab or when date filter changes
-  useEffect(() => {
-    if (activeTab === 'logs') {
-      if (logsTab === 'usage') {
-        loadUsageLogs();
-      } else {
-        loadErrorLogs();
-      }
-    }
-  }, [activeTab, logsTab, logDateFilter]);
-
   useEffect(() => {
     // Load team data when Data tab is active
     if (activeTab === 'data') {
@@ -487,7 +476,7 @@ export default function AdminPage() {
         loadErrorLogs();
       }
     }
-  }, [activeTab, logsTab]);
+  }, [activeTab, logsTab, logDateFilter]);
 
   // Reload team data when filter changes
   useEffect(() => {
