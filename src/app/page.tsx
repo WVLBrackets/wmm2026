@@ -11,21 +11,9 @@ export default async function Home() {
   return (
     <>
       <PageLogger location="Home" />
-    <div 
-      className="min-h-screen flex flex-col relative"
-      style={{
-        backgroundImage: 'url(/images/WMM Wood Floor Large.png)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed'
-      }}
-    >
-      {/* Optional overlay for better text readability if needed */}
-      <div className="absolute inset-0 bg-black/5 pointer-events-none"></div>
-
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 relative z-10">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1">
         {/* Row 1: Logo and Countdown Clock */}
         <div className="hidden lg:grid lg:grid-cols-2 gap-6 mb-8">
           {/* Home Page Logo */}
