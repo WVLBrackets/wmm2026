@@ -86,6 +86,11 @@ export interface SiteConfigData {
   acctConfirmSuccessMessage1?: string;
   acctConfirmSuccessButton1?: string;
   acctConfirmSuccessButton2?: string;
+  // Account confirmation failure page content
+  acctConfirmFailureHeader?: string;
+  acctConfirmFailureMessage1?: string;
+  acctConfirmFailureButton1?: string;
+  acctConfirmFailureButton2?: string;
   // Sign-in error messages
   emailFailInvalid?: string;
   emailFailNotConfirmed?: string;
@@ -358,6 +363,18 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
             break;
           case 'acct_confirm_success_button2':
             config.acctConfirmSuccessButton2 = value;
+            break;
+          case 'acct_confirm_failure_header':
+            config.acctConfirmFailureHeader = value;
+            break;
+          case 'acct_confirm_failure_message1':
+            config.acctConfirmFailureMessage1 = value;
+            break;
+          case 'acct_confirm_failure_button1':
+            config.acctConfirmFailureButton1 = value;
+            break;
+          case 'acct_confirm_failure_button2':
+            config.acctConfirmFailureButton2 = value;
             break;
           case 'email_fail_invalid':
             config.emailFailInvalid = value;

@@ -175,24 +175,30 @@ function ConfirmEmailContent() {
             <>
               <XCircle className="mx-auto h-16 w-16 text-red-500 mb-4" />
               <h2 className="text-3xl font-extrabold text-gray-900 mb-2">
-                Confirmation Failed
+                {siteConfig?.acctConfirmFailureHeader || FALLBACK_CONFIG.acctConfirmFailureHeader}
               </h2>
               <p className="text-sm text-gray-600 mb-6">
-                {message}
+                {siteConfig?.acctConfirmFailureMessage1 || FALLBACK_CONFIG.acctConfirmFailureMessage1 || message}
               </p>
               <div className="space-y-3">
-                <Link
-                  href="/auth/signup"
-                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer"
-                >
-                  Try Signing Up Again
-                </Link>
-                <Link
-                  href="/auth/signin"
-                  className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer"
-                >
-                  Sign In
-                </Link>
+                {/* Button 1 (Try Signing Up Again) */}
+                {(siteConfig?.acctConfirmFailureButton1 || FALLBACK_CONFIG.acctConfirmFailureButton1) !== 'X' && (
+                  <Link
+                    href="/auth/signup"
+                    className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer"
+                  >
+                    {siteConfig?.acctConfirmFailureButton1 || FALLBACK_CONFIG.acctConfirmFailureButton1}
+                  </Link>
+                )}
+                {/* Button 2 (Sign In) */}
+                {(siteConfig?.acctConfirmFailureButton2 || FALLBACK_CONFIG.acctConfirmFailureButton2) !== 'X' && (
+                  <Link
+                    href="/auth/signin"
+                    className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer"
+                  >
+                    {siteConfig?.acctConfirmFailureButton2 || FALLBACK_CONFIG.acctConfirmFailureButton2}
+                  </Link>
+                )}
               </div>
             </>
           )}

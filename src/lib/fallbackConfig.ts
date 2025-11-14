@@ -86,6 +86,11 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   acctConfirmSuccessMessage1: 'Your email has been confirmed successfully! You can now sign in.',
   acctConfirmSuccessButton1: 'Sign In Now',
   acctConfirmSuccessButton2: 'Go to My Picks',
+  // Account confirmation failure page defaults
+  acctConfirmFailureHeader: 'Confirmation Failed',
+  acctConfirmFailureMessage1: 'Invalid or expired confirmation token',
+  acctConfirmFailureButton1: 'Try Signing Up Again',
+  acctConfirmFailureButton2: 'Sign In',
   // Sign-in error messages
   emailFailInvalid: 'Invalid email or password',
   emailFailNotConfirmed: 'Please confirm your email address before signing in. Check your email for a confirmation link.',
