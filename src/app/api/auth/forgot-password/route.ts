@@ -45,9 +45,9 @@ export async function POST(request: NextRequest) {
 
     // In production, send reset email
     // Determine base URL based on environment
-    // In production, use NEXTAUTH_URL (production domain)
-    // In preview, use VERCEL_URL (preview deployment URL)
-    // In development, use localhost
+    // For preview deployments, use the Host header to get the branch URL
+    // For production, use NEXTAUTH_URL
+    // For development, use localhost
     const vercelEnv = process.env.VERCEL_ENV;
     let baseUrl: string;
     
@@ -55,10 +55,18 @@ export async function POST(request: NextRequest) {
       // Production: Use NEXTAUTH_URL which should be the production domain
       baseUrl = process.env.NEXTAUTH_URL || 'https://wmm2026.vercel.app';
     } else if (vercelEnv === 'preview') {
-      // Preview: Use VERCEL_URL for the specific preview deployment
-      baseUrl = process.env.VERCEL_URL 
-        ? `https://${process.env.VERCEL_URL}` 
-        : process.env.NEXTAUTH_URL || 'http://localhost:3000';
+      // Preview: Use Host header to get the branch URL (stable across deployments)
+      // This ensures emails use the branch URL, not the deployment-specific URL
+      const host = request.headers.get('host');
+      if (host) {
+        const protocol = request.headers.get('x-forwarded-proto') || 'https';
+        baseUrl = `${protocol}://${host}`;
+      } else {
+        // Fallback to VERCEL_URL if Host header not available
+        baseUrl = process.env.VERCEL_URL 
+          ? `https://${process.env.VERCEL_URL}` 
+          : process.env.NEXTAUTH_URL || 'http://localhost:3000';
+      }
     } else {
       // Development: Use localhost or NEXTAUTH_URL
       baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
