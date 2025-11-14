@@ -87,7 +87,7 @@ export async function logError(
     location,
     username: context?.username || null,
     isLoggedIn: context?.isLoggedIn ?? false,
-    userAgent: context?.userAgent || null,
+    userAgent: context?.userAgent || undefined,
   });
 }
 
