@@ -13,6 +13,9 @@ function ConfirmEmailContent() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
   const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
+  const [signInToken, setSignInToken] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isSigningIn, setIsSigningIn] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams?.get('token');
@@ -62,28 +65,10 @@ function ConfirmEmailContent() {
           const configMessage = siteConfig?.acctConfirmSuccessMessage1 || FALLBACK_CONFIG.acctConfirmSuccessMessage1 || '';
           setMessage(configMessage.replace(/{email}/g, data.userEmail || ''));
           
-          // Auto-sign in the user using the temporary sign-in token
+          // Store the sign-in token and email for use when user clicks "Go to My Picks"
           if (data.userEmail && data.signInToken) {
-            try {
-              // Use the temporary sign-in token for auto-sign in
-              const result = await signIn('credentials', {
-                email: data.userEmail,
-                password: `AUTO_SIGNIN_TOKEN:${data.signInToken}`,
-                redirect: false,
-              });
-              
-              if (result?.ok) {
-                // Successfully signed in, redirect to bracket page
-                router.push('/bracket');
-                return;
-              } else {
-                // Auto-sign in failed, show success page with buttons
-                console.log('Auto-sign in failed, showing success page');
-              }
-            } catch (signInError) {
-              console.error('Error during auto-sign in:', signInError);
-              // Continue to show success page even if auto-sign in fails
-            }
+            setUserEmail(data.userEmail);
+            setSignInToken(data.signInToken);
           }
         } else {
           setStatus('error');
@@ -130,12 +115,52 @@ function ConfirmEmailContent() {
                 >
                   {siteConfig?.acctConfirmSuccessButton1 || FALLBACK_CONFIG.acctConfirmSuccessButton1}
                 </Link>
-                <Link
-                  href="/bracket"
-                  className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer"
+                <button
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    if (!userEmail || !signInToken) {
+                      // Fallback: redirect to sign in if we don't have the token
+                      router.push('/auth/signin');
+                      return;
+                    }
+                    
+                    setIsSigningIn(true);
+                    try {
+                      // Use the temporary sign-in token for auto-sign in
+                      const result = await signIn('credentials', {
+                        email: userEmail,
+                        password: `AUTO_SIGNIN_TOKEN:${signInToken}`,
+                        redirect: false,
+                      });
+                      
+                      if (result?.ok) {
+                        // Successfully signed in, redirect to bracket page
+                        router.push('/bracket');
+                      } else {
+                        // Auto-sign in failed, redirect to sign in page
+                        console.log('Auto-sign in failed, redirecting to sign in');
+                        router.push('/auth/signin');
+                      }
+                    } catch (signInError) {
+                      console.error('Error during auto-sign in:', signInError);
+                      // Redirect to sign in page on error
+                      router.push('/auth/signin');
+                    } finally {
+                      setIsSigningIn(false);
+                    }
+                  }}
+                  disabled={isSigningIn}
+                  className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {siteConfig?.acctConfirmSuccessButton2 || FALLBACK_CONFIG.acctConfirmSuccessButton2}
-                </Link>
+                  {isSigningIn ? (
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2" />
+                      Signing in...
+                    </div>
+                  ) : (
+                    siteConfig?.acctConfirmSuccessButton2 || FALLBACK_CONFIG.acctConfirmSuccessButton2
+                  )}
+                </button>
               </div>
             </>
           )}
