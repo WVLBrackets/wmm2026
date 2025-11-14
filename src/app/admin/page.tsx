@@ -106,6 +106,10 @@ export default function AdminPage() {
   const [filterUser, setFilterUser] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterYear, setFilterYear] = useState<string>('all');
+  const [changingPasswordUserId, setChangingPasswordUserId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState<string>('');
+  const [confirmPassword, setConfirmPassword] = useState<string>('');
+  const [passwordError, setPasswordError] = useState<string>('');
   const [showEndpoints, setShowEndpoints] = useState(false);
   const [teamData, setTeamData] = useState<Record<string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }>>({});
   const [editingTeam, setEditingTeam] = useState<string | null>(null);
@@ -1113,9 +1117,57 @@ export default function AdminPage() {
   };
 
   const handleOpenPasswordChange = (userId: string) => {
-    // Navigate to reset password page
-    // Note: This functionality is handled by the separate /admin/reset-password page
-    window.location.href = '/admin/reset-password';
+    setChangingPasswordUserId(userId);
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError('');
+  };
+
+  const handleCancelPasswordChange = () => {
+    setChangingPasswordUserId(null);
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError('');
+  };
+
+  const handleChangePassword = async (userId: string) => {
+    if (!newPassword || newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+
+    setPasswordError('');
+
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ newPassword }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setChangingPasswordUserId(null);
+        setNewPassword('');
+        setConfirmPassword('');
+        setPasswordError('');
+        // Reload data to reflect changes
+        await loadData();
+      } else {
+        setPasswordError(data.error || 'Failed to change password');
+      }
+    } catch (error) {
+      console.error('Error changing password:', error);
+      setPasswordError('An error occurred. Please try again.');
+    }
   };
 
   const handleDeleteUser = async (userId: string, userName: string, bracketCounts?: { submitted: number; inProgress: number; deleted: number }) => {
@@ -1908,54 +1960,94 @@ export default function AdminPage() {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            <div className="flex items-center space-x-1">
-                              {!user.emailConfirmed && (
+                            {changingPasswordUserId === user.id ? (
+                              <div className="space-y-2 min-w-[300px]">
+                                <div className="flex flex-col space-y-2">
+                                  <input
+                                    type="password"
+                                    placeholder="New password (min 6 characters)"
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    className="px-2 py-1 border border-gray-300 rounded text-sm"
+                                    minLength={6}
+                                  />
+                                  <input
+                                    type="password"
+                                    placeholder="Confirm password"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    className="px-2 py-1 border border-gray-300 rounded text-sm"
+                                    minLength={6}
+                                  />
+                                </div>
+                                {passwordError && (
+                                  <div className="text-xs text-red-600">{passwordError}</div>
+                                )}
+                                <div className="flex items-center space-x-2">
+                                  <button
+                                    onClick={() => handleChangePassword(user.id)}
+                                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    onClick={handleCancelPasswordChange}
+                                    className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs rounded focus:outline-none focus:ring-2 focus:ring-gray-500"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center space-x-1">
+                                {!user.emailConfirmed && (
+                                  <button
+                                    onClick={() => handleConfirmUser(user.id)}
+                                    className="p-1.5 rounded border border-transparent bg-green-600 hover:bg-green-700 text-white focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-500 transition-colors"
+                                    title="Manually confirm this user"
+                                  >
+                                    <CheckCircle className="h-4 w-4" />
+                                  </button>
+                                )}
                                 <button
-                                  onClick={() => handleConfirmUser(user.id)}
-                                  className="p-1.5 rounded border border-transparent bg-green-600 hover:bg-green-700 text-white focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-500 transition-colors"
-                                  title="Manually confirm this user"
+                                  onClick={() => handleOpenPasswordChange(user.id)}
+                                  className="p-1.5 rounded border border-transparent bg-blue-600 hover:bg-blue-700 text-white focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 transition-colors"
+                                  title="Change user password"
                                 >
-                                  <CheckCircle className="h-4 w-4" />
+                                  <Key className="h-4 w-4" />
                                 </button>
-                              )}
-                              <button
-                                onClick={() => handleOpenPasswordChange(user.id)}
-                                className="p-1.5 rounded border border-transparent bg-blue-600 hover:bg-blue-700 text-white focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 transition-colors"
-                                title="Change user password"
-                              >
-                                <Key className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteUser(user.id, user.name, user.bracketCounts)}
-                                disabled={
-                                  user.bracketCounts && (
-                                    (user.bracketCounts.submitted > 0) || 
-                                    (user.bracketCounts.inProgress > 0) || 
-                                    (user.bracketCounts.deleted > 0)
-                                  )
-                                }
-                                className={`p-1.5 rounded border border-transparent focus:outline-none focus:ring-2 focus:ring-offset-1 transition-colors ${
-                                  (user.bracketCounts && (
-                                    (user.bracketCounts.submitted > 0) || 
-                                    (user.bracketCounts.inProgress > 0) || 
-                                    (user.bracketCounts.deleted > 0)
-                                  ))
-                                    ? 'bg-gray-400 text-white cursor-not-allowed opacity-50'
-                                    : 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500'
-                                }`}
-                                title={
-                                  (user.bracketCounts && (
-                                    (user.bracketCounts.submitted > 0) || 
-                                    (user.bracketCounts.inProgress > 0) || 
-                                    (user.bracketCounts.deleted > 0)
-                                  ))
-                                    ? 'Cannot delete user with existing brackets'
-                                    : 'Delete User'
-                                }
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
+                                <button
+                                  onClick={() => handleDeleteUser(user.id, user.name, user.bracketCounts)}
+                                  disabled={
+                                    user.bracketCounts && (
+                                      (user.bracketCounts.submitted > 0) || 
+                                      (user.bracketCounts.inProgress > 0) || 
+                                      (user.bracketCounts.deleted > 0)
+                                    )
+                                  }
+                                  className={`p-1.5 rounded border border-transparent focus:outline-none focus:ring-2 focus:ring-offset-1 transition-colors ${
+                                    (user.bracketCounts && (
+                                      (user.bracketCounts.submitted > 0) || 
+                                      (user.bracketCounts.inProgress > 0) || 
+                                      (user.bracketCounts.deleted > 0)
+                                    ))
+                                      ? 'bg-gray-400 text-white cursor-not-allowed opacity-50'
+                                      : 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500'
+                                  }`}
+                                  title={
+                                    (user.bracketCounts && (
+                                      (user.bracketCounts.submitted > 0) || 
+                                      (user.bracketCounts.inProgress > 0) || 
+                                      (user.bracketCounts.deleted > 0)
+                                    ))
+                                      ? 'Cannot delete user with existing brackets'
+                                      : 'Delete User'
+                                  }
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       );
