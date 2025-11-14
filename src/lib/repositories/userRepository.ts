@@ -66,7 +66,7 @@ export const InMemoryUserRepository: UserRepository = {
   async updateName() {
     // Placeholder; will be implemented when moving to DB-backed repo.
   },
-  async deleteUser(_userId) {
+  async deleteUser() {
     // Placeholder; will be implemented when moving to DB-backed repo.
   },
   async listUsers() {

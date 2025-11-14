@@ -166,10 +166,6 @@ export default function StepByStepBracket({
     setCurrentStep(stepIndex);
   };
 
-  const handleTeamClick = (game: TournamentGame, team: Record<string, unknown>) => {
-    if (game.winner) return;
-    onPick(game.id, team.id as string);
-  };
 
 
 

@@ -237,7 +237,7 @@ export default function RegionBracketLayout({
         <div className="flex items-start">
           {/* Round of 64 */}
           <div className="w-48">
-            {roundOf64.map(game => renderGame(game, 'Round of 64'))}
+            {roundOf64.map(game => renderGame(game))}
           </div>
 
           {/* Spacer */}
@@ -247,7 +247,7 @@ export default function RegionBracketLayout({
           <div className="w-48">
             {roundOf32.map((game, index) => (
               <div key={game.id} style={{ marginTop: index === 0 ? '2rem' : '4.25rem' }}>
-                {renderGame(game, 'Round of 32')}
+                {renderGame(game)}
               </div>
             ))}
           </div>
@@ -259,7 +259,7 @@ export default function RegionBracketLayout({
           <div className="w-48">
             {sweet16.map((game, index) => (
               <div key={game.id} style={{ marginTop: index === 0 ? '6rem' : '12.25rem' }}>
-                {renderGame(game, 'Sweet 16')}
+                {renderGame(game)}
               </div>
             ))}
           </div>
@@ -273,7 +273,7 @@ export default function RegionBracketLayout({
             <div>
               {elite8.map((game, index) => (
                 <div key={game.id} style={{ marginTop: index === 0 ? '14rem' : '0' }}>
-                  {renderGame(game, 'Elite 8')}
+                  {renderGame(game)}
                 </div>
               ))}
             </div>
