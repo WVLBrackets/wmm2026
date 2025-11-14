@@ -12,6 +12,7 @@ import MyPicksLanding from '@/components/MyPicksLanding';
 import { useBracketMode } from '@/contexts/BracketModeContext';
 import { Trophy } from 'lucide-react';
 import { LoggedButton } from '@/components/LoggedButton';
+import { useUsageLogger } from '@/hooks/useUsageLogger';
 
 function BracketContent() {
   const { data: session, status } = useSession();
@@ -32,6 +33,7 @@ function BracketContent() {
   const [entryName, setEntryName] = useState<string>('');
   const [tieBreaker, setTieBreaker] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedBrackets, setSubmittedBrackets] = useState<BracketSubmission[]>([]);
   const [bracketResetKey, setBracketResetKey] = useState(0);
   const [deletingBracketId, setDeletingBracketId] = useState<string | null>(null);
@@ -720,22 +722,6 @@ function BracketContent() {
     } finally {
       setDeletingBracketId(null);
     }
-  };
-
-    let total = 0;
-    
-    // Regional games: 4 regions × 15 games each = 60
-    Object.values(bracket.regions).forEach(regionGames => {
-      total += regionGames.length;
-    });
-    
-    // Final Four: 2 games
-    total += bracket.finalFour.length;
-    
-    // Championship: 1 game
-    total += 1;
-    
-    return total;
   };
 
   if (status === 'loading' || isLoading) {
