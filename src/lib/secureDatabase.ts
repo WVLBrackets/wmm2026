@@ -373,7 +373,7 @@ export async function getUserById(id: string): Promise<User | null> {
   };
 }
 
-export async function confirmUserEmail(token: string): Promise<boolean> {
+export async function confirmUserEmail(token: string): Promise<{ success: boolean; userEmail?: string; signInToken?: string }> {
   try {
     const environment = getCurrentEnvironment();
     
@@ -384,10 +384,21 @@ export async function confirmUserEmail(token: string): Promise<boolean> {
     `;
     
     if (tokenResult.rows.length === 0) {
-      return false;
+      return { success: false };
     }
     
     const tokenRow = tokenResult.rows[0];
+    
+    // Get user email before updating
+    const userResult = await sql`
+      SELECT email FROM users WHERE id = ${tokenRow.user_id}
+    `;
+    
+    if (userResult.rows.length === 0) {
+      return { success: false };
+    }
+    
+    const userEmail = userResult.rows[0].email;
     
     // Update user to confirmed
     await sql`
@@ -396,15 +407,24 @@ export async function confirmUserEmail(token: string): Promise<boolean> {
       WHERE id = ${tokenRow.user_id}
     `;
     
-    // Remove token
+    // Create a temporary sign-in token (expires in 5 minutes)
+    const signInToken = crypto.randomUUID();
+    const signInExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    
+    await sql`
+      INSERT INTO tokens (token, user_id, expires, type, environment)
+      VALUES (${signInToken}, ${tokenRow.user_id}, ${signInExpires}, 'auto_signin', ${environment})
+    `;
+    
+    // Remove confirmation token
     await sql`
       DELETE FROM tokens WHERE token = ${token}
     `;
     
-    return true;
+    return { success: true, userEmail, signInToken };
   } catch (error) {
     console.error('Error confirming user email:', error);
-    return false;
+    return { success: false };
   }
 }
 

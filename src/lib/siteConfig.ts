@@ -76,6 +76,16 @@ export interface SiteConfigData {
   regEmailMessage1?: string;
   regEmailMessage2?: string;
   regEmailFooter?: string;
+  // Account creation success page content
+  acctCreateSuccessHeader?: string;
+  acctCreateSuccessMessage1?: string;
+  acctCreateSuccessMessage2?: string;
+  acctCreateSuccessButton?: string;
+  // Account confirmation success page content
+  acctConfirmSuccessHeader?: string;
+  acctConfirmSuccessMessage1?: string;
+  acctConfirmSuccessButton1?: string;
+  acctConfirmSuccessButton2?: string;
   // Print bracket trophy icon
   printBracketTrophy?: string;
 }
@@ -321,6 +331,30 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
             break;
           case 'reg_email_footer':
             config.regEmailFooter = value;
+            break;
+          case 'acct_create_success_header':
+            config.acctCreateSuccessHeader = value;
+            break;
+          case 'acct_create_success_message1':
+            config.acctCreateSuccessMessage1 = value;
+            break;
+          case 'acct_create_success_message2':
+            config.acctCreateSuccessMessage2 = value;
+            break;
+          case 'acct_create_success_button':
+            config.acctCreateSuccessButton = value;
+            break;
+          case 'acct_confirm_success_header':
+            config.acctConfirmSuccessHeader = value;
+            break;
+          case 'acct_confirm_success_message1':
+            config.acctConfirmSuccessMessage1 = value;
+            break;
+          case 'acct_confirm_success_button1':
+            config.acctConfirmSuccessButton1 = value;
+            break;
+          case 'acct_confirm_success_button2':
+            config.acctConfirmSuccessButton2 = value;
             break;
           case 'print_bracket_trophy':
             config.printBracketTrophy = value;

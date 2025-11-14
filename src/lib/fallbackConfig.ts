@@ -76,6 +76,16 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   regEmailMessage1: 'Thank you for signing up for Warren\'s March Madness {Year}!',
   regEmailMessage2: 'To complete your account setup, please confirm your email address by clicking the button below:',
   regEmailFooter: 'If you didn\'t create an account with Warren\'s March Madness, please ignore this email.',
+  // Account creation success page defaults
+  acctCreateSuccessHeader: 'Check Your Email!',
+  acctCreateSuccessMessage1: 'We\'ve sent a confirmation link to {email}',
+  acctCreateSuccessMessage2: 'Please check your email and click the confirmation link to activate your account.',
+  acctCreateSuccessButton: 'Go to Sign In',
+  // Account confirmation success page defaults
+  acctConfirmSuccessHeader: 'Email Confirmed!',
+  acctConfirmSuccessMessage1: 'Your email has been confirmed successfully! You can now sign in.',
+  acctConfirmSuccessButton1: 'Sign In Now',
+  acctConfirmSuccessButton2: 'Go to My Picks',
   // Print bracket trophy icon (default to trophy-icon.png)
   printBracketTrophy: 'trophy-icon.png'
 };

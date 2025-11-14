@@ -1,17 +1,42 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CheckCircle, XCircle } from 'lucide-react';
+import { signIn } from 'next-auth/react';
+import { getSiteConfig } from '@/config/site';
+import { SiteConfigData } from '@/lib/siteConfig';
+import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 
 function ConfirmEmailContent() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
   const searchParams = useSearchParams();
+  const router = useRouter();
   const token = searchParams?.get('token');
 
   useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const config = await getSiteConfig();
+        setSiteConfig(config);
+      } catch (error) {
+        console.error('Failed to load site config:', error);
+        setSiteConfig(FALLBACK_CONFIG);
+      }
+    };
+    loadConfig();
+  }, []);
+
+  useEffect(() => {
+    if (!siteConfig) {
+      // Wait for config to load
+      return;
+    }
+    
     console.log('ConfirmEmailContent: token =', token);
     console.log('ConfirmEmailContent: searchParams =', searchParams?.toString());
     
@@ -35,7 +60,33 @@ function ConfirmEmailContent() {
 
         if (response.ok) {
           setStatus('success');
-          setMessage('Your email has been confirmed successfully! You can now sign in.');
+          const configMessage = siteConfig?.acctConfirmSuccessMessage1 || FALLBACK_CONFIG.acctConfirmSuccessMessage1;
+          setMessage(configMessage.replace(/{email}/g, data.userEmail || ''));
+          setUserEmail(data.userEmail);
+          
+          // Auto-sign in the user using the temporary sign-in token
+          if (data.userEmail && data.signInToken) {
+            try {
+              // Use the temporary sign-in token for auto-sign in
+              const result = await signIn('credentials', {
+                email: data.userEmail,
+                password: `AUTO_SIGNIN_TOKEN:${data.signInToken}`,
+                redirect: false,
+              });
+              
+              if (result?.ok) {
+                // Successfully signed in, redirect to bracket page
+                router.push('/bracket');
+                return;
+              } else {
+                // Auto-sign in failed, show success page with buttons
+                console.log('Auto-sign in failed, showing success page');
+              }
+            } catch (signInError) {
+              console.error('Error during auto-sign in:', signInError);
+              // Continue to show success page even if auto-sign in fails
+            }
+          }
         } else {
           setStatus('error');
           setMessage(data.error || 'Failed to confirm email');
@@ -47,7 +98,7 @@ function ConfirmEmailContent() {
     };
 
     confirmEmail();
-  }, [token, searchParams]);
+  }, [token, searchParams, siteConfig, router]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -69,7 +120,7 @@ function ConfirmEmailContent() {
             <>
               <CheckCircle className="mx-auto h-16 w-16 text-green-500 mb-4" />
               <h2 className="text-3xl font-extrabold text-gray-900 mb-2">
-                Email Confirmed!
+                {siteConfig?.acctConfirmSuccessHeader || FALLBACK_CONFIG.acctConfirmSuccessHeader}
               </h2>
               <p className="text-sm text-gray-600 mb-6">
                 {message}
@@ -79,13 +130,13 @@ function ConfirmEmailContent() {
                   href="/auth/signin"
                   className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer"
                 >
-                  Sign In Now
+                  {siteConfig?.acctConfirmSuccessButton1 || FALLBACK_CONFIG.acctConfirmSuccessButton1}
                 </Link>
                 <Link
                   href="/bracket"
                   className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer"
                 >
-                  Go to My Picks
+                  {siteConfig?.acctConfirmSuccessButton2 || FALLBACK_CONFIG.acctConfirmSuccessButton2}
                 </Link>
               </div>
             </>

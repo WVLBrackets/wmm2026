@@ -1,10 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
 import { usageLogger } from '@/lib/usageLogger';
+import { getSiteConfig } from '@/config/site';
+import { SiteConfigData } from '@/lib/siteConfig';
+import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 
 export default function SignUpPage() {
   const [name, setName] = useState('');
@@ -17,8 +20,22 @@ export default function SignUpPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [autoConfirmed, setAutoConfirmed] = useState(false);
+  const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
   
   const router = useRouter();
+
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const config = await getSiteConfig();
+        setSiteConfig(config);
+      } catch (error) {
+        console.error('Failed to load site config:', error);
+        setSiteConfig(FALLBACK_CONFIG);
+      }
+    };
+    loadConfig();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,20 +118,20 @@ export default function SignUpPage() {
             ) : (
               <>
                 <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                  Check Your Email!
+                  {siteConfig?.acctCreateSuccessHeader || FALLBACK_CONFIG.acctCreateSuccessHeader}
                 </h2>
                 <p className="mt-2 text-center text-sm text-gray-600">
-                  We&apos;ve sent a confirmation link to <strong>{email}</strong>
+                  {(siteConfig?.acctCreateSuccessMessage1 || FALLBACK_CONFIG.acctCreateSuccessMessage1).replace(/{email}/g, email)}
                 </p>
                 <p className="mt-2 text-center text-sm text-gray-600">
-                  Please check your email and click the confirmation link to activate your account.
+                  {siteConfig?.acctCreateSuccessMessage2 || FALLBACK_CONFIG.acctCreateSuccessMessage2}
                 </p>
                 <div className="mt-6">
                   <Link
                     href="/auth/signin"
                     className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer"
                   >
-                    Go to Sign In
+                    {siteConfig?.acctCreateSuccessButton || FALLBACK_CONFIG.acctCreateSuccessButton}
                   </Link>
                 </div>
               </>
