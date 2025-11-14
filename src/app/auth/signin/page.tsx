@@ -46,10 +46,24 @@ export default function SignInPage() {
       });
 
       if (result?.error) {
-        // Check if it's an email not confirmed error
-        if (result.error === 'EMAIL_NOT_CONFIRMED' || result.error.includes('EMAIL_NOT_CONFIRMED')) {
-          setError(siteConfig?.emailFailNotConfirmed || FALLBACK_CONFIG.emailFailNotConfirmed || 'Please confirm your email address before signing in.');
-        } else {
+        // When we get an error, check if the user exists and is not confirmed
+        // This helps us show the correct error message
+        try {
+          const checkResponse = await fetch('/api/auth/check-email-confirmed', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+          });
+          const checkData = await checkResponse.json();
+          if (checkData.exists && !checkData.confirmed) {
+            // User exists but email is not confirmed
+            setError(siteConfig?.emailFailNotConfirmed || FALLBACK_CONFIG.emailFailNotConfirmed || 'Please confirm your email address before signing in.');
+          } else {
+            // User doesn't exist or password is wrong
+            setError(siteConfig?.emailFailInvalid || FALLBACK_CONFIG.emailFailInvalid || 'Invalid email or password');
+          }
+        } catch {
+          // If check fails, default to invalid credentials
           setError(siteConfig?.emailFailInvalid || FALLBACK_CONFIG.emailFailInvalid || 'Invalid email or password');
         }
       } else {
