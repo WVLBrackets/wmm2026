@@ -206,7 +206,7 @@ export default function DynamicNavigation({ hideInBracketMode = false }: Dynamic
 
           {/* Mobile Navigation Icons */}
           <div className="lg:hidden flex items-center space-x-2">
-            {navigationItems.filter(item => item.name !== 'Home').map((item) => {
+            {navigationItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
               
