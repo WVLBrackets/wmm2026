@@ -33,7 +33,6 @@ function BracketContent() {
   const [entryName, setEntryName] = useState<string>('');
   const [tieBreaker, setTieBreaker] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedBrackets, setSubmittedBrackets] = useState<BracketSubmission[]>([]);
   const [bracketResetKey, setBracketResetKey] = useState(0);
   const [deletingBracketId, setDeletingBracketId] = useState<string | null>(null);
@@ -382,7 +381,6 @@ function BracketContent() {
     }
 
     try {
-      setIsSubmitting(true);
       setSubmitError(''); // Clear any previous errors
       
       const submission = {
@@ -449,8 +447,6 @@ function BracketContent() {
       console.error('Error submitting bracket:', error);
       setSubmitError('Failed to submit bracket. Please try again.');
       setTimeout(() => setSubmitError(''), 10000);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

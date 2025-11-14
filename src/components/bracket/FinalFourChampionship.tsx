@@ -108,8 +108,8 @@ export default function FinalFourChampionship({
             <div className="text-xs font-semibold text-gray-700 text-center mb-1">
               {title}
             </div>
-            {renderTeam(game.team1 as unknown as Record<string, unknown> | undefined, game, true)}
-            {renderTeam(game.team2 as unknown as Record<string, unknown> | undefined, game, false)}
+            {renderTeam(game.team1 as unknown as Record<string, unknown> | undefined, game)}
+            {renderTeam(game.team2 as unknown as Record<string, unknown> | undefined, game)}
           </div>
         );
       };

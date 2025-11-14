@@ -145,11 +145,6 @@ interface Browser {
   close: () => Promise<void>;
 }
 
-interface PuppeteerRequest {
-  resourceType: () => string;
-  url: () => string;
-  continue: () => void;
-}
 
 
 interface Page {

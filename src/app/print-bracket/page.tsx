@@ -116,7 +116,6 @@ export default function PrintBracketPage() {
     const picks = bracketData.picks as Record<string, string>;
     const semifinal1Pick = picks['final-four-1'];
     const semifinal2Pick = picks['final-four-2'];
-    const championshipPick = picks['championship'];
 
     // Get the two finalists (winners of semifinals)
     const tournament = tournamentData as unknown as TournamentData;
@@ -270,7 +269,6 @@ export default function PrintBracketPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0px', flex: 1 }}>
               {tournament.regions[regionIndex].teams.map((team, teamIndex) => {
                 const gameIndex = Math.floor(teamIndex / 2);
-                const game = (bracketTyped.regions as Record<string, unknown[]>)[regionKey]?.find(g => (g as Record<string, unknown>).round === 'Round of 64' && (g as Record<string, unknown>).gameNumber === gameIndex + 1);
                 
                 return (
                   <div key={team.id} style={{ 

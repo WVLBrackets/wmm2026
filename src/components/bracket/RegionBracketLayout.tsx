@@ -98,7 +98,7 @@ export default function RegionBracketLayout({
     );
   };
 
-  const renderGame = (game: TournamentGame, round: string) => {
+  const renderGame = (game: TournamentGame) => {
     // Always render both team slots, even if teams are not yet determined
     return (
       <div key={game.id} className="border border-gray-300 rounded p-1 space-y-0.5 mb-1 w-full">

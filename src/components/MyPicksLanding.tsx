@@ -37,7 +37,7 @@ interface MyPicksLandingProps {
   siteConfig?: SiteConfigData | null;
 }
 
-export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBracket, onDeleteBracket, onCopyBracket, deletingBracketId, pendingDeleteBracketId, onConfirmDelete, onCancelDelete, tournamentData, bracket, siteConfig }: MyPicksLandingProps) {
+export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBracket, onDeleteBracket, onCopyBracket, deletingBracketId, pendingDeleteBracketId, onConfirmDelete, onCancelDelete, tournamentData, siteConfig }: MyPicksLandingProps) {
   const { data: session } = useSession();
   const [expandedStatus, setExpandedStatus] = useState<'info' | null>(null);
   const [logoError, setLogoError] = useState(false);
@@ -233,7 +233,6 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
   // Get dynamic message based on bracket counts
   const getDynamicMessage = () => {
     const { submittedCount, inProgressCount, totalCost } = getBracketsInfo();
-    const entryCost = siteConfig?.entryCost || 5;
     
     let message = '';
     
