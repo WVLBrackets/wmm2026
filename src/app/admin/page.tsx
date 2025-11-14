@@ -2809,7 +2809,10 @@ export default function AdminPage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {usageSummary.locationTotals.map((locationTotal, idx) => (
+                            {usageSummary.locationTotals
+                              .filter(locationTotal => locationTotal.pageVisits > 0)
+                              .sort((a, b) => b.pageVisits - a.pageVisits)
+                              .map((locationTotal, idx) => (
                               <tr key={idx} className="border-b border-gray-200">
                                 <td className="py-2 px-2 text-gray-900 sticky left-0 bg-gray-50 z-10 font-medium">
                                   {locationTotal.location}
@@ -2868,7 +2871,10 @@ export default function AdminPage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {usageSummary.locationTotals.map((locationTotal, idx) => (
+                            {usageSummary.locationTotals
+                              .filter(locationTotal => locationTotal.clicks > 0)
+                              .sort((a, b) => b.clicks - a.clicks)
+                              .map((locationTotal, idx) => (
                               <tr key={idx} className="border-b border-gray-200">
                                 <td className="py-2 px-2 text-gray-900 sticky left-0 bg-gray-50 z-10 font-medium">
                                   {locationTotal.location}
