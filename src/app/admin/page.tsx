@@ -106,10 +106,6 @@ export default function AdminPage() {
   const [filterUser, setFilterUser] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterYear, setFilterYear] = useState<string>('all');
-  const [changingPasswordUserId, setChangingPasswordUserId] = useState<string | null>(null);
-  const [newPassword, setNewPassword] = useState<string>('');
-  const [confirmPassword, setConfirmPassword] = useState<string>('');
-  const [, setPasswordError] = useState<string>('');
   const [showEndpoints, setShowEndpoints] = useState(false);
   const [teamData, setTeamData] = useState<Record<string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }>>({});
   const [editingTeam, setEditingTeam] = useState<string | null>(null);
@@ -1117,17 +1113,9 @@ export default function AdminPage() {
   };
 
   const handleOpenPasswordChange = (userId: string) => {
-    setChangingPasswordUserId(userId);
-    setNewPassword('');
-    setConfirmPassword('');
-    setPasswordError('');
-  };
-
-  const handleCancelPasswordChange = () => {
-    setChangingPasswordUserId(null);
-    setNewPassword('');
-    setConfirmPassword('');
-    setPasswordError('');
+    // Navigate to reset password page
+    // Note: This functionality is handled by the separate /admin/reset-password page
+    window.location.href = '/admin/reset-password';
   };
 
   const handleDeleteUser = async (userId: string, userName: string, bracketCounts?: { submitted: number; inProgress: number; deleted: number }) => {
