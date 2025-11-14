@@ -390,16 +390,17 @@ export default function StandingsTable() {
           ) : undefined;
           
           return (
-            <TeamLogo
-              key={index}
-              teamName={team}
-              size={24}
-              teamCache={teamCache}
-              backgroundColor={quarterfinalColor}
-              borderColor={semifinalColor}
-              className="relative"
-              teamIndex={index + 1}
-            />
+            <div key={index} title={team} className="cursor-help">
+              <TeamLogo
+                teamName={team}
+                size={24}
+                teamCache={teamCache}
+                backgroundColor={quarterfinalColor}
+                borderColor={semifinalColor}
+                className="relative"
+                teamIndex={index + 1}
+              />
+            </div>
           );
         })}
       </div>
@@ -417,15 +418,17 @@ export default function StandingsTable() {
     
     return (
       <div className="flex flex-col items-center gap-0.5">
-        <TeamLogo
-          teamName={champion}
-          size={60}
-          teamCache={teamCache}
-          backgroundColor={finalColor}
-          borderColor={finalColor}
-          className="rounded"
-          teamIndex={undefined}
-        />
+        <div title={champion} className="cursor-help">
+          <TeamLogo
+            teamName={champion}
+            size={60}
+            teamCache={teamCache}
+            backgroundColor={finalColor}
+            borderColor={finalColor}
+            className="rounded"
+            teamIndex={undefined}
+          />
+        </div>
         <div className="text-xs text-gray-600 font-medium">
           TB: {tb}
         </div>
