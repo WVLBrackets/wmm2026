@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { ArrowLeft, Save } from 'lucide-react';
 import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
 import { TournamentRegion } from '@/types/tournament';
@@ -591,7 +592,7 @@ export default function TournamentBuilderPage() {
                               <span className="text-xs font-semibold text-gray-600">{team1.seed}</span>
                               <span className="text-xs text-gray-600 truncate flex-1">{team1.name}</span>
                               {team1.logo && (
-                                <img src={team1.logo} alt={team1.name} className="w-4 h-4 object-contain flex-shrink-0" />
+                                <Image src={team1.logo} alt={team1.name} width={16} height={16} className="w-4 h-4 object-contain flex-shrink-0" unoptimized />
                               )}
                             </div>
                           )}
@@ -627,7 +628,7 @@ export default function TournamentBuilderPage() {
                               <span className="text-xs font-semibold text-gray-600">{team2.seed}</span>
                               <span className="text-xs text-gray-600 truncate flex-1">{team2.name}</span>
                               {team2.logo && (
-                                <img src={team2.logo} alt={team2.name} className="w-4 h-4 object-contain flex-shrink-0" />
+                                <Image src={team2.logo} alt={team2.name} width={16} height={16} className="w-4 h-4 object-contain flex-shrink-0" unoptimized />
                               )}
                             </div>
                           )}

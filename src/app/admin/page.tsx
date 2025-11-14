@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Trash2, Edit, Save, X, Users, Trophy, CheckCircle, Key, Edit3, LogOut, Link2, Table, Plus, Download, AlertCircle, Power, PowerOff, Zap } from 'lucide-react';
 import { useBracketMode } from '@/contexts/BracketModeContext';
 
@@ -2539,13 +2540,13 @@ export default function AdminPage() {
                           </td>
                           <td className="px-3 py-4 whitespace-nowrap">
                             {editingTeamData?.logo ? (
-                              <img
+                              <Image
                                 src={editingTeamData.logo}
                                 alt="Preview"
+                                width={32}
+                                height={32}
                                 className="h-8 w-8 object-contain"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display = 'none';
-                                }}
+                                unoptimized
                               />
                             ) : (
                               <span className="text-gray-400 text-xs">No logo</span>
@@ -2596,13 +2597,13 @@ export default function AdminPage() {
                           </td>
                           <td className="px-3 py-4 whitespace-nowrap">
                             {team.logo ? (
-                              <img
+                              <Image
                                 src={team.logo}
                                 alt={team.name}
+                                width={32}
+                                height={32}
                                 className="h-8 w-8 object-contain"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display = 'none';
-                                }}
+                                unoptimized
                               />
                             ) : (
                               <span className="text-gray-400 text-xs">No logo</span>

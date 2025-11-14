@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useSession } from 'next-auth/react';
+import Image from 'next/image';
 import { Trophy, Plus, Edit, Eye, Clock, CheckCircle, LogOut, Trash2, Copy, Printer, Info, X, Mail } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { TournamentData, TournamentBracket } from '@/types/tournament';
@@ -124,13 +125,14 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
     }
     
     return (
-      <img 
+      <Image 
         src={logoPath} 
         alt="Team logo"
         width={24}
         height={24}
         className="object-contain"
         onError={() => setImageError(true)}
+        unoptimized
       />
     );
   };
@@ -297,9 +299,11 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                             Image not Found
                           </div>
                         ) : (
-                          <img
+                          <Image
                             src={`/images/${siteConfig.homePageLogo}`}
                             alt="Site Logo"
+                            width={200}
+                            height={100}
                             className="h-full w-auto object-contain max-h-full"
                             onError={() => setLogoError(true)}
                           />

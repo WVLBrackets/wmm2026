@@ -35,8 +35,9 @@ const sql = (strings: TemplateStringsArray, ...values: unknown[]) => {
 };
 
 // Export both named and default exports
+const localPostgresAdapter = { sql };
 export { sql };
-export default { sql };
+export default localPostgresAdapter;
 
 // Close the pool when needed
 export async function closePool() {
