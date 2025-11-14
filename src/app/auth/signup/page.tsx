@@ -121,10 +121,10 @@ export default function SignUpPage() {
                   {siteConfig?.acctCreateSuccessHeader || FALLBACK_CONFIG.acctCreateSuccessHeader}
                 </h2>
                 <p className="mt-2 text-center text-sm text-gray-600">
-                  {(siteConfig?.acctCreateSuccessMessage1 || FALLBACK_CONFIG.acctCreateSuccessMessage1).replace(/{email}/g, email)}
+                  {(siteConfig?.acctCreateSuccessMessage1 || FALLBACK_CONFIG.acctCreateSuccessMessage1 || '').replace(/{email}/g, email)}
                 </p>
                 <p className="mt-2 text-center text-sm text-gray-600">
-                  {siteConfig?.acctCreateSuccessMessage2 || FALLBACK_CONFIG.acctCreateSuccessMessage2}
+                  {siteConfig?.acctCreateSuccessMessage2 || FALLBACK_CONFIG.acctCreateSuccessMessage2 || ''}
                 </p>
                 <div className="mt-6">
                   <Link
