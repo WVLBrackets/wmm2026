@@ -1157,40 +1157,6 @@ export default function AdminPage() {
     }
   };
 
-  const handleChangePassword = async () => {
-    setPasswordError('');
-
-    if (!newPassword || newPassword.length < 6) {
-      setPasswordError('Password must be at least 6 characters');
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setPasswordError('Passwords do not match');
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/admin/users/${changingPasswordUserId}/change-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newPassword }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        // Reset form and reload data
-        handleCancelPasswordChange();
-        loadData();
-      } else {
-        setPasswordError(data.error || 'Failed to change password');
-      }
-    } catch (error) {
-      console.error('Error changing password:', error);
-      setPasswordError('Failed to change password');
-    }
-  };
 
   const handleEdit = (bracket: Bracket) => {
     setEditingBracket(bracket.id);

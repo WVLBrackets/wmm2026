@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { TournamentData, TournamentBracket, TournamentGame } from '@/types/tournament';
+import { TournamentData, TournamentBracket } from '@/types/tournament';
 import { updateBracketWithPicks } from '@/lib/bracketGenerator';
 import { SiteConfigData } from '@/lib/siteConfig';
 import RegionBracketLayout from './RegionBracketLayout';

@@ -267,7 +267,7 @@ export default function PrintBracketPage() {
         return (
           <div key={round} style={{ minWidth: '90px', flex: '1 1 0', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0px', flex: 1 }}>
-              {tournament.regions[regionIndex].teams.map((team, teamIndex) => {
+              {tournament.regions[regionIndex].teams.map((team) => {
                 return (
                   <div key={team.id} style={{ 
                     height: '6%', 
