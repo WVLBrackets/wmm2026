@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Trash2, Edit, Save, X, Users, Trophy, CheckCircle, Key, Edit3, LogOut, Link2, Table, Plus, Download, AlertCircle, Power, PowerOff, Zap } from 'lucide-react';
@@ -188,7 +188,7 @@ export default function AdminPage() {
     }
   };
 
-  const loadUsageLogs = async () => {
+  const loadUsageLogs = useCallback(async () => {
     try {
       setLogsLoading(true);
       setLogsError('');
@@ -233,9 +233,9 @@ export default function AdminPage() {
     } finally {
       setLogsLoading(false);
     }
-  };
+  }, [logStartDate, logEndDate, logUsernameFilter, logEventTypeFilter, logLocationFilter]);
 
-  const loadErrorLogs = async () => {
+  const loadErrorLogs = useCallback(async () => {
     try {
       setLogsLoading(true);
       setLogsError('');
@@ -270,9 +270,9 @@ export default function AdminPage() {
     } finally {
       setLogsLoading(false);
     }
-  };
+  }, [logStartDate, logEndDate]);
 
-  const loadUsageSummary = async () => {
+  const loadUsageSummary = useCallback(async () => {
     try {
       setLogsLoading(true);
       setLogsError('');
@@ -311,7 +311,7 @@ export default function AdminPage() {
     } finally {
       setLogsLoading(false);
     }
-  };
+  }, [logStartDate, logEndDate]);
 
   const handleDeleteLogs = async () => {
     const logType = logsTab === 'usage' ? 'usage' : 'error';
@@ -612,7 +612,7 @@ export default function AdminPage() {
         loadErrorLogs();
       }
     }
-  }, [activeTab, logsTab, logStartDate, logEndDate, logUsernameFilter, logEventTypeFilter, logLocationFilter]);
+  }, [activeTab, logsTab, logStartDate, logEndDate, logUsernameFilter, logEventTypeFilter, logLocationFilter, loadUsageSummary, loadUsageLogs, loadErrorLogs]);
 
   // Reload team data when filter changes
   useEffect(() => {
