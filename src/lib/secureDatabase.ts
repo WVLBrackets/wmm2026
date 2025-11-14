@@ -904,11 +904,6 @@ export async function getAllTeamReferenceData(activeOnly: boolean = false): Prom
         activeBoolean = Boolean(row.active);
       }
       
-      // Debug logging for first few teams to see what we're getting
-      if (Object.keys(teams).length < 3) {
-        console.log(`[DB] Team ${row.key}: active value = ${row.active}, type = ${typeof row.active}, converted = ${activeBoolean}`);
-      }
-      
       teams[row.key as string] = {
         id: row.id as string,
         name: row.name as string,
@@ -1039,18 +1034,14 @@ export async function initializeTeamDataTable(): Promise<void> {
       `;
       
       if (columnCheck.rows.length === 0) {
-        console.log('[initializeTeamDataTable] Adding mascot column to team_reference_data table');
         await teamDataSql`ALTER TABLE team_reference_data ADD COLUMN mascot VARCHAR(255)`;
-        console.log('[initializeTeamDataTable] Successfully added mascot column');
       }
     } catch (mascotError) {
       // Column might already exist or there's an issue, but don't fail initialization
-      if (mascotError instanceof Error && (
+      if (!(mascotError instanceof Error && (
         mascotError.message.includes('already exists') || 
         mascotError.message.includes('duplicate column')
-      )) {
-        console.log('[initializeTeamDataTable] mascot column already exists');
-      } else {
+      ))) {
         console.error('[initializeTeamDataTable] Error checking/adding mascot column:', mascotError);
       }
     }
@@ -1066,9 +1057,7 @@ export async function initializeTeamDataTable(): Promise<void> {
       `;
       
       if (activeColumnCheck.rows.length === 0) {
-        console.log('[initializeTeamDataTable] Adding active column to team_reference_data table');
         await teamDataSql`ALTER TABLE team_reference_data ADD COLUMN active BOOLEAN DEFAULT false`;
-        console.log('[initializeTeamDataTable] Successfully added active column');
         
         // Set initial active status based on abbreviation (non-numerical = active)
         await teamDataSql`
@@ -1076,21 +1065,18 @@ export async function initializeTeamDataTable(): Promise<void> {
           SET active = true 
           WHERE key !~ '^[0-9]+$'
         `;
-        console.log('[initializeTeamDataTable] Set initial active status for teams');
       }
     } catch (activeError) {
       // Column might already exist or there's an issue, but don't fail initialization
-      if (activeError instanceof Error && (
+      if (!(activeError instanceof Error && (
         activeError.message.includes('already exists') || 
         activeError.message.includes('duplicate column')
-      )) {
-        console.log('[initializeTeamDataTable] active column already exists');
-      } else {
+      ))) {
         console.error('[initializeTeamDataTable] Error checking/adding active column:', activeError);
       }
     }
     
-    console.log('[initializeTeamDataTable] Team reference data table initialized');
+    // Team reference data table initialized (no logging to reduce noise)
   } catch (error) {
     console.error('[initializeTeamDataTable] Error initializing team data table:', error);
     // Don't throw - allow function to continue even if table creation fails
