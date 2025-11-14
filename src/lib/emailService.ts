@@ -215,11 +215,94 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
   return emailService.sendEmail(options);
 }
 
-export async function sendConfirmationEmail(to: string, name: string, confirmationLink: string, confirmationCode: string): Promise<boolean> {
+/**
+ * Escape HTML entities to prevent XSS
+ */
+function escapeHtml(text: string): string {
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+  };
+  return text.replace(/[&<>"']/g, (m) => map[m]);
+}
+
+/**
+ * Replace template variables in registration email text
+ * Supports {Name} and {Year} syntax
+ * Note: Values are escaped for HTML safety
+ */
+function replaceRegEmailVariables(text: string, name: string, tournamentYear: string, escapeForHtml: boolean = false): string {
+  let result = text;
+  const nameValue = name || 'there';
+  const yearValue = tournamentYear || '2026';
+  
+  // Replace variables (case-insensitive)
+  result = result.replace(/\{Name\}/gi, escapeForHtml ? escapeHtml(nameValue) : nameValue);
+  result = result.replace(/\{Year\}/gi, escapeForHtml ? escapeHtml(yearValue) : yearValue);
+  
+  return result;
+}
+
+export async function sendConfirmationEmail(
+  to: string, 
+  name: string, 
+  confirmationLink: string, 
+  confirmationCode: string,
+  siteConfig?: { regEmailSubject?: string; regEmailHeader?: string; regEmailGreeting?: string; regEmailMessage1?: string; regEmailMessage2?: string; regEmailFooter?: string; tournamentYear?: string } | null
+): Promise<boolean> {
   // Only show badge for non-production environments
   const environment = process.env.VERCEL_ENV || process.env.NODE_ENV || 'development';
   const isProduction = environment === 'production';
   const showBadge = !isProduction;
+  
+  // Get config values with fallbacks
+  const { FALLBACK_CONFIG } = await import('@/lib/fallbackConfig');
+  const tournamentYear = siteConfig?.tournamentYear || process.env.NEXT_PUBLIC_TOURNAMENT_YEAR || '2026';
+  
+  const subject = replaceRegEmailVariables(
+    siteConfig?.regEmailSubject || FALLBACK_CONFIG.regEmailSubject || "Confirm Your Warren's March Madness Account",
+    name,
+    tournamentYear,
+    false // Subject doesn't need HTML escaping
+  );
+  
+  const header = replaceRegEmailVariables(
+    siteConfig?.regEmailHeader || FALLBACK_CONFIG.regEmailHeader || "Welcome to Warren's March Madness!",
+    name,
+    tournamentYear,
+    true // HTML content needs escaping
+  );
+  
+  const greeting = replaceRegEmailVariables(
+    siteConfig?.regEmailGreeting || FALLBACK_CONFIG.regEmailGreeting || 'Hi {Name},',
+    name,
+    tournamentYear,
+    true // HTML content needs escaping
+  );
+  
+  const message1 = replaceRegEmailVariables(
+    siteConfig?.regEmailMessage1 || FALLBACK_CONFIG.regEmailMessage1 || 'Thank you for signing up for Warren\'s March Madness {Year}!',
+    name,
+    tournamentYear,
+    true // HTML content needs escaping
+  );
+  
+  const message2 = replaceRegEmailVariables(
+    siteConfig?.regEmailMessage2 || FALLBACK_CONFIG.regEmailMessage2 || 'To complete your account setup, please confirm your email address by clicking the button below:',
+    name,
+    tournamentYear,
+    true // HTML content needs escaping
+  );
+  
+  const footer = replaceRegEmailVariables(
+    siteConfig?.regEmailFooter || FALLBACK_CONFIG.regEmailFooter || 'If you didn\'t create an account with Warren\'s March Madness, please ignore this email.',
+    name,
+    tournamentYear,
+    true // HTML content needs escaping
+  );
   
   // Environment badge (only for Preview/Development)
   const badgeHtml = showBadge ? `
@@ -233,15 +316,15 @@ export async function sendConfirmationEmail(to: string, name: string, confirmati
     <html>
     <head>
       <meta charset="utf-8">
-      <title>Confirm Your Account - Warren's March Madness</title>
+      <title>${subject}</title>
     </head>
     <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px;">
         ${badgeHtml}
-        <h2 style="color: #2c3e50; text-align: center;">Welcome to Warren's March Madness!</h2>
-        <p>Hi ${name},</p>
-        <p>Thank you for signing up for Warren's March Madness ${process.env.NEXT_PUBLIC_TOURNAMENT_YEAR || '2026'}!</p>
-        <p>To complete your account setup, please confirm your email address by clicking the button below:</p>
+        <h2 style="color: #2c3e50; text-align: center;">${header}</h2>
+        <p>${greeting}</p>
+        <p>${message1}</p>
+        <p>${message2}</p>
         <div style="text-align: center; margin: 30px 0;">
           <a href="${confirmationLink}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">Confirm My Account</a>
         </div>
@@ -251,33 +334,71 @@ export async function sendConfirmationEmail(to: string, name: string, confirmati
         <p>This link will expire in 24 hours.</p>
         <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
         <p style="font-size: 12px; color: #666; text-align: center;">
-          If you didn't create an account with Warren's March Madness, please ignore this email.
+          ${footer}
         </p>
       </div>
     </body>
     </html>
   `;
 
+  // For text version, use non-escaped values
+  const textHeader = replaceRegEmailVariables(
+    siteConfig?.regEmailHeader || FALLBACK_CONFIG.regEmailHeader || "Welcome to Warren's March Madness!",
+    name,
+    tournamentYear,
+    false // Text version doesn't need HTML escaping
+  );
+  
+  const textGreeting = replaceRegEmailVariables(
+    siteConfig?.regEmailGreeting || FALLBACK_CONFIG.regEmailGreeting || 'Hi {Name},',
+    name,
+    tournamentYear,
+    false // Text version doesn't need HTML escaping
+  );
+  
+  const textMessage1 = replaceRegEmailVariables(
+    siteConfig?.regEmailMessage1 || FALLBACK_CONFIG.regEmailMessage1 || 'Thank you for signing up for Warren\'s March Madness {Year}!',
+    name,
+    tournamentYear,
+    false // Text version doesn't need HTML escaping
+  );
+  
+  const textMessage2 = replaceRegEmailVariables(
+    siteConfig?.regEmailMessage2 || FALLBACK_CONFIG.regEmailMessage2 || 'To complete your account setup, please confirm your email address by clicking the button below:',
+    name,
+    tournamentYear,
+    false // Text version doesn't need HTML escaping
+  );
+  
+  const textFooter = replaceRegEmailVariables(
+    siteConfig?.regEmailFooter || FALLBACK_CONFIG.regEmailFooter || 'If you didn\'t create an account with Warren\'s March Madness, please ignore this email.',
+    name,
+    tournamentYear,
+    false // Text version doesn't need HTML escaping
+  );
+
   const text = `
-    Welcome to Warren's March Madness!
-    
-    Hi ${name},
-    
-    Thank you for signing up for Warren's March Madness ${process.env.NEXT_PUBLIC_TOURNAMENT_YEAR || '2026'}!
-    
-    To complete your account setup, please confirm your email address by visiting this link:
-    ${confirmationLink}
-    
-    Your confirmation code is: ${confirmationCode}
-    
-    This link will expire in 24 hours.
-    
-    If you didn't create an account with Warren's March Madness, please ignore this email.
+${textHeader}
+
+${textGreeting}
+
+${textMessage1}
+
+${textMessage2}
+
+To complete your account setup, please confirm your email address by visiting this link:
+${confirmationLink}
+
+Your confirmation code is: ${confirmationCode}
+
+This link will expire in 24 hours.
+
+${textFooter}
   `;
 
   return emailService.sendEmail({
     to,
-    subject: "Confirm Your Warren's March Madness Account",
+    subject,
     html,
     text,
   });

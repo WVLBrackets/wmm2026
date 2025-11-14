@@ -69,6 +69,13 @@ export interface SiteConfigData {
   emailSubmitMessage2?: string;
   emailSubmitMessage3?: string;
   emailSubmitFooter?: string;
+  // Email registration (confirmation) template content
+  regEmailSubject?: string;
+  regEmailHeader?: string;
+  regEmailGreeting?: string;
+  regEmailMessage1?: string;
+  regEmailMessage2?: string;
+  regEmailFooter?: string;
   // Print bracket trophy icon
   printBracketTrophy?: string;
 }
@@ -296,6 +303,24 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
             break;
           case 'email_submit_footer':
             config.emailSubmitFooter = value;
+            break;
+          case 'reg_email_subject':
+            config.regEmailSubject = value;
+            break;
+          case 'reg_email_header':
+            config.regEmailHeader = value;
+            break;
+          case 'reg_email_greeting':
+            config.regEmailGreeting = value;
+            break;
+          case 'reg_email_message1':
+            config.regEmailMessage1 = value;
+            break;
+          case 'reg_email_message2':
+            config.regEmailMessage2 = value;
+            break;
+          case 'reg_email_footer':
+            config.regEmailFooter = value;
             break;
           case 'print_bracket_trophy':
             config.printBracketTrophy = value;

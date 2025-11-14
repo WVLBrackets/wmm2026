@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createUser } from '@/lib/secureDatabase';
 import { sendConfirmationEmail, emailService } from '@/lib/emailService';
+import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
 
 export async function POST(request: NextRequest) {
   try {
@@ -109,8 +110,17 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
     
+    // Fetch site config for email template
+    let siteConfig = null;
+    try {
+      siteConfig = await getSiteConfigFromGoogleSheets();
+    } catch (configError) {
+      console.error('[Register] Error fetching site config, using fallbacks:', configError);
+      // Continue with fallback config
+    }
+    
     console.log(`[Register] Sending confirmation email to ${email} with token ${token.substring(0, 10)}...`);
-    const emailSent = await sendConfirmationEmail(email, name, confirmationLink, token);
+    const emailSent = await sendConfirmationEmail(email, name, confirmationLink, token, siteConfig);
 
     if (!emailSent) {
       return NextResponse.json({

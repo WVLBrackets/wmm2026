@@ -69,6 +69,13 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   emailSubmitMessage2: 'You currently have {submissionCount} submitted bracket(s) with a total cost of ${totalCost}.',
   emailSubmitMessage3: 'Want to increase your chances? Submit more brackets and invite your friends to join the fun!',
   emailSubmitFooter: 'This is an automated email from Warren\'s March Madness.',
+  // Email registration (confirmation) defaults
+  regEmailSubject: 'Confirm Your Warren\'s March Madness Account',
+  regEmailHeader: 'Welcome to Warren\'s March Madness!',
+  regEmailGreeting: 'Hi {Name},',
+  regEmailMessage1: 'Thank you for signing up for Warren\'s March Madness {Year}!',
+  regEmailMessage2: 'To complete your account setup, please confirm your email address by clicking the button below:',
+  regEmailFooter: 'If you didn\'t create an account with Warren\'s March Madness, please ignore this email.',
   // Print bracket trophy icon (default to trophy-icon.png)
   printBracketTrophy: 'trophy-icon.png'
 };
