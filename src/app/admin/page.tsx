@@ -77,7 +77,19 @@ export default function AdminPage() {
   const [logsTab, setLogsTab] = useState<'summary' | 'usage' | 'error'>('summary');
   const [usageLogs, setUsageLogs] = useState<UsageLog[]>([]);
   const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
-  const [usageSummary, setUsageSummary] = useState<{ pageVisits: Array<{ location: string; count: number }>; clicks: Array<{ location: string; count: number }> }>({ pageVisits: [], clicks: [] });
+  const [usageSummary, setUsageSummary] = useState<{
+    gridData: Array<{
+      date: string;
+      locations: Array<{ location: string; pageVisits: number; clicks: number }>;
+      dayTotal: { pageVisits: number; clicks: number };
+    }>;
+    locationTotals: Array<{ location: string; pageVisits: number; clicks: number }>;
+    totals: { pageVisits: number; clicks: number };
+  }>({
+    gridData: [],
+    locationTotals: [],
+    totals: { pageVisits: 0, clicks: 0 },
+  });
   const [logsLoading, setLogsLoading] = useState(false);
   const [logsError, setLogsError] = useState('');
   const [logStartDate, setLogStartDate] = useState<string>('');
@@ -86,6 +98,8 @@ export default function AdminPage() {
   const [logEventTypeFilter, setLogEventTypeFilter] = useState<string>('');
   const [logLocationFilter, setLogLocationFilter] = useState<string>('');
   const [deletingLogs, setDeletingLogs] = useState(false);
+  const [initializingDatabase, setInitializingDatabase] = useState(false);
+  const [databaseInitMessage, setDatabaseInitMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [editingBracket, setEditingBracket] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Bracket>>({});
   const [filterUser, setFilterUser] = useState<string>('all');
@@ -285,7 +299,11 @@ export default function AdminPage() {
         throw new Error(errorMsg);
       }
       
-      setUsageSummary(data.summary || { pageVisits: [], clicks: [] });
+      setUsageSummary(data.summary || {
+        gridData: [],
+        locationTotals: [],
+        totals: { pageVisits: 0, clicks: 0 },
+      });
     } catch (error) {
       console.error('Error loading usage summary:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to load usage summary';
@@ -347,6 +365,43 @@ export default function AdminPage() {
       alert(error instanceof Error ? error.message : 'Failed to delete logs');
     } finally {
       setDeletingLogs(false);
+    }
+  };
+
+  const handleInitializeDatabase = async () => {
+    if (!confirm('This will create the usage_logs and error_logs tables if they don\'t exist. Continue?')) {
+      return;
+    }
+
+    try {
+      setInitializingDatabase(true);
+      setDatabaseInitMessage(null);
+      setLogsError('');
+
+      const response = await fetch('/api/init-database', {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setDatabaseInitMessage({ type: 'success', text: 'Database tables initialized successfully!' });
+        // Reload logs after initialization
+        if (logsTab === 'summary') {
+          await loadUsageSummary();
+        } else if (logsTab === 'usage') {
+          await loadUsageLogs();
+        } else {
+          await loadErrorLogs();
+        }
+      } else {
+        setDatabaseInitMessage({ type: 'error', text: data.error || 'Failed to initialize database' });
+      }
+    } catch (error) {
+      console.error('Error initializing database:', error);
+      setDatabaseInitMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to initialize database' });
+    } finally {
+      setInitializingDatabase(false);
     }
   };
 
@@ -2633,7 +2688,7 @@ export default function AdminPage() {
           <div className="bg-white rounded-lg shadow-lg p-6">
             {/* Date Filters - Top Level */}
             <div className="mb-6 pb-4 border-b border-gray-200">
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-4 flex-wrap">
                 <div className="flex items-center space-x-2">
                   <label className="text-sm font-medium text-gray-700">Low End:</label>
                   <input
@@ -2662,12 +2717,30 @@ export default function AdminPage() {
                       loadErrorLogs();
                     }
                   }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
                   disabled={logsLoading}
                 >
                   {logsLoading ? 'Loading...' : 'Refresh'}
                 </button>
+                <button
+                  onClick={handleInitializeDatabase}
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400 flex items-center space-x-2"
+                  disabled={initializingDatabase}
+                  title="Create usage_logs and error_logs tables if they don't exist"
+                >
+                  <Power className="h-4 w-4" />
+                  <span>{initializingDatabase ? 'Initializing...' : 'Initialize Tables'}</span>
+                </button>
               </div>
+              {databaseInitMessage && (
+                <div className={`mt-3 p-3 rounded ${
+                  databaseInitMessage.type === 'success' 
+                    ? 'bg-green-100 text-green-700' 
+                    : 'bg-red-100 text-red-700'
+                }`}>
+                  {databaseInitMessage.text}
+                </div>
+              )}
             </div>
 
             <div className="mb-6 border-b border-gray-200">
@@ -2707,91 +2780,131 @@ export default function AdminPage() {
 
             {logsTab === 'summary' && (
               <div>
-                <h3 className="text-lg font-semibold mb-4">Usage Summary</h3>
+                <h3 className="text-lg font-semibold mb-4">Usage Summary - Last 7 Days</h3>
                 {logsError && (
                   <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
                     {logsError}
                   </div>
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Page Visits Section */}
+                  {/* Page Visits Grid */}
                   <div>
                     <h4 className="text-md font-semibold mb-3 text-gray-800">Page Visits</h4>
                     {logsLoading ? (
                       <div className="text-gray-500">Loading...</div>
-                    ) : usageSummary.pageVisits.length === 0 ? (
+                    ) : usageSummary.gridData.length === 0 ? (
                       <div className="text-gray-500">No page visits found</div>
                     ) : (
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <table className="min-w-full">
+                      <div className="bg-gray-50 rounded-lg p-4 overflow-x-auto">
+                        <table className="min-w-full text-xs">
                           <thead>
                             <tr className="border-b border-gray-300">
-                              <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Location</th>
-                              <th className="text-right py-2 px-3 text-sm font-medium text-gray-700">Count</th>
+                              <th className="text-left py-2 px-2 font-medium text-gray-700 sticky left-0 bg-gray-50 z-10">Location</th>
+                              {usageSummary.gridData.map((day) => (
+                                <th key={day.date} className="text-center py-2 px-2 font-medium text-gray-700">
+                                  {new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                </th>
+                              ))}
+                              <th className="text-center py-2 px-2 font-medium text-gray-700 bg-gray-200">Total</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {usageSummary.pageVisits.map((item, index) => (
-                              <tr key={index} className="border-b border-gray-200">
-                                <td className="py-2 px-3 text-sm text-gray-900">{item.location}</td>
-                                <td className="py-2 px-3 text-sm text-gray-900 text-right">{item.count}</td>
+                            {usageSummary.locationTotals.map((locationTotal, idx) => (
+                              <tr key={idx} className="border-b border-gray-200">
+                                <td className="py-2 px-2 text-gray-900 sticky left-0 bg-gray-50 z-10 font-medium">
+                                  {locationTotal.location}
+                                </td>
+                                {usageSummary.gridData.map((day) => {
+                                  const locationData = day.locations.find(l => l.location === locationTotal.location);
+                                  return (
+                                    <td key={day.date} className="py-2 px-2 text-center text-gray-900">
+                                      {locationData?.pageVisits || 0}
+                                    </td>
+                                  );
+                                })}
+                                <td className="py-2 px-2 text-center text-gray-900 font-semibold bg-gray-200">
+                                  {locationTotal.pageVisits}
+                                </td>
                               </tr>
                             ))}
+                            <tr className="border-t-2 border-gray-400 bg-gray-200">
+                              <td className="py-2 px-2 font-semibold text-gray-900 sticky left-0 bg-gray-200 z-10">
+                                Day Total
+                              </td>
+                              {usageSummary.gridData.map((day) => (
+                                <td key={day.date} className="py-2 px-2 text-center font-semibold text-gray-900">
+                                  {day.dayTotal.pageVisits}
+                                </td>
+                              ))}
+                              <td className="py-2 px-2 text-center font-bold text-gray-900 bg-gray-300">
+                                {usageSummary.totals.pageVisits}
+                              </td>
+                            </tr>
                           </tbody>
                         </table>
                       </div>
                     )}
                   </div>
 
-                  {/* Clicks Section */}
+                  {/* Clicks Grid */}
                   <div>
                     <h4 className="text-md font-semibold mb-3 text-gray-800">Clicks</h4>
                     {logsLoading ? (
                       <div className="text-gray-500">Loading...</div>
-                    ) : usageSummary.clicks.length === 0 ? (
+                    ) : usageSummary.gridData.length === 0 ? (
                       <div className="text-gray-500">No clicks found</div>
                     ) : (
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <table className="min-w-full">
+                      <div className="bg-gray-50 rounded-lg p-4 overflow-x-auto">
+                        <table className="min-w-full text-xs">
                           <thead>
                             <tr className="border-b border-gray-300">
-                              <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Location</th>
-                              <th className="text-right py-2 px-3 text-sm font-medium text-gray-700">Count</th>
+                              <th className="text-left py-2 px-2 font-medium text-gray-700 sticky left-0 bg-gray-50 z-10">Location</th>
+                              {usageSummary.gridData.map((day) => (
+                                <th key={day.date} className="text-center py-2 px-2 font-medium text-gray-700">
+                                  {new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                </th>
+                              ))}
+                              <th className="text-center py-2 px-2 font-medium text-gray-700 bg-gray-200">Total</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {usageSummary.clicks.map((item, index) => (
-                              <tr key={index} className="border-b border-gray-200">
-                                <td className="py-2 px-3 text-sm text-gray-900">{item.location}</td>
-                                <td className="py-2 px-3 text-sm text-gray-900 text-right">{item.count}</td>
+                            {usageSummary.locationTotals.map((locationTotal, idx) => (
+                              <tr key={idx} className="border-b border-gray-200">
+                                <td className="py-2 px-2 text-gray-900 sticky left-0 bg-gray-50 z-10 font-medium">
+                                  {locationTotal.location}
+                                </td>
+                                {usageSummary.gridData.map((day) => {
+                                  const locationData = day.locations.find(l => l.location === locationTotal.location);
+                                  return (
+                                    <td key={day.date} className="py-2 px-2 text-center text-gray-900">
+                                      {locationData?.clicks || 0}
+                                    </td>
+                                  );
+                                })}
+                                <td className="py-2 px-2 text-center text-gray-900 font-semibold bg-gray-200">
+                                  {locationTotal.clicks}
+                                </td>
                               </tr>
                             ))}
+                            <tr className="border-t-2 border-gray-400 bg-gray-200">
+                              <td className="py-2 px-2 font-semibold text-gray-900 sticky left-0 bg-gray-200 z-10">
+                                Day Total
+                              </td>
+                              {usageSummary.gridData.map((day) => (
+                                <td key={day.date} className="py-2 px-2 text-center font-semibold text-gray-900">
+                                  {day.dayTotal.clicks}
+                                </td>
+                              ))}
+                              <td className="py-2 px-2 text-center font-bold text-gray-900 bg-gray-300">
+                                {usageSummary.totals.clicks}
+                              </td>
+                            </tr>
                           </tbody>
                         </table>
                       </div>
                     )}
                   </div>
                 </div>
-                
-                {/* Subtotals */}
-                {!logsLoading && (usageSummary.pageVisits.length > 0 || usageSummary.clicks.length > 0) && (
-                  <div className="mt-6 pt-4 border-t border-gray-300">
-                    <div className="flex justify-end space-x-8">
-                      <div className="text-right">
-                        <span className="text-sm font-medium text-gray-700">Total Page Visits: </span>
-                        <span className="text-sm font-semibold text-gray-900">
-                          {usageSummary.pageVisits.reduce((sum, item) => sum + item.count, 0).toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-medium text-gray-700">Total Clicks: </span>
-                        <span className="text-sm font-semibold text-gray-900">
-                          {usageSummary.clicks.reduce((sum, item) => sum + item.count, 0).toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
