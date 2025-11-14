@@ -32,6 +32,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <meta name="format-detection" content="telephone=no" />
         <link rel="icon" href="/favicon.ico" />
         <link rel="icon" href="/basketball-favicon.png" type="image/png" />
         <link rel="shortcut icon" href="/favicon.ico" />
