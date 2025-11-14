@@ -60,7 +60,6 @@ export default function FinalFourChampionship({
   onEntryNameChange,
   siteConfig,
   existingBracketNames = [],
-  currentBracketId
 }: FinalFourChampionshipProps) {
   
   const handleTeamClick = (game: TournamentGame, team: Record<string, unknown>) => {
@@ -68,7 +67,7 @@ export default function FinalFourChampionship({
     onPick(game.id, team.id as string);
   };
 
-  const renderTeam = (team: Record<string, unknown> | undefined, game: TournamentGame, isTeam1: boolean) => {
+  const renderTeam = (team: Record<string, unknown> | undefined, game: TournamentGame) => {
     // Always render a slot, even if no team is assigned yet
     if (!team) {
       return (

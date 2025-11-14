@@ -9,8 +9,6 @@ import { usageLogger } from '@/lib/usageLogger';
  * Usage: useUsageLogger('Home') in a page component
  */
 export function useUsageLogger(location: string) {
-  const { data: session } = useSession();
-
   useEffect(() => {
     // Log page visit
     usageLogger.log('Page Visit', location);

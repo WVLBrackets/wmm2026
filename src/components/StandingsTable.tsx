@@ -222,7 +222,7 @@ export default function StandingsTable() {
         if (siteConfig.standingsYear) {
           setStandingsYear(siteConfig.standingsYear);
         }
-      } catch (error) {
+      } catch {
         // Error loading standings year - keep default fallback
         // Keep the default fallback value
       }
@@ -241,7 +241,7 @@ export default function StandingsTable() {
           setSelectedDay(days[0]);
           setDisplayDay(days[0]); // Also set display day
         }
-      } catch (error) {
+      } catch {
         // Error loading days - will retry on next render
       }
     };

@@ -591,7 +591,7 @@ export async function createBracket(userId: string, entryName: string, tieBreake
     if (config?.tournamentYear) {
       year = parseInt(config.tournamentYear);
     }
-  } catch (error) {
+  } catch {
     // Use fallback config if Google Sheets fails
     if (FALLBACK_CONFIG.tournamentYear) {
       year = parseInt(FALLBACK_CONFIG.tournamentYear);

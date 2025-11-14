@@ -151,11 +151,6 @@ interface PuppeteerRequest {
   continue: () => void;
 }
 
-interface PuppeteerResponse {
-  status: () => number;
-  url: () => string;
-  request: () => PuppeteerRequest;
-}
 
 interface Page {
   setContent: (html: string, options?: { waitUntil?: string }) => Promise<void>;
@@ -377,27 +372,6 @@ export async function generateBracketPDF(
       await browser.close();
     }
   }
-}
-
-/**
- * Get base URL for absolute image paths
- */
-function getBaseUrl(): string {
-  const vercelEnv = process.env.VERCEL_ENV;
-  let baseUrl: string;
-  
-  if (vercelEnv === 'production') {
-    baseUrl = process.env.NEXTAUTH_URL || 'https://wmm2026.vercel.app';
-  } else if (vercelEnv === 'preview') {
-    baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : process.env.NEXTAUTH_URL || 'http://localhost:3000';
-  } else {
-    baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-  }
-  
-  console.log(`[PDF Generation] Base URL determined: ${baseUrl} (VERCEL_ENV: ${vercelEnv}, VERCEL_URL: ${process.env.VERCEL_URL}, NEXTAUTH_URL: ${process.env.NEXTAUTH_URL})`);
-  return baseUrl;
 }
 
 /**

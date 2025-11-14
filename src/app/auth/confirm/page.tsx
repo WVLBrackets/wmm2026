@@ -40,7 +40,7 @@ function ConfirmEmailContent() {
           setStatus('error');
           setMessage(data.error || 'Failed to confirm email');
         }
-      } catch (error) {
+      } catch {
         setStatus('error');
         setMessage('An error occurred while confirming your email');
       }

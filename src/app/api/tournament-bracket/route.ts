@@ -6,7 +6,6 @@ import {
   getBracketsByUserId, 
   updateBracket, 
   getUserByEmail,
-  getAllBrackets 
 } from '@/lib/secureDatabase';
 import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
 import { sendSubmissionConfirmationEmail, processEmailAsync } from '@/lib/bracketEmailService';
@@ -88,7 +87,7 @@ export async function POST(request: NextRequest) {
       if (config?.tournamentYear) {
         tournamentYear = parseInt(config.tournamentYear);
       }
-    } catch (error) {
+    } catch {
       // Use fallback config if Google Sheets fails
       const { FALLBACK_CONFIG } = await import('@/lib/fallbackConfig');
       if (FALLBACK_CONFIG.tournamentYear) {
@@ -151,7 +150,7 @@ export async function POST(request: NextRequest) {
           if (siteConfig?.entryCost) {
             entryCost = siteConfig.entryCost;
           }
-        } catch (error) {
+        } catch {
           // Use default if config fails
           const { FALLBACK_CONFIG } = await import('@/lib/fallbackConfig');
           entryCost = FALLBACK_CONFIG.entryCost;

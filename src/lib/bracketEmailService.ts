@@ -6,7 +6,6 @@
 import { waitUntil } from '@vercel/functions';
 import { Bracket } from '@/lib/secureDatabase';
 import { SiteConfigData } from '@/lib/siteConfig';
-import { TournamentData, TournamentBracket } from '@/types/tournament';
 import { emailService } from '@/lib/emailService';
 import { renderEmailTemplate } from '@/lib/emailTemplate';
 import { generateBracketPDF } from '@/app/api/bracket/email-pdf/route';

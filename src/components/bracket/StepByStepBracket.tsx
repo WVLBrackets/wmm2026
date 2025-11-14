@@ -2,11 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { TournamentData, TournamentBracket, TournamentGame } from '@/types/tournament';
-import { getRegionalGames, updateBracketWithPicks } from '@/lib/bracketGenerator';
+import { updateBracketWithPicks } from '@/lib/bracketGenerator';
 import { SiteConfigData } from '@/lib/siteConfig';
 import RegionBracketLayout from './RegionBracketLayout';
 import FinalFourChampionship from './FinalFourChampionship';
-import { ChevronLeft, ChevronRight, CheckCircle, Circle, Save } from 'lucide-react';
 
 interface StepByStepBracketProps {
   tournamentData: TournamentData;
@@ -59,7 +58,7 @@ export default function StepByStepBracket({
   };
   
   const [currentStep, setCurrentStep] = useState(getInitialStep);
-  const [completedRegions, setCompletedRegions] = useState<Set<string>>(new Set());
+  const [completedRegions] = useState<Set<string>>(new Set());
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   // Track if this is the initial mount
@@ -102,13 +101,6 @@ export default function StepByStepBracket({
   const regions = tournamentData.regions;
   const totalSteps = regions.length + 1; // 4 regions + Final Four & Championship
   
-  const getStepName = (step: number) => {
-    if (step < regions.length) {
-      return `${regions[step].name} Region`;
-    } else {
-      return 'Final Four & Championship';
-    }
-  };
 
   const getStepProgress = (step: number) => {
     if (step < regions.length) {
@@ -180,7 +172,7 @@ export default function StepByStepBracket({
     onPick(game.id, team.id as string);
   };
 
-  const renderTeam = (team: Record<string, unknown>, game: TournamentGame, isTeam1: boolean) => {
+  const renderTeam = (team: Record<string, unknown>, game: TournamentGame) => {
     if (!team) return <div className="h-6 bg-gray-100 rounded"></div>;
     
     const isSelected = picks[game.id] === (team.id as string);

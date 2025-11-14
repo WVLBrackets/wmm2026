@@ -113,7 +113,7 @@ function extractTeamNameFromHTML(html: string): string | null {
         }
       }
     }
-  } catch (error) {
+  } catch {
     // If JSON parsing fails, continue to other methods
   }
 
@@ -197,7 +197,7 @@ function extractMascotFromHTML(html: string, teamName: string): string | null {
         return potentialMascot;
       }
     }
-  } catch (error) {
+  } catch {
     // If extraction fails, return null
   }
   
@@ -234,7 +234,7 @@ function extractLogoURLFromHTML(html: string): string | null {
         }
       }
     }
-  } catch (error) {
+  } catch {
     // Continue to other methods
   }
 

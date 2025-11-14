@@ -108,7 +108,7 @@ export default function AdminPage() {
   const [changingPasswordUserId, setChangingPasswordUserId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
-  const [passwordError, setPasswordError] = useState<string>('');
+  const [, setPasswordError] = useState<string>('');
   const [showEndpoints, setShowEndpoints] = useState(false);
   const [teamData, setTeamData] = useState<Record<string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }>>({});
   const [editingTeam, setEditingTeam] = useState<string | null>(null);
@@ -461,7 +461,7 @@ export default function AdminPage() {
         });
         
         console.log(`[Inactive Filter] Total: ${allEntries.length}, Active (true): ${activeEntries.length}, Inactive (false): ${inactiveEntries.length}, Other (${otherEntries.length}):`, 
-          otherEntries.map(([k, t]) => `${t.name}(${typeof t.active})`).slice(0, 5));
+          otherEntries.map(([, t]) => `${t.name}(${typeof t.active})`).slice(0, 5));
         
         // Show sample of first few inactive teams for debugging
         if (inactiveEntries.length > 0) {
@@ -475,7 +475,7 @@ export default function AdminPage() {
       } else if (teamActiveFilter === 'active') {
         // Filter to show only teams where active is true (or undefined/null which should be treated as active)
         filteredData = Object.fromEntries(
-          Object.entries(loadedData).filter(([_, team]) => team.active === true)
+          Object.entries(loadedData).filter(([, team]) => team.active === true)
         );
       }
       // 'all' filter doesn't need client-side filtering - show everything from API
@@ -536,19 +536,19 @@ export default function AdminPage() {
     });
 
     // Find duplicates (values that appear more than once)
-    Object.entries(nameCounts).forEach(([name, keys]) => {
+    Object.entries(nameCounts).forEach(([, keys]) => {
       if (keys.length > 1) {
         keys.forEach(k => duplicateIds.add(k));
       }
     });
 
-    Object.entries(keyCounts).forEach(([key, keys]) => {
+    Object.entries(keyCounts).forEach(([, keys]) => {
       if (keys.length > 1) {
         keys.forEach(k => duplicateIds.add(k));
       }
     });
 
-    Object.entries(idCounts).forEach(([id, keys]) => {
+    Object.entries(idCounts).forEach(([, keys]) => {
       if (keys.length > 1) {
         keys.forEach(k => duplicateIds.add(k));
       }

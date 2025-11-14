@@ -1,6 +1,4 @@
 import { NextAuthOptions } from 'next-auth';
-import type { JWT } from 'next-auth/jwt';
-import type { User, Session } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { verifyPassword } from './secureDatabase';
 
@@ -60,7 +58,7 @@ export const authOptions: NextAuthOptions = {
         if (urlObj.origin === baseUrlObj.origin) {
           return url;
         }
-      } catch (e) {
+      } catch {
         // If URL parsing fails, fallback to baseUrl
       }
       // Otherwise, redirect to base URL

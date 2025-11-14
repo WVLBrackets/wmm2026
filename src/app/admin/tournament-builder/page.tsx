@@ -567,7 +567,7 @@ export default function TournamentBuilderPage() {
                             value={(() => {
                               // Find team key that matches team1.id
                               if (!team1.id) return '';
-                              const teamEntry = teamList.find(([key, teamData]) => teamData.id === team1.id);
+                              const teamEntry = teamList.find(([, teamData]) => teamData.id === team1.id);
                               return teamEntry ? teamEntry[0] : '';
                             })()}
                             onChange={(e) => {
@@ -603,7 +603,7 @@ export default function TournamentBuilderPage() {
                             value={(() => {
                               // Find team key that matches team2.id
                               if (!team2.id) return '';
-                              const teamEntry = teamList.find(([key, teamData]) => teamData.id === team2.id);
+                              const teamEntry = teamList.find(([, teamData]) => teamData.id === team2.id);
                               return teamEntry ? teamEntry[0] : '';
                             })()}
                             onChange={(e) => {

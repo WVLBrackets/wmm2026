@@ -18,7 +18,7 @@ interface EnvironmentUsers {
 }
 
 export default function UsersAcrossEnvironmentsPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const [previewUsers, setPreviewUsers] = useState<EnvironmentUsers | null>(null);
   const [productionUsers, setProductionUsers] = useState<EnvironmentUsers | null>(null);

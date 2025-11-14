@@ -3,11 +3,11 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { getSiteConfig } from '@/config/site';
 import { SiteConfigData } from '@/lib/siteConfig';
 import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
-import { Home, Trophy, Info, Star, Menu, X, Vote, User, LogOut, Shield } from 'lucide-react';
+import { Home, Trophy, Info, Star, Menu, X, Vote, Shield } from 'lucide-react';
 import Image from 'next/image';
 
 const navigationItems = [

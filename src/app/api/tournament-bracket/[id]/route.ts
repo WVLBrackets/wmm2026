@@ -123,7 +123,7 @@ export async function PUT(
         if (config?.tournamentYear) {
           tournamentYear = parseInt(config.tournamentYear);
         }
-      } catch (error) {
+      } catch {
         // Use fallback config if Google Sheets fails
         if (FALLBACK_CONFIG.tournamentYear) {
           tournamentYear = parseInt(FALLBACK_CONFIG.tournamentYear);
@@ -191,7 +191,7 @@ export async function PUT(
             if (siteConfig?.entryCost) {
               entryCost = siteConfig.entryCost;
             }
-          } catch (error) {
+          } catch {
             entryCost = FALLBACK_CONFIG.entryCost;
           }
           

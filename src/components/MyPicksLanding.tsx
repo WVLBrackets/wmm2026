@@ -6,9 +6,7 @@ import { Trophy, Plus, Edit, Eye, Clock, CheckCircle, LogOut, Trash2, Copy, Prin
 import { signOut } from 'next-auth/react';
 import { TournamentData, TournamentBracket } from '@/types/tournament';
 import { SiteConfigData } from '@/lib/siteConfig';
-import Image from 'next/image';
 import { LoggedButton } from '@/components/LoggedButton';
-import { usageLogger } from '@/lib/usageLogger';
 
 interface Bracket {
   id: string;
@@ -137,9 +135,6 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
     );
   };
 
-  const handleDeleteBracket = (bracketId: string) => {
-    onDeleteBracket(bracketId);
-  };
 
   const handlePrintBracket = (bracket: Bracket) => {
     // Store bracket data in session storage for security
@@ -218,24 +213,6 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
       return 'bg-green-100 text-green-800';
     }
     return 'bg-yellow-100 text-yellow-800';
-  };
-
-  const getPicksCount = (picks: { [gameId: string]: string }) => {
-    return Object.keys(picks).length;
-  };
-
-  const getLastActivity = (bracket: Bracket) => {
-    const date = bracket.submittedAt || bracket.lastSaved;
-    if (!date) return 'Unknown';
-    
-    const activityDate = new Date(date);
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - activityDate.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) return 'Just now';
-    if (diffInHours < 24) return `${diffInHours}h ago`;
-    if (diffInHours < 48) return 'Yesterday';
-    return activityDate.toLocaleDateString();
   };
 
   // Get first name from full name
@@ -545,7 +522,6 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                     return nameA.localeCompare(nameB);
                   }).map((bracket, index) => {
                     const bracketData = bracket as unknown as Record<string, unknown>;
-                    const year = (bracketData.year as number) || new Date().getFullYear();
                     const number = (bracketData.bracketNumber as number) || 0;
                     const progress = calculateProgress(bracket.picks);
                     const finalFour = getFinalFourTeams(bracket.picks);

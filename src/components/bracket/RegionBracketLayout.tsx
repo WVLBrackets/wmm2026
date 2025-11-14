@@ -46,8 +46,6 @@ export default function RegionBracketLayout({
   canProceed = false,
   currentStep = 0,
   totalSteps = 5,
-  bracketNumber,
-  year,
   nextButtonText = 'Next',
   onStepClick,
   isStepComplete,
@@ -63,7 +61,7 @@ export default function RegionBracketLayout({
     onPick(game.id, team.id as string);
   };
 
-  const renderTeam = (team: Record<string, unknown> | undefined, game: TournamentGame, isTeam1: boolean, round: string) => {
+  const renderTeam = (team: Record<string, unknown> | undefined, game: TournamentGame) => {
     // Always render a slot, even if no team is assigned yet
     if (!team) {
       return (
@@ -104,8 +102,8 @@ export default function RegionBracketLayout({
     // Always render both team slots, even if teams are not yet determined
     return (
       <div key={game.id} className="border border-gray-300 rounded p-1 space-y-0.5 mb-1 w-full">
-        {renderTeam(game.team1 as unknown as Record<string, unknown> | undefined, game, true, round)}
-        {renderTeam(game.team2 as unknown as Record<string, unknown> | undefined, game, false, round)}
+        {renderTeam(game.team1 as unknown as Record<string, unknown> | undefined, game)}
+        {renderTeam(game.team2 as unknown as Record<string, unknown> | undefined, game)}
       </div>
     );
   };
