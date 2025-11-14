@@ -62,20 +62,33 @@ export const authOptions: NextAuthOptions = {
           }
 
           console.log('Auth: Attempting to verify password for:', email);
-          const user = await verifyPassword(email, password);
-          if (!user) {
+          const result = await verifyPassword(email, password);
+          if (!result.user) {
+            if (result.error === 'not_confirmed') {
+              console.log('Auth: User email not confirmed for:', credentials.email);
+              // Return a special error object that NextAuth will pass through
+              // We'll check for this in the signin page
+              const error = new Error('EMAIL_NOT_CONFIRMED');
+              // @ts-expect-error - Adding custom property to error
+              error.code = 'EMAIL_NOT_CONFIRMED';
+              throw error;
+            }
             console.log('Auth: User not found or password invalid for:', credentials.email);
             return null;
           }
 
-          console.log('Auth: User authenticated successfully:', user.email);
+          console.log('Auth: User authenticated successfully:', result.user.email);
           return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
+            id: result.user.id,
+            email: result.user.email,
+            name: result.user.name,
           };
         } catch (error) {
           console.error('Auth: Error during authorization:', error);
+          // Re-throw EMAIL_NOT_CONFIRMED errors so they can be caught
+          if (error instanceof Error && (error.message === 'EMAIL_NOT_CONFIRMED' || (error as { code?: string }).code === 'EMAIL_NOT_CONFIRMED')) {
+            throw error;
+          }
           return null;
         }
       }

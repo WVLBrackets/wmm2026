@@ -86,6 +86,9 @@ export interface SiteConfigData {
   acctConfirmSuccessMessage1?: string;
   acctConfirmSuccessButton1?: string;
   acctConfirmSuccessButton2?: string;
+  // Sign-in error messages
+  emailFailInvalid?: string;
+  emailFailNotConfirmed?: string;
   // Print bracket trophy icon
   printBracketTrophy?: string;
 }
@@ -355,6 +358,12 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
             break;
           case 'acct_confirm_success_button2':
             config.acctConfirmSuccessButton2 = value;
+            break;
+          case 'email_fail_invalid':
+            config.emailFailInvalid = value;
+            break;
+          case 'email_fail_not_confirmed':
+            config.emailFailNotConfirmed = value;
             break;
           case 'print_bracket_trophy':
             config.printBracketTrophy = value;

@@ -46,7 +46,12 @@ export default function SignInPage() {
       });
 
       if (result?.error) {
-        setError('Invalid email or password');
+        // Check if it's an email not confirmed error
+        if (result.error === 'EMAIL_NOT_CONFIRMED' || result.error.includes('EMAIL_NOT_CONFIRMED')) {
+          setError(siteConfig?.emailFailNotConfirmed || FALLBACK_CONFIG.emailFailNotConfirmed || 'Please confirm your email address before signing in.');
+        } else {
+          setError(siteConfig?.emailFailInvalid || FALLBACK_CONFIG.emailFailInvalid || 'Invalid email or password');
+        }
       } else {
         // Get the session to verify login
         const session = await getSession();
@@ -54,8 +59,13 @@ export default function SignInPage() {
           router.push('/bracket');
         }
       }
-    } catch {
-      setError('An error occurred. Please try again.');
+    } catch (error) {
+      // Check if it's an email not confirmed error
+      if (error instanceof Error && error.message === 'EMAIL_NOT_CONFIRMED') {
+        setError(siteConfig?.emailFailNotConfirmed || FALLBACK_CONFIG.emailFailNotConfirmed || 'Please confirm your email address before signing in.');
+      } else {
+        setError('An error occurred. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }

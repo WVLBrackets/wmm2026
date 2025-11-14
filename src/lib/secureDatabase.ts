@@ -490,20 +490,26 @@ export async function resetPassword(token: string, newPassword: string): Promise
   }
 }
 
-export async function verifyPassword(email: string, password: string): Promise<User | null> {
+export async function verifyPassword(email: string, password: string): Promise<{ user: User | null; error?: 'not_confirmed' | 'invalid' }> {
   try {
     const user = await getUserByEmail(email);
     if (!user) {
-      return null;
+      return { user: null, error: 'invalid' };
     }
 
     if (!user.emailConfirmed) {
-      return null;
+      // Check password first to avoid revealing if email exists
+      const isValid = await bcrypt.compare(password, user.password);
+      if (isValid) {
+        return { user: null, error: 'not_confirmed' };
+      }
+      // If password is wrong, return invalid (don't reveal email exists but not confirmed)
+      return { user: null, error: 'invalid' };
     }
 
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) {
-      return null;
+      return { user: null, error: 'invalid' };
     }
 
     // Update last_login timestamp on successful login
@@ -556,10 +562,10 @@ export async function verifyPassword(email: string, password: string): Promise<U
       console.error('[verifyPassword] Error details:', updateError instanceof Error ? updateError.message : String(updateError));
     }
 
-    return user;
+    return { user };
   } catch (error) {
     console.error('Error verifying password:', error);
-    return null;
+    return { user: null, error: 'invalid' };
   }
 }
 
