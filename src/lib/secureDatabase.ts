@@ -737,7 +737,6 @@ export async function getAllUsers(): Promise<Omit<User, 'password'>[]> {
     
     const users = result.rows.map((row: Record<string, unknown>) => {
       const lastLoginValue = row.last_login;
-      console.log(`[getAllUsers] User ${row.email}: last_login raw value:`, lastLoginValue, `type:`, typeof lastLoginValue);
       return {
         id: row.id as string,
         email: row.email as string,
@@ -748,12 +747,10 @@ export async function getAllUsers(): Promise<Omit<User, 'password'>[]> {
         environment: row.environment as string,
       };
     });
-    console.log(`[getAllUsers] Returning ${users.length} users, last_login values:`, users.map(u => ({ email: u.email, lastLogin: u.lastLogin })));
     return users;
   } catch (error) {
     // If last_login column doesn't exist yet, try without it
     if (error instanceof Error && error.message.includes('last_login')) {
-      console.log('[getAllUsers] last_login column not found, fetching without it');
       const result = await sql`
         SELECT id, email, name, email_confirmed, created_at, environment
         FROM users 
