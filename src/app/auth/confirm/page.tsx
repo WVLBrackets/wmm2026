@@ -12,7 +12,6 @@ import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 function ConfirmEmailContent() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
-  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -60,9 +59,8 @@ function ConfirmEmailContent() {
 
         if (response.ok) {
           setStatus('success');
-          const configMessage = siteConfig?.acctConfirmSuccessMessage1 || FALLBACK_CONFIG.acctConfirmSuccessMessage1;
+          const configMessage = siteConfig?.acctConfirmSuccessMessage1 || FALLBACK_CONFIG.acctConfirmSuccessMessage1 || '';
           setMessage(configMessage.replace(/{email}/g, data.userEmail || ''));
-          setUserEmail(data.userEmail);
           
           // Auto-sign in the user using the temporary sign-in token
           if (data.userEmail && data.signInToken) {
