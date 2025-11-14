@@ -44,9 +44,11 @@ export async function sendSubmissionConfirmationEmail(
 ): Promise<void> {
   console.log('[Bracket Email] Starting submission confirmation email process...');
   
+  // Calculate tournament year outside try block so it's available in catch block
+  const tournamentYear = siteConfig?.tournamentYear || bracket.year?.toString() || new Date().getFullYear().toString();
+  
   try {
     // Load tournament data
-    const tournamentYear = siteConfig?.tournamentYear || bracket.year?.toString() || new Date().getFullYear().toString();
     console.log('[Bracket Email] Loading tournament data for year:', tournamentYear);
     
     const { loadTournamentData } = await import('@/lib/tournamentLoader');
