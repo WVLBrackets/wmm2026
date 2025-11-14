@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
@@ -121,10 +121,30 @@ export default function SignUpPage() {
                   {siteConfig?.acctCreateSuccessHeader || FALLBACK_CONFIG.acctCreateSuccessHeader}
                 </h2>
                 <p className="mt-2 text-center text-sm text-gray-600">
-                  {(siteConfig?.acctCreateSuccessMessage1 || FALLBACK_CONFIG.acctCreateSuccessMessage1 || '').replace(/{email}/g, email)}
+                  {(() => {
+                    const msg = (siteConfig?.acctCreateSuccessMessage1 || FALLBACK_CONFIG.acctCreateSuccessMessage1 || '').replace(/{email}/g, email);
+                    const parts = msg.split('||');
+                    if (parts.length === 1) return msg;
+                    return parts.map((part, index) => (
+                      <React.Fragment key={index}>
+                        {part}
+                        {index < parts.length - 1 && <br />}
+                      </React.Fragment>
+                    ));
+                  })()}
                 </p>
                 <p className="mt-2 text-center text-sm text-gray-600">
-                  {siteConfig?.acctCreateSuccessMessage2 || FALLBACK_CONFIG.acctCreateSuccessMessage2 || ''}
+                  {(() => {
+                    const msg = siteConfig?.acctCreateSuccessMessage2 || FALLBACK_CONFIG.acctCreateSuccessMessage2 || '';
+                    const parts = msg.split('||');
+                    if (parts.length === 1) return msg;
+                    return parts.map((part, index) => (
+                      <React.Fragment key={index}>
+                        {part}
+                        {index < parts.length - 1 && <br />}
+                      </React.Fragment>
+                    ));
+                  })()}
                 </p>
                 <div className="mt-6">
                   <Link

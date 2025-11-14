@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CheckCircle, XCircle } from 'lucide-react';
@@ -106,7 +106,16 @@ function ConfirmEmailContent() {
                 {siteConfig?.acctConfirmSuccessHeader || FALLBACK_CONFIG.acctConfirmSuccessHeader}
               </h2>
               <p className="text-sm text-gray-600 mb-6">
-                {message}
+                {(() => {
+                  const parts = message.split('||');
+                  if (parts.length === 1) return message;
+                  return parts.map((part, index) => (
+                    <React.Fragment key={index}>
+                      {part}
+                      {index < parts.length - 1 && <br />}
+                    </React.Fragment>
+                  ));
+                })()}
               </p>
               <div className="space-y-3">
                 {/* Button 2 first (Go to My Picks) */}
@@ -178,7 +187,17 @@ function ConfirmEmailContent() {
                 {siteConfig?.acctConfirmFailureHeader || FALLBACK_CONFIG.acctConfirmFailureHeader}
               </h2>
               <p className="text-sm text-gray-600 mb-6">
-                {siteConfig?.acctConfirmFailureMessage1 || FALLBACK_CONFIG.acctConfirmFailureMessage1 || message}
+                {(() => {
+                  const msg = siteConfig?.acctConfirmFailureMessage1 || FALLBACK_CONFIG.acctConfirmFailureMessage1 || message;
+                  const parts = msg.split('||');
+                  if (parts.length === 1) return msg;
+                  return parts.map((part, index) => (
+                    <React.Fragment key={index}>
+                      {part}
+                      {index < parts.length - 1 && <br />}
+                    </React.Fragment>
+                  ));
+                })()}
               </p>
               <div className="space-y-3">
                 {/* Button 1 (Try Signing Up Again) */}
