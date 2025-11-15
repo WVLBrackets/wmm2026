@@ -2961,14 +2961,30 @@ export default function AdminPage() {
             {logsTab === 'usage' && (
               <div>
                 <div className="mb-4 flex justify-between items-center">
-                  <h3 className="text-lg font-semibold">Usage Logs</h3>
-                  <button
-                    onClick={handleDeleteLogs}
-                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-                    disabled={logsLoading || deletingLogs || usageLogs.length === 0}
-                  >
-                    {deletingLogs ? 'Deleting...' : 'Delete'}
-                  </button>
+                  <h3 className="text-lg font-semibold">
+                    Usage Logs {usageLogs.length > 0 && !loadAllLogs && `(${usageLogs.length} of many)`}
+                  </h3>
+                  <div className="flex gap-2">
+                    {!loadAllLogs && (
+                      <button
+                        onClick={() => {
+                          setLoadAllLogs(true);
+                          loadUsageLogs();
+                        }}
+                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                        disabled={logsLoading || deletingLogs}
+                      >
+                        {logsLoading ? 'Loading...' : 'Load All'}
+                      </button>
+                    )}
+                    <button
+                      onClick={handleDeleteLogs}
+                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                      disabled={logsLoading || deletingLogs || usageLogs.length === 0}
+                    >
+                      {deletingLogs ? 'Deleting...' : 'Delete'}
+                    </button>
+                  </div>
                 </div>
                 {logsError && (
                   <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
