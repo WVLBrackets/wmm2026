@@ -77,6 +77,7 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<'brackets' | 'users' | 'data' | 'logs'>('users');
   const [logsTab, setLogsTab] = useState<'summary' | 'usage' | 'error'>('summary');
   const [usageLogs, setUsageLogs] = useState<UsageLog[]>([]);
+  const [loadAllLogs, setLoadAllLogs] = useState(false);
   const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
   const [usageSummary, setUsageSummary] = useState<{
     gridData: Array<{
@@ -233,7 +234,7 @@ export default function AdminPage() {
     } finally {
       setLogsLoading(false);
     }
-  }, [logStartDate, logEndDate, logUsernameFilter, logEventTypeFilter, logLocationFilter]);
+  }, [logStartDate, logEndDate, logUsernameFilter, logEventTypeFilter, logLocationFilter, loadAllLogs]);
 
   const loadErrorLogs = useCallback(async () => {
     try {
@@ -322,14 +323,9 @@ export default function AdminPage() {
       return;
     }
     
-    // SECURITY: Require both date filters to prevent accidental deletion of all logs
-    if (!logStartDate || !logEndDate) {
-      alert('Please select both start and end date filters before deleting logs. This prevents accidental deletion of all logs.');
-      return;
-    }
-    
-    const dateRange = `${logStartDate} to ${logEndDate}`;
-    const confirmMessage = `Are you sure you want to delete ${count} ${logType} log${count !== 1 ? 's' : ''} from ${dateRange}? This action cannot be undone.`;
+    // Show confirmation with count of records to be deleted
+    const dateRange = (logStartDate && logEndDate) ? ` from ${logStartDate} to ${logEndDate}` : '';
+    const confirmMessage = `Are you sure you want to delete ${count} ${logType} log${count !== 1 ? 's' : ''}${dateRange}? This action cannot be undone.`;
     if (!confirm(confirmMessage)) {
       return;
     }
@@ -338,11 +334,15 @@ export default function AdminPage() {
       setDeletingLogs(true);
       
       const params = new URLSearchParams();
-      // Convert datetime-local to UTC ISO strings for server
-      const startDateUTC = new Date(logStartDate).toISOString();
-      const endDateUTC = new Date(logEndDate).toISOString();
-      params.append('startDate', startDateUTC);
-      params.append('endDate', endDateUTC);
+      // Only include date filters if they are set
+      if (logStartDate) {
+        const startDateUTC = new Date(logStartDate).toISOString();
+        params.append('startDate', startDateUTC);
+      }
+      if (logEndDate) {
+        const endDateUTC = new Date(logEndDate).toISOString();
+        params.append('endDate', endDateUTC);
+      }
       
       const response = await fetch(`/api/admin/logs/${logType}/delete?${params.toString()}`, {
         method: 'DELETE',
