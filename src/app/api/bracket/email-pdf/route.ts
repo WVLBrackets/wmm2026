@@ -278,7 +278,7 @@ export async function generateBracketPDF(
     const launchStartTime = Date.now();
     
     const launchPromise = puppeteer.launch({
-      args: isVercel ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox'],
+      args: chromium.args,
       defaultViewport: chromium.defaultViewport,
       executablePath: executablePath,
       headless: chromium.headless,
