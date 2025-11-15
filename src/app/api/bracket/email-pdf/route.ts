@@ -403,7 +403,6 @@ function getLogoAsBase64(logoPath: string | null | undefined): string {
     }
     
     const dataUrl = `data:${mimeType};base64,${base64}`;
-    console.log(`[PDF Generation] Logo converted to base64: ${logoPath} (${imageBuffer.length} bytes)`);
     return dataUrl;
   } catch (error) {
     console.error(`[PDF Generation] Error converting logo to base64 (${logoPath}):`, error);
