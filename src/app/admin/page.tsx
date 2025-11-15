@@ -1863,103 +1863,109 @@ export default function AdminPage() {
         {activeTab === 'brackets' && (
           <div className="bg-white rounded-lg shadow-lg p-6">
             {/* Filters */}
-            <div className="mb-6 flex items-center space-x-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Filter by User
-                </label>
-                <select
-                  value={filterUser}
-                  onChange={(e) => setFilterUser(e.target.value)}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                >
-                  <option value="all">All Users</option>
-                  {users.map(user => (
-                    <option key={user.id} value={user.id}>
-                      {user.name} ({user.email})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Filter by Status
-                </label>
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                >
-                  <option value="all">All Statuses</option>
-                  <option value="submitted">Submitted</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="deleted">Deleted</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Filter by Year
-                </label>
-                <select
-                  value={filterYear}
-                  onChange={(e) => setFilterYear(e.target.value)}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                >
-                  <option value="all">All Years</option>
-                  {Array.from(new Set(brackets.map(b => b.year).filter(y => y !== undefined && y !== null)))
-                    .sort((a, b) => (b || 0) - (a || 0))
-                    .map(year => (
-                      <option key={year} value={year}>
-                        {year}
+            <div className="mb-6">
+              <div className="flex items-center space-x-4 mb-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Filter by User
+                  </label>
+                  <select
+                    value={filterUser}
+                    onChange={(e) => setFilterUser(e.target.value)}
+                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  >
+                    <option value="all">All Users</option>
+                    {users.map(user => (
+                      <option key={user.id} value={user.id}>
+                        {user.name} ({user.email})
                       </option>
                     ))}
-                </select>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Filter by Status
+                  </label>
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  >
+                    <option value="all">All Statuses</option>
+                    <option value="submitted">Submitted</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="deleted">Deleted</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Filter by Year
+                  </label>
+                  <select
+                    value={filterYear}
+                    onChange={(e) => setFilterYear(e.target.value)}
+                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  >
+                    <option value="all">All Years</option>
+                    {Array.from(new Set(brackets.map(b => b.year).filter(y => y !== undefined && y !== null)))
+                      .sort((a, b) => (b || 0) - (a || 0))
+                      .map(year => (
+                        <option key={year} value={year}>
+                          {year}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Filter by Created Date
+                  </label>
+                  <input
+                    type="date"
+                    value={filterCreatedDate}
+                    onChange={(e) => setFilterCreatedDate(e.target.value)}
+                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Filter by Updated Date
+                  </label>
+                  <input
+                    type="date"
+                    value={filterUpdatedDate}
+                    onChange={(e) => setFilterUpdatedDate(e.target.value)}
+                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+                
+                <div className="ml-auto">
+                  <button
+                    onClick={() => {
+                      setFilterUser('all');
+                      setFilterStatus('all');
+                      setFilterYear('all');
+                      setFilterCreatedDate('');
+                      setFilterUpdatedDate('');
+                    }}
+                    className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-600 text-white hover:bg-gray-700"
+                    title="Clear all filters"
+                  >
+                    Clear Filters
+                  </button>
+                </div>
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Filter by Created Date
-                </label>
-                <input
-                  type="date"
-                  value={filterCreatedDate}
-                  onChange={(e) => setFilterCreatedDate(e.target.value)}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Filter by Updated Date
-                </label>
-                <input
-                  type="date"
-                  value={filterUpdatedDate}
-                  onChange={(e) => setFilterUpdatedDate(e.target.value)}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                />
-              </div>
-              
-              <div className="ml-auto flex gap-2">
-                <button
-                  onClick={() => {
-                    setFilterUser('all');
-                    setFilterStatus('all');
-                    setFilterYear('all');
-                    setFilterCreatedDate('');
-                    setFilterUpdatedDate('');
-                  }}
-                  className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-600 text-white hover:bg-gray-700"
-                  title="Clear all filters"
-                >
-                  Clear Filters
-                </button>
+              {/* Action buttons on second line */}
+              <div className="flex gap-2">
                 <button
                   onClick={handleExportBrackets}
                   disabled={filteredBrackets.length === 0 || isExporting}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                  className={`px-3 py-1.5 rounded text-sm font-medium ${
                     filteredBrackets.length === 0 || isExporting
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -1968,12 +1974,12 @@ export default function AdminPage() {
                 >
                   {isExporting ? (
                     <>
-                      <span className="animate-spin inline-block mr-2">⏳</span>
+                      <span className="animate-spin inline-block mr-1">⏳</span>
                       Exporting...
                     </>
                   ) : (
                     <>
-                      <Download className="w-4 h-4 inline mr-2" />
+                      <Download className="w-4 h-4 inline mr-1" />
                       Extract ({filteredBrackets.length})
                     </>
                   )}
@@ -1981,14 +1987,14 @@ export default function AdminPage() {
                 <button
                   onClick={handleDeleteAllFiltered}
                   disabled={filteredBrackets.length === 0}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                  className={`px-3 py-1.5 rounded text-sm font-medium ${
                     filteredBrackets.length === 0
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       : 'bg-red-600 text-white hover:bg-red-700'
                   }`}
                   title={filteredBrackets.length === 0 ? 'No brackets to delete' : `Delete ${filteredBrackets.length} filtered bracket(s)`}
                 >
-                  <Trash2 className="w-4 h-4 inline mr-2" />
+                  <Trash2 className="w-4 h-4 inline mr-1" />
                   Delete All ({filteredBrackets.length})
                 </button>
               </div>
