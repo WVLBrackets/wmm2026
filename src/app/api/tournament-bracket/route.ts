@@ -45,20 +45,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate tie breaker for submitted brackets
-    if (body.tieBreaker) {
-      const tieBreakerNum = Number(body.tieBreaker);
-      if (isNaN(tieBreakerNum) || tieBreakerNum < 100 || tieBreakerNum > 300) {
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: 'Tie breaker must be a number between 100 and 300'
-          },
-          { status: 400 }
-        );
-      }
-    }
-
     // Validate picks structure
     const picks = body.picks;
     if (typeof picks !== 'object' || Object.keys(picks).length === 0) {

@@ -131,7 +131,9 @@ export default function StepByStepBracket({
       // Final Four & Championship - need all regions complete, all Final Four games picked, and tie breaker filled
       const allRegionsComplete = regions.every(region => isStepComplete(regions.indexOf(region)));
       const finalFourComplete = isStepComplete(regions.length);
-      const tieBreakerValid = Boolean(tieBreaker && !isNaN(Number(tieBreaker)) && Number(tieBreaker) >= 50 && Number(tieBreaker) <= 500);
+      const low = siteConfig?.tieBreakerLow ?? 50;
+      const high = siteConfig?.tieBreakerHigh ?? 500;
+      const tieBreakerValid = Boolean(tieBreaker && !isNaN(Number(tieBreaker)) && Number(tieBreaker) >= low && Number(tieBreaker) <= high);
       const entryNameValid = entryName.trim().length > 0;
       
       return allRegionsComplete && finalFourComplete && tieBreakerValid && entryNameValid;

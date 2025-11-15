@@ -96,6 +96,9 @@ export interface SiteConfigData {
   emailFailNotConfirmed?: string;
   // Print bracket trophy icon
   printBracketTrophy?: string;
+  // Tie breaker validation
+  tieBreakerLow?: number;
+  tieBreakerHigh?: number;
 }
 
 // Function to fetch site config from Google Sheets
@@ -261,6 +264,12 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
             break;
           case 'final_message_tie_breaker_invalid':
             config.finalMessageTieBreakerInvalid = value;
+            break;
+          case 'tie_breaker_low':
+            config.tieBreakerLow = parseInt(value, 10) || undefined;
+            break;
+          case 'tie_breaker_high':
+            config.tieBreakerHigh = parseInt(value, 10) || undefined;
             break;
           case 'final_message_duplicate_name':
             config.finalMessageDuplicateName = value;

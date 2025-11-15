@@ -95,6 +95,9 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   emailFailInvalid: 'Invalid email or password',
   emailFailNotConfirmed: 'Please confirm your email address before signing in. Check your email for a confirmation link.',
   // Print bracket trophy icon (default to trophy-icon.png)
-  printBracketTrophy: 'trophy-icon.png'
+  printBracketTrophy: 'trophy-icon.png',
+  // Tie breaker validation
+  tieBreakerLow: 50,
+  tieBreakerHigh: 500
 };
 

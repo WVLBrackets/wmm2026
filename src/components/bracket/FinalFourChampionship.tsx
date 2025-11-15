@@ -182,7 +182,9 @@ export default function FinalFourChampionship({
   const tieBreakerValid = () => {
     if (!tieBreaker) return false;
     const value = Number(tieBreaker);
-    return !isNaN(value) && value >= 50 && value <= 500;
+    const low = siteConfig?.tieBreakerLow ?? 50;
+    const high = siteConfig?.tieBreakerHigh ?? 500;
+    return !isNaN(value) && value >= low && value <= high;
   };
 
   const entryNameValid = () => {
@@ -215,9 +217,14 @@ export default function FinalFourChampionship({
     }
     
     if (!tieBreakerValid()) {
+      const low = siteConfig?.tieBreakerLow ?? 50;
+      const high = siteConfig?.tieBreakerHigh ?? 500;
+      const message = (siteConfig?.finalMessageTieBreakerInvalid || 'Tie breaker must be between {low} and {high}.')
+        .replace(/{low}/g, String(low))
+        .replace(/{high}/g, String(high));
       return {
         color: 'yellow',
-        message: siteConfig?.finalMessageTieBreakerInvalid || 'Tie breaker must be between 50 and 500.'
+        message
       };
     }
     
