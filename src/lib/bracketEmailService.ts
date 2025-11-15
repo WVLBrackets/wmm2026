@@ -219,6 +219,24 @@ export async function sendOnDemandPdfEmail(
     const pdfBuffer = await generateBracketPDF(bracket, bracketWithPicks, tournamentData, siteConfig);
     console.log('[Bracket Email] PDF generated, size:', pdfBuffer.length, 'bytes');
     
+    // Get all submitted brackets for this user to calculate counts (same logic as submission email)
+    const { getBracketsByUserId } = await import('@/lib/secureDatabase');
+    const allUserBrackets = await getBracketsByUserId(bracket.userId);
+    const submittedBrackets = allUserBrackets.filter(b => b.status === 'submitted' && b.year === parseInt(tournamentYear));
+    const submissionCount = submittedBrackets.length;
+    
+    // Get entry cost from config
+    let entryCost = 5; // Default
+    if (siteConfig?.entryCost) {
+      entryCost = siteConfig.entryCost;
+    } else {
+      // Use fallback if config doesn't have entryCost
+      const { FALLBACK_CONFIG } = await import('@/lib/fallbackConfig');
+      entryCost = FALLBACK_CONFIG.entryCost;
+    }
+    
+    const totalCost = submissionCount * entryCost;
+    
     // Render email template
     console.log('[Bracket Email] Rendering email template...');
     const entryName = bracket.entryName || `Bracket ${bracket.id}`;
@@ -228,6 +246,8 @@ export async function sendOnDemandPdfEmail(
       tournamentYear,
       siteName: siteConfig?.siteName || 'Warren\'s March Madness',
       bracketId: bracket.id.toString(),
+      submissionCount,
+      totalCost,
     }, 'pdf');
     console.log('[Bracket Email] Email template rendered');
     
