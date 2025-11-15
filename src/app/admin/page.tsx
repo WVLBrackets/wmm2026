@@ -91,6 +91,7 @@ export default function AdminPage() {
   const [logsTab, setLogsTab] = useState<'summary' | 'usage' | 'error' | 'email'>('summary');
   const [emailLogsView, setEmailLogsView] = useState<'summary' | 'detail'>('summary');
   const [usageLogs, setUsageLogs] = useState<UsageLog[]>([]);
+  const [allUsageLogs, setAllUsageLogs] = useState<UsageLog[]>([]); // Store all logs for dropdown options
   const [loadAllLogs, setLoadAllLogs] = useState(false);
   const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
   const [usageSummary, setUsageSummary] = useState<{
@@ -312,7 +313,14 @@ export default function AdminPage() {
         throw new Error(errorMsg);
       }
       
-      setUsageLogs(data.logs || []);
+      const logs = data.logs || [];
+      setUsageLogs(logs);
+      
+      // If no filters are applied, update allUsageLogs for dropdown options
+      // This ensures dropdowns always show all available options
+      if (!logUsernameFilter && !logEventTypeFilter && !logLocationFilter) {
+        setAllUsageLogs(logs);
+      }
     } catch (error) {
       console.error('Error loading usage logs:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to load usage logs';
@@ -3323,7 +3331,7 @@ export default function AdminPage() {
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                     >
                       <option value="">All Usernames</option>
-                      {Array.from(new Set(usageLogs.map(log => log.username).filter((u): u is string => Boolean(u)))).sort().map((username) => (
+                      {Array.from(new Set((allUsageLogs.length > 0 ? allUsageLogs : usageLogs).map(log => log.username).filter((u): u is string => Boolean(u)))).sort().map((username) => (
                         <option key={username} value={username}>
                           {username}
                         </option>
@@ -3340,7 +3348,7 @@ export default function AdminPage() {
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                     >
                       <option value="">All Event Types</option>
-                      {Array.from(new Set(usageLogs.map(log => log.eventType))).sort().map((eventType) => (
+                      {Array.from(new Set((allUsageLogs.length > 0 ? allUsageLogs : usageLogs).map(log => log.eventType))).sort().map((eventType) => (
                         <option key={eventType} value={eventType}>
                           {eventType}
                         </option>
@@ -3357,7 +3365,7 @@ export default function AdminPage() {
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                     >
                       <option value="">All Locations</option>
-                      {Array.from(new Set(usageLogs.map(log => log.location))).sort().map((location) => (
+                      {Array.from(new Set((allUsageLogs.length > 0 ? allUsageLogs : usageLogs).map(log => log.location))).sort().map((location) => (
                         <option key={location} value={location}>
                           {location}
                         </option>
