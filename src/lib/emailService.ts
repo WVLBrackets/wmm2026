@@ -51,8 +51,14 @@ class EmailService {
     // Check if email is configured
     if (!process.env.RESEND_API_KEY || !process.env.FROM_EMAIL) {
       // Without email config, disable email service
+      return {
+        provider: 'disabled',
+      };
+    }
+
+    // Use Resend for email
     return {
-      provider: 'disabled',
+      provider: 'resend',
     };
   }
 
