@@ -9,10 +9,16 @@ function getAuthSecret(): string {
   // During build/static generation, return a placeholder to avoid errors
   // The secret will be validated when actually used for authentication
   if (!secret) {
-    // Check if we're in a build context (static generation)
-    if (process.env.NEXT_PHASE === 'phase-production-build' || process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
-      // Return a placeholder during build - will be validated at runtime
-      return 'build-placeholder-secret';
+    // Check if we're in a build/static generation context
+    // During build, Next.js may try to serialize authOptions, triggering the getter
+    // We return a placeholder that will be replaced at runtime
+    const isBuildTime = 
+      process.env.NEXT_PHASE === 'phase-production-build' ||
+      (typeof process.env.NEXT_RUNTIME === 'undefined' && process.env.NODE_ENV === 'production');
+    
+    if (isBuildTime) {
+      // Return a placeholder during build - will be validated at runtime when actually used
+      return 'build-placeholder-secret-will-be-validated-at-runtime';
     }
     throw new Error('NEXTAUTH_SECRET environment variable is required');
   }

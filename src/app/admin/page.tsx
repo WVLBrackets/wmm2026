@@ -1,5 +1,9 @@
 'use client';
 
+// Force dynamic rendering to prevent static generation issues with auth
+// This ensures the page is always rendered server-side, avoiding build-time auth validation
+export const dynamic = 'force-dynamic';
+
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
