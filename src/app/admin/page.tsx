@@ -155,30 +155,52 @@ export default function AdminPage() {
     }
     
     // Filter by created date (match date only, ignore time)
+    // Handle timezone properly: date input gives YYYY-MM-DD in local timezone
     if (filterCreatedDate) {
-      const filterDate = new Date(filterCreatedDate);
-      filterDate.setHours(0, 0, 0, 0);
-      const nextDay = new Date(filterDate);
-      nextDay.setDate(nextDay.getDate() + 1);
+      // Parse the date string (YYYY-MM-DD) and create date range in local timezone
+      const [year, month, day] = filterCreatedDate.split('-').map(Number);
+      const filterDateStart = new Date(year, month - 1, day, 0, 0, 0, 0); // Local midnight start
+      const filterDateEnd = new Date(year, month - 1, day, 23, 59, 59, 999); // Local end of day
       
       filtered = filtered.filter(b => {
         const createdDate = new Date(b.createdAt);
-        createdDate.setHours(0, 0, 0, 0);
-        return createdDate >= filterDate && createdDate < nextDay;
+        // Compare dates by converting both to local date strings
+        const createdDateStr = createdDate.toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: '2-digit', 
+          day: '2-digit' 
+        });
+        const filterDateStr = filterDateStart.toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: '2-digit', 
+          day: '2-digit' 
+        });
+        return createdDateStr === filterDateStr;
       });
     }
     
     // Filter by updated date (match date only, ignore time)
+    // Handle timezone properly: date input gives YYYY-MM-DD in local timezone
     if (filterUpdatedDate) {
-      const filterDate = new Date(filterUpdatedDate);
-      filterDate.setHours(0, 0, 0, 0);
-      const nextDay = new Date(filterDate);
-      nextDay.setDate(nextDay.getDate() + 1);
+      // Parse the date string (YYYY-MM-DD) and create date range in local timezone
+      const [year, month, day] = filterUpdatedDate.split('-').map(Number);
+      const filterDateStart = new Date(year, month - 1, day, 0, 0, 0, 0); // Local midnight start
+      const filterDateEnd = new Date(year, month - 1, day, 23, 59, 59, 999); // Local end of day
       
       filtered = filtered.filter(b => {
         const updatedDate = new Date(b.updatedAt);
-        updatedDate.setHours(0, 0, 0, 0);
-        return updatedDate >= filterDate && updatedDate < nextDay;
+        // Compare dates by converting both to local date strings
+        const updatedDateStr = updatedDate.toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: '2-digit', 
+          day: '2-digit' 
+        });
+        const filterDateStr = filterDateStart.toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: '2-digit', 
+          day: '2-digit' 
+        });
+        return updatedDateStr === filterDateStr;
       });
     }
     
@@ -1796,6 +1818,19 @@ export default function AdminPage() {
               </div>
               
               <div className="ml-auto flex gap-2">
+                <button
+                  onClick={() => {
+                    setFilterUser('all');
+                    setFilterStatus('all');
+                    setFilterYear('all');
+                    setFilterCreatedDate('');
+                    setFilterUpdatedDate('');
+                  }}
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-600 text-white hover:bg-gray-700"
+                  title="Clear all filters"
+                >
+                  Clear Filters
+                </button>
                 <button
                   onClick={handleExportBrackets}
                   disabled={filteredBrackets.length === 0 || isExporting}
