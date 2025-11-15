@@ -134,8 +134,9 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt',
   },
-  secret: process.env.NEXTAUTH_SECRET || (() => {
-    throw new Error('NEXTAUTH_SECRET environment variable is required');
-  })(),
+  get secret() {
+    // Lazy evaluation: only check when secret is actually accessed
+    return getAuthSecret();
+  },
 };
 
