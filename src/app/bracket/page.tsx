@@ -453,7 +453,11 @@ function BracketContent() {
   };
 
   // Landing page handlers
-  const handleCreateNew = () => {
+  const handleCreateNew = async () => {
+    // Log New Bracket immediately when button is clicked (no bracket ID yet)
+    const { usageLogger } = await import('@/lib/usageLogger');
+    usageLogger.log('Click', 'New Bracket', null);
+    
     setEditingBracket(null);
     setPicks({});
     setEntryName(session?.user?.name || '');
@@ -532,7 +536,17 @@ function BracketContent() {
     await loadSubmittedBrackets(); // Reload brackets to show the newly submitted one
   };
 
-  const handleCloseBracket = () => {
+  const handleCloseBracket = async () => {
+    // Log Cancel button click with bracket ID if available
+    let bracketNumber: number | undefined;
+    if (editingBracket) {
+      const bracket = editingBracket as Record<string, unknown>;
+      bracketNumber = bracket.bracketNumber as number | undefined;
+    }
+    
+    const { usageLogger } = await import('@/lib/usageLogger');
+    usageLogger.log('Click', 'Cancel', bracketNumber ? String(bracketNumber).padStart(6, '0') : null);
+    
     handleBackToLanding();
   };
 
@@ -629,15 +643,9 @@ function BracketContent() {
         if (!editingBracket && data.data) {
           const newBracket = data.data as Record<string, unknown>;
           bracketNumber = newBracket.bracketNumber as number | undefined;
-          
-          // Log New Bracket with bracket ID after creation
-          if (bracketNumber) {
-            const { usageLogger } = await import('@/lib/usageLogger');
-            usageLogger.log('Click', 'New Bracket', String(bracketNumber).padStart(6, '0'));
-          }
         }
         
-        // Log the save action
+        // Log the save action (New Bracket was already logged when button was clicked)
         const { usageLogger } = await import('@/lib/usageLogger');
         usageLogger.log('Click', 'Save', bracketNumber ? String(bracketNumber).padStart(6, '0') : null);
         
