@@ -100,7 +100,6 @@ export async function GET(request: NextRequest) {
     
     // Build CSV header
     const headers = [
-      'Year',
       'Entry Name',
       ...roundOf64GameIds.map(id => `R64-${id}`),
       ...roundOf32GameIds.map(id => `R32-${id}`),
@@ -111,9 +110,12 @@ export async function GET(request: NextRequest) {
       'Champion',
       'Tie Breaker',
       'Player Name',
-      'Email',
-      'Bracket ID',
-      'Timestamp'
+      'Player Email',
+      'Year',
+      'Friendly Bracket ID',
+      'Encoded Bracket ID',
+      'Status',
+      'Bracket Created Timestamp'
     ];
     
     // Build CSV rows
@@ -129,8 +131,10 @@ export async function GET(request: NextRequest) {
       const finalFourRight = getTeamAbbr(picks['final-four-2']);
       const champion = getTeamAbbr(picks['championship']);
       
+      // Generate friendly bracket ID (year-six digit format)
+      const friendlyBracketId = `${bracket.year || new Date().getFullYear()}-${String(bracket.bracketNumber || '?').padStart(6, '0')}`;
+      
       return [
-        escapeCsvValue(bracket.year),
         escapeCsvValue(bracket.entryName),
         ...roundOf64Winners.map(escapeCsvValue),
         ...roundOf32Winners.map(escapeCsvValue),
@@ -142,8 +146,11 @@ export async function GET(request: NextRequest) {
         escapeCsvValue(bracket.tieBreaker),
         escapeCsvValue(bracket.userName),
         escapeCsvValue(bracket.userEmail),
+        escapeCsvValue(bracket.year),
+        escapeCsvValue(friendlyBracketId),
         escapeCsvValue(bracket.id),
-        escapeCsvValue(bracket.updatedAt.toISOString())
+        escapeCsvValue(bracket.status),
+        escapeCsvValue(bracket.createdAt.toISOString())
       ];
     });
     
