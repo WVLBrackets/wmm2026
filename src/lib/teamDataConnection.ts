@@ -1,4 +1,3 @@
-import { getCurrentEnvironment } from './databaseConfig';
 import type { QueryResult, Pool } from 'pg';
 
 /**

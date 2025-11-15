@@ -65,12 +65,8 @@ export async function GET() {
   } catch (error) {
     // Don't expose error details in production
     // Always return generic error for security
-    if (false) {
-      console.error('[Admin Users API] Error:', error);
-      console.error('[Admin Users API] Error stack:', error instanceof Error ? error.stack : 'No stack');
-    } else {
-      console.error('[Admin Users API] Error:', error instanceof Error ? error.message : 'Unknown error');
-    }
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[Admin Users API] Error:', errorMessage);
     
     if (error instanceof Error && error.message.includes('Unauthorized')) {
       return NextResponse.json(

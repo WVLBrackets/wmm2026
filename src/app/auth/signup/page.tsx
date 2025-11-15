@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
 import { usageLogger } from '@/lib/usageLogger';
@@ -21,7 +20,6 @@ export default function SignUpPage() {
   const [success, setSuccess] = useState(false);
   const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
   
-  const router = useRouter();
 
   useEffect(() => {
     const loadConfig = async () => {
