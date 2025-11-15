@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 
     // Build query conditions array
     const conditions: string[] = [];
-    const params: any[] = [];
+    const params: (string | boolean | number)[] = [];
     let paramIndex = 1;
 
     // Always filter by environment
