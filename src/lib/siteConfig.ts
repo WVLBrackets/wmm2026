@@ -69,6 +69,31 @@ export interface SiteConfigData {
   emailSubmitMessage2?: string;
   emailSubmitMessage3?: string;
   emailSubmitFooter?: string;
+  // Email registration (confirmation) template content
+  regEmailSubject?: string;
+  regEmailHeader?: string;
+  regEmailGreeting?: string;
+  regEmailMessage1?: string;
+  regEmailMessage2?: string;
+  regEmailFooter?: string;
+  // Account creation success page content
+  acctCreateSuccessHeader?: string;
+  acctCreateSuccessMessage1?: string;
+  acctCreateSuccessMessage2?: string;
+  acctCreateSuccessButton?: string;
+  // Account confirmation success page content
+  acctConfirmSuccessHeader?: string;
+  acctConfirmSuccessMessage1?: string;
+  acctConfirmSuccessButton1?: string;
+  acctConfirmSuccessButton2?: string;
+  // Account confirmation failure page content
+  acctConfirmFailureHeader?: string;
+  acctConfirmFailureMessage1?: string;
+  acctConfirmFailureButton1?: string;
+  acctConfirmFailureButton2?: string;
+  // Sign-in error messages
+  emailFailInvalid?: string;
+  emailFailNotConfirmed?: string;
   // Print bracket trophy icon
   printBracketTrophy?: string;
 }
@@ -296,6 +321,66 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
             break;
           case 'email_submit_footer':
             config.emailSubmitFooter = value;
+            break;
+          case 'reg_email_subject':
+            config.regEmailSubject = value;
+            break;
+          case 'reg_email_header':
+            config.regEmailHeader = value;
+            break;
+          case 'reg_email_greeting':
+            config.regEmailGreeting = value;
+            break;
+          case 'reg_email_message1':
+            config.regEmailMessage1 = value;
+            break;
+          case 'reg_email_message2':
+            config.regEmailMessage2 = value;
+            break;
+          case 'reg_email_footer':
+            config.regEmailFooter = value;
+            break;
+          case 'acct_create_success_header':
+            config.acctCreateSuccessHeader = value;
+            break;
+          case 'acct_create_success_message1':
+            config.acctCreateSuccessMessage1 = value;
+            break;
+          case 'acct_create_success_message2':
+            config.acctCreateSuccessMessage2 = value;
+            break;
+          case 'acct_create_success_button':
+            config.acctCreateSuccessButton = value;
+            break;
+          case 'acct_confirm_success_header':
+            config.acctConfirmSuccessHeader = value;
+            break;
+          case 'acct_confirm_success_message1':
+            config.acctConfirmSuccessMessage1 = value;
+            break;
+          case 'acct_confirm_success_button1':
+            config.acctConfirmSuccessButton1 = value;
+            break;
+          case 'acct_confirm_success_button2':
+            config.acctConfirmSuccessButton2 = value;
+            break;
+          case 'acct_confirm_failure_header':
+            config.acctConfirmFailureHeader = value;
+            break;
+          case 'acct_confirm_failure_message1':
+            config.acctConfirmFailureMessage1 = value;
+            break;
+          case 'acct_confirm_failure_button1':
+            config.acctConfirmFailureButton1 = value;
+            break;
+          case 'acct_confirm_failure_button2':
+            config.acctConfirmFailureButton2 = value;
+            break;
+          case 'email_fail_invalid':
+            config.emailFailInvalid = value;
+            break;
+          case 'email_fail_not_confirmed':
+            config.emailFailNotConfirmed = value;
             break;
           case 'print_bracket_trophy':
             config.printBracketTrophy = value;

@@ -47,14 +47,17 @@ export default function HomePageLogo({ logoFileName }: HomePageLogoProps) {
     );
   }
 
-  // For custom logos, use regular img tag for better error handling
+  // For custom logos, use Next.js Image with error handling
   return (
     <div className="w-full h-full flex items-center justify-center">
-      <img
+      <Image
         src={logoPath}
         alt="Site Logo"
+        width={400}
+        height={200}
         className="w-full h-full object-contain max-w-full max-h-full"
         onError={() => setImageError(true)}
+        unoptimized={!logoPath.startsWith('/images/')}
       />
     </div>
   );

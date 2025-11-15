@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Trash2, Edit, Save, X, Users, Trophy, CheckCircle, Key, Edit3, LogOut, Link2, Table, Plus, Download, AlertCircle, Power, PowerOff, Zap } from 'lucide-react';
 import { useBracketMode } from '@/contexts/BracketModeContext';
 
@@ -461,7 +462,7 @@ export default function AdminPage() {
         });
         
         console.log(`[Inactive Filter] Total: ${allEntries.length}, Active (true): ${activeEntries.length}, Inactive (false): ${inactiveEntries.length}, Other (${otherEntries.length}):`, 
-          otherEntries.map(([k, t]) => `${t.name}(${typeof t.active})`).slice(0, 5));
+          otherEntries.map(([, t]) => `${t.name}(${typeof t.active})`).slice(0, 5));
         
         // Show sample of first few inactive teams for debugging
         if (inactiveEntries.length > 0) {
@@ -475,7 +476,7 @@ export default function AdminPage() {
       } else if (teamActiveFilter === 'active') {
         // Filter to show only teams where active is true (or undefined/null which should be treated as active)
         filteredData = Object.fromEntries(
-          Object.entries(loadedData).filter(([_, team]) => team.active === true)
+          Object.entries(loadedData).filter(([, team]) => team.active === true)
         );
       }
       // 'all' filter doesn't need client-side filtering - show everything from API
@@ -536,19 +537,19 @@ export default function AdminPage() {
     });
 
     // Find duplicates (values that appear more than once)
-    Object.entries(nameCounts).forEach(([name, keys]) => {
+    Object.entries(nameCounts).forEach(([, keys]) => {
       if (keys.length > 1) {
         keys.forEach(k => duplicateIds.add(k));
       }
     });
 
-    Object.entries(keyCounts).forEach(([key, keys]) => {
+    Object.entries(keyCounts).forEach(([, keys]) => {
       if (keys.length > 1) {
         keys.forEach(k => duplicateIds.add(k));
       }
     });
 
-    Object.entries(idCounts).forEach(([id, keys]) => {
+    Object.entries(idCounts).forEach(([, keys]) => {
       if (keys.length > 1) {
         keys.forEach(k => duplicateIds.add(k));
       }
@@ -1129,6 +1130,46 @@ export default function AdminPage() {
     setPasswordError('');
   };
 
+  const handleChangePassword = async (userId: string) => {
+    if (!newPassword || newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+
+    setPasswordError('');
+
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ newPassword }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setChangingPasswordUserId(null);
+        setNewPassword('');
+        setConfirmPassword('');
+        setPasswordError('');
+        // Reload data to reflect changes
+        await loadData();
+      } else {
+        setPasswordError(data.error || 'Failed to change password');
+      }
+    } catch (error) {
+      console.error('Error changing password:', error);
+      setPasswordError('An error occurred. Please try again.');
+    }
+  };
+
   const handleDeleteUser = async (userId: string, userName: string, bracketCounts?: { submitted: number; inProgress: number; deleted: number }) => {
     // Check if user has any brackets
     if (bracketCounts && (bracketCounts.submitted > 0 || bracketCounts.inProgress > 0 || bracketCounts.deleted > 0)) {
@@ -1157,40 +1198,6 @@ export default function AdminPage() {
     }
   };
 
-  const handleChangePassword = async () => {
-    setPasswordError('');
-
-    if (!newPassword || newPassword.length < 6) {
-      setPasswordError('Password must be at least 6 characters');
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setPasswordError('Passwords do not match');
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/admin/users/${changingPasswordUserId}/change-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newPassword }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        // Reset form and reload data
-        handleCancelPasswordChange();
-        loadData();
-      } else {
-        setPasswordError(data.error || 'Failed to change password');
-      }
-    } catch (error) {
-      console.error('Error changing password:', error);
-      setPasswordError('Failed to change password');
-    }
-  };
 
   const handleEdit = (bracket: Bracket) => {
     setEditingBracket(bracket.id);
@@ -1953,54 +1960,94 @@ export default function AdminPage() {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            <div className="flex items-center space-x-1">
-                              {!user.emailConfirmed && (
+                            {changingPasswordUserId === user.id ? (
+                              <div className="space-y-2 min-w-[300px]">
+                                <div className="flex flex-col space-y-2">
+                                  <input
+                                    type="password"
+                                    placeholder="New password (min 6 characters)"
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    className="px-2 py-1 border border-gray-300 rounded text-sm"
+                                    minLength={6}
+                                  />
+                                  <input
+                                    type="password"
+                                    placeholder="Confirm password"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    className="px-2 py-1 border border-gray-300 rounded text-sm"
+                                    minLength={6}
+                                  />
+                                </div>
+                                {passwordError && (
+                                  <div className="text-xs text-red-600">{passwordError}</div>
+                                )}
+                                <div className="flex items-center space-x-2">
+                                  <button
+                                    onClick={() => handleChangePassword(user.id)}
+                                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    onClick={handleCancelPasswordChange}
+                                    className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs rounded focus:outline-none focus:ring-2 focus:ring-gray-500"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center space-x-1">
+                                {!user.emailConfirmed && (
+                                  <button
+                                    onClick={() => handleConfirmUser(user.id)}
+                                    className="p-1.5 rounded border border-transparent bg-green-600 hover:bg-green-700 text-white focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-500 transition-colors"
+                                    title="Manually confirm this user"
+                                  >
+                                    <CheckCircle className="h-4 w-4" />
+                                  </button>
+                                )}
                                 <button
-                                  onClick={() => handleConfirmUser(user.id)}
-                                  className="p-1.5 rounded border border-transparent bg-green-600 hover:bg-green-700 text-white focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-500 transition-colors"
-                                  title="Manually confirm this user"
+                                  onClick={() => handleOpenPasswordChange(user.id)}
+                                  className="p-1.5 rounded border border-transparent bg-blue-600 hover:bg-blue-700 text-white focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 transition-colors"
+                                  title="Change user password"
                                 >
-                                  <CheckCircle className="h-4 w-4" />
+                                  <Key className="h-4 w-4" />
                                 </button>
-                              )}
-                              <button
-                                onClick={() => handleOpenPasswordChange(user.id)}
-                                className="p-1.5 rounded border border-transparent bg-blue-600 hover:bg-blue-700 text-white focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 transition-colors"
-                                title="Change user password"
-                              >
-                                <Key className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteUser(user.id, user.name, user.bracketCounts)}
-                                disabled={
-                                  user.bracketCounts && (
-                                    (user.bracketCounts.submitted > 0) || 
-                                    (user.bracketCounts.inProgress > 0) || 
-                                    (user.bracketCounts.deleted > 0)
-                                  )
-                                }
-                                className={`p-1.5 rounded border border-transparent focus:outline-none focus:ring-2 focus:ring-offset-1 transition-colors ${
-                                  (user.bracketCounts && (
-                                    (user.bracketCounts.submitted > 0) || 
-                                    (user.bracketCounts.inProgress > 0) || 
-                                    (user.bracketCounts.deleted > 0)
-                                  ))
-                                    ? 'bg-gray-400 text-white cursor-not-allowed opacity-50'
-                                    : 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500'
-                                }`}
-                                title={
-                                  (user.bracketCounts && (
-                                    (user.bracketCounts.submitted > 0) || 
-                                    (user.bracketCounts.inProgress > 0) || 
-                                    (user.bracketCounts.deleted > 0)
-                                  ))
-                                    ? 'Cannot delete user with existing brackets'
-                                    : 'Delete User'
-                                }
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
+                                <button
+                                  onClick={() => handleDeleteUser(user.id, user.name, user.bracketCounts)}
+                                  disabled={
+                                    user.bracketCounts && (
+                                      (user.bracketCounts.submitted > 0) || 
+                                      (user.bracketCounts.inProgress > 0) || 
+                                      (user.bracketCounts.deleted > 0)
+                                    )
+                                  }
+                                  className={`p-1.5 rounded border border-transparent focus:outline-none focus:ring-2 focus:ring-offset-1 transition-colors ${
+                                    (user.bracketCounts && (
+                                      (user.bracketCounts.submitted > 0) || 
+                                      (user.bracketCounts.inProgress > 0) || 
+                                      (user.bracketCounts.deleted > 0)
+                                    ))
+                                      ? 'bg-gray-400 text-white cursor-not-allowed opacity-50'
+                                      : 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500'
+                                  }`}
+                                  title={
+                                    (user.bracketCounts && (
+                                      (user.bracketCounts.submitted > 0) || 
+                                      (user.bracketCounts.inProgress > 0) || 
+                                      (user.bracketCounts.deleted > 0)
+                                    ))
+                                      ? 'Cannot delete user with existing brackets'
+                                      : 'Delete User'
+                                  }
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       );
@@ -2573,13 +2620,13 @@ export default function AdminPage() {
                           </td>
                           <td className="px-3 py-4 whitespace-nowrap">
                             {editingTeamData?.logo ? (
-                              <img
+                              <Image
                                 src={editingTeamData.logo}
                                 alt="Preview"
+                                width={32}
+                                height={32}
                                 className="h-8 w-8 object-contain"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display = 'none';
-                                }}
+                                unoptimized
                               />
                             ) : (
                               <span className="text-gray-400 text-xs">No logo</span>
@@ -2630,13 +2677,13 @@ export default function AdminPage() {
                           </td>
                           <td className="px-3 py-4 whitespace-nowrap">
                             {team.logo ? (
-                              <img
+                              <Image
                                 src={team.logo}
                                 alt={team.name}
+                                width={32}
+                                height={32}
                                 className="h-8 w-8 object-contain"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display = 'none';
-                                }}
+                                unoptimized
                               />
                             ) : (
                               <span className="text-gray-400 text-xs">No logo</span>

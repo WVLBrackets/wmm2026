@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createUser } from '@/lib/secureDatabase';
 import { sendConfirmationEmail, emailService } from '@/lib/emailService';
+import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
 
 export async function POST(request: NextRequest) {
   try {
@@ -65,9 +66,9 @@ export async function POST(request: NextRequest) {
     }
     
     // Determine base URL based on environment
-    // In production, use NEXTAUTH_URL (production domain)
-    // In preview, use VERCEL_URL (preview deployment URL)
-    // In development, use localhost
+    // For preview deployments, use the Host header to get the branch URL
+    // For production, use NEXTAUTH_URL
+    // For development, use localhost
     const vercelEnv = process.env.VERCEL_ENV;
     let baseUrl: string;
     
@@ -76,11 +77,20 @@ export async function POST(request: NextRequest) {
       baseUrl = process.env.NEXTAUTH_URL || 'https://wmm2026.vercel.app';
       console.log(`[Register] Using production URL: ${baseUrl}`);
     } else if (vercelEnv === 'preview') {
-      // Preview: Use VERCEL_URL for the specific preview deployment
-      baseUrl = process.env.VERCEL_URL 
-        ? `https://${process.env.VERCEL_URL}` 
-        : process.env.NEXTAUTH_URL || 'http://localhost:3000';
-      console.log(`[Register] Using preview URL: ${baseUrl}`);
+      // Preview: Use Host header to get the branch URL (stable across deployments)
+      // This ensures emails use the branch URL, not the deployment-specific URL
+      const host = request.headers.get('host');
+      if (host) {
+        const protocol = request.headers.get('x-forwarded-proto') || 'https';
+        baseUrl = `${protocol}://${host}`;
+        console.log(`[Register] Using preview branch URL from Host header: ${baseUrl}`);
+      } else {
+        // Fallback to VERCEL_URL if Host header not available
+        baseUrl = process.env.VERCEL_URL 
+          ? `https://${process.env.VERCEL_URL}` 
+          : process.env.NEXTAUTH_URL || 'http://localhost:3000';
+        console.log(`[Register] Using preview URL fallback: ${baseUrl}`);
+      }
     } else {
       // Development: Use localhost or NEXTAUTH_URL
       baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
@@ -100,8 +110,17 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
     
+    // Fetch site config for email template
+    let siteConfig = null;
+    try {
+      siteConfig = await getSiteConfigFromGoogleSheets();
+    } catch (configError) {
+      console.error('[Register] Error fetching site config, using fallbacks:', configError);
+      // Continue with fallback config
+    }
+    
     console.log(`[Register] Sending confirmation email to ${email} with token ${token.substring(0, 10)}...`);
-    const emailSent = await sendConfirmationEmail(email, name, confirmationLink, token);
+    const emailSent = await sendConfirmationEmail(email, name, confirmationLink, token, siteConfig);
 
     if (!emailSent) {
       return NextResponse.json({

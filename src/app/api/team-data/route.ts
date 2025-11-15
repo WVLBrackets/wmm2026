@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 
     // Transform to the format expected by client-side code
     const teamRefData = Object.entries(teamData)
-      .filter(([_, teamInfo]) => teamInfo.active !== false)
+      .filter(([, teamInfo]) => teamInfo.active !== false)
       .map(([abbr, teamInfo]) => ({
         abbr,
         id: teamInfo.id,

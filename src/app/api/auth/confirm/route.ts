@@ -17,10 +17,10 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Confirmation API: Calling confirmUserEmail...');
-    const confirmed = await confirmUserEmail(token);
-    console.log('Confirmation API: confirmUserEmail result:', confirmed);
+    const result = await confirmUserEmail(token);
+    console.log('Confirmation API: confirmUserEmail result:', result);
     
-    if (!confirmed) {
+    if (!result.success) {
       console.log('Confirmation API: Token confirmation failed');
       return NextResponse.json(
         { error: 'Invalid or expired confirmation token' },
@@ -30,6 +30,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       message: 'Email confirmed successfully. You can now sign in.',
+      userEmail: result.userEmail,
+      signInToken: result.signInToken,
     });
 
   } catch (error) {

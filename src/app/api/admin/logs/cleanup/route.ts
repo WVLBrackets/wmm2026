@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/lib/adminAuth';
@@ -8,7 +8,7 @@ import { getCurrentEnvironment } from '@/lib/databaseConfig';
 /**
  * POST /api/admin/logs/cleanup - Clean up logs older than 60 days (admin only)
  */
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     const session = await getServerSession(authOptions);
     

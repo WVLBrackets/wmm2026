@@ -1,12 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { TournamentData, TournamentBracket, TournamentGame } from '@/types/tournament';
-import { getRegionalGames, updateBracketWithPicks } from '@/lib/bracketGenerator';
+import { TournamentData, TournamentBracket } from '@/types/tournament';
+import { updateBracketWithPicks } from '@/lib/bracketGenerator';
 import { SiteConfigData } from '@/lib/siteConfig';
 import RegionBracketLayout from './RegionBracketLayout';
 import FinalFourChampionship from './FinalFourChampionship';
-import { ChevronLeft, ChevronRight, CheckCircle, Circle, Save } from 'lucide-react';
 
 interface StepByStepBracketProps {
   tournamentData: TournamentData;
@@ -59,7 +58,6 @@ export default function StepByStepBracket({
   };
   
   const [currentStep, setCurrentStep] = useState(getInitialStep);
-  const [completedRegions, setCompletedRegions] = useState<Set<string>>(new Set());
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   // Track if this is the initial mount
@@ -102,13 +100,6 @@ export default function StepByStepBracket({
   const regions = tournamentData.regions;
   const totalSteps = regions.length + 1; // 4 regions + Final Four & Championship
   
-  const getStepName = (step: number) => {
-    if (step < regions.length) {
-      return `${regions[step].name} Region`;
-    } else {
-      return 'Final Four & Championship';
-    }
-  };
 
   const getStepProgress = (step: number) => {
     if (step < regions.length) {
@@ -175,37 +166,7 @@ export default function StepByStepBracket({
     setCurrentStep(stepIndex);
   };
 
-  const handleTeamClick = (game: TournamentGame, team: Record<string, unknown>) => {
-    if (game.winner) return;
-    onPick(game.id, team.id as string);
-  };
 
-  const renderTeam = (team: Record<string, unknown>, game: TournamentGame, isTeam1: boolean) => {
-    if (!team) return <div className="h-6 bg-gray-100 rounded"></div>;
-    
-    const isSelected = picks[game.id] === (team.id as string);
-    const isClickable = !game.winner;
-    
-    return (
-      <div
-        className={`
-          flex items-center justify-between px-2 py-1 rounded border cursor-pointer transition-all text-xs
-          ${isSelected ? 'bg-blue-100 border-blue-500' : 'bg-white border-gray-300 hover:border-gray-400'}
-          ${isClickable ? 'hover:bg-gray-50' : 'cursor-not-allowed opacity-50'}
-        `}
-        onClick={() => isClickable && handleTeamClick(game, team)}
-      >
-        <div className="flex items-center space-x-1">
-          <span className="text-xs font-bold text-gray-600">#{team.seed as number}</span>
-          <img src={team.logo as string} alt={team.name as string} className="w-3 h-3" />
-          <span className="text-xs font-medium truncate text-black">{team.name as string}</span>
-        </div>
-        {isSelected && (
-          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-        )}
-      </div>
-    );
-  };
 
 
 

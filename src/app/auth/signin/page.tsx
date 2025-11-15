@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { signIn, getSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { getSiteConfig } from '@/config/site';
 import { SiteConfigData } from '@/lib/siteConfig';
 import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
@@ -46,7 +46,26 @@ export default function SignInPage() {
       });
 
       if (result?.error) {
-        setError('Invalid email or password');
+        // When we get an error, check if the user exists and is not confirmed
+        // This helps us show the correct error message
+        try {
+          const checkResponse = await fetch('/api/auth/check-email-confirmed', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+          });
+          const checkData = await checkResponse.json();
+          if (checkData.exists && !checkData.confirmed) {
+            // User exists but email is not confirmed
+            setError(siteConfig?.emailFailNotConfirmed || FALLBACK_CONFIG.emailFailNotConfirmed || 'Please confirm your email address before signing in.');
+          } else {
+            // User doesn't exist or password is wrong
+            setError(siteConfig?.emailFailInvalid || FALLBACK_CONFIG.emailFailInvalid || 'Invalid email or password');
+          }
+        } catch {
+          // If check fails, default to invalid credentials
+          setError(siteConfig?.emailFailInvalid || FALLBACK_CONFIG.emailFailInvalid || 'Invalid email or password');
+        }
       } else {
         // Get the session to verify login
         const session = await getSession();
@@ -55,7 +74,12 @@ export default function SignInPage() {
         }
       }
     } catch (error) {
-      setError('An error occurred. Please try again.');
+      // Check if it's an email not confirmed error
+      if (error instanceof Error && error.message === 'EMAIL_NOT_CONFIRMED') {
+        setError(siteConfig?.emailFailNotConfirmed || FALLBACK_CONFIG.emailFailNotConfirmed || 'Please confirm your email address before signing in.');
+      } else {
+        setError('An error occurred. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }

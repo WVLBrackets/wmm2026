@@ -124,7 +124,6 @@ export async function generateMultiPageBracketPDF(
         }
         
         const yOffset = i * (pageHeight - 20);
-        const remainingHeight = Math.min(pageHeight - 20, imgHeight - yOffset);
         
         pdf.addImage(
           canvas.toDataURL('image/png'),

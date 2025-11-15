@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { DollarSign, Trophy, FileSpreadsheet, AlertTriangle, Dog, Calculator, CreditCard, Heart, CheckCircle, Gift, Medal, Crown } from 'lucide-react';
+import { DollarSign, Trophy, FileSpreadsheet, AlertTriangle, Dog, Calculator, CreditCard, CheckCircle, Gift, Medal, Crown } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getSiteConfig } from '@/config/site';
 import { SiteConfigData } from '@/lib/siteConfig';

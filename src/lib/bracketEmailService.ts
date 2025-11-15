@@ -6,10 +6,11 @@
 import { waitUntil } from '@vercel/functions';
 import { Bracket } from '@/lib/secureDatabase';
 import { SiteConfigData } from '@/lib/siteConfig';
-import { TournamentData, TournamentBracket } from '@/types/tournament';
 import { emailService } from '@/lib/emailService';
 import { renderEmailTemplate } from '@/lib/emailTemplate';
 import { generateBracketPDF } from '@/app/api/bracket/email-pdf/route';
+import { logError } from '@/lib/serverErrorLogger';
+import { notifyAdminOfError } from '@/lib/adminNotifications';
 
 /**
  * Generate a sanitized filename for bracket PDF
@@ -43,9 +44,11 @@ export async function sendSubmissionConfirmationEmail(
 ): Promise<void> {
   console.log('[Bracket Email] Starting submission confirmation email process...');
   
+  // Calculate tournament year outside try block so it's available in catch block
+  const tournamentYear = siteConfig?.tournamentYear || bracket.year?.toString() || new Date().getFullYear().toString();
+  
   try {
     // Load tournament data
-    const tournamentYear = siteConfig?.tournamentYear || bracket.year?.toString() || new Date().getFullYear().toString();
     console.log('[Bracket Email] Loading tournament data for year:', tournamentYear);
     
     const { loadTournamentData } = await import('@/lib/tournamentLoader');
@@ -67,6 +70,29 @@ export async function sendSubmissionConfirmationEmail(
       console.log('[Bracket Email] PDF generated, size:', pdfBuffer.length, 'bytes');
     } catch (pdfError) {
       console.error('[Bracket Email] Error generating PDF:', pdfError);
+      
+      // Log error to database
+      const error = pdfError instanceof Error ? pdfError : new Error(String(pdfError));
+      await logError(error, 'Bracket Email - PDF Generation (Submission)', {
+        username: user.email,
+        isLoggedIn: true,
+        additionalInfo: {
+          bracketId: bracket.id.toString(),
+          entryName: bracket.entryName,
+          tournamentYear,
+        },
+      });
+      
+      // Notify admin of critical error
+      await notifyAdminOfError(error, 'Bracket Email - PDF Generation (Submission)', {
+        bracketId: bracket.id.toString(),
+        userEmail: user.email,
+        additionalDetails: {
+          entryName: bracket.entryName,
+          tournamentYear,
+        },
+      });
+      
       // Continue without PDF - email will still be sent
     }
     
@@ -119,10 +145,29 @@ export async function sendSubmissionConfirmationEmail(
     console.log('[Bracket Email] Confirmation email sent successfully' + (pdfBuffer ? ' with PDF attachment' : ''));
   } catch (error) {
     console.error('[Bracket Email] Error in submission confirmation email process:', error);
-    if (error instanceof Error) {
-      console.error('[Bracket Email] Error message:', error.message);
-      console.error('[Bracket Email] Error stack:', error.stack);
-    }
+    
+    // Log error to database
+    const err = error instanceof Error ? error : new Error(String(error));
+    await logError(err, 'Bracket Email - Submission Confirmation', {
+      username: user.email,
+      isLoggedIn: true,
+      additionalInfo: {
+        bracketId: bracket.id.toString(),
+        entryName: bracket.entryName,
+        tournamentYear,
+      },
+    });
+    
+    // Notify admin of critical error
+    await notifyAdminOfError(err, 'Bracket Email - Submission Confirmation', {
+      bracketId: bracket.id.toString(),
+      userEmail: user.email,
+      additionalDetails: {
+        entryName: bracket.entryName,
+        tournamentYear,
+      },
+    });
+    
     // Don't throw - we don't want to fail the submission if email fails
   }
 }
@@ -195,10 +240,30 @@ export async function sendOnDemandPdfEmail(
     }
   } catch (error) {
     console.error('[Bracket Email] Error in on-demand PDF email process:', error);
-    if (error instanceof Error) {
-      console.error('[Bracket Email] Error message:', error.message);
-      console.error('[Bracket Email] Error stack:', error.stack);
-    }
+    
+    // Log error to database
+    const err = error instanceof Error ? error : new Error(String(error));
+    const tournamentYear = siteConfig?.tournamentYear || bracket.year?.toString() || new Date().getFullYear().toString();
+    await logError(err, 'Bracket Email - PDF Generation (On-Demand)', {
+      username: user.email,
+      isLoggedIn: true,
+      additionalInfo: {
+        bracketId: bracket.id.toString(),
+        entryName: bracket.entryName,
+        tournamentYear,
+      },
+    });
+    
+    // Notify admin of critical error
+    await notifyAdminOfError(err, 'Bracket Email - PDF Generation (On-Demand)', {
+      bracketId: bracket.id.toString(),
+      userEmail: user.email,
+      additionalDetails: {
+        entryName: bracket.entryName,
+        tournamentYear,
+      },
+    });
+    
     throw error; // Re-throw for on-demand emails so user knows it failed
   }
 }

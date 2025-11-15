@@ -16,7 +16,6 @@ export async function POST(request: NextRequest) {
     const userAgent = request.headers.get('user-agent') || '';
 
     // Get user info (optional - user may not be logged in)
-    const isLoggedIn = !!session?.user?.email;
     const sessionUsername = session?.user?.email || null;
 
     const body = await request.json();
@@ -28,9 +27,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // Map environment to display format
-    const envDisplay = environment === 'production' ? 'Prod' : 'Preview';
 
     // Insert all entries in a single transaction
     const values = entries.map((entry) => {

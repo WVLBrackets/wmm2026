@@ -116,13 +116,11 @@ export default function PrintBracketPage() {
     const picks = bracketData.picks as Record<string, string>;
     const semifinal1Pick = picks['final-four-1'];
     const semifinal2Pick = picks['final-four-2'];
-    const championshipPick = picks['championship'];
 
     // Get the two finalists (winners of semifinals)
     const tournament = tournamentData as unknown as TournamentData;
     const finalist1 = semifinal1Pick && tournament ? tournament.regions.flatMap(r => r.teams).find(t => t.id === semifinal1Pick) : null;
     const finalist2 = semifinal2Pick && tournament ? tournament.regions.flatMap(r => r.teams).find(t => t.id === semifinal2Pick) : null;
-    const champion = championshipPick && tournament ? tournament.regions.flatMap(r => r.teams).find(t => t.id === championshipPick) : null;
 
     const bracketDataTyped = bracketData as Record<string, unknown>;
     const tieBreaker = bracketDataTyped.tieBreaker as string | number | undefined;
@@ -264,18 +262,12 @@ export default function PrintBracketPage() {
       ? ['Final Four', 'Elite 8', 'Sweet 16', 'Round of 32', 'Round of 64']
       : ['Round of 64', 'Round of 32', 'Sweet 16', 'Elite 8', 'Final Four'];
     
-    return columnOrder.map((round, index) => {
+    return columnOrder.map((round) => {
       if (round === 'Round of 64') {
         return (
           <div key={round} style={{ minWidth: '90px', flex: '1 1 0', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0px', flex: 1 }}>
-              {tournament.regions[regionIndex].teams.map((team, teamIndex) => {
-                const gameIndex = Math.floor(teamIndex / 2);
-                const isFirstTeam = teamIndex % 2 === 0;
-                const game = (bracketTyped.regions as Record<string, unknown[]>)[regionKey]?.find(g => (g as Record<string, unknown>).round === 'Round of 64' && (g as Record<string, unknown>).gameNumber === gameIndex + 1);
-                const pickedWinner = game ? (bracketDataTyped.picks as Record<string, string>)[(game as Record<string, unknown>).id as string] : null;
-                const isWinner = pickedWinner === team.id;
-                
+              {tournament.regions[regionIndex].teams.map((team) => {
                 return (
                   <div key={team.id} style={{ 
                     height: '6%', 

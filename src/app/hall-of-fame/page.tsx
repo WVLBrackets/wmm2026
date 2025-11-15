@@ -230,18 +230,23 @@ export default async function HallOfFamePage() {
                       ? 'bg-gray-500' 
                       : 'bg-yellow-600'
                   }`}></div>
-                  <div className={`absolute left-2 top-2 px-2 py-1 rounded text-xs font-bold ${
-                    isHiatus || is2020 || is2016
-                      ? 'bg-gray-500 text-white' 
-                      : 'bg-yellow-600 text-white'
-                  }`}>
+                  <div 
+                    className={`absolute left-2 top-2 px-2 py-1 rounded text-xs font-bold ${
+                      isHiatus || is2020 || is2016
+                        ? 'bg-gray-500 text-white' 
+                        : 'bg-yellow-600 text-white'
+                    }`}
+                    style={{ textDecoration: 'none' }}
+                    suppressHydrationWarning
+                  >
                     {is2020 ? `${entry.year} - Tournament Cancelled` :
                      is2016 ? `${entry.year} - WMM Hiatus` :
                      isHiatus ? `${entry.year} - Tournament Not Held` :
                      entry.totalEntries === 0 ? (
                        <span>{entry.year} - <span className="italic">unknown</span></span>
-                     ) :
-                     `${entry.year} - ${entry.totalEntries} entries`}
+                     ) : (
+                       <span style={{ textDecoration: 'none', userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}>{entry.year} - {entry.totalEntries} entries</span>
+                     )}
                   </div>
                   {/* Logo in top right corner */}
                   <div className="absolute top-4 right-4 w-12 h-12 flex items-center justify-center">
@@ -366,7 +371,7 @@ export default async function HallOfFamePage() {
                           <h4 className={`text-sm font-bold ${index < 10 ? 'text-yellow-900' : 'text-gray-900'}`}>
                             {finisher.name}
                           </h4>
-                          <div className="flex items-center gap-1 flex-wrap">
+                          <div className="flex flex-col md:flex-row md:items-center md:gap-1 md:flex-wrap gap-1">
                             {finisher.finishes
                               .sort((a, b) => parseInt(b.year) - parseInt(a.year)) // Sort by year descending (most recent first)
                               .slice(0, 5) // Show up to 5 finishes
@@ -376,13 +381,14 @@ export default async function HallOfFamePage() {
                                   {finish.place === 2 && <Trophy className="h-3 w-3 text-gray-400" />}
                                   {finish.place === 3 && <Medal className="h-3 w-3 text-amber-600" />}
                                   <span className="text-xs text-gray-600">{finish.year}</span>
+                                  {/* Hyphen only on desktop */}
                                   {finishIndex < Math.min(finisher.finishes.length, 5) - 1 && (
-                                    <span className="text-gray-400 mx-1">-</span>
+                                    <span className="hidden md:inline text-gray-400 mx-1">-</span>
                                   )}
                                 </span>
                               ))}
                             {finisher.finishes.length > 5 && (
-                              <span className="text-gray-500 ml-1">
+                              <span className="text-gray-500 md:ml-1">
                                 +{finisher.finishes.length - 5} more
                               </span>
                             )}

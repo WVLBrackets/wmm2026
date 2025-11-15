@@ -63,10 +63,10 @@ export const InMemoryUserRepository: UserRepository = {
     // Admin password changes will be wired through dedicated endpoints.
     void hash;
   },
-  async updateName(_userId, _name) {
+  async updateName() {
     // Placeholder; will be implemented when moving to DB-backed repo.
   },
-  async deleteUser(_userId) {
+  async deleteUser() {
     // Placeholder; will be implemented when moving to DB-backed repo.
   },
   async listUsers() {
@@ -109,17 +109,17 @@ export const InMemoryTokenRepository: TokenRepository = {
   async resetPassword(token, newPassword) {
     return await dbResetPassword(token, newPassword);
   },
-  async findConfirmationToken(token) {
+  async findConfirmationToken() {
     // This function doesn't exist in database.ts, return undefined for now
     // In a real implementation, we'd query the tokens array
     return undefined;
   },
-  async findPasswordResetToken(token) {
+  async findPasswordResetToken() {
     // This function doesn't exist in database.ts, return undefined for now
     // In a real implementation, we'd query the tokens array
     return undefined;
   },
-  async deleteToken(token) {
+  async deleteToken() {
     // This function doesn't exist in database.ts, no-op for now
     // In a real implementation, we'd remove from tokens array
   },

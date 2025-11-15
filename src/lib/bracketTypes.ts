@@ -26,7 +26,7 @@ export function generateBracketStructure(): Game[] {
   let gameId = 1;
 
   // Generate games for each region
-  TOURNAMENT_CONFIG.regions.forEach((region, regionIndex) => {
+  TOURNAMENT_CONFIG.regions.forEach(() => {
     TOURNAMENT_CONFIG.rounds.forEach((round, roundIndex) => {
       if (round.gamesPerRegion > 0) {
         for (let gameNum = 1; gameNum <= round.gamesPerRegion; gameNum++) {

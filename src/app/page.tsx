@@ -1,4 +1,3 @@
-import { Calendar } from 'lucide-react';
 import CountdownClock from '@/components/CountdownClock';
 import Announcements from '@/components/Announcements';
 import { getSiteConfig } from '@/config/site';

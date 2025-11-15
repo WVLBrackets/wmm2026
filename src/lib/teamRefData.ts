@@ -45,7 +45,7 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
           
           if (Object.keys(dbTeams).length > 0) {
             const teamData: TeamRefData[] = Object.entries(dbTeams)
-              .filter(([_, teamInfo]) => teamInfo.active !== false)
+              .filter(([, teamInfo]) => teamInfo.active !== false)
               .map(([abbr, teamInfo]) => ({
                 abbr,
                 id: teamInfo.id,
@@ -87,9 +87,7 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
       
       // Client-side: fetch from API route which accesses the database
       try {
-        const apiStart = performance.now();
         const response = await fetch('/api/team-data?activeOnly=true');
-        const apiEnd = performance.now();
         
         if (!response.ok) {
           throw new Error(`API returned ${response.status}: ${response.statusText}`);

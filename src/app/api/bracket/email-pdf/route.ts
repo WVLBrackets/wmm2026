@@ -145,22 +145,14 @@ interface Browser {
   close: () => Promise<void>;
 }
 
-interface PuppeteerRequest {
-  resourceType: () => string;
-  url: () => string;
-  continue: () => void;
-}
 
-interface PuppeteerResponse {
-  status: () => number;
-  url: () => string;
-  request: () => PuppeteerRequest;
-}
 
 interface Page {
   setContent: (html: string, options?: { waitUntil?: string }) => Promise<void>;
   setRequestInterception: (value: boolean) => Promise<void>;
   setViewport: (viewport: { width: number; height: number; deviceScaleFactor?: number }) => Promise<void>;
+  setDefaultNavigationTimeout: (timeout: number) => void;
+  setDefaultTimeout: (timeout: number) => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   on: (event: string, handler: (arg: any) => void) => void;
   pdf: (options: {
@@ -332,6 +324,10 @@ export async function generateBracketPDF(
     const page = await browser.newPage();
     console.log('[PDF Generation] Page created');
     
+    // Set increased timeout for navigation (90 seconds) to handle large HTML content
+    page.setDefaultNavigationTimeout(90000);
+    page.setDefaultTimeout(90000);
+    
     // Set viewport to A4 landscape dimensions (297mm x 210mm = 1123px x 794px at 96 DPI)
     await page.setViewport({
       width: 1123,
@@ -347,7 +343,9 @@ export async function generateBracketPDF(
     
     console.log('[PDF Generation] Setting page content...');
     // Images are embedded as base64 data URLs, so no HTTP requests needed
-    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+    // Use 'load' instead of 'networkidle0' since all resources are embedded
+    // This is faster and more reliable for large base64-embedded content
+    await page.setContent(htmlContent, { waitUntil: 'load' });
     console.log('[PDF Generation] Page content set');
 
     // Generate PDF
@@ -377,27 +375,6 @@ export async function generateBracketPDF(
       await browser.close();
     }
   }
-}
-
-/**
- * Get base URL for absolute image paths
- */
-function getBaseUrl(): string {
-  const vercelEnv = process.env.VERCEL_ENV;
-  let baseUrl: string;
-  
-  if (vercelEnv === 'production') {
-    baseUrl = process.env.NEXTAUTH_URL || 'https://wmm2026.vercel.app';
-  } else if (vercelEnv === 'preview') {
-    baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : process.env.NEXTAUTH_URL || 'http://localhost:3000';
-  } else {
-    baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-  }
-  
-  console.log(`[PDF Generation] Base URL determined: ${baseUrl} (VERCEL_ENV: ${vercelEnv}, VERCEL_URL: ${process.env.VERCEL_URL}, NEXTAUTH_URL: ${process.env.NEXTAUTH_URL})`);
-  return baseUrl;
 }
 
 /**

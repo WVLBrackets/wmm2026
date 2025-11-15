@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, RefObject } from 'react';
+import Image from 'next/image';
 import { TournamentGame } from '@/types/tournament';
 import { SiteConfigData } from '@/lib/siteConfig';
 import { CheckCircle, ChevronLeft, ChevronRight, Save, Trophy } from 'lucide-react';
@@ -60,7 +61,6 @@ export default function FinalFourChampionship({
   onEntryNameChange,
   siteConfig,
   existingBracketNames = [],
-  currentBracketId
 }: FinalFourChampionshipProps) {
   
   const handleTeamClick = (game: TournamentGame, team: Record<string, unknown>) => {
@@ -68,7 +68,7 @@ export default function FinalFourChampionship({
     onPick(game.id, team.id as string);
   };
 
-  const renderTeam = (team: Record<string, unknown> | undefined, game: TournamentGame, isTeam1: boolean) => {
+  const renderTeam = (team: Record<string, unknown> | undefined, game: TournamentGame) => {
     // Always render a slot, even if no team is assigned yet
     if (!team) {
       return (
@@ -92,7 +92,7 @@ export default function FinalFourChampionship({
       >
             <div className="flex items-center space-x-1 flex-1 min-w-0">
               <span className="text-xs font-bold text-gray-600">#{team.seed as number}</span>
-              <img src={team.logo as string} alt={team.name as string} className="w-3 h-3 flex-shrink-0" />
+              <Image src={team.logo as string} alt={team.name as string} width={12} height={12} className="w-3 h-3 flex-shrink-0" unoptimized />
               <span className="text-xs font-medium truncate text-black">{team.name as string}</span>
             </div>
         {isSelected && (
@@ -109,8 +109,8 @@ export default function FinalFourChampionship({
             <div className="text-xs font-semibold text-gray-700 text-center mb-1">
               {title}
             </div>
-            {renderTeam(game.team1 as unknown as Record<string, unknown> | undefined, game, true)}
-            {renderTeam(game.team2 as unknown as Record<string, unknown> | undefined, game, false)}
+            {renderTeam(game.team1 as unknown as Record<string, unknown> | undefined, game)}
+            {renderTeam(game.team2 as unknown as Record<string, unknown> | undefined, game)}
           </div>
         );
       };
@@ -381,7 +381,7 @@ export default function FinalFourChampionship({
                   <span className="text-lg font-bold text-gray-600">#{champion.seed}</span>
                   <span className="text-lg font-semibold text-gray-800">{champion.name}</span>
                   {champion.logo && (
-                    <img src={champion.logo} alt={champion.name} className="w-8 h-8 object-contain flex-shrink-0" />
+                    <Image src={champion.logo} alt={champion.name} width={32} height={32} className="w-8 h-8 object-contain flex-shrink-0" unoptimized />
                   )}
                 </>
               ) : (

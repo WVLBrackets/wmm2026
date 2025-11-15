@@ -2,13 +2,12 @@
 
 import React, { useState } from 'react';
 import { useSession } from 'next-auth/react';
+import Image from 'next/image';
 import { Trophy, Plus, Edit, Eye, Clock, CheckCircle, LogOut, Trash2, Copy, Printer, Info, X, Mail } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { TournamentData, TournamentBracket } from '@/types/tournament';
 import { SiteConfigData } from '@/lib/siteConfig';
-import Image from 'next/image';
 import { LoggedButton } from '@/components/LoggedButton';
-import { usageLogger } from '@/lib/usageLogger';
 
 interface Bracket {
   id: string;
@@ -39,7 +38,7 @@ interface MyPicksLandingProps {
   siteConfig?: SiteConfigData | null;
 }
 
-export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBracket, onDeleteBracket, onCopyBracket, deletingBracketId, pendingDeleteBracketId, onConfirmDelete, onCancelDelete, tournamentData, bracket, siteConfig }: MyPicksLandingProps) {
+export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBracket, onDeleteBracket, onCopyBracket, deletingBracketId, pendingDeleteBracketId, onConfirmDelete, onCancelDelete, tournamentData, siteConfig }: MyPicksLandingProps) {
   const { data: session } = useSession();
   const [expandedStatus, setExpandedStatus] = useState<'info' | null>(null);
   const [logoError, setLogoError] = useState(false);
@@ -126,20 +125,18 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
     }
     
     return (
-      <img 
+      <Image 
         src={logoPath} 
         alt="Team logo"
         width={24}
         height={24}
         className="object-contain"
         onError={() => setImageError(true)}
+        unoptimized
       />
     );
   };
 
-  const handleDeleteBracket = (bracketId: string) => {
-    onDeleteBracket(bracketId);
-  };
 
   const handlePrintBracket = (bracket: Bracket) => {
     // Store bracket data in session storage for security
@@ -220,24 +217,6 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
     return 'bg-yellow-100 text-yellow-800';
   };
 
-  const getPicksCount = (picks: { [gameId: string]: string }) => {
-    return Object.keys(picks).length;
-  };
-
-  const getLastActivity = (bracket: Bracket) => {
-    const date = bracket.submittedAt || bracket.lastSaved;
-    if (!date) return 'Unknown';
-    
-    const activityDate = new Date(date);
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - activityDate.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) return 'Just now';
-    if (diffInHours < 24) return `${diffInHours}h ago`;
-    if (diffInHours < 48) return 'Yesterday';
-    return activityDate.toLocaleDateString();
-  };
-
   // Get first name from full name
   const getFirstName = (fullName: string | null | undefined) => {
     if (!fullName) return 'User';
@@ -256,7 +235,6 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
   // Get dynamic message based on bracket counts
   const getDynamicMessage = () => {
     const { submittedCount, inProgressCount, totalCost } = getBracketsInfo();
-    const entryCost = siteConfig?.entryCost || 5;
     
     let message = '';
     
@@ -321,9 +299,11 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                             Image not Found
                           </div>
                         ) : (
-                          <img
+                          <Image
                             src={`/images/${siteConfig.homePageLogo}`}
                             alt="Site Logo"
+                            width={200}
+                            height={100}
                             className="h-full w-auto object-contain max-h-full"
                             onError={() => setLogoError(true)}
                           />
@@ -545,7 +525,6 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                     return nameA.localeCompare(nameB);
                   }).map((bracket, index) => {
                     const bracketData = bracket as unknown as Record<string, unknown>;
-                    const year = (bracketData.year as number) || new Date().getFullYear();
                     const number = (bracketData.bracketNumber as number) || 0;
                     const progress = calculateProgress(bracket.picks);
                     const finalFour = getFinalFourTeams(bracket.picks);

@@ -69,6 +69,31 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   emailSubmitMessage2: 'You currently have {submissionCount} submitted bracket(s) with a total cost of ${totalCost}.',
   emailSubmitMessage3: 'Want to increase your chances? Submit more brackets and invite your friends to join the fun!',
   emailSubmitFooter: 'This is an automated email from Warren\'s March Madness.',
+  // Email registration (confirmation) defaults
+  regEmailSubject: 'Confirm Your Warren\'s March Madness Account',
+  regEmailHeader: 'Welcome to Warren\'s March Madness!',
+  regEmailGreeting: 'Hi {Name},',
+  regEmailMessage1: 'Thank you for signing up for Warren\'s March Madness {Year}!',
+  regEmailMessage2: 'To complete your account setup, please confirm your email address by clicking the button below:',
+  regEmailFooter: 'If you didn\'t create an account with Warren\'s March Madness, please ignore this email.',
+  // Account creation success page defaults
+  acctCreateSuccessHeader: 'Check Your Email!',
+  acctCreateSuccessMessage1: 'We\'ve sent a confirmation link to {email}',
+  acctCreateSuccessMessage2: 'Please check your email and click the confirmation link to activate your account.',
+  acctCreateSuccessButton: 'Go to Sign In',
+  // Account confirmation success page defaults
+  acctConfirmSuccessHeader: 'Email Confirmed!',
+  acctConfirmSuccessMessage1: 'Your email has been confirmed successfully! You can now sign in.',
+  acctConfirmSuccessButton1: 'Sign In Now',
+  acctConfirmSuccessButton2: 'Go to My Picks',
+  // Account confirmation failure page defaults
+  acctConfirmFailureHeader: 'Confirmation Failed',
+  acctConfirmFailureMessage1: 'Invalid or expired confirmation token',
+  acctConfirmFailureButton1: 'Try Signing Up Again',
+  acctConfirmFailureButton2: 'Sign In',
+  // Sign-in error messages
+  emailFailInvalid: 'Invalid email or password',
+  emailFailNotConfirmed: 'Please confirm your email address before signing in. Check your email for a confirmation link.',
   // Print bracket trophy icon (default to trophy-icon.png)
   printBracketTrophy: 'trophy-icon.png'
 };

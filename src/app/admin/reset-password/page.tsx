@@ -33,7 +33,7 @@ export default function AdminResetPasswordPage() {
       } else {
         setError(data.error || 'Failed to reset password');
       }
-    } catch (error) {
+    } catch {
       setError('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);

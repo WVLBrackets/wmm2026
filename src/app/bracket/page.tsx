@@ -4,16 +4,15 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { TournamentData, TournamentBracket, BracketSubmission } from '@/types/tournament';
-import { loadTournamentData, generateTournamentBracket } from '@/lib/tournamentLoader';
+import { loadTournamentData } from '@/lib/tournamentLoader';
 import { generate64TeamBracket } from '@/lib/bracketGenerator';
 import { getSiteConfigFromGoogleSheets, SiteConfigData } from '@/lib/siteConfig';
 import StepByStepBracket from '@/components/bracket/StepByStepBracket';
 import MyPicksLanding from '@/components/MyPicksLanding';
 import { useBracketMode } from '@/contexts/BracketModeContext';
-import { Trophy, Users, Calendar, Plus, Eye, LogOut, Save, CheckCircle, ArrowLeft } from 'lucide-react';
-import { signOut } from 'next-auth/react';
-import { useUsageLogger } from '@/hooks/useUsageLogger';
+import { Trophy } from 'lucide-react';
 import { LoggedButton } from '@/components/LoggedButton';
+import { useUsageLogger } from '@/hooks/useUsageLogger';
 
 function BracketContent() {
   const { data: session, status } = useSession();
@@ -34,8 +33,6 @@ function BracketContent() {
   const [entryName, setEntryName] = useState<string>('');
   const [tieBreaker, setTieBreaker] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showForm, setShowForm] = useState(false);
   const [submittedBrackets, setSubmittedBrackets] = useState<BracketSubmission[]>([]);
   const [bracketResetKey, setBracketResetKey] = useState(0);
   const [deletingBracketId, setDeletingBracketId] = useState<string | null>(null);
@@ -384,7 +381,6 @@ function BracketContent() {
     }
 
     try {
-      setIsSubmitting(true);
       setSubmitError(''); // Clear any previous errors
       
       const submission = {
@@ -451,8 +447,6 @@ function BracketContent() {
       console.error('Error submitting bracket:', error);
       setSubmitError('Failed to submit bracket. Please try again.');
       setTimeout(() => setSubmitError(''), 10000);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -724,28 +718,6 @@ function BracketContent() {
     } finally {
       setDeletingBracketId(null);
     }
-  };
-
-  const getTotalPicks = () => {
-    return Object.keys(picks).length;
-  };
-
-  const getTotalPossiblePicks = () => {
-    if (!bracket) return 0;
-    let total = 0;
-    
-    // Regional games: 4 regions × 15 games each = 60
-    Object.values(bracket.regions).forEach(regionGames => {
-      total += regionGames.length;
-    });
-    
-    // Final Four: 2 games
-    total += bracket.finalFour.length;
-    
-    // Championship: 1 game
-    total += 1;
-    
-    return total;
   };
 
   if (status === 'loading' || isLoading) {

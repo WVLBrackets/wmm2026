@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, RefObject } from 'react';
+import Image from 'next/image';
 import { TournamentGame } from '@/types/tournament';
 import { CheckCircle, ChevronLeft, ChevronRight, Save, ArrowRight } from 'lucide-react';
 
@@ -46,8 +47,6 @@ export default function RegionBracketLayout({
   canProceed = false,
   currentStep = 0,
   totalSteps = 5,
-  bracketNumber,
-  year,
   nextButtonText = 'Next',
   onStepClick,
   isStepComplete,
@@ -63,7 +62,7 @@ export default function RegionBracketLayout({
     onPick(game.id, team.id as string);
   };
 
-  const renderTeam = (team: Record<string, unknown> | undefined, game: TournamentGame, isTeam1: boolean, round: string) => {
+  const renderTeam = (team: Record<string, unknown> | undefined, game: TournamentGame) => {
     // Always render a slot, even if no team is assigned yet
     if (!team) {
       return (
@@ -90,7 +89,7 @@ export default function RegionBracketLayout({
       >
         <div className="flex items-center space-x-1 flex-1 min-w-0">
           <span className="text-xs font-bold text-gray-600">#{team.seed as number}</span>
-          <img src={team.logo as string} alt={team.name as string} className="w-3 h-3 flex-shrink-0" />
+          <Image src={team.logo as string} alt={team.name as string} width={12} height={12} className="w-3 h-3 flex-shrink-0" unoptimized />
           <span className="text-xs font-medium truncate text-black">{team.name as string}</span>
         </div>
         {isSelected && (
@@ -100,12 +99,12 @@ export default function RegionBracketLayout({
     );
   };
 
-  const renderGame = (game: TournamentGame, round: string) => {
+  const renderGame = (game: TournamentGame) => {
     // Always render both team slots, even if teams are not yet determined
     return (
       <div key={game.id} className="border border-gray-300 rounded p-1 space-y-0.5 mb-1 w-full">
-        {renderTeam(game.team1 as unknown as Record<string, unknown> | undefined, game, true, round)}
-        {renderTeam(game.team2 as unknown as Record<string, unknown> | undefined, game, false, round)}
+        {renderTeam(game.team1 as unknown as Record<string, unknown> | undefined, game)}
+        {renderTeam(game.team2 as unknown as Record<string, unknown> | undefined, game)}
       </div>
     );
   };
@@ -239,7 +238,7 @@ export default function RegionBracketLayout({
         <div className="flex items-start">
           {/* Round of 64 */}
           <div className="w-48">
-            {roundOf64.map(game => renderGame(game, 'Round of 64'))}
+            {roundOf64.map(game => renderGame(game))}
           </div>
 
           {/* Spacer */}
@@ -249,7 +248,7 @@ export default function RegionBracketLayout({
           <div className="w-48">
             {roundOf32.map((game, index) => (
               <div key={game.id} style={{ marginTop: index === 0 ? '2rem' : '4.25rem' }}>
-                {renderGame(game, 'Round of 32')}
+                {renderGame(game)}
               </div>
             ))}
           </div>
@@ -261,7 +260,7 @@ export default function RegionBracketLayout({
           <div className="w-48">
             {sweet16.map((game, index) => (
               <div key={game.id} style={{ marginTop: index === 0 ? '6rem' : '12.25rem' }}>
-                {renderGame(game, 'Sweet 16')}
+                {renderGame(game)}
               </div>
             ))}
           </div>
@@ -275,7 +274,7 @@ export default function RegionBracketLayout({
             <div>
               {elite8.map((game, index) => (
                 <div key={game.id} style={{ marginTop: index === 0 ? '14rem' : '0' }}>
-                  {renderGame(game, 'Elite 8')}
+                  {renderGame(game)}
                 </div>
               ))}
             </div>
@@ -357,7 +356,7 @@ export default function RegionBracketLayout({
                   <span className="text-lg font-bold text-gray-600">#{regionalChampion.seed}</span>
                   <span className="text-lg font-semibold text-gray-800">{regionalChampion.name}</span>
                   {regionalChampion.logo && (
-                    <img src={regionalChampion.logo} alt={regionalChampion.name} className="w-8 h-8 object-contain flex-shrink-0" />
+                    <Image src={regionalChampion.logo} alt={regionalChampion.name} width={32} height={32} className="w-8 h-8 object-contain flex-shrink-0" unoptimized />
                   )}
                 </div>
               )}
