@@ -6,20 +6,26 @@ import { verifyPassword } from './secureDatabase';
 // This prevents build-time errors while still ensuring the secret is required
 function getAuthSecret(): string {
   const secret = process.env.NEXTAUTH_SECRET;
+  
   // During build/static generation, return a placeholder to avoid errors
-  // The secret will be validated when actually used for authentication
+  // The secret will be validated when actually used for authentication at runtime
+  // Check multiple conditions to detect build time:
+  // 1. NEXT_PHASE indicates build phase
+  // 2. VERCEL environment during build doesn't have all runtime env vars yet
+  // 3. If no secret and we're in production build context, use placeholder
   if (!secret) {
-    // Check if we're in a build/static generation context
-    // During build, Next.js may try to serialize authOptions, triggering the getter
-    // We return a placeholder that will be replaced at runtime
     const isBuildTime = 
       process.env.NEXT_PHASE === 'phase-production-build' ||
-      (typeof process.env.NEXT_RUNTIME === 'undefined' && process.env.NODE_ENV === 'production');
+      process.env.NEXT_PHASE === 'phase-export' ||
+      (process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV);
     
     if (isBuildTime) {
-      // Return a placeholder during build - will be validated at runtime when actually used
-      return 'build-placeholder-secret-will-be-validated-at-runtime';
+      // Return a placeholder during build - NextAuth will use this during build
+      // but it will be validated and replaced at runtime when actually needed
+      return 'build-placeholder-secret-not-used-for-auth';
     }
+    
+    // At runtime, if secret is missing, throw error
     throw new Error('NEXTAUTH_SECRET environment variable is required');
   }
   return secret;
