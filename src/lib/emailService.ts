@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
 
 export interface EmailServiceConfig {
-  provider: 'gmail' | 'sendgrid' | 'console' | 'disabled';
+  provider: 'gmail' | 'sendgrid' | 'resend' | 'console' | 'disabled';
   user?: string;
   pass?: string;
   apiKey?: string;
