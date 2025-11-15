@@ -200,8 +200,63 @@ export default function FinalFourChampionship({
     return existingBracketNames.some(name => name === trimmedName);
   };
 
+  // Check if submission is disabled due to deadline or toggle
+  const isSubmissionDisabled = () => {
+    // Check stop_submit_toggle first
+    if (siteConfig?.stopSubmitToggle === 'Yes') {
+      return true;
+    }
+    
+    // Check stop_submit_date_time
+    if (siteConfig?.stopSubmitDateTime) {
+      try {
+        const deadline = new Date(siteConfig.stopSubmitDateTime);
+        const now = new Date();
+        if (now >= deadline) {
+          return true;
+        }
+      } catch (e) {
+        // Invalid date format - ignore
+      }
+    }
+    
+    return false;
+  };
+
+  // Get the reason submission is disabled
+  const getSubmissionDisabledReason = () => {
+    // Check stop_submit_toggle first
+    if (siteConfig?.stopSubmitToggle === 'Yes') {
+      return siteConfig?.finalMessageSubmitOff || 'Bracket submissions are currently disabled.';
+    }
+    
+    // Check stop_submit_date_time
+    if (siteConfig?.stopSubmitDateTime) {
+      try {
+        const deadline = new Date(siteConfig.stopSubmitDateTime);
+        const now = new Date();
+        if (now >= deadline) {
+          return siteConfig?.finalMessageTooLate || 'Bracket submissions are closed. The deadline has passed.';
+        }
+      } catch (e) {
+        // Invalid date format - ignore
+      }
+    }
+    
+    return null;
+  };
+
   // Determine message state
   const getMessageState = () => {
+    // Check submission disabled first (highest priority)
+    const disabledReason = getSubmissionDisabledReason();
+    if (disabledReason) {
+      return {
+        color: 'yellow',
+        message: disabledReason
+      };
+    }
+    
     if (!allWinnersSelected()) {
       return {
         color: 'yellow',
@@ -541,10 +596,10 @@ export default function FinalFourChampionship({
               {onNext && (
                 <button
                   onClick={onNext}
-                  disabled={!canProceed || isDuplicateName()}
+                  disabled={!canProceed || isDuplicateName() || isSubmissionDisabled()}
                   className={`
                     flex items-center space-x-2 px-6 py-2 rounded-lg transition-colors
-                    ${canProceed && !isDuplicateName()
+                    ${canProceed && !isDuplicateName() && !isSubmissionDisabled()
                       ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }

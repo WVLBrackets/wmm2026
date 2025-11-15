@@ -98,6 +98,11 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   printBracketTrophy: 'trophy-icon.png',
   // Tie breaker validation
   tieBreakerLow: 50,
-  tieBreakerHigh: 500
+  tieBreakerHigh: 500,
+  // Submission deadline and toggle
+  stopSubmitDateTime: '',
+  stopSubmitToggle: 'No',
+  finalMessageTooLate: 'Bracket submissions are closed. The deadline has passed.',
+  finalMessageSubmitOff: 'Bracket submissions are currently disabled.'
 };
 

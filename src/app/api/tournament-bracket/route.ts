@@ -9,6 +9,9 @@ import {
 } from '@/lib/secureDatabase';
 import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
 import { sendSubmissionConfirmationEmail, processEmailAsync } from '@/lib/bracketEmailService';
+import { validateBracketSubmission } from '@/lib/bracketSubmissionValidator';
+import { loadTournamentData } from '@/lib/tournamentLoader';
+import { logError } from '@/lib/serverErrorLogger';
 
 /**
  * POST /api/tournament-bracket - Create a new tournament bracket (submit)
@@ -66,12 +69,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get tournament year from config (same logic as createBracket)
+    // Get site config and tournament year
+    let siteConfig = null;
     let tournamentYear = new Date().getFullYear(); // Default fallback
     try {
-      const config = await getSiteConfigFromGoogleSheets();
-      if (config?.tournamentYear) {
-        tournamentYear = parseInt(config.tournamentYear);
+      siteConfig = await getSiteConfigFromGoogleSheets();
+      if (siteConfig?.tournamentYear) {
+        tournamentYear = parseInt(siteConfig.tournamentYear);
       }
     } catch {
       // Use fallback config if Google Sheets fails
@@ -101,7 +105,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create new submitted bracket
+    // Load tournament data for validation
+    const tournamentData = await loadTournamentData(tournamentYear.toString());
+
+    // Validate bracket submission server-side
+    const validation = await validateBracketSubmission(
+      picks,
+      body.tieBreaker,
+      tournamentData,
+      siteConfig
+    );
+
+    // Create new bracket (always create, even if invalid)
     const bracket = await createBracket(
       user.id,
       body.entryName,
@@ -109,8 +124,27 @@ export async function POST(request: NextRequest) {
       picks
     );
     
-    // Update status to submitted
-    const updatedBracket = await updateBracket(bracket.id, { status: 'submitted' });
+    // Determine status: 'Invalid' if validation failed, otherwise 'submitted'
+    const bracketStatus = validation.isValid ? 'submitted' : 'Invalid';
+    
+    // Update status
+    const updatedBracket = await updateBracket(bracket.id, { status: bracketStatus });
+
+    // If validation failed, log error
+    if (!validation.isValid) {
+      const errorMessage = `Invalid bracket submission: ${validation.errors.join('; ')}`;
+      const validationError = new Error(errorMessage);
+      await logError(validationError, 'Bracket Submission - Invalid Data', {
+        username: user.email,
+        isLoggedIn: true,
+        additionalInfo: {
+          bracketId: bracket.id,
+          entryName: body.entryName,
+          errors: validation.errors,
+          tournamentYear,
+        },
+      });
+    }
     
     if (!updatedBracket) {
       return NextResponse.json(
@@ -119,47 +153,45 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Send automated submission confirmation email in background
-    // Process asynchronously using centralized service with waitUntil
-    const emailPromise = (async () => {
-      try {
-        // Get all submitted brackets for this user to calculate counts
-        const allUserBrackets = await getBracketsByUserId(user.id);
-        const submittedBrackets = allUserBrackets.filter(b => b.status === 'submitted' && b.year === tournamentYear);
-        const submissionCount = submittedBrackets.length;
-        
-        // Get entry cost from config
-        let entryCost = 5; // Default
-        let siteConfig = null;
+    // Only send confirmation email if bracket is valid and submitted (not invalid)
+    if (bracketStatus === 'submitted') {
+      // Send automated submission confirmation email in background
+      // Process asynchronously using centralized service with waitUntil
+      const emailPromise = (async () => {
         try {
-          siteConfig = await getSiteConfigFromGoogleSheets();
+          // Get all submitted brackets for this user to calculate counts
+          const allUserBrackets = await getBracketsByUserId(user.id);
+          const submittedBrackets = allUserBrackets.filter(b => b.status === 'submitted' && b.year === tournamentYear);
+          const submissionCount = submittedBrackets.length;
+          
+          // Get entry cost from config
+          let entryCost = 5; // Default
           if (siteConfig?.entryCost) {
             entryCost = siteConfig.entryCost;
+          } else {
+            const { FALLBACK_CONFIG } = await import('@/lib/fallbackConfig');
+            entryCost = FALLBACK_CONFIG.entryCost;
           }
-        } catch {
-          // Use default if config fails
-          const { FALLBACK_CONFIG } = await import('@/lib/fallbackConfig');
-          entryCost = FALLBACK_CONFIG.entryCost;
+          
+          const totalCost = submissionCount * entryCost;
+          
+          // Use centralized email service
+          await sendSubmissionConfirmationEmail(
+            updatedBracket,
+            user,
+            siteConfig,
+            submissionCount,
+            totalCost
+          );
+        } catch (emailError) {
+          // Log error but don't fail the submission (already returned success)
+          console.error('[Submit Bracket] Error sending confirmation email:', emailError);
         }
-        
-        const totalCost = submissionCount * entryCost;
-        
-        // Use centralized email service
-        await sendSubmissionConfirmationEmail(
-          updatedBracket,
-          user,
-          siteConfig,
-          submissionCount,
-          totalCost
-        );
-      } catch (emailError) {
-        // Log error but don't fail the submission (already returned success)
-        console.error('[Submit Bracket] Error sending confirmation email:', emailError);
-      }
-    })();
-    
-    // Use waitUntil to keep execution context alive after response
-    processEmailAsync(emailPromise);
+      })();
+      
+      // Use waitUntil to keep execution context alive after response
+      processEmailAsync(emailPromise);
+    }
 
     // Return bracket in the format expected by the frontend
     return NextResponse.json({
@@ -173,13 +205,15 @@ export async function POST(request: NextRequest) {
         submittedAt: updatedBracket.updatedAt.toISOString(),
         picks: updatedBracket.picks,
         totalPoints: 0,
-        isComplete: true,
-        isPublic: true,
+        isComplete: bracketStatus === 'submitted',
+        isPublic: bracketStatus === 'submitted',
         status: updatedBracket.status,
         bracketNumber: updatedBracket.bracketNumber,
         year: updatedBracket.year
       },
-      message: 'Tournament bracket submitted successfully'
+      message: bracketStatus === 'submitted' 
+        ? 'Tournament bracket submitted successfully' 
+        : 'Bracket saved but marked as invalid due to validation errors'
     });
   } catch (error) {
     console.error('Error creating tournament bracket:', error);

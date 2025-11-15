@@ -99,6 +99,11 @@ export interface SiteConfigData {
   // Tie breaker validation
   tieBreakerLow?: number;
   tieBreakerHigh?: number;
+  // Submission deadline and toggle
+  stopSubmitDateTime?: string;
+  stopSubmitToggle?: string;
+  finalMessageTooLate?: string;
+  finalMessageSubmitOff?: string;
 }
 
 // Function to fetch site config from Google Sheets
@@ -270,6 +275,18 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
             break;
           case 'tie_breaker_high':
             config.tieBreakerHigh = parseInt(value, 10) || undefined;
+            break;
+          case 'stop_submit_date_time':
+            config.stopSubmitDateTime = value;
+            break;
+          case 'stop_submit_toggle':
+            config.stopSubmitToggle = value;
+            break;
+          case 'final_message_too_late':
+            config.finalMessageTooLate = value;
+            break;
+          case 'final_message_submit_off':
+            config.finalMessageSubmitOff = value;
             break;
           case 'final_message_duplicate_name':
             config.finalMessageDuplicateName = value;
