@@ -1267,6 +1267,67 @@ export default function AdminPage() {
     }
   };
 
+  const handleExportBrackets = async () => {
+    if (filteredBrackets.length === 0) {
+      alert('No brackets to export');
+      return;
+    }
+    
+    try {
+      setIsExporting(true);
+      
+      // Build query parameters matching current filters
+      const params = new URLSearchParams();
+      if (filterStatus && filterStatus !== 'all') {
+        params.append('status', filterStatus);
+      }
+      if (filterUserId && filterUserId !== 'all') {
+        params.append('userId', filterUserId);
+      }
+      if (filterYear && filterYear !== 'all') {
+        params.append('year', filterYear);
+      }
+      
+      // Fetch CSV file
+      const response = await fetch(`/api/admin/brackets/export?${params.toString()}`);
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to export brackets');
+      }
+      
+      // Get CSV content
+      const csvContent = await response.text();
+      
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Get filename from Content-Disposition header or use default
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'brackets-export.csv';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exporting brackets:', error);
+      alert(error instanceof Error ? error.message : 'Failed to export brackets');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const handleDeleteAllFiltered = async () => {
     if (filteredBrackets.length === 0) {
       return;
