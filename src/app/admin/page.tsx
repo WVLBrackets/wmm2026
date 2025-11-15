@@ -74,6 +74,7 @@ export default function AdminPage() {
   const [filteredBrackets, setFilteredBrackets] = useState<Bracket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
   const [activeTab, setActiveTab] = useState<'brackets' | 'users' | 'data' | 'logs'>('users');
   const [logsTab, setLogsTab] = useState<'summary' | 'usage' | 'error'>('summary');
   const [usageLogs, setUsageLogs] = useState<UsageLog[]>([]);
@@ -1679,7 +1680,29 @@ export default function AdminPage() {
                 </select>
               </div>
               
-              <div className="ml-auto">
+              <div className="ml-auto flex gap-2">
+                <button
+                  onClick={handleExportBrackets}
+                  disabled={filteredBrackets.length === 0 || isExporting}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                    filteredBrackets.length === 0 || isExporting
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
+                  title={filteredBrackets.length === 0 ? 'No brackets to export' : `Export ${filteredBrackets.length} filtered bracket(s) to CSV`}
+                >
+                  {isExporting ? (
+                    <>
+                      <span className="animate-spin inline-block mr-2">⏳</span>
+                      Exporting...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4 inline mr-2" />
+                      Extract ({filteredBrackets.length})
+                    </>
+                  )}
+                </button>
                 <button
                   onClick={handleDeleteAllFiltered}
                   disabled={filteredBrackets.length === 0}
