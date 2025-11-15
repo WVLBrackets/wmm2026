@@ -124,7 +124,6 @@ export default function AdminPage() {
   const [teamSortColumn, setTeamSortColumn] = useState<'name' | 'mascot' | 'key' | 'id' | null>('name');
   const [teamSortOrder, setTeamSortOrder] = useState<'asc' | 'desc'>('asc');
   const [duplicateCheck, setDuplicateCheck] = useState<{ hasDuplicates: boolean; duplicateIds: string[] }>({ hasDuplicates: false, duplicateIds: [] });
-  const [isDevelopment, setIsDevelopment] = useState(false);
   const [teamActiveFilter, setTeamActiveFilter] = useState<'all' | 'active' | 'inactive'>('active');
 
   // Ensure bracket mode is disabled when admin page loads
@@ -593,9 +592,6 @@ export default function AdminPage() {
       return;
     }
     
-    // Check if we're in development (hide Team Data tab)
-    const hostname = window.location.hostname;
-    setIsDevelopment(hostname === 'localhost' || hostname === '127.0.0.1');
     
     loadDataRef.current?.();
   }, [status, router]);
@@ -1595,19 +1591,17 @@ export default function AdminPage() {
                 <Trophy className="w-5 h-5" />
                 <span>Brackets ({brackets.length})</span>
               </button>
-              {!isDevelopment && (
-                <button
-                  onClick={() => setActiveTab('data')}
-                  className={`flex items-center space-x-2 px-6 py-4 border-b-2 font-medium text-sm ${
-                    activeTab === 'data'
-                      ? 'border-blue-600 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <Table className="w-5 h-5" />
-                  <span>Team Data ({Object.keys(teamData).length})</span>
-                </button>
-              )}
+              <button
+                onClick={() => setActiveTab('data')}
+                className={`flex items-center space-x-2 px-6 py-4 border-b-2 font-medium text-sm ${
+                  activeTab === 'data'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Table className="w-5 h-5" />
+                <span>Team Data ({Object.keys(teamData).length})</span>
+              </button>
               <button
                 onClick={() => setActiveTab('logs')}
                 className={`flex items-center space-x-2 px-6 py-4 border-b-2 font-medium text-sm ${

@@ -48,14 +48,9 @@ class EmailService {
       };
     }
 
-    // In development, use console logging
-    if (process.env.NODE_ENV === 'development') {
-      return {
-        provider: 'console',
-      };
-    }
-
-    // In production without email config, disable email service
+    // Check if email is configured
+    if (!process.env.RESEND_API_KEY || !process.env.FROM_EMAIL) {
+      // Without email config, disable email service
     return {
       provider: 'disabled',
     };
@@ -254,7 +249,7 @@ export async function sendConfirmationEmail(
   siteConfig?: { regEmailSubject?: string; regEmailHeader?: string; regEmailGreeting?: string; regEmailMessage1?: string; regEmailMessage2?: string; regEmailFooter?: string; tournamentYear?: string } | null
 ): Promise<boolean> {
   // Only show badge for non-production environments
-  const environment = process.env.VERCEL_ENV || process.env.NODE_ENV || 'development';
+  const environment = process.env.VERCEL_ENV || 'production';
   const isProduction = environment === 'production';
   const showBadge = !isProduction;
   
@@ -406,7 +401,7 @@ ${textFooter}
 
 export async function sendPasswordResetEmail(to: string, name: string, resetLink: string, resetCode: string): Promise<boolean> {
   // Only show badge for non-production environments
-  const environment = process.env.VERCEL_ENV || process.env.NODE_ENV || 'development';
+  const environment = process.env.VERCEL_ENV || 'production';
   const isProduction = environment === 'production';
   const showBadge = !isProduction;
   

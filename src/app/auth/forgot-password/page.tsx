@@ -33,13 +33,8 @@ export default function ForgotPasswordPage() {
       const data = await response.json();
 
       if (response.ok) {
-        // In development mode, redirect directly to reset password page with token
-        if (data.isDevelopment && data.resetToken) {
-          router.push(`/auth/reset-password?token=${data.resetToken}`);
-          return; // Don't set isSubmitted
-        } else {
-          setIsSubmitted(true);
-        }
+        // Password reset email sent successfully
+        setIsSubmitted(true);
       } else {
         setError(data.error || 'Failed to send reset email');
       }

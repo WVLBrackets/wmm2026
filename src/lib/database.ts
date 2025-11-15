@@ -40,31 +40,27 @@ export async function createUser(email: string, name: string, password: string):
   const confirmationToken = crypto.randomBytes(32).toString('hex');
   const confirmationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-  // Only auto-confirm in development mode
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  
+  // Always require email confirmation
   const user: User = {
     id: crypto.randomUUID(),
     email,
     name,
     password: hashedPassword,
-    emailConfirmed: isDevelopment, // Only auto-confirm in development
-    confirmationToken: isDevelopment ? undefined : confirmationToken,
-    confirmationExpires: isDevelopment ? undefined : confirmationExpires,
+    emailConfirmed: false, // Always require email confirmation
+    confirmationToken,
+    confirmationExpires,
     createdAt: new Date(),
   };
 
   users.push(user);
   
-  // Store confirmation token only if not in development mode
-  if (!isDevelopment) {
-    tokens.push({
-      token: confirmationToken,
-      userId: user.id,
-      expires: confirmationExpires,
-      type: 'confirmation'
-    });
-  }
+  // Always store confirmation token
+  tokens.push({
+    token: confirmationToken,
+    userId: user.id,
+    expires: confirmationExpires,
+    type: 'confirmation'
+  });
 
   return user;
 }

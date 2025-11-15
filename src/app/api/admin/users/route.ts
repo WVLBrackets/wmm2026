@@ -37,8 +37,8 @@ export async function GET() {
         };
         } catch (error) {
           // Log error but don't expose user IDs in production
-          const isDevelopment = process.env.NODE_ENV === 'development';
-          if (isDevelopment) {
+          // Always return generic error for security
+          if (false) {
             console.error(`[Admin Users API] Error getting bracket counts for user ${user.id}:`, error);
           } else {
             console.error('[Admin Users API] Error getting bracket counts for user');
@@ -64,8 +64,8 @@ export async function GET() {
     });
   } catch (error) {
     // Don't expose error details in production
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    if (isDevelopment) {
+    // Always return generic error for security
+    if (false) {
       console.error('[Admin Users API] Error:', error);
       console.error('[Admin Users API] Error stack:', error instanceof Error ? error.stack : 'No stack');
     } else {
@@ -83,7 +83,6 @@ export async function GET() {
       { 
         success: false, 
         error: 'Failed to fetch users',
-        ...(isDevelopment && { details: error instanceof Error ? error.message : String(error) })
       },
       { status: 500 }
     );

@@ -28,14 +28,11 @@ export async function GET() {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    // Don't expose error details in production
-    const isDevelopment = process.env.NODE_ENV === 'development';
     console.error('Database initialization error:', error);
     return NextResponse.json(
       { 
         success: false, 
-        error: 'Failed to initialize database',
-        ...(isDevelopment && { details: error instanceof Error ? error.message : 'Unknown error' })
+        error: 'Failed to initialize database'
       },
       { status: 500 }
     );
@@ -66,14 +63,11 @@ export async function POST() {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    // Don't expose error details in production
-    const isDevelopment = process.env.NODE_ENV === 'development';
     console.error('Database initialization error:', error);
     return NextResponse.json(
       { 
         success: false, 
-        error: 'Failed to initialize database',
-        ...(isDevelopment && { details: error instanceof Error ? error.message : 'Unknown error' })
+        error: 'Failed to initialize database'
       },
       { status: 500 }
     );
