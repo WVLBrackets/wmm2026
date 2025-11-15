@@ -141,8 +141,23 @@ export async function sendSubmissionConfirmationEmail(
     
     // Send email
     console.log('[Bracket Email] Sending email...');
-    await emailService.sendEmail(emailOptions);
+    const emailSent = await emailService.sendEmail(emailOptions);
     console.log('[Bracket Email] Confirmation email sent successfully' + (pdfBuffer ? ' with PDF attachment' : ''));
+
+    // Log email event (Bracket Submit - attachment expected)
+    try {
+      const { logEmailEvent } = await import('@/lib/emailLogger');
+      await logEmailEvent({
+        eventType: 'Bracket Submit',
+        destinationEmail: user.email,
+        attachmentExpected: true,
+        attachmentSuccess: pdfBuffer !== null,
+        emailSuccess: emailSent,
+      });
+    } catch (logError) {
+      // Don't fail email sending if logging fails
+      console.error('[Bracket Email] Failed to log Bracket Submit email:', logError);
+    }
   } catch (error) {
     console.error('[Bracket Email] Error in submission confirmation email process:', error);
     
@@ -233,6 +248,21 @@ export async function sendOnDemandPdfEmail(
       ],
     });
     
+    // Log email event (Bracket Email - attachment expected)
+    try {
+      const { logEmailEvent } = await import('@/lib/emailLogger');
+      await logEmailEvent({
+        eventType: 'Bracket Email',
+        destinationEmail: user.email,
+        attachmentExpected: true,
+        attachmentSuccess: emailSent ? true : false, // PDF was generated, so attachment success = email success
+        emailSuccess: emailSent,
+      });
+    } catch (logError) {
+      // Don't fail email sending if logging fails
+      console.error('[Bracket Email] Failed to log Bracket Email event:', logError);
+    }
+
     if (!emailSent) {
       console.error('[Bracket Email] Email service returned false');
     } else {

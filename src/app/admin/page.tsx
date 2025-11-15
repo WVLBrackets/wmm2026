@@ -49,6 +49,18 @@ interface ErrorLog {
   createdAt: string;
 }
 
+interface EmailLog {
+  id: string;
+  environment: string;
+  timestamp: string;
+  eventType: string;
+  destinationEmail: string;
+  attachmentExpected: boolean;
+  attachmentSuccess: boolean | null;
+  emailSuccess: boolean;
+  createdAt: string;
+}
+
 interface Bracket {
   id: string;
   userId: string;
@@ -76,7 +88,8 @@ export default function AdminPage() {
   const [error, setError] = useState('');
   const [isExporting, setIsExporting] = useState(false);
   const [activeTab, setActiveTab] = useState<'brackets' | 'users' | 'data' | 'logs'>('users');
-  const [logsTab, setLogsTab] = useState<'summary' | 'usage' | 'error'>('summary');
+  const [logsTab, setLogsTab] = useState<'summary' | 'usage' | 'error' | 'email'>('summary');
+  const [emailLogsView, setEmailLogsView] = useState<'summary' | 'detail'>('summary');
   const [usageLogs, setUsageLogs] = useState<UsageLog[]>([]);
   const [loadAllLogs, setLoadAllLogs] = useState(false);
   const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
@@ -101,6 +114,25 @@ export default function AdminPage() {
   const [logEventTypeFilter, setLogEventTypeFilter] = useState<string>('');
   const [logLocationFilter, setLogLocationFilter] = useState<string>('');
   const [deletingLogs, setDeletingLogs] = useState(false);
+  const [emailLogs, setEmailLogs] = useState<EmailLog[]>([]);
+  const [emailSummary, setEmailSummary] = useState<{
+    gridData: Array<{
+      date: string;
+      events: Array<{ eventType: string; count: number }>;
+      dayTotal: { emails: number; pdfs: number; pdfSuccess: number };
+    }>;
+    eventTotals: Array<{ eventType: string; count: number }>;
+    totals: { emails: number; pdfs: number; pdfSuccess: number };
+  }>({
+    gridData: [],
+    eventTotals: [],
+    totals: { emails: 0, pdfs: 0, pdfSuccess: 0 },
+  });
+  const [emailLogEventTypeFilter, setEmailLogEventTypeFilter] = useState<string>('all');
+  const [emailLogEmailFilter, setEmailLogEmailFilter] = useState<string>('');
+  const [emailLogAttachmentExpectedFilter, setEmailLogAttachmentExpectedFilter] = useState<string>('');
+  const [emailLogAttachmentSuccessFilter, setEmailLogAttachmentSuccessFilter] = useState<string>('');
+  const [emailLogEmailSuccessFilter, setEmailLogEmailSuccessFilter] = useState<string>('');
   const [initializingDatabase, setInitializingDatabase] = useState(false);
   const [databaseInitMessage, setDatabaseInitMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [editingBracket, setEditingBracket] = useState<string | null>(null);
@@ -368,6 +400,93 @@ export default function AdminPage() {
     }
   }, [logStartDate, logEndDate]);
 
+  const loadEmailSummary = useCallback(async () => {
+    try {
+      setLogsLoading(true);
+      setLogsError('');
+      
+      const params = new URLSearchParams();
+      if (logStartDate) {
+        const localDate = new Date(logStartDate);
+        params.append('startDate', localDate.toISOString());
+      }
+      if (logEndDate) {
+        const localDate = new Date(logEndDate);
+        localDate.setMilliseconds(999);
+        params.append('endDate', localDate.toISOString());
+      }
+      
+      const response = await fetch(`/api/admin/logs/email/summary?${params.toString()}`);
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
+        const errorMsg = data.error || data.details || 'Failed to load email summary';
+        throw new Error(errorMsg);
+      }
+      
+      setEmailSummary(data.summary || {
+        gridData: [],
+        eventTotals: [],
+        totals: { emails: 0, pdfs: 0, pdfSuccess: 0 },
+      });
+    } catch (error) {
+      console.error('Error loading email summary:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load email summary';
+      setLogsError(errorMessage);
+    } finally {
+      setLogsLoading(false);
+    }
+  }, [logStartDate, logEndDate]);
+
+  const loadEmailLogs = useCallback(async () => {
+    try {
+      setLogsLoading(true);
+      setLogsError('');
+      
+      const params = new URLSearchParams({ limit: '100' });
+      if (logStartDate) {
+        const localDate = new Date(logStartDate);
+        params.append('startDate', localDate.toISOString());
+      }
+      if (logEndDate) {
+        const localDate = new Date(logEndDate);
+        localDate.setMilliseconds(999);
+        params.append('endDate', localDate.toISOString());
+      }
+      if (emailLogEventTypeFilter && emailLogEventTypeFilter !== 'all') {
+        params.append('eventType', emailLogEventTypeFilter);
+      }
+      if (emailLogEmailFilter) {
+        params.append('destinationEmail', emailLogEmailFilter);
+      }
+      if (emailLogAttachmentExpectedFilter !== '') {
+        params.append('attachmentExpected', emailLogAttachmentExpectedFilter);
+      }
+      if (emailLogAttachmentSuccessFilter !== '') {
+        params.append('attachmentSuccess', emailLogAttachmentSuccessFilter);
+      }
+      if (emailLogEmailSuccessFilter !== '') {
+        params.append('emailSuccess', emailLogEmailSuccessFilter);
+      }
+      
+      const response = await fetch(`/api/admin/logs/email?${params.toString()}`);
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
+        const errorMsg = data.error || data.details || 'Failed to load email logs';
+        throw new Error(errorMsg);
+      }
+      
+      setEmailLogs(data.logs || []);
+    } catch (error) {
+      console.error('Error loading email logs:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load email logs';
+      setLogsError(errorMessage);
+    } finally {
+      setLogsLoading(false);
+    }
+  }, [logStartDate, logEndDate, emailLogEventTypeFilter, emailLogEmailFilter, emailLogAttachmentExpectedFilter, emailLogAttachmentSuccessFilter, emailLogEmailSuccessFilter]);
+
   const handleDeleteLogs = async () => {
     const logType = logsTab === 'usage' ? 'usage' : 'error';
     const count = logsTab === 'usage' ? usageLogs.length : errorLogs.length;
@@ -445,8 +564,10 @@ export default function AdminPage() {
           await loadUsageSummary();
         } else if (logsTab === 'usage') {
           await loadUsageLogs();
-        } else {
+        } else if (logsTab === 'error') {
           await loadErrorLogs();
+        } else if (logsTab === 'email') {
+          await loadEmailSummary();
         }
       } else {
         setDatabaseInitMessage({ type: 'error', text: data.error || 'Failed to initialize database' });
@@ -659,11 +780,17 @@ export default function AdminPage() {
         loadUsageSummary();
       } else if (logsTab === 'usage') {
         loadUsageLogs();
-      } else {
+      } else if (logsTab === 'error') {
         loadErrorLogs();
+      } else if (logsTab === 'email') {
+        if (emailLogsView === 'summary') {
+          loadEmailSummary();
+        } else {
+          loadEmailLogs();
+        }
       }
     }
-  }, [activeTab, logsTab, logStartDate, logEndDate, logUsernameFilter, logEventTypeFilter, logLocationFilter, loadUsageSummary, loadUsageLogs, loadErrorLogs]);
+  }, [activeTab, logsTab, emailLogsView, logStartDate, logEndDate, logUsernameFilter, logEventTypeFilter, logLocationFilter, loadUsageSummary, loadUsageLogs, loadErrorLogs, loadEmailSummary, loadEmailLogs]);
 
   // Reload team data when filter changes
   useEffect(() => {
@@ -2996,6 +3123,16 @@ export default function AdminPage() {
                 >
                   Error Logs ({errorLogs.length})
                 </button>
+                <button
+                  onClick={() => setLogsTab('email')}
+                  className={`px-4 py-2 border-b-2 font-medium text-sm ${
+                    logsTab === 'email'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Email Logs
+                </button>
               </nav>
             </div>
 
@@ -3336,6 +3473,273 @@ export default function AdminPage() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+            )}
+
+            {logsTab === 'email' && (
+              <div>
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Email Logs</h3>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => {
+                        setEmailLogsView('summary');
+                        loadEmailSummary();
+                      }}
+                      className={`px-4 py-2 text-sm font-medium rounded-lg ${
+                        emailLogsView === 'summary'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Summary
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEmailLogsView('detail');
+                        loadEmailLogs();
+                      }}
+                      className={`px-4 py-2 text-sm font-medium rounded-lg ${
+                        emailLogsView === 'detail'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Detail
+                    </button>
+                  </div>
+                </div>
+
+                {logsError && (
+                  <div className="mb-4 bg-red-50 border-l-4 border-red-500 p-4 rounded">
+                    <p className="text-sm text-red-800">{logsError}</p>
+                  </div>
+                )}
+
+                {/* Email Summary View */}
+                {emailLogsView === 'summary' && emailSummary.gridData.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-md font-semibold mb-3">Email Summary - Last 7 Days</h4>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Date</th>
+                            {['Account Creation', 'Password Reset', 'Bracket Submit', 'Bracket Email'].map(eventType => (
+                              <th key={eventType} className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
+                                {eventType}
+                              </th>
+                            ))}
+                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Total Emails</th>
+                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b">PDFs Generated</th>
+                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b">PDFs Success</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {emailSummary.gridData.map((day) => (
+                            <tr key={day.date} className="hover:bg-gray-50">
+                              <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {new Date(day.date).toLocaleDateString()}
+                              </td>
+                              {['Account Creation', 'Password Reset', 'Bracket Submit', 'Bracket Email'].map(eventType => {
+                                const event = day.events.find(e => e.eventType === eventType);
+                                return (
+                                  <td key={eventType} className="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-900">
+                                    {event?.count || 0}
+                                  </td>
+                                );
+                              })}
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-center font-semibold text-gray-900">
+                                {day.dayTotal.emails}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-900">
+                                {day.dayTotal.pdfs}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-900">
+                                {day.dayTotal.pdfSuccess}
+                              </td>
+                            </tr>
+                          ))}
+                          <tr className="bg-gray-50 font-semibold">
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">Totals</td>
+                            {['Account Creation', 'Password Reset', 'Bracket Submit', 'Bracket Email'].map(eventType => {
+                              const total = emailSummary.eventTotals.find(e => e.eventType === eventType);
+                              return (
+                                <td key={eventType} className="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-900">
+                                  {total?.count || 0}
+                                </td>
+                              );
+                            })}
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-900">
+                              {emailSummary.totals.emails}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-900">
+                              {emailSummary.totals.pdfs}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-900">
+                              {emailSummary.totals.pdfSuccess}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Email Detail View */}
+                {emailLogsView === 'detail' && (
+                  <>
+                <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Event Type
+                    </label>
+                    <select
+                      value={emailLogEventTypeFilter}
+                      onChange={(e) => setEmailLogEventTypeFilter(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    >
+                      <option value="all">All Event Types</option>
+                      <option value="Account Creation">Account Creation</option>
+                      <option value="Password Reset">Password Reset</option>
+                      <option value="Bracket Submit">Bracket Submit</option>
+                      <option value="Bracket Email">Bracket Email</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email Address
+                    </label>
+                    <input
+                      type="text"
+                      value={emailLogEmailFilter}
+                      onChange={(e) => setEmailLogEmailFilter(e.target.value)}
+                      placeholder="Filter by email..."
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Attachment Expected
+                    </label>
+                    <select
+                      value={emailLogAttachmentExpectedFilter}
+                      onChange={(e) => setEmailLogAttachmentExpectedFilter(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    >
+                      <option value="">All</option>
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Attachment Success
+                    </label>
+                    <select
+                      value={emailLogAttachmentSuccessFilter}
+                      onChange={(e) => setEmailLogAttachmentSuccessFilter(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    >
+                      <option value="">All</option>
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                      <option value="null">N/A</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email Success
+                    </label>
+                    <select
+                      value={emailLogEmailSuccessFilter}
+                      onChange={(e) => setEmailLogEmailSuccessFilter(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    >
+                      <option value="">All</option>
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                    </select>
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      onClick={loadEmailLogs}
+                      disabled={logsLoading}
+                      className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {logsLoading ? 'Loading...' : 'Apply Filters'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Attachment Expected</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Attachment Success</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Email Success</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {logsLoading ? (
+                        <tr>
+                          <td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-500">
+                            Loading email logs...
+                          </td>
+                        </tr>
+                      ) : emailLogs.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-500">
+                            No email logs found
+                          </td>
+                        </tr>
+                      ) : (
+                        emailLogs.map((log) => (
+                          <tr key={log.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {new Date(log.timestamp).toLocaleString()}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {log.eventType}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {log.destinationEmail}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
+                              {log.attachmentExpected ? (
+                                <span className="text-green-600">Yes</span>
+                              ) : (
+                                <span className="text-gray-400">No</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
+                              {log.attachmentSuccess === null ? (
+                                <span className="text-gray-400">N/A</span>
+                              ) : log.attachmentSuccess ? (
+                                <span className="text-green-600">Yes</span>
+                              ) : (
+                                <span className="text-red-600">No</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
+                              {log.emailSuccess ? (
+                                <span className="text-green-600">Yes</span>
+                              ) : (
+                                <span className="text-red-600">No</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                  </>
+                )}
               </div>
             )}
           </div>

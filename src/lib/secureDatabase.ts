@@ -176,6 +176,21 @@ export async function initializeDatabase() {
       )
     `;
 
+    // Create email logs table for tracking email events
+    await sql`
+      CREATE TABLE IF NOT EXISTS email_logs (
+        id VARCHAR(36) PRIMARY KEY,
+        environment VARCHAR(50) NOT NULL,
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        event_type VARCHAR(50) NOT NULL,
+        destination_email VARCHAR(255) NOT NULL,
+        attachment_expected BOOLEAN NOT NULL,
+        attachment_success BOOLEAN,
+        email_success BOOLEAN NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
     // Create team_reference_data table for managing team data
     // Note: This table is created in PROD database and accessed by both staging and prod
     // No environment column needed since all environments share the same data

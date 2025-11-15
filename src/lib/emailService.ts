@@ -397,12 +397,29 @@ This link will expire in 24 hours.
 ${textFooter}
   `;
 
-  return emailService.sendEmail({
+  const emailSent = await emailService.sendEmail({
     to,
     subject,
     html,
     text,
   });
+
+  // Log email event (Account Creation - no attachment expected)
+  try {
+    const { logEmailEvent } = await import('@/lib/emailLogger');
+    await logEmailEvent({
+      eventType: 'Account Creation',
+      destinationEmail: to,
+      attachmentExpected: false,
+      attachmentSuccess: null,
+      emailSuccess: emailSent,
+    });
+  } catch (logError) {
+    // Don't fail email sending if logging fails
+    console.error('[Email Service] Failed to log Account Creation email:', logError);
+  }
+
+  return emailSent;
 }
 
 export async function sendPasswordResetEmail(to: string, name: string, resetLink: string, resetCode: string): Promise<boolean> {
@@ -465,10 +482,27 @@ export async function sendPasswordResetEmail(to: string, name: string, resetLink
     If you didn't request a password reset, please ignore this email. Your password will remain unchanged.
   `;
 
-  return emailService.sendEmail({
+  const emailSent = await emailService.sendEmail({
     to,
     subject: "Password Reset - Warren's March Madness",
     html,
     text,
   });
+
+  // Log email event (Password Reset - no attachment expected)
+  try {
+    const { logEmailEvent } = await import('@/lib/emailLogger');
+    await logEmailEvent({
+      eventType: 'Password Reset',
+      destinationEmail: to,
+      attachmentExpected: false,
+      attachmentSuccess: null,
+      emailSuccess: emailSent,
+    });
+  } catch (logError) {
+    // Don't fail email sending if logging fails
+    console.error('[Email Service] Failed to log Password Reset email:', logError);
+  }
+
+  return emailSent;
 }
