@@ -215,7 +215,7 @@ export default function FinalFourChampionship({
         if (now >= deadline) {
           return true;
         }
-      } catch (e) {
+      } catch {
         // Invalid date format - ignore
       }
     }
@@ -238,7 +238,7 @@ export default function FinalFourChampionship({
         if (now >= deadline) {
           return siteConfig?.finalMessageTooLate || 'Bracket submissions are closed. The deadline has passed.';
         }
-      } catch (e) {
+      } catch {
         // Invalid date format - ignore
       }
     }

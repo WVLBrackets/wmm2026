@@ -36,8 +36,8 @@ export async function validateBracketSubmission(
   if (tieBreaker === undefined || tieBreaker === null) {
     errors.push('Tie breaker is required');
   } else {
-    const low = siteConfig?.tieBreakerLow ?? FALLBACK_CONFIG.tieBreakerLow;
-    const high = siteConfig?.tieBreakerHigh ?? FALLBACK_CONFIG.tieBreakerHigh;
+    const low = siteConfig?.tieBreakerLow ?? FALLBACK_CONFIG.tieBreakerLow ?? 50;
+    const high = siteConfig?.tieBreakerHigh ?? FALLBACK_CONFIG.tieBreakerHigh ?? 500;
     if (isNaN(tieBreaker) || tieBreaker < low || tieBreaker > high) {
       errors.push(`Tie breaker must be between ${low} and ${high}`);
     }
@@ -124,7 +124,7 @@ function checkSubmissionDisabled(siteConfig: SiteConfigData | null): { disabled:
           reason: siteConfig?.finalMessageTooLate || FALLBACK_CONFIG.finalMessageTooLate || 'Bracket submissions are closed. The deadline has passed.'
         };
       }
-    } catch (e) {
+    } catch {
       // Invalid date format - ignore
     }
   }
@@ -150,10 +150,7 @@ function validateBracketStructureLogic(
   // Validate Championship winner comes from Final Four
 
   Object.entries(bracketStructure.regions).forEach(([regionPosition, regionGames]) => {
-    const roundOf64Games = regionGames.filter(g => g.round === 'Round of 64');
     const roundOf32Games = regionGames.filter(g => g.round === 'Round of 32');
-    const sweet16Games = regionGames.filter(g => g.round === 'Sweet 16');
-    const elite8Games = regionGames.filter(g => g.round === 'Elite 8');
 
     // Validate Round of 32 winners come from Round of 64
     roundOf32Games.forEach(r32Game => {
