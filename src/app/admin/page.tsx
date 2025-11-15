@@ -194,7 +194,10 @@ export default function AdminPage() {
       setLogsLoading(true);
       setLogsError('');
       
-      const params = new URLSearchParams({ limit: '100' });
+      const params = new URLSearchParams();
+      if (!loadAllLogs) {
+        params.append('limit', '100');
+      }
       if (logStartDate) {
         // Convert datetime-local (user's local time) to UTC ISO string
         // datetime-local format: "YYYY-MM-DDTHH:mm"
