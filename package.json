@@ -10,7 +10,6 @@
     "download-logos": "node scripts/download-logos.js",
     "sync-teams": "tsx scripts/sync-teams-from-espn.ts",
     "preview-uniform": "tsx scripts/preview-uniform.ts",
-    "preview-uniform-ai": "tsx scripts/preview-uniform-ai.ts",
     "generate-players": "tsx scripts/generate-players-batch.ts"
   },
   "dependencies": {

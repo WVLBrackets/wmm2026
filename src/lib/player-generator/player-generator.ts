@@ -3,7 +3,7 @@
  * Generates PNG images of generic football players with customizable uniforms
  */
 
-import { createCanvas, loadImage, CanvasRenderingContext2D, Image } from 'canvas';
+import { createCanvas, CanvasRenderingContext2D } from 'canvas';
 import { UniformConfig, PlayerVariation } from './uniform-config';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -274,7 +274,7 @@ function drawJersey(
   height: number,
   config: UniformConfig,
   number: number,
-  variation: PlayerVariation
+  _variation: PlayerVariation
 ): void {
   const torsoWidth = width * 0.4;
   const torsoHeight = height * 0.25;
@@ -431,7 +431,7 @@ function drawCleats(
   width: number,
   height: number,
   config: UniformConfig,
-  variation: PlayerVariation
+  _variation: PlayerVariation
 ): void {
   const legWidth = width * 0.15;
   const cleatHeight = height * 0.05;
