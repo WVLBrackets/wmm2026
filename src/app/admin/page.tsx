@@ -1281,8 +1281,8 @@ export default function AdminPage() {
       if (filterStatus && filterStatus !== 'all') {
         params.append('status', filterStatus);
       }
-      if (filterUserId && filterUserId !== 'all') {
-        params.append('userId', filterUserId);
+      if (filterUser && filterUser !== 'all') {
+        params.append('userId', filterUser);
       }
       if (filterYear && filterYear !== 'all') {
         params.append('year', filterYear);
