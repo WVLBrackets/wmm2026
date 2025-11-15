@@ -108,6 +108,8 @@ export default function AdminPage() {
   const [filterUser, setFilterUser] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterYear, setFilterYear] = useState<string>('all');
+  const [filterCreatedDate, setFilterCreatedDate] = useState<string>('');
+  const [filterUpdatedDate, setFilterUpdatedDate] = useState<string>('');
   const [changingPasswordUserId, setChangingPasswordUserId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
