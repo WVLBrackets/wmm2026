@@ -154,8 +154,36 @@ export default function AdminPage() {
       filtered = filtered.filter(b => b.year === yearNum);
     }
     
+    // Filter by created date (match date only, ignore time)
+    if (filterCreatedDate) {
+      const filterDate = new Date(filterCreatedDate);
+      filterDate.setHours(0, 0, 0, 0);
+      const nextDay = new Date(filterDate);
+      nextDay.setDate(nextDay.getDate() + 1);
+      
+      filtered = filtered.filter(b => {
+        const createdDate = new Date(b.createdAt);
+        createdDate.setHours(0, 0, 0, 0);
+        return createdDate >= filterDate && createdDate < nextDay;
+      });
+    }
+    
+    // Filter by updated date (match date only, ignore time)
+    if (filterUpdatedDate) {
+      const filterDate = new Date(filterUpdatedDate);
+      filterDate.setHours(0, 0, 0, 0);
+      const nextDay = new Date(filterDate);
+      nextDay.setDate(nextDay.getDate() + 1);
+      
+      filtered = filtered.filter(b => {
+        const updatedDate = new Date(b.updatedAt);
+        updatedDate.setHours(0, 0, 0, 0);
+        return updatedDate >= filterDate && updatedDate < nextDay;
+      });
+    }
+    
     setFilteredBrackets(filtered);
-  }, [brackets, filterUser, filterStatus, filterYear]);
+  }, [brackets, filterUser, filterStatus, filterYear, filterCreatedDate, filterUpdatedDate]);
 
   const loadTeamDataRef = useRef<(() => Promise<void>) | undefined>(undefined);
 
@@ -1743,6 +1771,30 @@ export default function AdminPage() {
                 </select>
               </div>
               
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Filter by Created Date
+                </label>
+                <input
+                  type="date"
+                  value={filterCreatedDate}
+                  onChange={(e) => setFilterCreatedDate(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Filter by Updated Date
+                </label>
+                <input
+                  type="date"
+                  value={filterUpdatedDate}
+                  onChange={(e) => setFilterUpdatedDate(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              
               <div className="ml-auto flex gap-2">
                 <button
                   onClick={handleExportBrackets}
@@ -1803,6 +1855,9 @@ export default function AdminPage() {
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Created
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Updated
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1813,7 +1868,7 @@ export default function AdminPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredBrackets.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
                         No brackets found
                       </td>
                     </tr>
@@ -1895,6 +1950,9 @@ export default function AdminPage() {
                               {bracket.status}
                             </span>
                           )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(bracket.createdAt).toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {new Date(bracket.updatedAt).toLocaleDateString()}
