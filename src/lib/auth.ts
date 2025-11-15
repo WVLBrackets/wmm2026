@@ -2,6 +2,16 @@ import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { verifyPassword } from './secureDatabase';
 
+// Validate NEXTAUTH_SECRET at runtime when authOptions is actually used
+// This prevents build-time errors while still ensuring the secret is required
+function getAuthSecret(): string {
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    throw new Error('NEXTAUTH_SECRET environment variable is required');
+  }
+  return secret;
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
