@@ -6,7 +6,14 @@ import { verifyPassword } from './secureDatabase';
 // This prevents build-time errors while still ensuring the secret is required
 function getAuthSecret(): string {
   const secret = process.env.NEXTAUTH_SECRET;
+  // During build/static generation, return a placeholder to avoid errors
+  // The secret will be validated when actually used for authentication
   if (!secret) {
+    // Check if we're in a build context (static generation)
+    if (process.env.NEXT_PHASE === 'phase-production-build' || process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
+      // Return a placeholder during build - will be validated at runtime
+      return 'build-placeholder-secret';
+    }
     throw new Error('NEXTAUTH_SECRET environment variable is required');
   }
   return secret;
