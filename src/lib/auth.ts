@@ -76,6 +76,52 @@ export const authOptions: NextAuthOptions = {
                 DELETE FROM tokens WHERE token = ${signInToken}
               `;
               
+              // Update last_login timestamp on successful auto-signin
+              // This is a non-critical update, so we don't fail login if it errors
+              try {
+                // First check if column exists, create it if needed
+                try {
+                  const columnCheck = await sql`
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'users' 
+                      AND column_name = 'last_login'
+                      AND table_schema = current_schema()
+                  `;
+                  
+                  if (columnCheck.rows.length === 0) {
+                    console.log('[Auth Auto-Signin] last_login column not found, creating it...');
+                    try {
+                      await sql`ALTER TABLE users ADD COLUMN last_login TIMESTAMP`;
+                      console.log('[Auth Auto-Signin] Successfully created last_login column');
+                    } catch (addError) {
+                      // Column might have been created by another request, try the update anyway
+                      if (addError instanceof Error && (
+                        !addError.message.includes('already exists') && 
+                        !addError.message.includes('duplicate column')
+                      )) {
+                        console.error('[Auth Auto-Signin] Error creating last_login column:', addError);
+                        throw addError;
+                      }
+                    }
+                  }
+                } catch (checkError) {
+                  console.error('[Auth Auto-Signin] Error checking for last_login column:', checkError);
+                  // Continue anyway, try the update - might work if column exists
+                }
+                
+                // Now try the update
+                const updateResult = await sql`
+                  UPDATE users 
+                  SET last_login = CURRENT_TIMESTAMP
+                  WHERE id = ${row.user_id} AND environment = ${environment}
+                `;
+                console.log(`[Auth Auto-Signin] last_login update successful, rows affected: ${updateResult.rowCount ?? 0}`);
+              } catch (updateError) {
+                // Log but don't fail login if last_login update fails
+                console.error('[Auth Auto-Signin] Error updating last_login (non-critical):', updateError);
+              }
+              
               console.log('Auth: User authenticated via auto-signin token:', row.email);
               return {
                 id: row.user_id,
