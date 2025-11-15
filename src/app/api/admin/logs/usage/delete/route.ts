@@ -35,27 +35,26 @@ export async function DELETE(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
-    // SECURITY: Require both date parameters to prevent accidental deletion of all logs
-    if (!startDate || !endDate) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Both startDate and endDate parameters are required for safety'
-        },
-        { status: 400 }
-      );
+    // Delete logs - with date range if provided, otherwise delete all
+    let result;
+    if (startDate && endDate) {
+      // Delete logs for the specified date range
+      const startDateISO = new Date(startDate).toISOString();
+      const endDateISO = new Date(endDate).toISOString();
+      
+      result = await sql`
+        DELETE FROM usage_logs
+        WHERE environment = ${environment}
+          AND timestamp >= ${startDateISO}
+          AND timestamp <= ${endDateISO}
+      `;
+    } else {
+      // Delete all logs for the environment
+      result = await sql`
+        DELETE FROM usage_logs
+        WHERE environment = ${environment}
+      `;
     }
-
-    // Delete logs for the specified date range
-    const startDateISO = new Date(startDate).toISOString();
-    const endDateISO = new Date(endDate).toISOString();
-    
-    const result = await sql`
-      DELETE FROM usage_logs
-      WHERE environment = ${environment}
-        AND timestamp >= ${startDateISO}
-        AND timestamp <= ${endDateISO}
-    `;
 
     return NextResponse.json({
       success: true,

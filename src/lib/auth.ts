@@ -134,6 +134,8 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt',
   },
-  secret: process.env.NEXTAUTH_SECRET || 'fallback-secret-for-development',
+  secret: process.env.NEXTAUTH_SECRET || (() => {
+    throw new Error('NEXTAUTH_SECRET environment variable is required');
+  })(),
 };
 

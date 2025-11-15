@@ -48,8 +48,6 @@ function BracketContent() {
   const shouldShowMyPicksPage = () => {
     if (!siteConfig) return false;
     
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    
     // Detect preview/staging by checking if we're on a Vercel preview URL
     // Vercel preview URLs follow the pattern: project-name-git-branch-owner-projects.vercel.app
     // Production is typically on a custom domain (wmm2026.com) or the main vercel.app domain
@@ -60,8 +58,8 @@ function BracketContent() {
        window.location.hostname.includes('.'))
     );
     
-    // Use dev flag for both local development and preview/staging deployments
-    if (isDevelopment || isPreview) {
+    // Use dev flag for preview/staging deployments
+    if (isPreview) {
       return siteConfig.showPicksDev === 'Yes';
     }
     

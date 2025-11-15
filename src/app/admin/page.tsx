@@ -74,9 +74,11 @@ export default function AdminPage() {
   const [filteredBrackets, setFilteredBrackets] = useState<Bracket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
   const [activeTab, setActiveTab] = useState<'brackets' | 'users' | 'data' | 'logs'>('users');
   const [logsTab, setLogsTab] = useState<'summary' | 'usage' | 'error'>('summary');
   const [usageLogs, setUsageLogs] = useState<UsageLog[]>([]);
+  const [loadAllLogs, setLoadAllLogs] = useState(false);
   const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
   const [usageSummary, setUsageSummary] = useState<{
     gridData: Array<{
@@ -106,6 +108,8 @@ export default function AdminPage() {
   const [filterUser, setFilterUser] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterYear, setFilterYear] = useState<string>('all');
+  const [filterCreatedDate, setFilterCreatedDate] = useState<string>('');
+  const [filterUpdatedDate, setFilterUpdatedDate] = useState<string>('');
   const [changingPasswordUserId, setChangingPasswordUserId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
@@ -124,7 +128,6 @@ export default function AdminPage() {
   const [teamSortColumn, setTeamSortColumn] = useState<'name' | 'mascot' | 'key' | 'id' | null>('name');
   const [teamSortOrder, setTeamSortOrder] = useState<'asc' | 'desc'>('asc');
   const [duplicateCheck, setDuplicateCheck] = useState<{ hasDuplicates: boolean; duplicateIds: string[] }>({ hasDuplicates: false, duplicateIds: [] });
-  const [isDevelopment, setIsDevelopment] = useState(false);
   const [teamActiveFilter, setTeamActiveFilter] = useState<'all' | 'active' | 'inactive'>('active');
 
   // Ensure bracket mode is disabled when admin page loads
@@ -151,8 +154,58 @@ export default function AdminPage() {
       filtered = filtered.filter(b => b.year === yearNum);
     }
     
+    // Filter by created date (match date only, ignore time)
+    // Handle timezone properly: date input gives YYYY-MM-DD in local timezone
+    if (filterCreatedDate) {
+      // Parse the date string (YYYY-MM-DD) and create date range in local timezone
+      const [year, month, day] = filterCreatedDate.split('-').map(Number);
+      const filterDateStart = new Date(year, month - 1, day, 0, 0, 0, 0); // Local midnight start
+      const filterDateEnd = new Date(year, month - 1, day, 23, 59, 59, 999); // Local end of day
+      
+      filtered = filtered.filter(b => {
+        const createdDate = new Date(b.createdAt);
+        // Compare dates by converting both to local date strings
+        const createdDateStr = createdDate.toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: '2-digit', 
+          day: '2-digit' 
+        });
+        const filterDateStr = filterDateStart.toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: '2-digit', 
+          day: '2-digit' 
+        });
+        return createdDateStr === filterDateStr;
+      });
+    }
+    
+    // Filter by updated date (match date only, ignore time)
+    // Handle timezone properly: date input gives YYYY-MM-DD in local timezone
+    if (filterUpdatedDate) {
+      // Parse the date string (YYYY-MM-DD) and create date range in local timezone
+      const [year, month, day] = filterUpdatedDate.split('-').map(Number);
+      const filterDateStart = new Date(year, month - 1, day, 0, 0, 0, 0); // Local midnight start
+      const filterDateEnd = new Date(year, month - 1, day, 23, 59, 59, 999); // Local end of day
+      
+      filtered = filtered.filter(b => {
+        const updatedDate = new Date(b.updatedAt);
+        // Compare dates by converting both to local date strings
+        const updatedDateStr = updatedDate.toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: '2-digit', 
+          day: '2-digit' 
+        });
+        const filterDateStr = filterDateStart.toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: '2-digit', 
+          day: '2-digit' 
+        });
+        return updatedDateStr === filterDateStr;
+      });
+    }
+    
     setFilteredBrackets(filtered);
-  }, [brackets, filterUser, filterStatus, filterYear]);
+  }, [brackets, filterUser, filterStatus, filterYear, filterCreatedDate, filterUpdatedDate]);
 
   const loadTeamDataRef = useRef<(() => Promise<void>) | undefined>(undefined);
 
@@ -194,7 +247,10 @@ export default function AdminPage() {
       setLogsLoading(true);
       setLogsError('');
       
-      const params = new URLSearchParams({ limit: '100' });
+      const params = new URLSearchParams();
+      if (!loadAllLogs) {
+        params.append('limit', '100');
+      }
       if (logStartDate) {
         // Convert datetime-local (user's local time) to UTC ISO string
         // datetime-local format: "YYYY-MM-DDTHH:mm"
@@ -234,7 +290,7 @@ export default function AdminPage() {
     } finally {
       setLogsLoading(false);
     }
-  }, [logStartDate, logEndDate, logUsernameFilter, logEventTypeFilter, logLocationFilter]);
+  }, [logStartDate, logEndDate, logUsernameFilter, logEventTypeFilter, logLocationFilter, loadAllLogs]);
 
   const loadErrorLogs = useCallback(async () => {
     try {
@@ -323,14 +379,9 @@ export default function AdminPage() {
       return;
     }
     
-    // SECURITY: Require both date filters to prevent accidental deletion of all logs
-    if (!logStartDate || !logEndDate) {
-      alert('Please select both start and end date filters before deleting logs. This prevents accidental deletion of all logs.');
-      return;
-    }
-    
-    const dateRange = `${logStartDate} to ${logEndDate}`;
-    const confirmMessage = `Are you sure you want to delete ${count} ${logType} log${count !== 1 ? 's' : ''} from ${dateRange}? This action cannot be undone.`;
+    // Show confirmation with count of records to be deleted
+    const dateRange = (logStartDate && logEndDate) ? ` from ${logStartDate} to ${logEndDate}` : '';
+    const confirmMessage = `Are you sure you want to delete ${count} ${logType} log${count !== 1 ? 's' : ''}${dateRange}? This action cannot be undone.`;
     if (!confirm(confirmMessage)) {
       return;
     }
@@ -339,11 +390,15 @@ export default function AdminPage() {
       setDeletingLogs(true);
       
       const params = new URLSearchParams();
-      // Convert datetime-local to UTC ISO strings for server
-      const startDateUTC = new Date(logStartDate).toISOString();
-      const endDateUTC = new Date(logEndDate).toISOString();
-      params.append('startDate', startDateUTC);
-      params.append('endDate', endDateUTC);
+      // Only include date filters if they are set
+      if (logStartDate) {
+        const startDateUTC = new Date(logStartDate).toISOString();
+        params.append('startDate', startDateUTC);
+      }
+      if (logEndDate) {
+        const endDateUTC = new Date(logEndDate).toISOString();
+        params.append('endDate', endDateUTC);
+      }
       
       const response = await fetch(`/api/admin/logs/${logType}/delete?${params.toString()}`, {
         method: 'DELETE',
@@ -593,9 +648,6 @@ export default function AdminPage() {
       return;
     }
     
-    // Check if we're in development (hide Team Data tab)
-    const hostname = window.location.hostname;
-    setIsDevelopment(hostname === 'localhost' || hostname === '127.0.0.1');
     
     loadDataRef.current?.();
   }, [status, router]);
@@ -1267,6 +1319,67 @@ export default function AdminPage() {
     }
   };
 
+  const handleExportBrackets = async () => {
+    if (filteredBrackets.length === 0) {
+      alert('No brackets to export');
+      return;
+    }
+    
+    try {
+      setIsExporting(true);
+      
+      // Build query parameters matching current filters
+      const params = new URLSearchParams();
+      if (filterStatus && filterStatus !== 'all') {
+        params.append('status', filterStatus);
+      }
+      if (filterUser && filterUser !== 'all') {
+        params.append('userId', filterUser);
+      }
+      if (filterYear && filterYear !== 'all') {
+        params.append('year', filterYear);
+      }
+      
+      // Fetch CSV file
+      const response = await fetch(`/api/admin/brackets/export?${params.toString()}`);
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to export brackets');
+      }
+      
+      // Get CSV content
+      const csvContent = await response.text();
+      
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Get filename from Content-Disposition header or use default
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'brackets-export.csv';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exporting brackets:', error);
+      alert(error instanceof Error ? error.message : 'Failed to export brackets');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const handleDeleteAllFiltered = async () => {
     if (filteredBrackets.length === 0) {
       return;
@@ -1595,19 +1708,17 @@ export default function AdminPage() {
                 <Trophy className="w-5 h-5" />
                 <span>Brackets ({brackets.length})</span>
               </button>
-              {!isDevelopment && (
-                <button
-                  onClick={() => setActiveTab('data')}
-                  className={`flex items-center space-x-2 px-6 py-4 border-b-2 font-medium text-sm ${
-                    activeTab === 'data'
-                      ? 'border-blue-600 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <Table className="w-5 h-5" />
-                  <span>Team Data ({Object.keys(teamData).length})</span>
-                </button>
-              )}
+              <button
+                onClick={() => setActiveTab('data')}
+                className={`flex items-center space-x-2 px-6 py-4 border-b-2 font-medium text-sm ${
+                  activeTab === 'data'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Table className="w-5 h-5" />
+                <span>Team Data ({Object.keys(teamData).length})</span>
+              </button>
               <button
                 onClick={() => setActiveTab('logs')}
                 className={`flex items-center space-x-2 px-6 py-4 border-b-2 font-medium text-sm ${
@@ -1682,7 +1793,66 @@ export default function AdminPage() {
                 </select>
               </div>
               
-              <div className="ml-auto">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Filter by Created Date
+                </label>
+                <input
+                  type="date"
+                  value={filterCreatedDate}
+                  onChange={(e) => setFilterCreatedDate(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Filter by Updated Date
+                </label>
+                <input
+                  type="date"
+                  value={filterUpdatedDate}
+                  onChange={(e) => setFilterUpdatedDate(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              
+              <div className="ml-auto flex gap-2">
+                <button
+                  onClick={() => {
+                    setFilterUser('all');
+                    setFilterStatus('all');
+                    setFilterYear('all');
+                    setFilterCreatedDate('');
+                    setFilterUpdatedDate('');
+                  }}
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-600 text-white hover:bg-gray-700"
+                  title="Clear all filters"
+                >
+                  Clear Filters
+                </button>
+                <button
+                  onClick={handleExportBrackets}
+                  disabled={filteredBrackets.length === 0 || isExporting}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                    filteredBrackets.length === 0 || isExporting
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
+                  title={filteredBrackets.length === 0 ? 'No brackets to export' : `Export ${filteredBrackets.length} filtered bracket(s) to CSV`}
+                >
+                  {isExporting ? (
+                    <>
+                      <span className="animate-spin inline-block mr-2">⏳</span>
+                      Exporting...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4 inline mr-2" />
+                      Extract ({filteredBrackets.length})
+                    </>
+                  )}
+                </button>
                 <button
                   onClick={handleDeleteAllFiltered}
                   disabled={filteredBrackets.length === 0}
@@ -1720,6 +1890,9 @@ export default function AdminPage() {
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Created
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Updated
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1730,7 +1903,7 @@ export default function AdminPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredBrackets.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
                         No brackets found
                       </td>
                     </tr>
@@ -1812,6 +1985,9 @@ export default function AdminPage() {
                               {bracket.status}
                             </span>
                           )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(bracket.createdAt).toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {new Date(bracket.updatedAt).toLocaleDateString()}
@@ -2964,14 +3140,30 @@ export default function AdminPage() {
             {logsTab === 'usage' && (
               <div>
                 <div className="mb-4 flex justify-between items-center">
-                  <h3 className="text-lg font-semibold">Usage Logs</h3>
-                  <button
-                    onClick={handleDeleteLogs}
-                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-                    disabled={logsLoading || deletingLogs || usageLogs.length === 0}
-                  >
-                    {deletingLogs ? 'Deleting...' : 'Delete'}
-                  </button>
+                  <h3 className="text-lg font-semibold">
+                    Usage Logs {usageLogs.length > 0 && !loadAllLogs && `(${usageLogs.length} of many)`}
+                  </h3>
+                  <div className="flex gap-2">
+                    {!loadAllLogs && (
+                      <button
+                        onClick={() => {
+                          setLoadAllLogs(true);
+                          loadUsageLogs();
+                        }}
+                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                        disabled={logsLoading || deletingLogs}
+                      >
+                        {logsLoading ? 'Loading...' : 'Load All'}
+                      </button>
+                    )}
+                    <button
+                      onClick={handleDeleteLogs}
+                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                      disabled={logsLoading || deletingLogs || usageLogs.length === 0}
+                    >
+                      {deletingLogs ? 'Deleting...' : 'Delete'}
+                    </button>
+                  </div>
                 </div>
                 {logsError && (
                   <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">

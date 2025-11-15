@@ -279,41 +279,36 @@ export async function createUser(email: string, name: string, password: string):
   // Generate confirmation token
   const confirmationToken = crypto.randomBytes(32).toString('hex');
   const confirmationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-
-  // Only auto-confirm in development mode
-  const isDevelopment = process.env.NODE_ENV === 'development';
   
   const userId = crypto.randomUUID();
   
-  // Insert user with environment
+  // Insert user with environment (always require email confirmation)
   await sql`
     INSERT INTO users (
       id, email, name, password, email_confirmed,
       confirmation_token, confirmation_expires, environment
     ) VALUES (
-      ${userId}, ${email}, ${name}, ${hashedPassword}, ${isDevelopment},
-      ${isDevelopment ? null : confirmationToken}, 
-      ${isDevelopment ? null : confirmationExpires.toISOString()},
+      ${userId}, ${email}, ${name}, ${hashedPassword}, false,
+      ${confirmationToken}, 
+      ${confirmationExpires.toISOString()},
       ${environment}
     )
   `;
   
-  // Store confirmation token only if not in development mode
-  if (!isDevelopment) {
-    await sql`
-      INSERT INTO tokens (token, user_id, expires, type, environment)
-      VALUES (${confirmationToken}, ${userId}, ${confirmationExpires.toISOString()}, 'confirmation', ${environment})
-    `;
-  }
+  // Always store confirmation token
+  await sql`
+    INSERT INTO tokens (token, user_id, expires, type, environment)
+    VALUES (${confirmationToken}, ${userId}, ${confirmationExpires.toISOString()}, 'confirmation', ${environment})
+  `;
 
   return {
     id: userId,
     email,
     name,
     password: hashedPassword,
-    emailConfirmed: isDevelopment,
-    confirmationToken: isDevelopment ? undefined : confirmationToken,
-    confirmationExpires: isDevelopment ? undefined : confirmationExpires,
+    emailConfirmed: false,
+    confirmationToken,
+    confirmationExpires,
     environment,
     createdAt: new Date(),
   };

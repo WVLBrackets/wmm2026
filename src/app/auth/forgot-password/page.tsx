@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
 import { usageLogger } from '@/lib/usageLogger';
@@ -11,7 +10,6 @@ export default function ForgotPasswordPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,13 +31,8 @@ export default function ForgotPasswordPage() {
       const data = await response.json();
 
       if (response.ok) {
-        // In development mode, redirect directly to reset password page with token
-        if (data.isDevelopment && data.resetToken) {
-          router.push(`/auth/reset-password?token=${data.resetToken}`);
-          return; // Don't set isSubmitted
-        } else {
-          setIsSubmitted(true);
-        }
+        // Password reset email sent successfully
+        setIsSubmitted(true);
       } else {
         setError(data.error || 'Failed to send reset email');
       }

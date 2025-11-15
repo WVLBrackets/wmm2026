@@ -32,22 +32,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // In development mode, return the token directly so user can reset immediately
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    
-    if (isDevelopment) {
-      return NextResponse.json({
-        message: 'Password reset token generated',
-        resetToken,
-        isDevelopment: true,
-      });
-    }
-
-    // In production, send reset email
+    // Send reset email
     // Determine base URL based on environment
     // For preview deployments, use the Host header to get the branch URL
     // For production, use NEXTAUTH_URL
-    // For development, use localhost
     const vercelEnv = process.env.VERCEL_ENV;
     let baseUrl: string;
     
@@ -65,11 +53,11 @@ export async function POST(request: NextRequest) {
         // Fallback to VERCEL_URL if Host header not available
         baseUrl = process.env.VERCEL_URL 
           ? `https://${process.env.VERCEL_URL}` 
-          : process.env.NEXTAUTH_URL || 'http://localhost:3000';
+          : process.env.NEXTAUTH_URL || 'https://wmm2026.vercel.app';
       }
     } else {
-      // Development: Use localhost or NEXTAUTH_URL
-      baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+      // Fallback to production URL (should not happen in deployed environments)
+      baseUrl = process.env.NEXTAUTH_URL || 'https://wmm2026.vercel.app';
     }
     
     const resetLink = `${baseUrl}/auth/reset-password?token=${resetToken}`;

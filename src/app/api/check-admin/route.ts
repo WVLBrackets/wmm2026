@@ -25,13 +25,10 @@ export async function GET() {
 
     return NextResponse.json({ isAdmin: userIsAdmin });
   } catch (error) {
-    // Don't expose error details in production
-    const isDevelopment = process.env.NODE_ENV === 'development';
     console.error('Error checking admin status:', error);
     return NextResponse.json(
       { 
-        error: 'Internal server error',
-        ...(isDevelopment && { details: error instanceof Error ? error.message : 'Unknown error' })
+        error: 'Internal server error'
       },
       { status: 500 }
     );

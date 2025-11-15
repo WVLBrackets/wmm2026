@@ -124,15 +124,12 @@ export async function POST(request: NextRequest) {
       errorName: error instanceof Error ? error.name : undefined
     });
     
-    // Return error details in staging/development for debugging
-    const isStaging = process.env.VERCEL_ENV === 'preview' || process.env.NODE_ENV === 'development';
+    // Return generic error (never expose details)
     
     return NextResponse.json(
       { 
         success: false, 
-        error: 'An error occurred while sending the email',
-        details: isStaging ? errorMessage : undefined,
-        stack: isStaging && errorStack ? errorStack.substring(0, 500) : undefined
+        error: 'An error occurred while sending the email'
       },
       { status: 500 }
     );
@@ -231,58 +228,49 @@ export async function generateBracketPDF(
   
   try {
     // Launch browser with Chromium
-    // Use Chromium for both production and preview (staging) environments
-    // Only use local Chrome for local development
-    const vercelEnv = process.env.VERCEL_ENV;
-    const isVercel = vercelEnv === 'production' || vercelEnv === 'preview';
-    console.log('[PDF Generation] Environment:', vercelEnv, 'isVercel:', isVercel);
-    
+    // Always use Chromium for Vercel deployments (production and preview)
     console.log('[PDF Generation] Launching browser...');
     console.log('[PDF Generation] About to call chromium.executablePath()...');
+    
+    // Add timeout to executablePath call (10 seconds)
+    const execPathStartTime = Date.now();
+    console.log('[PDF Generation] Setting up executablePath timeout...');
     let executablePath: string;
-    if (isVercel) {
-      // Add timeout to executablePath call (10 seconds)
-      const execPathStartTime = Date.now();
-      console.log('[PDF Generation] Setting up executablePath timeout...');
+    try {
+      console.log('[PDF Generation] Calling chromium.executablePath()...');
+      const execPathPromise = chromium.executablePath();
+      console.log('[PDF Generation] chromium.executablePath() called, setting up timeout...');
+      let timeoutId: NodeJS.Timeout | null = null;
+      const execPathTimeout = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          console.error('[PDF Generation] TIMEOUT: chromium.executablePath() exceeded 10 seconds');
+          reject(new Error('chromium.executablePath() timed out after 10 seconds'));
+        }, 10000);
+      });
+      console.log('[PDF Generation] Racing executablePath promise with timeout...');
       try {
-        console.log('[PDF Generation] Calling chromium.executablePath()...');
-        const execPathPromise = chromium.executablePath();
-        console.log('[PDF Generation] chromium.executablePath() called, setting up timeout...');
-        let timeoutId: NodeJS.Timeout | null = null;
-        const execPathTimeout = new Promise<never>((_, reject) => {
-          timeoutId = setTimeout(() => {
-            console.error('[PDF Generation] TIMEOUT: chromium.executablePath() exceeded 10 seconds');
-            reject(new Error('chromium.executablePath() timed out after 10 seconds'));
-          }, 10000);
-        });
-        console.log('[PDF Generation] Racing executablePath promise with timeout...');
-        try {
-          executablePath = await Promise.race([execPathPromise, execPathTimeout]) as string;
-          // Clear timeout if operation completed successfully
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-          }
-          const execPathTime = Date.now() - execPathStartTime;
-          console.log(`[PDF Generation] Executable path retrieved in ${execPathTime}ms:`, executablePath);
-        } catch (raceError) {
-          // Clear timeout on error too
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-          }
-          throw raceError;
+        executablePath = await Promise.race([execPathPromise, execPathTimeout]) as string;
+        // Clear timeout if operation completed successfully
+        if (timeoutId) {
+          clearTimeout(timeoutId);
         }
-      } catch (execPathError) {
         const execPathTime = Date.now() - execPathStartTime;
-        console.error(`[PDF Generation] Failed to get executable path after ${execPathTime}ms:`, execPathError);
-        if (execPathError instanceof Error) {
-          console.error('[PDF Generation] Error message:', execPathError.message);
-          console.error('[PDF Generation] Error stack:', execPathError.stack);
+        console.log(`[PDF Generation] Executable path retrieved in ${execPathTime}ms:`, executablePath);
+      } catch (raceError) {
+        // Clear timeout on error too
+        if (timeoutId) {
+          clearTimeout(timeoutId);
         }
-        throw execPathError;
+        throw raceError;
       }
-    } else {
-      executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome';
-      console.log('[PDF Generation] Executable path (local):', executablePath);
+    } catch (execPathError) {
+      const execPathTime = Date.now() - execPathStartTime;
+      console.error(`[PDF Generation] Failed to get executable path after ${execPathTime}ms:`, execPathError);
+      if (execPathError instanceof Error) {
+        console.error('[PDF Generation] Error message:', execPathError.message);
+        console.error('[PDF Generation] Error stack:', execPathError.stack);
+      }
+      throw execPathError;
     }
     
     // Add timeout to browser launch (30 seconds) to prevent hanging
@@ -290,7 +278,7 @@ export async function generateBracketPDF(
     const launchStartTime = Date.now();
     
     const launchPromise = puppeteer.launch({
-      args: isVercel ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox'],
+      args: chromium.args,
       defaultViewport: chromium.defaultViewport,
       executablePath: executablePath,
       headless: chromium.headless,
@@ -415,7 +403,6 @@ function getLogoAsBase64(logoPath: string | null | undefined): string {
     }
     
     const dataUrl = `data:${mimeType};base64,${base64}`;
-    console.log(`[PDF Generation] Logo converted to base64: ${logoPath} (${imageBuffer.length} bytes)`);
     return dataUrl;
   } catch (error) {
     console.error(`[PDF Generation] Error converting logo to base64 (${logoPath}):`, error);

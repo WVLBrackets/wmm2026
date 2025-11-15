@@ -42,20 +42,7 @@ export async function POST(request: NextRequest) {
       throw createError;
     }
 
-    // In development mode, user is auto-confirmed
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    
-    // Auto-confirm ONLY in development
-    if (isDevelopment) {
-      return NextResponse.json({
-        message: 'User created successfully. You can now sign in.',
-        userId: user.id,
-        autoConfirmed: true,
-        reason: 'development mode'
-      });
-    }
-
-    // In production, always require email verification
+    // Always require email verification
     const token = user.confirmationToken;
     
     if (!token) {
@@ -68,7 +55,6 @@ export async function POST(request: NextRequest) {
     // Determine base URL based on environment
     // For preview deployments, use the Host header to get the branch URL
     // For production, use NEXTAUTH_URL
-    // For development, use localhost
     const vercelEnv = process.env.VERCEL_ENV;
     let baseUrl: string;
     
@@ -88,13 +74,13 @@ export async function POST(request: NextRequest) {
         // Fallback to VERCEL_URL if Host header not available
         baseUrl = process.env.VERCEL_URL 
           ? `https://${process.env.VERCEL_URL}` 
-          : process.env.NEXTAUTH_URL || 'http://localhost:3000';
+          : process.env.NEXTAUTH_URL || 'https://wmm2026.vercel.app';
         console.log(`[Register] Using preview URL fallback: ${baseUrl}`);
       }
     } else {
-      // Development: Use localhost or NEXTAUTH_URL
-      baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-      console.log(`[Register] Using development URL: ${baseUrl}`);
+      // Fallback to production URL (should not happen in deployed environments)
+      baseUrl = process.env.NEXTAUTH_URL || 'https://wmm2026.vercel.app';
+      console.log(`[Register] Using fallback URL: ${baseUrl}`);
     }
     
     const confirmationLink = `${baseUrl}/auth/confirm?token=${token}`;

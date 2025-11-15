@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
 import { usageLogger } from '@/lib/usageLogger';
@@ -19,10 +18,8 @@ export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const [autoConfirmed, setAutoConfirmed] = useState(false);
   const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
   
-  const router = useRouter();
 
   useEffect(() => {
     const loadConfig = async () => {
@@ -71,15 +68,7 @@ export default function SignUpPage() {
 
       if (response.ok) {
         setSuccess(true);
-        // Check if user was auto-confirmed (development mode)
-        if (data.autoConfirmed) {
-          setAutoConfirmed(true);
-          // Redirect to signin after a short delay
-          setTimeout(() => {
-            router.push('/auth/signin?registered=true');
-          }, 2000);
-        }
-        // Otherwise, user needs to confirm email
+        // User registration successful (email confirmation required)
       } else {
         setError(data.error || 'Failed to create account');
       }
@@ -100,7 +89,7 @@ export default function SignUpPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            {autoConfirmed ? (
+            {false ? (
               <>
                 <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
                   Account Created!
