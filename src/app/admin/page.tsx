@@ -157,10 +157,9 @@ export default function AdminPage() {
     // Filter by created date (match date only, ignore time)
     // Handle timezone properly: date input gives YYYY-MM-DD in local timezone
     if (filterCreatedDate) {
-      // Parse the date string (YYYY-MM-DD) and create date range in local timezone
+      // Parse the date string (YYYY-MM-DD) and create date in local timezone
       const [year, month, day] = filterCreatedDate.split('-').map(Number);
       const filterDateStart = new Date(year, month - 1, day, 0, 0, 0, 0); // Local midnight start
-      const filterDateEnd = new Date(year, month - 1, day, 23, 59, 59, 999); // Local end of day
       
       filtered = filtered.filter(b => {
         const createdDate = new Date(b.createdAt);
@@ -182,10 +181,9 @@ export default function AdminPage() {
     // Filter by updated date (match date only, ignore time)
     // Handle timezone properly: date input gives YYYY-MM-DD in local timezone
     if (filterUpdatedDate) {
-      // Parse the date string (YYYY-MM-DD) and create date range in local timezone
+      // Parse the date string (YYYY-MM-DD) and create date in local timezone
       const [year, month, day] = filterUpdatedDate.split('-').map(Number);
       const filterDateStart = new Date(year, month - 1, day, 0, 0, 0, 0); // Local midnight start
-      const filterDateEnd = new Date(year, month - 1, day, 23, 59, 59, 999); // Local end of day
       
       filtered = filtered.filter(b => {
         const updatedDate = new Date(b.updatedAt);
