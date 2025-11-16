@@ -763,8 +763,13 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                                 onClick={() => onCopyBracket(bracket)}
                                 logLocation="Copy"
                                 bracketId={number ? String(number).padStart(6, '0') : null}
-                                className="bg-green-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-green-700 cursor-pointer transition-colors"
-                                title="Copy"
+                                disabled={isBracketCreationDisabled()}
+                                className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
+                                  isBracketCreationDisabled()
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
+                                }`}
+                                title={isBracketCreationDisabled() ? getBracketCreationDisabledReason() || '' : 'Copy'}
                               >
                                 <Copy className="h-4 w-4" />
                               </LoggedButton>
