@@ -105,10 +105,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if submission is allowed (deadline/toggle check) BEFORE creating bracket
+    const submissionCheck = checkSubmissionAllowed(siteConfig);
+    if (!submissionCheck.allowed) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: submissionCheck.reason || 'Bracket submission is currently disabled.'
+        },
+        { status: 400 }
+      );
+    }
+
     // Load tournament data for validation
     const tournamentData = await loadTournamentData(tournamentYear.toString());
 
-    // Validate bracket submission server-side
+    // Validate bracket submission server-side (for data validation, not deadline/toggle)
     const validation = await validateBracketSubmission(
       picks,
       body.tieBreaker,
@@ -116,7 +128,7 @@ export async function POST(request: NextRequest) {
       siteConfig
     );
 
-    // Create new bracket (always create, even if invalid)
+    // Create new bracket (always create, even if invalid data)
     const bracket = await createBracket(
       user.id,
       body.entryName,
@@ -124,7 +136,8 @@ export async function POST(request: NextRequest) {
       picks
     );
     
-    // Determine status: 'Invalid' if validation failed, otherwise 'submitted'
+    // Determine status: 'Invalid' if validation failed (invalid data), otherwise 'submitted'
+    // Note: Deadline/toggle checks are handled above, so if we get here, submission is allowed
     const bracketStatus = validation.isValid ? 'submitted' : 'Invalid';
     
     // Update status

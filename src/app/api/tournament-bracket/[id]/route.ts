@@ -8,6 +8,8 @@ import {
   getUserByEmail 
 } from '@/lib/secureDatabase';
 import { sendSubmissionConfirmationEmail, processEmailAsync } from '@/lib/bracketEmailService';
+import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
+import { checkSubmissionAllowed } from '@/lib/bracketSubmissionValidator';
 
 /**
  * GET /api/tournament-bracket/[id] - Get a specific bracket
@@ -110,25 +112,39 @@ export async function PUT(
 
     const body = await request.json();
     
-    // If changing status to submitted, check for duplicate names within the same year
+    // If changing status to submitted, check if submission is allowed and validate
     if (body.status === 'submitted') {
-      const { getBracketsByUserId } = await import('@/lib/secureDatabase');
-      const { getSiteConfigFromGoogleSheets } = await import('@/lib/siteConfig');
-      const { FALLBACK_CONFIG } = await import('@/lib/fallbackConfig');
-      
-      // Get tournament year from config (same logic as createBracket)
+      // Get fresh site config to check submission rules
+      let siteConfig = null;
       let tournamentYear = new Date().getFullYear(); // Default fallback
       try {
-        const config = await getSiteConfigFromGoogleSheets();
-        if (config?.tournamentYear) {
-          tournamentYear = parseInt(config.tournamentYear);
+        siteConfig = await getSiteConfigFromGoogleSheets();
+        if (siteConfig?.tournamentYear) {
+          tournamentYear = parseInt(siteConfig.tournamentYear);
         }
       } catch {
         // Use fallback config if Google Sheets fails
+        const { FALLBACK_CONFIG } = await import('@/lib/fallbackConfig');
+        siteConfig = FALLBACK_CONFIG;
         if (FALLBACK_CONFIG.tournamentYear) {
           tournamentYear = parseInt(FALLBACK_CONFIG.tournamentYear);
         }
       }
+
+      // Check if submission is allowed (deadline/toggle check) BEFORE other validations
+      const submissionCheck = checkSubmissionAllowed(siteConfig);
+      if (!submissionCheck.allowed) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: submissionCheck.reason || 'Bracket submission is currently disabled.'
+          },
+          { status: 400 }
+        );
+      }
+      
+      // Check for duplicate names within the same year
+      const { getBracketsByUserId } = await import('@/lib/secureDatabase');
 
       const existingBrackets = await getBracketsByUserId(user.id);
       
