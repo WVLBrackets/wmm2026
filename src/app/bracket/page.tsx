@@ -584,7 +584,8 @@ function BracketContent() {
         // Navigate to edit the copied bracket
         handleEditBracket(data.data);
       } else {
-        alert(`Error: ${data.error}`);
+        // Show validation error from server
+        alert(data.error || 'Failed to copy bracket. Bracket creation may be disabled.');
       }
     } catch (error) {
       console.error('Error copying bracket:', error);
@@ -653,7 +654,8 @@ function BracketContent() {
         await loadSubmittedBrackets();
         handleBackToLanding();
       } else {
-        alert(`Error: ${data.error}`);
+        // Show validation error from server
+        alert(data.error || 'Failed to save bracket. Bracket creation may be disabled.');
       }
     } catch (error) {
       console.error('Error saving bracket:', error);

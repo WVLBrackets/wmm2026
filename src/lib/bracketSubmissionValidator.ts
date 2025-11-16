@@ -103,6 +103,18 @@ export async function validateBracketSubmission(
 
 /**
  * Check if submission is disabled due to deadline or toggle
+ * Exported for use in both PUT (creation) and POST (submission) routes
+ */
+export function checkSubmissionAllowed(siteConfig: SiteConfigData | null): { allowed: boolean; reason?: string } {
+  const result = checkSubmissionDisabled(siteConfig);
+  return {
+    allowed: !result.disabled,
+    reason: result.disabled ? result.reason : undefined
+  };
+}
+
+/**
+ * Check if submission is disabled due to deadline or toggle
  */
 function checkSubmissionDisabled(siteConfig: SiteConfigData | null): { disabled: boolean; reason: string } {
   // Check stop_submit_toggle first

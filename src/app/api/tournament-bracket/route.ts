@@ -9,7 +9,7 @@ import {
 } from '@/lib/secureDatabase';
 import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
 import { sendSubmissionConfirmationEmail, processEmailAsync } from '@/lib/bracketEmailService';
-import { validateBracketSubmission } from '@/lib/bracketSubmissionValidator';
+import { validateBracketSubmission, checkSubmissionAllowed } from '@/lib/bracketSubmissionValidator';
 import { loadTournamentData } from '@/lib/tournamentLoader';
 import { logError } from '@/lib/serverErrorLogger';
 
@@ -265,6 +265,28 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
         { status: 404 }
+      );
+    }
+
+    // Get fresh site config to check submission rules
+    let siteConfig = null;
+    try {
+      siteConfig = await getSiteConfigFromGoogleSheets();
+    } catch {
+      // Use fallback config if Google Sheets fails
+      const { FALLBACK_CONFIG } = await import('@/lib/fallbackConfig');
+      siteConfig = FALLBACK_CONFIG;
+    }
+
+    // Check if bracket creation is allowed (deadline/toggle check)
+    const submissionCheck = checkSubmissionAllowed(siteConfig);
+    if (!submissionCheck.allowed) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: submissionCheck.reason || 'Bracket creation is currently disabled.'
+        },
+        { status: 400 }
       );
     }
 
