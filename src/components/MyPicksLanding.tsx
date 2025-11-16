@@ -315,7 +315,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
     if (siteConfig?.stopSubmitDateTime) {
       try {
         const deadline = new Date(siteConfig.stopSubmitDateTime);
-      const now = new Date();
+        const now = new Date();
         if (now >= deadline) {
           return siteConfig?.finalMessageTooLate || 'Bracket submissions are closed. The deadline has passed.';
         }
