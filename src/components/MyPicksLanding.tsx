@@ -281,6 +281,52 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
     );
   };
 
+  // Check if bracket creation/copying is disabled due to deadline or toggle
+  const isBracketCreationDisabled = () => {
+    // Check stop_submit_toggle first
+    if (siteConfig?.stopSubmitToggle === 'Yes') {
+      return true;
+    }
+    
+    // Check stop_submit_date_time
+    if (siteConfig?.stopSubmitDateTime) {
+      try {
+        const deadline = new Date(siteConfig.stopSubmitDateTime);
+        const now = new Date();
+        if (now >= deadline) {
+          return true;
+        }
+      } catch {
+        // Invalid date format - ignore
+      }
+    }
+    
+    return false;
+  };
+
+  // Get the reason bracket creation is disabled
+  const getBracketCreationDisabledReason = () => {
+    // Check stop_submit_toggle first
+    if (siteConfig?.stopSubmitToggle === 'Yes') {
+      return siteConfig?.finalMessageSubmitOff || 'Bracket submissions are currently disabled.';
+    }
+    
+    // Check stop_submit_date_time
+    if (siteConfig?.stopSubmitDateTime) {
+      try {
+        const deadline = new Date(siteConfig.stopSubmitDateTime);
+      const now = new Date();
+        if (now >= deadline) {
+          return siteConfig?.finalMessageTooLate || 'Bracket submissions are closed. The deadline has passed.';
+        }
+      } catch {
+        // Invalid date format - ignore
+      }
+    }
+    
+    return null;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -347,7 +393,13 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                   <div className="flex items-center space-x-3 flex-shrink-0 ml-4">
                     <button
                       onClick={onCreateNew}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
+                      disabled={isBracketCreationDisabled()}
+                      title={isBracketCreationDisabled() ? getBracketCreationDisabledReason() || '' : 'Create a new bracket'}
+                      className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
+                        isBracketCreationDisabled()
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                      }`}
                     >
                       <Plus className="h-4 w-4" />
                       <span>New Bracket</span>
@@ -388,7 +440,13 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                     <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
                       <button
                         onClick={onCreateNew}
-                        className="bg-blue-600 text-white px-2 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
+                        disabled={isBracketCreationDisabled()}
+                        title={isBracketCreationDisabled() ? getBracketCreationDisabledReason() || '' : 'Create a new bracket'}
+                        className={`px-2 py-2 rounded-lg flex items-center space-x-2 ${
+                          isBracketCreationDisabled()
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                        }`}
                       >
                         <Plus className="h-4 w-4" />
                       </button>
@@ -662,8 +720,13 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                                     onClick={() => onCopyBracket(bracket)}
                                     logLocation="Copy"
                                     bracketId={number ? String(number).padStart(6, '0') : null}
-                                    className="bg-green-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-green-700 cursor-pointer transition-colors"
-                                    title="Copy"
+                                    disabled={isBracketCreationDisabled()}
+                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
+                                      isBracketCreationDisabled()
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
+                                    }`}
+                                    title={isBracketCreationDisabled() ? getBracketCreationDisabledReason() || '' : 'Copy'}
                                   >
                                     <Copy className="h-4 w-4" />
                                   </LoggedButton>

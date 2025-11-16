@@ -21,6 +21,11 @@ export function LoggedButton({
   ...props 
 }: LoggedButtonProps) {
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    // Don't log or fire onClick if button is disabled
+    if (props.disabled) {
+      return;
+    }
+    
     // Log the click
     usageLogger.log('Click', logLocation, bracketId);
     
