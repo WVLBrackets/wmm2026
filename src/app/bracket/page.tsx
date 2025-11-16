@@ -458,6 +458,23 @@ function BracketContent() {
     const { usageLogger } = await import('@/lib/usageLogger');
     usageLogger.log('Click', 'New Bracket', null);
     
+    // Check with server if bracket creation is currently allowed (fresh config check)
+    try {
+      const response = await fetch('/api/bracket/check-creation');
+      const data = await response.json();
+      
+      if (!data.success || !data.allowed) {
+        // Bracket creation is not allowed - show error and don't proceed
+        alert(data.reason || 'Bracket creation is currently disabled.');
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking bracket creation status:', error);
+      alert('Failed to verify bracket creation status. Please try again.');
+      return;
+    }
+    
+    // If we get here, creation is allowed - proceed with creating new bracket
     setEditingBracket(null);
     setPicks({});
     setEntryName(session?.user?.name || '');
