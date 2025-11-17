@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { Trash2, Edit, Save, X, Users, Trophy, CheckCircle, Key, Edit3, LogOut, Link2, Table, Plus, Download, AlertCircle, Power, PowerOff, Zap } from 'lucide-react';
+import { Trash2, Edit, Save, X, Users, Trophy, CheckCircle, LogOut, Link2, Table, Plus, Download, AlertCircle, Power, PowerOff, Zap } from 'lucide-react';
 import { useBracketMode } from '@/contexts/BracketModeContext';
 import UsersTab from '@/components/admin/UsersTab';
 import BracketsTab from '@/components/admin/BracketsTab';
@@ -250,7 +250,6 @@ export default function AdminPage() {
       
       setUsers(usersData.users || usersData.data || []);
       setBrackets(bracketsData.data || []);
-      setFilteredBrackets(bracketsData.data || []);
     } catch (error) {
       console.error('Error loading admin data:', error);
       setError('Failed to load admin data');
@@ -829,7 +828,8 @@ export default function AdminPage() {
         setEmailLogsView(newEmailView);
       }
     }
-  }, [searchParams]); // Only depend on searchParams, not state variables to avoid loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]); // Only depend on searchParams to sync from URL, not state variables to avoid loops
 
   useEffect(() => {
     if (status === 'loading') return;
