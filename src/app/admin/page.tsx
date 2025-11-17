@@ -148,14 +148,14 @@ export default function AdminPage() {
       };
     };
     limits: {
-      resend: {
+      email: {
         monthly: number;
         daily: number;
         name: string;
         upgradeCost: {
           tier1: { range: string; cost: number; description: string };
-          tier2: { range: string; cost: number; description: string };
-          tier3: { range: string; cost: number; description: string };
+          tier2?: { range: string; cost: number; description: string };
+          tier3?: { range: string; cost: number; description: string };
         };
       };
       vercel: {
