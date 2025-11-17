@@ -579,9 +579,9 @@ function BracketContent() {
       sessionStorage.removeItem('bracketCurrentStep');
     }
     
-    // If in admin mode, redirect back to admin panel
+    // If in admin mode, redirect back to admin brackets tab
     if (isAdminMode) {
-      router.push('/admin');
+      router.push('/admin?tab=brackets');
       return;
     }
     
@@ -602,6 +602,12 @@ function BracketContent() {
     
     const { usageLogger } = await import('@/lib/usageLogger');
     usageLogger.log('Click', 'Cancel', bracketNumber ? String(bracketNumber).padStart(6, '0') : null);
+    
+    // If in admin mode, redirect back to admin brackets tab
+    if (isAdminMode) {
+      router.push('/admin?tab=brackets');
+      return;
+    }
     
     handleBackToLanding();
   };
@@ -708,6 +714,13 @@ function BracketContent() {
         
         // Reload brackets to show the updated bracket
         await loadSubmittedBrackets();
+        
+        // If in admin mode, redirect back to admin brackets tab
+        if (isAdminMode) {
+          router.push('/admin?tab=brackets');
+          return;
+        }
+        
         handleBackToLanding();
       } else {
         // Show validation error from server
@@ -919,6 +932,7 @@ function BracketContent() {
           siteConfig={siteConfig}
           existingBracketNames={submittedBrackets.filter(b => b.status === 'submitted').map(b => b.entryName)}
           currentBracketId={editingBracket ? (editingBracket as Record<string, unknown>).id as string : undefined}
+          isAdminMode={isAdminMode}
         />
       </div>
     </div>

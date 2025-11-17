@@ -27,6 +27,7 @@ interface StepByStepBracketProps {
   siteConfig?: SiteConfigData | null;
   existingBracketNames?: string[];
   currentBracketId?: string;
+  isAdminMode?: boolean;
 }
 
 export default function StepByStepBracket({ 
@@ -48,7 +49,8 @@ export default function StepByStepBracket({
   year,
   siteConfig,
   existingBracketNames = [],
-  currentBracketId
+  currentBracketId,
+  isAdminMode = false
 }: StepByStepBracketProps) {
   // Restore current step from sessionStorage on mount
   const getInitialStep = () => {
@@ -228,6 +230,7 @@ export default function StepByStepBracket({
           siteConfig={siteConfig as SiteConfigData | null}
           existingBracketNames={existingBracketNames}
           currentBracketId={currentBracketId}
+          isAdminMode={isAdminMode}
         />
       );
     }

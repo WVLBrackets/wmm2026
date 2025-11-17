@@ -35,6 +35,7 @@ interface FinalFourChampionshipProps {
   siteConfig?: SiteConfigData | null;
   existingBracketNames?: string[];
   currentBracketId?: string;
+  isAdminMode?: boolean;
 }
 
 export default function FinalFourChampionship({ 
@@ -61,6 +62,7 @@ export default function FinalFourChampionship({
   onEntryNameChange,
   siteConfig,
   existingBracketNames = [],
+  isAdminMode = false,
 }: FinalFourChampionshipProps) {
   
   const handleTeamClick = (game: TournamentGame, team: Record<string, unknown>) => {
@@ -593,7 +595,7 @@ export default function FinalFourChampionship({
                   <span>Cancel</span>
                 </button>
               )}
-              {onNext && (
+              {onNext && !isAdminMode && (
                 <button
                   onClick={onNext}
                   disabled={!canProceed || isDuplicateName() || isSubmissionDisabled()}
