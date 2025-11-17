@@ -5,9 +5,8 @@ import { useBracketMode } from '@/contexts/BracketModeContext';
 import { generate64TeamBracket, updateBracketWithPicks } from '@/lib/bracketGenerator';
 import { loadTournamentData } from '@/lib/tournamentLoader';
 import { getTeamInfo } from '@/lib/teamLogos';
-import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
-import { TournamentTeam, TournamentData } from '@/types/tournament';
 import { SiteConfigData } from '@/lib/siteConfig';
+import { TournamentTeam, TournamentData } from '@/types/tournament';
 import Image from 'next/image';
 // Trophy icon is now a PNG image, no longer using lucide-react Trophy
 
@@ -26,8 +25,10 @@ export default function PrintBracketPage() {
     
     const loadBracketData = async () => {
       try {
-        // Load site config first to get tournament year
-        const config = await getSiteConfigFromGoogleSheets();
+        // Load site config first to get tournament year (via API route)
+        const configResponse = await fetch('/api/site-config');
+        const configResult = await configResponse.json();
+        const config = configResult.success ? configResult.data : null;
         setSiteConfig(config);
         
         // Use tournament year from config (fallback to '2025' if not available)

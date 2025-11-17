@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { TournamentData, TournamentBracket, BracketSubmission } from '@/types/tournament';
 import { loadTournamentData } from '@/lib/tournamentLoader';
 import { generate64TeamBracket } from '@/lib/bracketGenerator';
-import { getSiteConfigFromGoogleSheets, SiteConfigData } from '@/lib/siteConfig';
+import { SiteConfigData } from '@/lib/siteConfig';
 import StepByStepBracket from '@/components/bracket/StepByStepBracket';
 import MyPicksLanding from '@/components/MyPicksLanding';
 import { useBracketMode } from '@/contexts/BracketModeContext';
@@ -202,8 +202,10 @@ function BracketContent() {
     try {
       setIsLoading(true);
       
-      // Load site config first to get tournament year
-      const config = await getSiteConfigFromGoogleSheets();
+      // Load site config first to get tournament year (via API route)
+      const configResponse = await fetch('/api/site-config');
+      const configResult = await configResponse.json();
+      const config = configResult.success ? configResult.data : null;
       setSiteConfig(config);
       
       // Use tournament year from config (fallback to '2025' if not available)
