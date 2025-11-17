@@ -14,6 +14,7 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 /**
  * Get site configuration with caching and fallback
  * Tries Google Sheets first, falls back to environment variables
+ * Works in both server and client contexts
  */
 export const getSiteConfig = async (): Promise<SiteConfigData> => {
   const now = Date.now();
@@ -24,8 +25,23 @@ export const getSiteConfig = async (): Promise<SiteConfigData> => {
   }
   
   try {
-    // Try to get config from Google Sheets
-    const googleConfig = await getSiteConfigFromGoogleSheets();
+    // Check if we're in a server environment (Node.js) or browser
+    const isServer = typeof window === 'undefined';
+    
+    let googleConfig: SiteConfigData | null = null;
+    
+    if (isServer) {
+      // Server-side: Call getSiteConfigFromGoogleSheets directly
+      googleConfig = await getSiteConfigFromGoogleSheets();
+    } else {
+      // Client-side: Use API route to avoid unstable_cache issues
+      const response = await fetch('/api/site-config');
+      const result = await response.json();
+      if (result.success) {
+        googleConfig = result.data;
+      }
+    }
+    
     if (googleConfig) {
       cachedConfig = googleConfig;
       lastFetchTime = now;
