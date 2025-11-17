@@ -139,6 +139,8 @@ export default function AdminPage() {
       emails: {
         monthly: { used: number; successful: number; limit: number; percent: number; alertLevel: string; projected: number; daysRemaining: number; daysInMonth: number };
         daily: { used: number; successful: number; limit: number; percent: number; alertLevel: string };
+        provider?: string;
+        providerName?: string;
       };
       pdfs: {
         monthly: { generated: number; successful: number };
@@ -858,7 +860,7 @@ export default function AdminPage() {
     } else if (activeTab === 'usage') {
       loadUsageMonitoring();
     }
-  }, [activeTab, logsTab, emailLogsView, logStartDate, logEndDate, logUsernameFilter, logEventTypeFilter, logLocationFilter, loadUsageSummary, loadUsageLogs, loadErrorLogs, loadEmailSummary, loadEmailLogs]);
+  }, [activeTab, logsTab, emailLogsView, logStartDate, logEndDate, logUsernameFilter, logEventTypeFilter, logLocationFilter, loadUsageSummary, loadUsageLogs, loadErrorLogs, loadEmailSummary, loadEmailLogs, loadUsageMonitoring]);
 
   // Reload team data when filter changes
   useEffect(() => {
