@@ -40,6 +40,7 @@ function BracketContent() {
   const [submitError, setSubmitError] = useState<string>('');
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
+  const [pendingBracketData, setPendingBracketData] = useState<Record<string, unknown> | null>(null);
 
   const loadTournamentRef = useRef<(() => Promise<void>) | undefined>(undefined);
   const hasRestoredState = useRef(false);
@@ -236,8 +237,13 @@ function BracketContent() {
       return;
     }
     
+    // Don't load tournament if we're in admin edit mode - loadBracketForEdit will handle it
+    if (searchParams?.get('edit') && searchParams?.get('admin') === 'true') {
+      return;
+    }
+    
     loadTournamentRef.current?.();
-  }, [status, router]);
+  }, [status, router, searchParams]);
 
   const loadSubmittedBrackets = async () => {
     try {
@@ -261,11 +267,29 @@ function BracketContent() {
 
   const loadBracketForEdit = async (bracketId: string, adminMode = false) => {
     try {
+      setIsLoading(true);
+      
+      // Load tournament data first if not already loaded
+      if (!tournamentData || !bracket) {
+        // Load site config first to get tournament year (via API route)
+        const configResponse = await fetch('/api/site-config');
+        const configResult = await configResponse.json();
+        const config = configResult.success ? configResult.data : null;
+        setSiteConfig(config);
+        
+        // Use tournament year from config (fallback to '2025' if not available)
+        const tournamentYear = config?.tournamentYear || '2025';
+        const tournamentDataLoaded = await loadTournamentData(tournamentYear);
+        setTournamentData(tournamentDataLoaded);
+        
+        const bracketDataStructure = generate64TeamBracket(tournamentDataLoaded);
+        setBracket(bracketDataStructure);
+      }
+      
       // Use admin endpoint if in admin mode
       const endpoint = adminMode 
         ? `/api/admin/brackets/${bracketId}`
         : `/api/tournament-bracket/${bracketId}`;
-      
       
       const response = await fetch(endpoint);
       const data = await response.json();
@@ -273,17 +297,30 @@ function BracketContent() {
       if (data.success && data.data) {
         const bracketData = data.data as Record<string, unknown>;
         setEditingBracket(bracketData);
-        setPicks(bracketData.picks as { [gameId: string]: string } || {});
-        setEntryName(bracketData.entryName as string || '');
-        setTieBreaker(bracketData.tieBreaker?.toString() || '');
-        setCurrentView('bracket');
+        
+        // Store bracket data to be applied once bracket structure is ready
+        setPendingBracketData(bracketData);
       } else {
         console.error('Failed to load bracket:', data.error);
+        setIsLoading(false);
       }
     } catch (error) {
       console.error('Error loading bracket for edit:', error);
+      setIsLoading(false);
     }
   };
+
+  // Apply pending bracket data once bracket structure is ready
+  useEffect(() => {
+    if (pendingBracketData && bracket && tournamentData) {
+      setPicks(pendingBracketData.picks as { [gameId: string]: string } || {});
+      setEntryName(pendingBracketData.entryName as string || '');
+      setTieBreaker(pendingBracketData.tieBreaker?.toString() || '');
+      setCurrentView('bracket');
+      setIsLoading(false);
+      setPendingBracketData(null); // Clear pending data
+    }
+  }, [pendingBracketData, bracket, tournamentData]);
 
   const handlePick = (gameId: string, teamId: string) => {
     setPicks(prev => {
