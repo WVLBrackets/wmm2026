@@ -448,7 +448,7 @@ export const getSiteConfigFromGoogleSheets = unstable_cache(
   },
   ['site-config'],
   { 
-    revalidate: 450, // 7.5 minutes (middle of 5-10 minute range)
+    revalidate: 300, // 5 minutes
     tags: ['site-config']
   }
 );
