@@ -305,8 +305,6 @@ export async function PUT(request: NextRequest) {
 
     // Always create a new in-progress bracket when using PUT without an ID
     // Users can have multiple in-progress brackets with the same name
-    console.log('Creating new in-progress bracket for user:', user.id, 'with name:', body.entryName);
-    
     const bracket = await createBracket(
       user.id,
       body.entryName,
@@ -314,12 +312,8 @@ export async function PUT(request: NextRequest) {
       body.picks
     );
     
-    console.log('Bracket created with status:', bracket.status);
-    
     // Set status to in_progress
     const updatedBracket = await updateBracket(bracket.id, { status: 'in_progress' });
-    
-    console.log('Updated bracket status:', updatedBracket?.status);
     
     if (!updatedBracket) {
       return NextResponse.json(

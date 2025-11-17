@@ -26,7 +26,6 @@ export async function POST(request: NextRequest) {
     let user;
     try {
       user = await createUser(email, name, password);
-      console.log(`[Register] User created successfully: ${user.id} for email: ${email}`);
     } catch (createError) {
       console.error('[Register] Error creating user:', createError);
       
@@ -61,7 +60,6 @@ export async function POST(request: NextRequest) {
     if (vercelEnv === 'production') {
       // Production: Use NEXTAUTH_URL which should be the production domain
       baseUrl = process.env.NEXTAUTH_URL || 'https://wmm2026.vercel.app';
-      console.log(`[Register] Using production URL: ${baseUrl}`);
     } else if (vercelEnv === 'preview') {
       // Preview: Use Host header to get the branch URL (stable across deployments)
       // This ensures emails use the branch URL, not the deployment-specific URL
@@ -69,18 +67,15 @@ export async function POST(request: NextRequest) {
       if (host) {
         const protocol = request.headers.get('x-forwarded-proto') || 'https';
         baseUrl = `${protocol}://${host}`;
-        console.log(`[Register] Using preview branch URL from Host header: ${baseUrl}`);
       } else {
         // Fallback to VERCEL_URL if Host header not available
         baseUrl = process.env.VERCEL_URL 
           ? `https://${process.env.VERCEL_URL}` 
           : process.env.NEXTAUTH_URL || 'https://wmm2026.vercel.app';
-        console.log(`[Register] Using preview URL fallback: ${baseUrl}`);
       }
     } else {
       // Fallback to production URL (should not happen in deployed environments)
       baseUrl = process.env.NEXTAUTH_URL || 'https://wmm2026.vercel.app';
-      console.log(`[Register] Using fallback URL: ${baseUrl}`);
     }
     
     const confirmationLink = `${baseUrl}/auth/confirm?token=${token}`;
@@ -105,7 +100,6 @@ export async function POST(request: NextRequest) {
       // Continue with fallback config
     }
     
-    console.log(`[Register] Sending confirmation email to ${email} with token ${token.substring(0, 10)}...`);
     const emailSent = await sendConfirmationEmail(email, name, confirmationLink, token, siteConfig);
 
     if (!emailSent) {

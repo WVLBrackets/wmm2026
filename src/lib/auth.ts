@@ -40,7 +40,6 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         try {
           if (!credentials?.email || !credentials?.password) {
-            console.log('Auth: Missing credentials');
             return null;
           }
 
@@ -90,10 +89,8 @@ export const authOptions: NextAuthOptions = {
                   `;
                   
                   if (columnCheck.rows.length === 0) {
-                    console.log('[Auth Auto-Signin] last_login column not found, creating it...');
                     try {
                       await sql`ALTER TABLE users ADD COLUMN last_login TIMESTAMP`;
-                      console.log('[Auth Auto-Signin] Successfully created last_login column');
                     } catch (addError) {
                       // Column might have been created by another request, try the update anyway
                       if (addError instanceof Error && (
@@ -111,18 +108,16 @@ export const authOptions: NextAuthOptions = {
                 }
                 
                 // Now try the update
-                const updateResult = await sql`
+                await sql`
                   UPDATE users 
                   SET last_login = CURRENT_TIMESTAMP
                   WHERE id = ${row.user_id} AND environment = ${environment}
                 `;
-                console.log(`[Auth Auto-Signin] last_login update successful, rows affected: ${updateResult.rowCount ?? 0}`);
               } catch (updateError) {
                 // Log but don't fail login if last_login update fails
                 console.error('[Auth Auto-Signin] Error updating last_login (non-critical):', updateError);
               }
               
-              console.log('Auth: User authenticated via auto-signin token:', row.email);
               return {
                 id: row.user_id,
                 email: row.email,
@@ -130,15 +125,12 @@ export const authOptions: NextAuthOptions = {
               };
             }
             
-            console.log('Auth: Invalid auto-signin token');
             return null;
           }
 
-          console.log('Auth: Attempting to verify password for:', email);
           const result = await verifyPassword(email, password);
           if (!result.user) {
             if (result.error === 'not_confirmed') {
-              console.log('Auth: User email not confirmed for:', credentials.email);
               // Return a special error object that NextAuth will pass through
               // We'll check for this in the signin page
               const error = new Error('EMAIL_NOT_CONFIRMED');
@@ -146,11 +138,8 @@ export const authOptions: NextAuthOptions = {
               error.code = 'EMAIL_NOT_CONFIRMED';
               throw error;
             }
-            console.log('Auth: User not found or password invalid for:', credentials.email);
             return null;
           }
-
-          console.log('Auth: User authenticated successfully:', result.user.email);
           return {
             id: result.user.id,
             email: result.user.email,

@@ -10,12 +10,9 @@ import { TournamentData, TournamentBracket, TournamentTeam } from '@/types/tourn
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('[Email PDF] Starting request');
-    
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
-      console.log('[Email PDF] Unauthorized - no session');
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -23,8 +20,6 @@ export async function POST(request: NextRequest) {
     }
 
     const { bracketId, siteConfig: providedSiteConfig } = await request.json();
-    console.log('[Email PDF] Bracket ID:', bracketId);
-    console.log('[Email PDF] Site config provided:', !!providedSiteConfig);
 
     if (!bracketId) {
       return NextResponse.json(
@@ -34,11 +29,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch bracket data
-    console.log('[Email PDF] Fetching bracket...');
     const bracket = await getBracketById(bracketId);
 
     if (!bracket) {
-      console.log('[Email PDF] Bracket not found');
       return NextResponse.json(
         { success: false, error: 'Bracket not found' },
         { status: 404 }
@@ -46,10 +39,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user by email to verify ownership
-    console.log('[Email PDF] Verifying ownership...');
     const user = await getUserByEmail(session.user.email);
     if (!user || bracket.userId !== user.id) {
-      console.log('[Email PDF] Ownership verification failed');
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 403 }
@@ -58,7 +49,6 @@ export async function POST(request: NextRequest) {
 
     // Only allow emailing submitted brackets
     if (bracket.status !== 'submitted') {
-      console.log('[Email PDF] Bracket not submitted, status:', bracket.status);
       return NextResponse.json(
         { success: false, error: 'Only submitted brackets can be emailed' },
         { status: 400 }
@@ -78,12 +68,8 @@ export async function POST(request: NextRequest) {
     // This avoids unnecessary fetch calls and timeout issues
     let siteConfig: SiteConfigData | null = providedSiteConfig || null;
     if (!siteConfig) {
-      console.log('[Email PDF] Site config not provided, fetching from Google Sheets...');
       try {
-        const configStartTime = Date.now();
         siteConfig = await getSiteConfigFromGoogleSheets();
-        const configTime = Date.now() - configStartTime;
-        console.log(`[Email PDF] Site config loaded successfully in ${configTime}ms`);
         if (!siteConfig) {
           console.warn('[Email PDF] Site config returned null, will use fallback values');
         }
@@ -92,13 +78,10 @@ export async function POST(request: NextRequest) {
         // Continue anyway - we'll use fallback values in the template
         siteConfig = null;
       }
-    } else {
-      console.log('[Email PDF] Using site config provided by client (no fetch needed)');
     }
 
     // Process PDF generation and email asynchronously using centralized service
     // This keeps the execution context alive after returning the response
-    console.log('[Email PDF] Starting background PDF generation and email processing...');
     
     const emailPromise = sendOnDemandPdfEmail(
       bracket,
@@ -185,38 +168,30 @@ export async function generateBracketPDF(
   tournamentData: TournamentData,
   siteConfig: SiteConfigData | null
 ): Promise<Buffer> {
-  console.log('[PDF Generation] Starting...');
-  
   // Dynamically require puppeteer packages only at runtime (optional dependencies)
   let puppeteer: PuppeteerType | null = null;
   let chromium: ChromiumType | null = null;
   
   try {
-    console.log('[PDF Generation] Loading puppeteer-core...');
     // Use dynamic require to avoid build-time module resolution errors
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     puppeteer = require('puppeteer-core') as PuppeteerType;
-    console.log('[PDF Generation] puppeteer-core loaded');
   } catch (error) {
     console.error('[PDF Generation] Failed to load puppeteer-core:', error);
     const errorDetails = error instanceof Error ? error.message : String(error);
-    console.error('[PDF Generation] Error details:', errorDetails);
     throw new Error(`Failed to load puppeteer-core: ${errorDetails}. Make sure puppeteer-core is installed in dependencies.`);
   }
   
   try {
-    console.log('[PDF Generation] Loading @sparticuz/chromium...');
     // Use dynamic require to avoid build-time module resolution errors
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     chromium = require('@sparticuz/chromium') as ChromiumType;
     if (chromium && typeof chromium.setGraphicsMode === 'function') {
       chromium.setGraphicsMode(false);
     }
-    console.log('[PDF Generation] @sparticuz/chromium loaded');
   } catch (error) {
     console.error('[PDF Generation] Failed to load @sparticuz/chromium:', error);
     const errorDetails = error instanceof Error ? error.message : String(error);
-    console.error('[PDF Generation] Error details:', errorDetails);
     throw new Error(`Failed to load @sparticuz/chromium: ${errorDetails}. Make sure @sparticuz/chromium is installed in dependencies.`);
   }
   
@@ -229,17 +204,12 @@ export async function generateBracketPDF(
   try {
     // Launch browser with Chromium
     // Always use Chromium for Vercel deployments (production and preview)
-    console.log('[PDF Generation] Launching browser...');
-    console.log('[PDF Generation] About to call chromium.executablePath()...');
     
     // Add timeout to executablePath call (10 seconds)
     const execPathStartTime = Date.now();
-    console.log('[PDF Generation] Setting up executablePath timeout...');
     let executablePath: string;
     try {
-      console.log('[PDF Generation] Calling chromium.executablePath()...');
       const execPathPromise = chromium.executablePath();
-      console.log('[PDF Generation] chromium.executablePath() called, setting up timeout...');
       let timeoutId: NodeJS.Timeout | null = null;
       const execPathTimeout = new Promise<never>((_, reject) => {
         timeoutId = setTimeout(() => {
@@ -247,15 +217,12 @@ export async function generateBracketPDF(
           reject(new Error('chromium.executablePath() timed out after 10 seconds'));
         }, 10000);
       });
-      console.log('[PDF Generation] Racing executablePath promise with timeout...');
       try {
         executablePath = await Promise.race([execPathPromise, execPathTimeout]) as string;
         // Clear timeout if operation completed successfully
         if (timeoutId) {
           clearTimeout(timeoutId);
         }
-        const execPathTime = Date.now() - execPathStartTime;
-        console.log(`[PDF Generation] Executable path retrieved in ${execPathTime}ms:`, executablePath);
       } catch (raceError) {
         // Clear timeout on error too
         if (timeoutId) {
@@ -297,8 +264,6 @@ export async function generateBracketPDF(
       if (launchTimeoutId) {
         clearTimeout(launchTimeoutId);
       }
-      const launchTime = Date.now() - launchStartTime;
-      console.log(`[PDF Generation] Browser launched successfully in ${launchTime}ms`);
     } catch (launchError) {
       // Clear timeout on error too
       if (launchTimeoutId) {
@@ -310,7 +275,6 @@ export async function generateBracketPDF(
     }
 
     const page = await browser.newPage();
-    console.log('[PDF Generation] Page created');
     
     // Set increased timeout for navigation (90 seconds) to handle large HTML content
     page.setDefaultNavigationTimeout(90000);
@@ -322,22 +286,16 @@ export async function generateBracketPDF(
       height: 794,
       deviceScaleFactor: 1,
     });
-    console.log('[PDF Generation] Viewport set to A4 landscape');
 
     // Generate HTML content for the bracket
-    console.log('[PDF Generation] Generating HTML...');
     const htmlContent = await generatePrintPageHTML(bracket, updatedBracket, tournamentData, siteConfig);
-    console.log('[PDF Generation] HTML generated, length:', htmlContent.length);
     
-    console.log('[PDF Generation] Setting page content...');
     // Images are embedded as base64 data URLs, so no HTTP requests needed
     // Use 'load' instead of 'networkidle0' since all resources are embedded
     // This is faster and more reliable for large base64-embedded content
     await page.setContent(htmlContent, { waitUntil: 'load' });
-    console.log('[PDF Generation] Page content set');
 
     // Generate PDF
-    console.log('[PDF Generation] Generating PDF...');
     const pdf = await page.pdf({
       format: 'A4',
       landscape: true,
@@ -351,7 +309,6 @@ export async function generateBracketPDF(
       preferCSSPageSize: false,
       displayHeaderFooter: false,
     });
-    console.log('[PDF Generation] PDF generated, size:', pdf.length, 'bytes');
 
     return Buffer.from(pdf);
   } catch (error) {
@@ -359,7 +316,6 @@ export async function generateBracketPDF(
     throw error;
   } finally {
     if (browser) {
-      console.log('[PDF Generation] Closing browser...');
       await browser.close();
     }
   }

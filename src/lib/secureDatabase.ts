@@ -65,30 +65,20 @@ export async function initializeDatabase() {
           AND table_schema = current_schema()
       `;
       
-      console.log(`[initializeDatabase] last_login column check: ${columnCheck.rows.length} results`);
-      
       if (columnCheck.rows.length === 0) {
-        console.log('[initializeDatabase] Adding last_login column to users table');
         await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP`;
-        console.log('[initializeDatabase] Successfully added last_login column to users table');
-      } else {
-        console.log('[initializeDatabase] last_login column already exists');
       }
     } catch (error) {
       // If IF NOT EXISTS is not supported, try without it
       if (error instanceof Error && error.message.includes('IF NOT EXISTS')) {
         try {
-          console.log('[initializeDatabase] IF NOT EXISTS not supported, trying direct ALTER TABLE');
           await sql`ALTER TABLE users ADD COLUMN last_login TIMESTAMP`;
-          console.log('[initializeDatabase] Successfully added last_login column (direct method)');
         } catch (addError) {
           // Column might already exist
-          if (addError instanceof Error && (
+          if (!(addError instanceof Error && (
             addError.message.includes('already exists') || 
             addError.message.includes('duplicate column')
-          )) {
-            console.log('[initializeDatabase] last_login column already exists (detected via error)');
-          } else {
+          ))) {
             console.error('[initializeDatabase] Error adding last_login column:', addError);
           }
         }
@@ -231,7 +221,6 @@ export async function initializeDatabase() {
       `;
     } catch (error) {
       // Constraint might already exist, ignore the error
-      console.log('Users constraint might already exist:', error);
     }
     
     try {
@@ -241,10 +230,7 @@ export async function initializeDatabase() {
       `;
     } catch (error) {
       // Constraint might already exist, ignore the error
-      console.log('Brackets constraint might already exist:', error);
     }
-
-    console.log(`Database initialized successfully for environment: ${environment}`);
   } catch (error) {
     console.error('Error initializing database:', error);
     throw error;
@@ -265,10 +251,8 @@ export async function createUser(email: string, name: string, password: string):
       error.message.includes('relation') ||
       (error as { code?: string }).code === '42P01'
     )) {
-      console.log('[createUser] Database tables not found, initializing database...');
       try {
         await initializeDatabase();
-        console.log('[createUser] Database initialized successfully');
       } catch (initError) {
         console.error('[createUser] Failed to initialize database:', initError);
         throw new Error('Database initialization failed. Please contact the administrator.');
@@ -539,10 +523,8 @@ export async function verifyPassword(email: string, password: string): Promise<{
         `;
         
         if (columnCheck.rows.length === 0) {
-          console.log('[verifyPassword] last_login column not found, creating it...');
           try {
             await sql`ALTER TABLE users ADD COLUMN last_login TIMESTAMP`;
-            console.log('[verifyPassword] Successfully created last_login column');
           } catch (addError) {
             // Column might have been created by another request, try the update anyway
             if (addError instanceof Error && (
@@ -560,16 +542,14 @@ export async function verifyPassword(email: string, password: string): Promise<{
       }
       
       // Now try the update
-      const updateResult = await sql`
+      await sql`
         UPDATE users 
         SET last_login = CURRENT_TIMESTAMP
         WHERE id = ${user.id} AND environment = ${environment}
       `;
-      console.log(`[verifyPassword] last_login update successful, rows affected: ${updateResult.rowCount ?? 0}`);
     } catch (updateError) {
       // Log but don't fail login if last_login update fails
       console.error('[verifyPassword] Error updating last_login (non-critical):', updateError);
-      console.error('[verifyPassword] Error details:', updateError instanceof Error ? updateError.message : String(updateError));
     }
 
     return { user };
@@ -1129,6 +1109,5 @@ export async function initializeTeamDataTable(): Promise<void> {
 export async function syncTeamDataFromJSON(): Promise<void> {
   // Database is the source of truth - no longer syncing from JSON file
   // This function is a no-op to maintain backwards compatibility
-  console.log('[syncTeamDataFromJSON] Database is the source of truth - JSON sync disabled');
   return;
 }

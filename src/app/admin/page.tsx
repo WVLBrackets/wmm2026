@@ -698,21 +698,8 @@ export default function AdminPage() {
             activeEntries.push([key, team]);
           } else {
             otherEntries.push([key, team]);
-            // Log teams with unexpected active values
-            console.log(`[Inactive Filter] Team "${team.name}" (${key}): active =`, activeValue, `(type: ${activeType})`);
           }
         });
-        
-        console.log(`[Inactive Filter] Total: ${allEntries.length}, Active (true): ${activeEntries.length}, Inactive (false): ${inactiveEntries.length}, Other (${otherEntries.length}):`, 
-          otherEntries.map(([, t]) => `${t.name}(${typeof t.active})`).slice(0, 5));
-        
-        // Show sample of first few inactive teams for debugging
-        if (inactiveEntries.length > 0) {
-          console.log(`[Inactive Filter] Sample inactive teams:`, inactiveEntries.slice(0, 3).map(([k, t]) => `${k}: ${t.name} (active=${t.active})`));
-        } else {
-          console.log(`[Inactive Filter] WARNING: No inactive teams found! All ${allEntries.length} teams have active=true.`);
-          console.log(`[Inactive Filter] To test: Toggle a team's active checkbox to false, then check this filter again.`);
-        }
         
         filteredData = Object.fromEntries(inactiveEntries);
       } else if (teamActiveFilter === 'active') {
@@ -722,8 +709,6 @@ export default function AdminPage() {
         );
       }
       // 'all' filter doesn't need client-side filtering - show everything from API
-      
-      console.log(`[Team Data] Filter: ${teamActiveFilter}, Teams loaded: ${Object.keys(loadedData).length}, Teams filtered: ${Object.keys(filteredData).length}`);
       setTeamData(filteredData);
       setTeamDataError(''); // Clear any previous errors
       

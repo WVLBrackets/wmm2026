@@ -42,32 +42,23 @@ export async function sendSubmissionConfirmationEmail(
   submissionCount: number,
   totalCost: number
 ): Promise<void> {
-  console.log('[Bracket Email] Starting submission confirmation email process...');
-  
   // Calculate tournament year outside try block so it's available in catch block
   const tournamentYear = siteConfig?.tournamentYear || bracket.year?.toString() || new Date().getFullYear().toString();
   
   try {
     // Load tournament data
-    console.log('[Bracket Email] Loading tournament data for year:', tournamentYear);
-    
     const { loadTournamentData } = await import('@/lib/tournamentLoader');
     const tournamentData = await loadTournamentData(tournamentYear);
-    console.log('[Bracket Email] Tournament data loaded');
     
     // Generate bracket structure
-    console.log('[Bracket Email] Generating bracket structure...');
     const { generate64TeamBracket, updateBracketWithPicks } = await import('@/lib/bracketGenerator');
     const generatedBracket = generate64TeamBracket(tournamentData);
     const bracketWithPicks = updateBracketWithPicks(generatedBracket, bracket.picks, tournamentData);
-    console.log('[Bracket Email] Bracket structure generated');
     
     // Generate PDF for attachment
     let pdfBuffer: Buffer | null = null;
     try {
-      console.log('[Bracket Email] Generating PDF...');
       pdfBuffer = await generateBracketPDF(bracket, bracketWithPicks, tournamentData, siteConfig);
-      console.log('[Bracket Email] PDF generated, size:', pdfBuffer.length, 'bytes');
     } catch (pdfError) {
       console.error('[Bracket Email] Error generating PDF:', pdfError);
       
@@ -97,7 +88,6 @@ export async function sendSubmissionConfirmationEmail(
     }
     
     // Render email template
-    console.log('[Bracket Email] Rendering email template...');
     const emailContent = await renderEmailTemplate(siteConfig, {
       name: user.name || undefined,
       entryName: bracket.entryName,
@@ -107,7 +97,6 @@ export async function sendSubmissionConfirmationEmail(
       submissionCount,
       totalCost,
     }, 'submit');
-    console.log('[Bracket Email] Email template rendered');
     
     // Prepare email with optional PDF attachment
     const emailOptions: {
@@ -140,9 +129,7 @@ export async function sendSubmissionConfirmationEmail(
     }
     
     // Send email
-    console.log('[Bracket Email] Sending email...');
     const emailSent = await emailService.sendEmail(emailOptions);
-    console.log('[Bracket Email] Confirmation email sent successfully' + (pdfBuffer ? ' with PDF attachment' : ''));
 
     // Log email event (Bracket Submit - attachment expected)
     try {
@@ -196,28 +183,20 @@ export async function sendOnDemandPdfEmail(
   user: { name: string | null | undefined; email: string },
   siteConfig: SiteConfigData | null
 ): Promise<void> {
-  console.log('[Bracket Email] Starting on-demand PDF email process...');
-  
   try {
     // Load tournament data
     const tournamentYear = siteConfig?.tournamentYear || bracket.year?.toString() || new Date().getFullYear().toString();
-    console.log('[Bracket Email] Loading tournament data for year:', tournamentYear);
     
     const { loadTournamentData } = await import('@/lib/tournamentLoader');
     const tournamentData = await loadTournamentData(tournamentYear);
-    console.log('[Bracket Email] Tournament data loaded');
     
     // Generate bracket structure
-    console.log('[Bracket Email] Generating bracket structure...');
     const { generate64TeamBracket, updateBracketWithPicks } = await import('@/lib/bracketGenerator');
     const generatedBracket = generate64TeamBracket(tournamentData);
     const bracketWithPicks = updateBracketWithPicks(generatedBracket, bracket.picks, tournamentData);
-    console.log('[Bracket Email] Bracket structure generated');
     
     // Generate PDF
-    console.log('[Bracket Email] Generating PDF...');
     const pdfBuffer = await generateBracketPDF(bracket, bracketWithPicks, tournamentData, siteConfig);
-    console.log('[Bracket Email] PDF generated, size:', pdfBuffer.length, 'bytes');
     
     // Get all submitted brackets for this user to calculate counts (same logic as submission email)
     const { getBracketsByUserId } = await import('@/lib/secureDatabase');
@@ -238,7 +217,6 @@ export async function sendOnDemandPdfEmail(
     const totalCost = submissionCount * entryCost;
     
     // Render email template
-    console.log('[Bracket Email] Rendering email template...');
     const entryName = bracket.entryName || `Bracket ${bracket.id}`;
     const emailContent = await renderEmailTemplate(siteConfig, {
       name: user.name || undefined,
@@ -249,10 +227,8 @@ export async function sendOnDemandPdfEmail(
       submissionCount,
       totalCost,
     }, 'pdf');
-    console.log('[Bracket Email] Email template rendered');
     
     // Send email with PDF attachment
-    console.log('[Bracket Email] Sending email...');
     const pdfFilename = generateBracketFilename(bracket.entryName, tournamentYear, bracket.id.toString());
     const emailSent = await emailService.sendEmail({
       to: user.email,
@@ -285,8 +261,6 @@ export async function sendOnDemandPdfEmail(
 
     if (!emailSent) {
       console.error('[Bracket Email] Email service returned false');
-    } else {
-      console.log('[Bracket Email] Email sent successfully to:', user.email);
     }
   } catch (error) {
     console.error('[Bracket Email] Error in on-demand PDF email process:', error);

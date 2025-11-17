@@ -74,27 +74,18 @@ export async function getUserById(id: string): Promise<User | null> {
 }
 
 export async function confirmUserEmail(token: string): Promise<boolean> {
-  console.log('Database: confirmUserEmail called with token:', token);
-  console.log('Database: Total tokens in array:', tokens.length);
-  console.log('Database: Tokens:', tokens.map(t => ({ token: t.token.substring(0, 8) + '...', type: t.type, userId: t.userId })));
-  
   const tokenRecord = tokens.find(t => t.token === token && t.type === 'confirmation');
-  console.log('Database: Found token record:', tokenRecord ? 'YES' : 'NO');
   
   if (!tokenRecord) {
-    console.log('Database: No matching token found');
     return false;
   }
   
   if (tokenRecord.expires < new Date()) {
-    console.log('Database: Token expired');
     return false;
   }
 
   const user = users.find(u => u.id === tokenRecord.userId);
-  console.log('Database: Found user:', user ? 'YES' : 'NO');
   if (!user) {
-    console.log('Database: No user found for token');
     return false;
   }
 
@@ -106,7 +97,6 @@ export async function confirmUserEmail(token: string): Promise<boolean> {
   // Remove token
   const tokenIndex = tokens.indexOf(tokenRecord);
   tokens.splice(tokenIndex, 1);
-  console.log('Database: Token removed, user confirmed');
 
   return true;
 }
@@ -163,26 +153,20 @@ export async function resetPassword(token: string, newPassword: string): Promise
 
 export async function verifyPassword(email: string, password: string): Promise<User | null> {
   try {
-    console.log('Database: Looking up user by email:', email);
     const user = await getUserByEmail(email);
     if (!user) {
-      console.log('Database: User not found:', email);
       return null;
     }
 
     if (!user.emailConfirmed) {
-      console.log('Database: User email not confirmed:', email);
       return null;
     }
 
-    console.log('Database: Comparing password for user:', email);
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) {
-      console.log('Database: Password invalid for user:', email);
       return null;
     }
 
-    console.log('Database: Password verified for user:', email);
     return user;
   } catch (error) {
     console.error('Database: Error verifying password:', error);
