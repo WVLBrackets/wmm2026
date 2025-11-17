@@ -32,7 +32,7 @@ export async function initializeDatabase() {
   try {
     // Ensure the database configuration is set up
     getDatabaseConfig();
-    const environment = getCurrentEnvironment();
+    getCurrentEnvironment(); // Ensure environment is initialized
     
     // Create users table with environment isolation
     await sql`
@@ -219,7 +219,7 @@ export async function initializeDatabase() {
         ALTER TABLE users ADD CONSTRAINT chk_users_environment 
         CHECK (environment IN ('development', 'preview', 'production'))
       `;
-    } catch (error) {
+    } catch {
       // Constraint might already exist, ignore the error
     }
     
@@ -228,7 +228,7 @@ export async function initializeDatabase() {
         ALTER TABLE brackets ADD CONSTRAINT chk_brackets_environment 
         CHECK (environment IN ('development', 'preview', 'production'))
       `;
-    } catch (error) {
+    } catch {
       // Constraint might already exist, ignore the error
     }
   } catch (error) {

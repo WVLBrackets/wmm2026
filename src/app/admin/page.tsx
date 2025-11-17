@@ -688,7 +688,6 @@ export default function AdminPage() {
         
         allEntries.forEach(([key, team]) => {
           const activeValue = team.active;
-          const activeType = typeof activeValue;
           const isStrictFalse = activeValue === false;
           const isStrictTrue = activeValue === true;
           
