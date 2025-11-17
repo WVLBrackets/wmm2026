@@ -87,7 +87,7 @@ export default function AdminPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [isExporting, setIsExporting] = useState(false);
-  const [activeTab, setActiveTab] = useState<'brackets' | 'users' | 'data' | 'logs'>('users');
+  const [activeTab, setActiveTab] = useState<'brackets' | 'users' | 'data' | 'logs' | 'usage'>('users');
   const [logsTab, setLogsTab] = useState<'summary' | 'usage' | 'error' | 'email'>('summary');
   const [emailLogsView, setEmailLogsView] = useState<'summary' | 'detail'>('summary');
   const [usageLogs, setUsageLogs] = useState<UsageLog[]>([]);
@@ -134,6 +134,21 @@ export default function AdminPage() {
   const [emailLogAttachmentExpectedFilter, setEmailLogAttachmentExpectedFilter] = useState<string>('');
   const [emailLogAttachmentSuccessFilter, setEmailLogAttachmentSuccessFilter] = useState<string>('');
   const [emailLogEmailSuccessFilter, setEmailLogEmailSuccessFilter] = useState<string>('');
+  const [usageMonitoring, setUsageMonitoring] = useState<{
+    usage: {
+      emails: {
+        monthly: { used: number; successful: number; limit: number; percent: number; alertLevel: string; projected: number; daysRemaining: number; daysInMonth: number };
+        daily: { used: number; successful: number; limit: number; percent: number; alertLevel: string };
+      };
+      pdfs: {
+        monthly: { generated: number; successful: number };
+        daily: { generated: number; successful: number };
+      };
+    };
+    limits: any;
+    recommendations: { emails: string; actions: { immediate: string[]; optimization: string[] } };
+  } | null>(null);
+  const [usageMonitoringLoading, setUsageMonitoringLoading] = useState(false);
   const [initializingDatabase, setInitializingDatabase] = useState(false);
   const [databaseInitMessage, setDatabaseInitMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [editingBracket, setEditingBracket] = useState<string | null>(null);
@@ -797,8 +812,10 @@ export default function AdminPage() {
           loadEmailLogs();
         }
       }
+    } else if (activeTab === 'usage') {
+      loadUsageMonitoring();
     }
-  }, [activeTab, logsTab, emailLogsView, logStartDate, logEndDate, logUsernameFilter, logEventTypeFilter, logLocationFilter, loadUsageSummary, loadUsageLogs, loadErrorLogs, loadEmailSummary, loadEmailLogs]);
+  }, [activeTab, logsTab, emailLogsView, logStartDate, logEndDate, logUsernameFilter, logEventTypeFilter, logLocationFilter, loadUsageSummary, loadUsageLogs, loadErrorLogs, loadEmailSummary, loadEmailLogs, loadUsageMonitoring]);
 
   // Reload team data when filter changes
   useEffect(() => {
@@ -1862,6 +1879,17 @@ export default function AdminPage() {
               >
                 <AlertCircle className="w-5 h-5" />
                 <span>Logs</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('usage')}
+                className={`flex items-center space-x-2 px-6 py-4 border-b-2 font-medium text-sm ${
+                  activeTab === 'usage'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Zap className="w-5 h-5" />
+                <span>Usage Monitoring</span>
               </button>
             </nav>
           </div>
@@ -3754,6 +3782,199 @@ export default function AdminPage() {
                 </div>
                   </>
                 )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Usage Monitoring Tab */}
+        {activeTab === 'usage' && (
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold mb-2">Usage Monitoring Dashboard</h2>
+              <p className="text-gray-600">Monitor your free tier usage and get upgrade recommendations</p>
+            </div>
+
+            {usageMonitoringLoading ? (
+              <div className="text-center py-8">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <p className="mt-2 text-gray-600">Loading usage data...</p>
+              </div>
+            ) : logsError ? (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-red-800">{logsError}</p>
+              </div>
+            ) : usageMonitoring ? (
+              <div className="space-y-6">
+                {/* Email Usage Section */}
+                <div className="border border-gray-200 rounded-lg p-6">
+                  <h3 className="text-xl font-semibold mb-4 flex items-center">
+                    <span className="mr-2">📧</span>
+                    Email Usage - Resend
+                  </h3>
+                  
+                  {/* Monthly Email Usage */}
+                  <div className="mb-6">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-medium">Monthly Usage</span>
+                      <span className={`font-bold ${
+                        usageMonitoring.usage.emails.monthly.alertLevel === 'critical' ? 'text-red-600' :
+                        usageMonitoring.usage.emails.monthly.alertLevel === 'warning' ? 'text-yellow-600' :
+                        'text-green-600'
+                      }`}>
+                        {usageMonitoring.usage.emails.monthly.used.toLocaleString()} / {usageMonitoring.usage.emails.monthly.limit.toLocaleString()} 
+                        ({usageMonitoring.usage.emails.monthly.percent.toFixed(1)}%)
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-4 mb-2">
+                      <div
+                        className={`h-4 rounded-full ${
+                          usageMonitoring.usage.emails.monthly.alertLevel === 'critical' ? 'bg-red-600' :
+                          usageMonitoring.usage.emails.monthly.alertLevel === 'warning' ? 'bg-yellow-500' :
+                          'bg-green-500'
+                        }`}
+                        style={{ width: `${Math.min(usageMonitoring.usage.emails.monthly.percent, 100)}%` }}
+                      ></div>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Successful: {usageMonitoring.usage.emails.monthly.successful.toLocaleString()} | 
+                      Projected Monthly: {usageMonitoring.usage.emails.monthly.projected.toLocaleString()} | 
+                      Days Remaining: {usageMonitoring.usage.emails.monthly.daysRemaining}
+                    </div>
+                  </div>
+
+                  {/* Daily Email Usage */}
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-medium">Daily Usage</span>
+                      <span className={`font-bold ${
+                        usageMonitoring.usage.emails.daily.alertLevel === 'critical' ? 'text-red-600' :
+                        usageMonitoring.usage.emails.daily.alertLevel === 'warning' ? 'text-yellow-600' :
+                        'text-green-600'
+                      }`}>
+                        {usageMonitoring.usage.emails.daily.used.toLocaleString()} / {usageMonitoring.usage.emails.daily.limit.toLocaleString()} 
+                        ({usageMonitoring.usage.emails.daily.percent.toFixed(1)}%)
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-4">
+                      <div
+                        className={`h-4 rounded-full ${
+                          usageMonitoring.usage.emails.daily.alertLevel === 'critical' ? 'bg-red-600' :
+                          usageMonitoring.usage.emails.daily.alertLevel === 'warning' ? 'bg-yellow-500' :
+                          'bg-green-500'
+                        }`}
+                        style={{ width: `${Math.min(usageMonitoring.usage.emails.daily.percent, 100)}%` }}
+                      ></div>
+                    </div>
+                    <div className="text-sm text-gray-600 mt-2">
+                      Successful: {usageMonitoring.usage.emails.daily.successful.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+
+                {/* PDF Generation Section */}
+                <div className="border border-gray-200 rounded-lg p-6">
+                  <h3 className="text-xl font-semibold mb-4 flex items-center">
+                    <span className="mr-2">📄</span>
+                    PDF Generation
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-sm text-gray-600 mb-1">Monthly</div>
+                      <div className="text-2xl font-bold">{usageMonitoring.usage.pdfs.monthly.generated.toLocaleString()}</div>
+                      <div className="text-sm text-gray-500">Generated | {usageMonitoring.usage.pdfs.monthly.successful.toLocaleString()} Successful</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-600 mb-1">Daily</div>
+                      <div className="text-2xl font-bold">{usageMonitoring.usage.pdfs.daily.generated.toLocaleString()}</div>
+                      <div className="text-sm text-gray-500">Generated | {usageMonitoring.usage.pdfs.daily.successful.toLocaleString()} Successful</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recommendations Section */}
+                <div className={`border rounded-lg p-6 ${
+                  usageMonitoring.usage.emails.monthly.alertLevel === 'critical' ? 'border-red-300 bg-red-50' :
+                  usageMonitoring.usage.emails.monthly.alertLevel === 'warning' ? 'border-yellow-300 bg-yellow-50' :
+                  'border-blue-300 bg-blue-50'
+                }`}>
+                  <h3 className="text-xl font-semibold mb-4 flex items-center">
+                    <span className="mr-2">💡</span>
+                    Recommendations
+                  </h3>
+                  <div className="mb-4">
+                    <p className={`font-medium ${
+                      usageMonitoring.usage.emails.monthly.alertLevel === 'critical' ? 'text-red-800' :
+                      usageMonitoring.usage.emails.monthly.alertLevel === 'warning' ? 'text-yellow-800' :
+                      'text-blue-800'
+                    }`}>
+                      {usageMonitoring.recommendations.emails}
+                    </p>
+                  </div>
+                  
+                  {usageMonitoring.recommendations.actions.immediate.length > 0 && (
+                    <div className="mb-4">
+                      <h4 className="font-semibold mb-2">Immediate Actions:</h4>
+                      <ul className="list-disc list-inside space-y-1">
+                        {usageMonitoring.recommendations.actions.immediate.map((action, idx) => (
+                          <li key={idx} className="text-sm">{action}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div>
+                    <h4 className="font-semibold mb-2">Optimization Suggestions:</h4>
+                    <ul className="list-disc list-inside space-y-1">
+                      {usageMonitoring.recommendations.actions.optimization.map((action, idx) => (
+                        <li key={idx} className="text-sm">{action}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Upgrade Options Section */}
+                <div className="border border-gray-200 rounded-lg p-6">
+                  <h3 className="text-xl font-semibold mb-4 flex items-center">
+                    <span className="mr-2">💰</span>
+                    Upgrade Options
+                  </h3>
+                  
+                  <div className="mb-6">
+                    <h4 className="font-semibold mb-3 text-lg">Resend Email Service</h4>
+                    <div className="space-y-3">
+                      <div className="border border-gray-300 rounded-lg p-4">
+                        <div className="font-semibold">Tier 1: {usageMonitoring.limits.resend.upgradeCost.tier1.range} emails</div>
+                        <div className="text-2xl font-bold text-blue-600">${usageMonitoring.limits.resend.upgradeCost.tier1.cost}/month</div>
+                        <div className="text-sm text-gray-600 mt-1">{usageMonitoring.limits.resend.upgradeCost.tier1.description}</div>
+                      </div>
+                      <div className="border border-gray-300 rounded-lg p-4">
+                        <div className="font-semibold">Tier 2: {usageMonitoring.limits.resend.upgradeCost.tier2.range} emails</div>
+                        <div className="text-2xl font-bold text-blue-600">${usageMonitoring.limits.resend.upgradeCost.tier2.cost}/month</div>
+                        <div className="text-sm text-gray-600 mt-1">{usageMonitoring.limits.resend.upgradeCost.tier2.description}</div>
+                      </div>
+                      <div className="border border-gray-300 rounded-lg p-4">
+                        <div className="font-semibold">Tier 3: {usageMonitoring.limits.resend.upgradeCost.tier3.range} emails</div>
+                        <div className="text-2xl font-bold text-blue-600">${usageMonitoring.limits.resend.upgradeCost.tier3.cost}/month</div>
+                        <div className="text-sm text-gray-600 mt-1">{usageMonitoring.limits.resend.upgradeCost.tier3.description}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-3 text-lg">Vercel Hosting</h4>
+                    <div className="border border-gray-300 rounded-lg p-4">
+                      <div className="font-semibold">Pro Plan</div>
+                      <div className="text-2xl font-bold text-blue-600">${usageMonitoring.limits.vercel.upgradeCost.pro.cost}/month</div>
+                      <div className="text-sm text-gray-600 mt-1">{usageMonitoring.limits.vercel.upgradeCost.pro.description}</div>
+                      <div className="text-sm text-gray-500 mt-2">{usageMonitoring.limits.vercel.upgradeCost.additional.description}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                No usage data available
               </div>
             )}
           </div>
