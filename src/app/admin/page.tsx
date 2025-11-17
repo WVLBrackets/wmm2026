@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSession, signOut } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { Trash2, Edit, Save, X, Users, Trophy, CheckCircle, Key, Edit3, LogOut, Link2, Table, Plus, Download, AlertCircle, Power, PowerOff, Zap } from 'lucide-react';
 import { useBracketMode } from '@/contexts/BracketModeContext';
@@ -79,7 +79,35 @@ interface Bracket {
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { setInBracketMode } = useBracketMode();
+  
+  // Get initial tab from URL, default to 'users'
+  const getInitialTab = (): 'brackets' | 'users' | 'data' | 'logs' | 'usage' => {
+    const tabParam = searchParams?.get('tab');
+    if (tabParam && ['brackets', 'users', 'data', 'logs', 'usage'].includes(tabParam)) {
+      return tabParam as 'brackets' | 'users' | 'data' | 'logs' | 'usage';
+    }
+    return 'users';
+  };
+
+  // Get initial logsTab from URL
+  const getInitialLogsTab = (): 'summary' | 'usage' | 'error' | 'email' => {
+    const logsTabParam = searchParams?.get('logsTab');
+    if (logsTabParam && ['summary', 'usage', 'error', 'email'].includes(logsTabParam)) {
+      return logsTabParam as 'summary' | 'usage' | 'error' | 'email';
+    }
+    return 'summary';
+  };
+
+  // Get initial emailLogsView from URL
+  const getInitialEmailLogsView = (): 'summary' | 'detail' => {
+    const viewParam = searchParams?.get('emailView');
+    if (viewParam && ['summary', 'detail'].includes(viewParam)) {
+      return viewParam as 'summary' | 'detail';
+    }
+    return 'summary';
+  };
   
   const [users, setUsers] = useState<User[]>([]);
   const [brackets, setBrackets] = useState<Bracket[]>([]);
@@ -87,9 +115,9 @@ export default function AdminPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [isExporting, setIsExporting] = useState(false);
-  const [activeTab, setActiveTab] = useState<'brackets' | 'users' | 'data' | 'logs' | 'usage'>('users');
-  const [logsTab, setLogsTab] = useState<'summary' | 'usage' | 'error' | 'email'>('summary');
-  const [emailLogsView, setEmailLogsView] = useState<'summary' | 'detail'>('summary');
+  const [activeTab, setActiveTab] = useState<'brackets' | 'users' | 'data' | 'logs' | 'usage'>(getInitialTab());
+  const [logsTab, setLogsTab] = useState<'summary' | 'usage' | 'error' | 'email'>(getInitialLogsTab());
+  const [emailLogsView, setEmailLogsView] = useState<'summary' | 'detail'>(getInitialEmailLogsView());
   const [usageLogs, setUsageLogs] = useState<UsageLog[]>([]);
   const [allUsageLogs, setAllUsageLogs] = useState<UsageLog[]>([]); // Store all logs for dropdown options
   const [loadAllLogs, setLoadAllLogs] = useState(false);
@@ -807,9 +835,79 @@ export default function AdminPage() {
     }
   };
 
+  // Helper function to update URL with new tab
+  const updateUrlTab = (tab: 'brackets' | 'users' | 'data' | 'logs' | 'usage', logsTab?: 'summary' | 'usage' | 'error' | 'email', emailView?: 'summary' | 'detail') => {
+    const params = new URLSearchParams(searchParams?.toString() || '');
+    params.set('tab', tab);
+    
+    if (tab === 'logs' && logsTab) {
+      params.set('logsTab', logsTab);
+    } else if (tab !== 'logs') {
+      params.delete('logsTab');
+    }
+    
+    if (tab === 'logs' && logsTab === 'email' && emailView) {
+      params.set('emailView', emailView);
+    } else if (tab !== 'logs' || logsTab !== 'email') {
+      params.delete('emailView');
+    }
+    
+    router.replace(`/admin?${params.toString()}`, { scroll: false });
+  };
+
+  // Wrapper functions that update both state and URL
+  const handleSetActiveTab = (tab: 'brackets' | 'users' | 'data' | 'logs' | 'usage') => {
+    setActiveTab(tab);
+    // Update URL immediately to reflect the change
+    if (tab === 'logs') {
+      updateUrlTab(tab, logsTab, emailLogsView);
+    } else {
+      updateUrlTab(tab);
+    }
+  };
+
+  const handleSetLogsTab = (tab: 'summary' | 'usage' | 'error' | 'email') => {
+    setLogsTab(tab);
+    updateUrlTab(activeTab, tab, tab === 'email' ? emailLogsView : undefined);
+  };
+
+  const handleSetEmailLogsView = (view: 'summary' | 'detail') => {
+    setEmailLogsView(view);
+    updateUrlTab(activeTab, logsTab, view);
+  };
+
   // Assign functions to refs after they're declared
   loadDataRef.current = loadData;
   loadTeamDataRef.current = loadTeamData;
+
+  // Sync state from URL params when they change (e.g., on page refresh)
+  useEffect(() => {
+    if (!searchParams) return;
+    
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['brackets', 'users', 'data', 'logs', 'usage'].includes(tabParam)) {
+      const newTab = tabParam as 'brackets' | 'users' | 'data' | 'logs' | 'usage';
+      if (newTab !== activeTab) {
+        setActiveTab(newTab);
+      }
+    }
+    
+    const logsTabParam = searchParams.get('logsTab');
+    if (logsTabParam && ['summary', 'usage', 'error', 'email'].includes(logsTabParam)) {
+      const newLogsTab = logsTabParam as 'summary' | 'usage' | 'error' | 'email';
+      if (newLogsTab !== logsTab) {
+        setLogsTab(newLogsTab);
+      }
+    }
+    
+    const emailViewParam = searchParams.get('emailView');
+    if (emailViewParam && ['summary', 'detail'].includes(emailViewParam)) {
+      const newEmailView = emailViewParam as 'summary' | 'detail';
+      if (newEmailView !== emailLogsView) {
+        setEmailLogsView(newEmailView);
+      }
+    }
+  }, [searchParams]); // Only depend on searchParams, not state variables to avoid loops
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -1866,7 +1964,7 @@ export default function AdminPage() {
           <div className="border-b border-gray-200">
             <nav className="flex -mb-px">
               <button
-                onClick={() => setActiveTab('users')}
+                onClick={() => handleSetActiveTab('users')}
                 className={`flex items-center space-x-2 px-6 py-4 border-b-2 font-medium text-sm ${
                   activeTab === 'users'
                     ? 'border-blue-600 text-blue-600'
@@ -1877,7 +1975,7 @@ export default function AdminPage() {
                 <span>Users ({users.length})</span>
               </button>
               <button
-                onClick={() => setActiveTab('brackets')}
+                onClick={() => handleSetActiveTab('brackets')}
                 className={`flex items-center space-x-2 px-6 py-4 border-b-2 font-medium text-sm ${
                   activeTab === 'brackets'
                     ? 'border-blue-600 text-blue-600'
@@ -1888,7 +1986,7 @@ export default function AdminPage() {
                 <span>Brackets ({brackets.length})</span>
               </button>
               <button
-                onClick={() => setActiveTab('data')}
+                onClick={() => handleSetActiveTab('data')}
                 className={`flex items-center space-x-2 px-6 py-4 border-b-2 font-medium text-sm ${
                   activeTab === 'data'
                     ? 'border-blue-600 text-blue-600'
@@ -1899,7 +1997,7 @@ export default function AdminPage() {
                 <span>Team Data ({Object.keys(teamData).length})</span>
               </button>
               <button
-                onClick={() => setActiveTab('logs')}
+                onClick={() => handleSetActiveTab('logs')}
                 className={`flex items-center space-x-2 px-6 py-4 border-b-2 font-medium text-sm ${
                   activeTab === 'logs'
                     ? 'border-blue-600 text-blue-600'
@@ -1910,7 +2008,7 @@ export default function AdminPage() {
                 <span>Logs</span>
               </button>
               <button
-                onClick={() => setActiveTab('usage')}
+                onClick={() => handleSetActiveTab('usage')}
                 className={`flex items-center space-x-2 px-6 py-4 border-b-2 font-medium text-sm ${
                   activeTab === 'usage'
                     ? 'border-blue-600 text-blue-600'
@@ -3165,7 +3263,7 @@ export default function AdminPage() {
             <div className="mb-6 border-b border-gray-200">
               <nav className="flex -mb-px">
                 <button
-                  onClick={() => setLogsTab('summary')}
+                  onClick={() => handleSetLogsTab('summary')}
                   className={`px-4 py-2 border-b-2 font-medium text-sm ${
                     logsTab === 'summary'
                       ? 'border-blue-600 text-blue-600'
@@ -3175,7 +3273,7 @@ export default function AdminPage() {
                   Usage Summary
                 </button>
                 <button
-                  onClick={() => setLogsTab('usage')}
+                  onClick={() => handleSetLogsTab('usage')}
                   className={`px-4 py-2 border-b-2 font-medium text-sm ${
                     logsTab === 'usage'
                       ? 'border-blue-600 text-blue-600'
@@ -3185,7 +3283,7 @@ export default function AdminPage() {
                   Usage Logs ({usageLogs.length})
                 </button>
                 <button
-                  onClick={() => setLogsTab('error')}
+                  onClick={() => handleSetLogsTab('error')}
                   className={`px-4 py-2 border-b-2 font-medium text-sm ${
                     logsTab === 'error'
                       ? 'border-blue-600 text-blue-600'
@@ -3195,7 +3293,7 @@ export default function AdminPage() {
                   Error Logs ({errorLogs.length})
                 </button>
                 <button
-                  onClick={() => setLogsTab('email')}
+                  onClick={() => handleSetLogsTab('email')}
                   className={`px-4 py-2 border-b-2 font-medium text-sm ${
                     logsTab === 'email'
                       ? 'border-blue-600 text-blue-600'
@@ -3554,7 +3652,7 @@ export default function AdminPage() {
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => {
-                        setEmailLogsView('summary');
+                        handleSetEmailLogsView('summary');
                         loadEmailSummary();
                       }}
                       className={`px-4 py-2 text-sm font-medium rounded-lg ${
@@ -3567,7 +3665,7 @@ export default function AdminPage() {
                     </button>
                     <button
                       onClick={() => {
-                        setEmailLogsView('detail');
+                        handleSetEmailLogsView('detail');
                         loadEmailLogs();
                       }}
                       className={`px-4 py-2 text-sm font-medium rounded-lg ${
