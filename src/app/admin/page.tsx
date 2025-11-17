@@ -3836,6 +3836,21 @@ export default function AdminPage() {
             <div className="mb-6">
               <h2 className="text-2xl font-bold mb-2">Usage Monitoring Dashboard</h2>
               <p className="text-gray-600">Monitor your free tier usage and get upgrade recommendations</p>
+              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h3 className="font-semibold text-blue-900 mb-2">📊 How to Monitor Vercel Usage:</h3>
+                <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+                  <li>Go to your <a href="https://vercel.com/dashboard" target="_blank" rel="noopener noreferrer" className="underline font-medium">Vercel Dashboard</a> → Select your project → Settings → Usage</li>
+                  <li>Check Function Execution (100 GB-hours/month limit) and Bandwidth (100 GB/month limit)</li>
+                  <li><strong>Note:</strong> Built-in alerts are only available on Pro/Enterprise plans ($20/month)</li>
+                  <li><strong>Upgrade:</strong> Dashboard → Settings → Billing → Upgrade (takes effect immediately)</li>
+                </ul>
+                <h3 className="font-semibold text-blue-900 mt-3 mb-2">📧 Resend Email Monitoring:</h3>
+                <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+                  <li>Go to your <a href="https://resend.com/dashboard" target="_blank" rel="noopener noreferrer" className="underline font-medium">Resend Dashboard</a> to view email usage</li>
+                  <li>Enable email notifications in Resend Settings → Notifications for usage alerts</li>
+                  <li><strong>Upgrade:</strong> Dashboard → Billing → Upgrade (takes effect immediately)</li>
+                </ul>
+              </div>
             </div>
 
             {usageMonitoringLoading ? (
