@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
+import { getSiteConfigFromGoogleSheetsFresh } from '@/lib/siteConfig';
 import { checkSubmissionAllowed } from '@/lib/bracketSubmissionValidator';
 
 /**
@@ -19,10 +19,10 @@ export async function GET() {
       );
     }
 
-    // Get fresh site config to check submission rules
+    // Get fresh site config to check submission rules (bypass cache for real-time validation)
     let siteConfig = null;
     try {
-      siteConfig = await getSiteConfigFromGoogleSheets();
+      siteConfig = await getSiteConfigFromGoogleSheetsFresh();
     } catch {
       // Use fallback config if Google Sheets fails
       const { FALLBACK_CONFIG } = await import('@/lib/fallbackConfig');

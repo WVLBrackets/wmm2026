@@ -1,5 +1,7 @@
 // Google Sheets integration for Site Configuration
 
+import { unstable_cache } from 'next/cache';
+
 // Google Sheet ID for Site Config
 const SITE_CONFIG_SHEET_ID = '1BpNNLm9NfZdg5QgYalzKjxXeKQ-Lg8ng0GG5pwnhtPI';
 
@@ -106,8 +108,11 @@ export interface SiteConfigData {
   finalMessageSubmitOff?: string;
 }
 
-// Function to fetch site config from Google Sheets
-export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | null> => {
+/**
+ * Internal function to fetch site config from Google Sheets (uncached)
+ * This is the actual implementation that hits the Google Sheets API
+ */
+async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData | null> {
   try {
     // Use Google Sheets public CSV export
     const csvUrl = `https://docs.google.com/spreadsheets/d/${SITE_CONFIG_SHEET_ID}/export?format=csv&gid=0`;
@@ -429,7 +434,37 @@ export const getSiteConfigFromGoogleSheets = async (): Promise<SiteConfigData | 
     console.error('Error fetching site config from Google Sheets:', error);
     return null;
   }
-};
+}
+
+/**
+ * Get site config from Google Sheets with caching (7.5 minute TTL)
+ * Use this for general config access where real-time values aren't critical
+ * 
+ * For validation checks (bracket creation/submission), use getSiteConfigFromGoogleSheetsFresh()
+ */
+export const getSiteConfigFromGoogleSheets = unstable_cache(
+  async (): Promise<SiteConfigData | null> => {
+    return await fetchSiteConfigFromGoogleSheetsUncached();
+  },
+  ['site-config'],
+  { 
+    revalidate: 450, // 7.5 minutes (middle of 5-10 minute range)
+    tags: ['site-config']
+  }
+);
+
+/**
+ * Get site config from Google Sheets WITHOUT caching (real-time)
+ * Use this for validation checks where we need the latest values:
+ * - Before creating a new bracket (New Bracket or Copy buttons)
+ * - Before submitting a bracket
+ * 
+ * This bypasses the cache to ensure we check the current state of
+ * stop_submit_toggle and stop_submit_date_time
+ */
+export async function getSiteConfigFromGoogleSheetsFresh(): Promise<SiteConfigData | null> {
+  return await fetchSiteConfigFromGoogleSheetsUncached();
+}
 
 // Helper function to parse CSV line with proper handling of quoted fields
 function parseCSVLine(line: string): string[] {

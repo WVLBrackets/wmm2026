@@ -7,7 +7,7 @@ import {
   updateBracket, 
   getUserByEmail,
 } from '@/lib/secureDatabase';
-import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
+import { getSiteConfigFromGoogleSheets, getSiteConfigFromGoogleSheetsFresh } from '@/lib/siteConfig';
 import { sendSubmissionConfirmationEmail, processEmailAsync } from '@/lib/bracketEmailService';
 import { validateBracketSubmission, checkSubmissionAllowed } from '@/lib/bracketSubmissionValidator';
 import { loadTournamentData } from '@/lib/tournamentLoader';
@@ -69,11 +69,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get site config and tournament year
+    // Get fresh site config and tournament year (bypass cache for real-time validation)
     let siteConfig = null;
     let tournamentYear = new Date().getFullYear(); // Default fallback
     try {
-      siteConfig = await getSiteConfigFromGoogleSheets();
+      siteConfig = await getSiteConfigFromGoogleSheetsFresh();
       if (siteConfig?.tournamentYear) {
         tournamentYear = parseInt(siteConfig.tournamentYear);
       }
@@ -281,10 +281,10 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Get fresh site config to check submission rules
+    // Get fresh site config to check submission rules (bypass cache for real-time validation)
     let siteConfig = null;
     try {
-      siteConfig = await getSiteConfigFromGoogleSheets();
+      siteConfig = await getSiteConfigFromGoogleSheetsFresh();
     } catch {
       // Use fallback config if Google Sheets fails
       const { FALLBACK_CONFIG } = await import('@/lib/fallbackConfig');

@@ -8,7 +8,7 @@ import {
   getUserByEmail 
 } from '@/lib/secureDatabase';
 import { sendSubmissionConfirmationEmail, processEmailAsync } from '@/lib/bracketEmailService';
-import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
+import { getSiteConfigFromGoogleSheets, getSiteConfigFromGoogleSheetsFresh } from '@/lib/siteConfig';
 import { checkSubmissionAllowed } from '@/lib/bracketSubmissionValidator';
 
 /**
@@ -114,11 +114,11 @@ export async function PUT(
     
     // If changing status to submitted, check if submission is allowed and validate
     if (body.status === 'submitted') {
-      // Get fresh site config to check submission rules
+      // Get fresh site config to check submission rules (bypass cache for real-time validation)
       let siteConfig = null;
       let tournamentYear = new Date().getFullYear(); // Default fallback
       try {
-        siteConfig = await getSiteConfigFromGoogleSheets();
+        siteConfig = await getSiteConfigFromGoogleSheetsFresh();
         if (siteConfig?.tournamentYear) {
           tournamentYear = parseInt(siteConfig.tournamentYear);
         }
