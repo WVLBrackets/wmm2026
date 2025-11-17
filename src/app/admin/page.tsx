@@ -335,13 +335,14 @@ export default function AdminPage() {
     }
   };
 
-  const loadUsageLogs = useCallback(async () => {
+  const loadUsageLogs = useCallback(async (forceLoadAll?: boolean) => {
     try {
       setLogsLoading(true);
       setLogsError('');
       
       const params = new URLSearchParams();
-      if (!loadAllLogs) {
+      const shouldLoadAll = forceLoadAll !== undefined ? forceLoadAll : loadAllLogs;
+      if (!shouldLoadAll) {
         params.append('limit', '100');
       }
       if (logStartDate) {
@@ -3158,7 +3159,7 @@ export default function AdminPage() {
                       <button
                         onClick={() => {
                           setLoadAllLogs(true);
-                          loadUsageLogs();
+                          loadUsageLogs(true); // Pass true to force load all
                         }}
                         className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                         disabled={logsLoading || deletingLogs}
