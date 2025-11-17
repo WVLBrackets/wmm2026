@@ -3868,7 +3868,7 @@ export default function AdminPage() {
                 <div className="border border-gray-200 rounded-lg p-6">
                   <h3 className="text-xl font-semibold mb-4 flex items-center">
                     <span className="mr-2">📧</span>
-                    Email Usage - Resend
+                    Email Usage - {usageMonitoring.usage.emails.providerName || 'Email Service'}
                   </h3>
                   
                   {/* Monthly Email Usage */}
@@ -3999,23 +3999,32 @@ export default function AdminPage() {
                   </h3>
                   
                   <div className="mb-6">
-                    <h4 className="font-semibold mb-3 text-lg">Resend Email Service</h4>
+                    <h4 className="font-semibold mb-3 text-lg">{usageMonitoring.usage.emails.providerName || 'Email Service'}</h4>
+                    <div className="mb-3 p-3 bg-gray-50 rounded-lg">
+                      <div className="text-sm text-gray-600">Current Provider: <span className="font-semibold text-gray-900">{usageMonitoring.usage.emails.providerName}</span></div>
+                    </div>
                     <div className="space-y-3">
-                      <div className="border border-gray-300 rounded-lg p-4">
-                        <div className="font-semibold">Tier 1: {usageMonitoring.limits.resend.upgradeCost.tier1.range} emails</div>
-                        <div className="text-2xl font-bold text-blue-600">${usageMonitoring.limits.resend.upgradeCost.tier1.cost}/month</div>
-                        <div className="text-sm text-gray-600 mt-1">{usageMonitoring.limits.resend.upgradeCost.tier1.description}</div>
-                      </div>
-                      <div className="border border-gray-300 rounded-lg p-4">
-                        <div className="font-semibold">Tier 2: {usageMonitoring.limits.resend.upgradeCost.tier2.range} emails</div>
-                        <div className="text-2xl font-bold text-blue-600">${usageMonitoring.limits.resend.upgradeCost.tier2.cost}/month</div>
-                        <div className="text-sm text-gray-600 mt-1">{usageMonitoring.limits.resend.upgradeCost.tier2.description}</div>
-                      </div>
-                      <div className="border border-gray-300 rounded-lg p-4">
-                        <div className="font-semibold">Tier 3: {usageMonitoring.limits.resend.upgradeCost.tier3.range} emails</div>
-                        <div className="text-2xl font-bold text-blue-600">${usageMonitoring.limits.resend.upgradeCost.tier3.cost}/month</div>
-                        <div className="text-sm text-gray-600 mt-1">{usageMonitoring.limits.resend.upgradeCost.tier3.description}</div>
-                      </div>
+                      {usageMonitoring.limits.email.upgradeCost.tier1 && (
+                        <div className="border border-gray-300 rounded-lg p-4">
+                          <div className="font-semibold">Option 1: {usageMonitoring.limits.email.upgradeCost.tier1.range}</div>
+                          <div className="text-2xl font-bold text-blue-600">${usageMonitoring.limits.email.upgradeCost.tier1.cost}/month</div>
+                          <div className="text-sm text-gray-600 mt-1">{usageMonitoring.limits.email.upgradeCost.tier1.description}</div>
+                        </div>
+                      )}
+                      {usageMonitoring.limits.email.upgradeCost.tier2 && (
+                        <div className="border border-gray-300 rounded-lg p-4">
+                          <div className="font-semibold">Option 2: {usageMonitoring.limits.email.upgradeCost.tier2.range}</div>
+                          <div className="text-2xl font-bold text-blue-600">${usageMonitoring.limits.email.upgradeCost.tier2.cost}/month</div>
+                          <div className="text-sm text-gray-600 mt-1">{usageMonitoring.limits.email.upgradeCost.tier2.description}</div>
+                        </div>
+                      )}
+                      {usageMonitoring.limits.email.upgradeCost.tier3 && (
+                        <div className="border border-gray-300 rounded-lg p-4">
+                          <div className="font-semibold">Option 3: {usageMonitoring.limits.email.upgradeCost.tier3.range}</div>
+                          <div className="text-2xl font-bold text-blue-600">${usageMonitoring.limits.email.upgradeCost.tier3.cost}/month</div>
+                          <div className="text-sm text-gray-600 mt-1">{usageMonitoring.limits.email.upgradeCost.tier3.description}</div>
+                        </div>
+                      )}
                     </div>
                   </div>
 

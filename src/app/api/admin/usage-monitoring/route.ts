@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/lib/adminAuth';
 import { sql } from '@/lib/databaseAdapter';
 import { getCurrentEnvironment } from '@/lib/databaseConfig';
+import { emailService } from '@/lib/emailService';
 
 /**
  * GET /api/admin/usage-monitoring - Get usage statistics vs free tier limits (admin only)
@@ -74,18 +75,62 @@ export async function GET(request: NextRequest) {
     const dailyPdfs = Number(dailyEmailResult.rows[0]?.pdf_generations || 0);
     const dailySuccessfulPdfs = Number(dailyEmailResult.rows[0]?.successful_pdfs || 0);
 
-    // Free tier limits
-    const limits = {
-      resend: {
+    // Detect which email provider is actually being used
+    const emailProvider = emailService.getProvider();
+    const emailStatus = emailService.getStatus();
+    
+    // Determine email service limits based on actual provider
+    let emailServiceLimits: {
+      monthly: number;
+      daily: number;
+      name: string;
+      upgradeCost: {
+        tier1: { range: string; cost: number; description: string };
+        tier2?: { range: string; cost: number; description: string };
+        tier3?: { range: string; cost: number; description: string };
+      };
+    };
+
+    if (emailProvider === 'gmail') {
+      // Gmail SMTP limits: 500 emails per day (no monthly limit, but daily is the constraint)
+      // Monthly would be ~15,000 if sending at max daily rate
+      emailServiceLimits = {
+        monthly: 15000, // Approximate if sending at daily max
+        daily: 500,
+        name: 'Gmail SMTP',
+        upgradeCost: {
+          tier1: { range: 'Upgrade to Google Workspace', cost: 6, description: '$6/month per user for Google Workspace (2,000 emails/day)' },
+          tier2: { range: 'Use SendGrid', cost: 20, description: '$20/month for SendGrid (up to 50,000 emails)' },
+          tier3: { range: 'Use Resend', cost: 20, description: '$20/month for Resend (up to 50,000 emails)' },
+        }
+      };
+    } else if (emailProvider === 'sendgrid') {
+      // SendGrid free tier: 100 emails/day
+      emailServiceLimits = {
         monthly: 3000,
         daily: 100,
-        name: 'Resend Email Service',
+        name: 'SendGrid',
         upgradeCost: {
           tier1: { range: '3,001 - 50,000', cost: 20, description: '$20/month for up to 50,000 emails' },
           tier2: { range: '50,001 - 100,000', cost: 35, description: '$35/month for up to 100,000 emails' },
           tier3: { range: '100,001 - 200,000', cost: 160, description: '$160/month for up to 200,000 emails' },
         }
-      },
+      };
+    } else {
+      // Default to Resend limits (though not actually implemented)
+      emailServiceLimits = {
+        monthly: 3000,
+        daily: 100,
+        name: 'Email Service',
+        upgradeCost: {
+          tier1: { range: 'Configure SendGrid or Resend', cost: 20, description: '$20/month for up to 50,000 emails' },
+        }
+      };
+    }
+
+    // Free tier limits
+    const limits = {
+      email: emailServiceLimits,
       vercel: {
         name: 'Vercel Hosting',
         functionExecution: {
@@ -104,8 +149,8 @@ export async function GET(request: NextRequest) {
     };
 
     // Calculate percentages and status
-    const monthlyEmailPercent = (monthlyEmails / limits.resend.monthly) * 100;
-    const dailyEmailPercent = (dailyEmails / limits.resend.daily) * 100;
+    const monthlyEmailPercent = (monthlyEmails / limits.email.monthly) * 100;
+    const dailyEmailPercent = (dailyEmails / limits.email.daily) * 100;
 
     // Determine alert levels
     const getAlertLevel = (percent: number): 'ok' | 'warning' | 'critical' => {
@@ -134,7 +179,7 @@ export async function GET(request: NextRequest) {
           monthly: {
             used: monthlyEmails,
             successful: monthlySuccessfulEmails,
-            limit: limits.resend.monthly,
+            limit: limits.email.monthly,
             percent: Math.round(monthlyEmailPercent * 100) / 100,
             alertLevel: monthlyEmailAlert,
             projected: projectedMonthlyEmails,
@@ -144,10 +189,12 @@ export async function GET(request: NextRequest) {
           daily: {
             used: dailyEmails,
             successful: dailySuccessfulEmails,
-            limit: limits.resend.daily,
+            limit: limits.email.daily,
             percent: Math.round(dailyEmailPercent * 100) / 100,
             alertLevel: dailyEmailAlert
-          }
+          },
+          provider: emailProvider,
+          providerName: emailStatus.provider
         },
         pdfs: {
           monthly: {
@@ -173,9 +220,9 @@ export async function GET(request: NextRequest) {
           : 'OK: Email usage is within safe limits.',
         actions: {
           immediate: monthlyEmailPercent >= 90 
-            ? ['Upgrade Resend plan to avoid service interruption', 'Review email sending patterns to optimize usage']
+            ? [`Upgrade ${emailServiceLimits.name} plan to avoid service interruption`, 'Review email sending patterns to optimize usage']
             : monthlyEmailPercent >= 75
-            ? ['Monitor usage daily', 'Consider upgrading Resend plan before reaching limit', 'Review if all emails are necessary']
+            ? ['Monitor usage daily', `Consider upgrading ${emailServiceLimits.name} plan before reaching limit`, 'Review if all emails are necessary']
             : [],
           optimization: [
             'Cache PDFs to avoid regenerating for same bracket',
