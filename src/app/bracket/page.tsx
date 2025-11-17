@@ -77,6 +77,28 @@ function BracketContent() {
     
     if (editId && adminMode) {
       setIsAdminMode(true);
+      
+      // Clear sessionStorage when editing a different bracket to prevent stale state
+      if (typeof window !== 'undefined') {
+        const savedState = sessionStorage.getItem('bracketState');
+        if (savedState) {
+          try {
+            const state = JSON.parse(savedState);
+            // If the edit ID in URL is different from saved state, clear it
+            if (state.editingBracketId && state.editingBracketId !== editId) {
+              sessionStorage.removeItem('bracketState');
+              sessionStorage.removeItem('bracketCurrentStep');
+              hasRestoredState.current = false; // Reset restoration flag
+            }
+          } catch (error) {
+            // If parsing fails, clear it anyway
+            sessionStorage.removeItem('bracketState');
+            sessionStorage.removeItem('bracketCurrentStep');
+            hasRestoredState.current = false;
+          }
+        }
+      }
+      
       // Load the bracket to edit with admin mode flag
       loadBracketForEdit(editId, true);
     }
