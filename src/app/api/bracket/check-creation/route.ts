@@ -8,7 +8,7 @@ import { checkSubmissionAllowed } from '@/lib/bracketSubmissionValidator';
  * GET /api/bracket/check-creation - Check if bracket creation is currently allowed
  * Returns whether bracket creation is allowed based on stop_submit_toggle and stop_submit_date_time
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     

@@ -145,7 +145,27 @@ export default function AdminPage() {
         daily: { generated: number; successful: number };
       };
     };
-    limits: any;
+    limits: {
+      resend: {
+        monthly: number;
+        daily: number;
+        name: string;
+        upgradeCost: {
+          tier1: { range: string; cost: number; description: string };
+          tier2: { range: string; cost: number; description: string };
+          tier3: { range: string; cost: number; description: string };
+        };
+      };
+      vercel: {
+        name: string;
+        functionExecution: { limit: number; description: string };
+        bandwidth: { limit: number; description: string };
+        upgradeCost: {
+          pro: { cost: number; description: string };
+          additional: { description: string };
+        };
+      };
+    };
     recommendations: { emails: string; actions: { immediate: string[]; optimization: string[] } };
   } | null>(null);
   const [usageMonitoringLoading, setUsageMonitoringLoading] = useState(false);
@@ -510,6 +530,29 @@ export default function AdminPage() {
     }
   }, [logStartDate, logEndDate, emailLogEventTypeFilter, emailLogEmailFilter, emailLogAttachmentExpectedFilter, emailLogAttachmentSuccessFilter, emailLogEmailSuccessFilter]);
 
+  const loadUsageMonitoring = useCallback(async () => {
+    try {
+      setUsageMonitoringLoading(true);
+      setLogsError('');
+      
+      const response = await fetch('/api/admin/usage-monitoring');
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
+        const errorMsg = data.error || data.details || 'Failed to load usage monitoring data';
+        throw new Error(errorMsg);
+      }
+      
+      setUsageMonitoring(data);
+    } catch (error) {
+      console.error('Error loading usage monitoring:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load usage monitoring data';
+      setLogsError(errorMessage);
+    } finally {
+      setUsageMonitoringLoading(false);
+    }
+  }, []);
+
   const handleDeleteLogs = async () => {
     const logType = logsTab === 'usage' ? 'usage' : 'error';
     const count = logsTab === 'usage' ? usageLogs.length : errorLogs.length;
@@ -815,7 +858,7 @@ export default function AdminPage() {
     } else if (activeTab === 'usage') {
       loadUsageMonitoring();
     }
-  }, [activeTab, logsTab, emailLogsView, logStartDate, logEndDate, logUsernameFilter, logEventTypeFilter, logLocationFilter, loadUsageSummary, loadUsageLogs, loadErrorLogs, loadEmailSummary, loadEmailLogs, loadUsageMonitoring]);
+  }, [activeTab, logsTab, emailLogsView, logStartDate, logEndDate, logUsernameFilter, logEventTypeFilter, logLocationFilter, loadUsageSummary, loadUsageLogs, loadErrorLogs, loadEmailSummary, loadEmailLogs]);
 
   // Reload team data when filter changes
   useEffect(() => {
