@@ -144,6 +144,15 @@ function BracketContent() {
       return;
     }
     
+    // Don't restore from sessionStorage if we're in admin edit mode with a URL parameter
+    // The URL-based edit should take precedence
+    const editId = searchParams?.get('edit');
+    const adminMode = searchParams?.get('admin') === 'true';
+    if (editId && adminMode) {
+      // URL-based edit is being handled by the other useEffect, skip restoration
+      return;
+    }
+    
     const savedState = sessionStorage.getItem('bracketState');
     const savedStep = sessionStorage.getItem('bracketCurrentStep');
     
