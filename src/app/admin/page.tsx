@@ -3844,11 +3844,12 @@ export default function AdminPage() {
                   <li><strong>Note:</strong> Built-in alerts are only available on Pro/Enterprise plans ($20/month)</li>
                   <li><strong>Upgrade:</strong> Dashboard → Settings → Billing → Upgrade (takes effect immediately)</li>
                 </ul>
-                <h3 className="font-semibold text-blue-900 mt-3 mb-2">📧 Resend Email Monitoring:</h3>
+                <h3 className="font-semibold text-blue-900 mt-3 mb-2">📧 Email Service Monitoring:</h3>
                 <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-                  <li>Go to your <a href="https://resend.com/dashboard" target="_blank" rel="noopener noreferrer" className="underline font-medium">Resend Dashboard</a> to view email usage</li>
-                  <li>Enable email notifications in Resend Settings → Notifications for usage alerts</li>
-                  <li><strong>Upgrade:</strong> Dashboard → Billing → Upgrade (takes effect immediately)</li>
+                  <li>Your current email provider is shown in the dashboard below</li>
+                  <li><strong>Gmail SMTP:</strong> 500 emails/day limit (no built-in dashboard, monitor via this page)</li>
+                  <li><strong>SendGrid:</strong> Check <a href="https://app.sendgrid.com" target="_blank" rel="noopener noreferrer" className="underline font-medium">SendGrid Dashboard</a> for usage</li>
+                  <li><strong>Upgrade Options:</strong> See recommendations below based on your current provider</li>
                 </ul>
               </div>
             </div>
