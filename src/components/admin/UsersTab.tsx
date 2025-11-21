@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
-import { Trash2, CheckCircle, Key, Edit2, X, Save, Search, Disc } from 'lucide-react';
+import { Trash2, CheckCircle, Key, Edit2, X, Search, Disc } from 'lucide-react';
 
 interface User {
   id: string;

@@ -4,7 +4,6 @@ import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/lib/adminAuth';
 import { sql } from '@vercel/postgres';
 import { getCurrentEnvironment } from '@/lib/databaseConfig';
-import { getUserBracketCounts } from '@/lib/secureDatabase';
 
 /**
  * POST /api/admin/users/bulk-delete - Bulk delete users (admin only)
@@ -36,6 +35,7 @@ export async function POST(request: NextRequest) {
     const skippedIds: string[] = [];
 
     // Batch check bracket counts for all users at once
+    // Use IN clause with array - @vercel/postgres handles arrays in IN clauses
     const bracketCountsResult = await sql`
       SELECT 
         user_id,
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
         SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress_count,
         SUM(CASE WHEN status = 'deleted' THEN 1 ELSE 0 END) as deleted_count
       FROM brackets
-      WHERE user_id = ANY(${userIds}) AND environment = ${environment}
+      WHERE user_id IN (${sql.join(userIds.map(id => sql`${id}`), sql`, `)}) AND environment = ${environment}
       GROUP BY user_id
     `;
 
@@ -73,13 +73,13 @@ export async function POST(request: NextRequest) {
         // Batch delete tokens first (foreign key constraint)
         await sql`
           DELETE FROM tokens 
-          WHERE user_id = ANY(${deletableUserIds}) AND environment = ${environment}
+          WHERE user_id IN (${sql.join(deletableUserIds.map(id => sql`${id}`), sql`, `)}) AND environment = ${environment}
         `;
 
         // Batch delete users
         const deleteResult = await sql`
           DELETE FROM users 
-          WHERE id = ANY(${deletableUserIds}) AND environment = ${environment}
+          WHERE id IN (${sql.join(deletableUserIds.map(id => sql`${id}`), sql`, `)}) AND environment = ${environment}
           RETURNING id
         `;
 
