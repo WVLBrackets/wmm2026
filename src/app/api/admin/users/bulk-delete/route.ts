@@ -35,35 +35,58 @@ export async function POST(request: NextRequest) {
     const deletedIds: string[] = [];
     const skippedIds: string[] = [];
 
-    // Process each user
-    for (const userId of userIds) {
-      try {
-        // Check if user has any brackets
-        const bracketCounts = await getUserBracketCounts(userId);
-        
-        if (bracketCounts.submitted > 0 || bracketCounts.inProgress > 0 || bracketCounts.deleted > 0) {
-          skippedIds.push(userId);
-          continue;
-        }
+    // Batch check bracket counts for all users at once
+    const bracketCountsResult = await sql`
+      SELECT 
+        user_id,
+        SUM(CASE WHEN status = 'submitted' THEN 1 ELSE 0 END) as submitted_count,
+        SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress_count,
+        SUM(CASE WHEN status = 'deleted' THEN 1 ELSE 0 END) as deleted_count
+      FROM brackets
+      WHERE user_id = ANY(${userIds}) AND environment = ${environment}
+      GROUP BY user_id
+    `;
 
-        // Delete tokens first (foreign key constraint)
+    // Create a map of userId -> bracket counts
+    const bracketCountsMap = new Map<string, { submitted: number; inProgress: number; deleted: number }>();
+    for (const row of bracketCountsResult.rows) {
+      bracketCountsMap.set(row.user_id as string, {
+        submitted: Number(row.submitted_count) || 0,
+        inProgress: Number(row.in_progress_count) || 0,
+        deleted: Number(row.deleted_count) || 0,
+      });
+    }
+
+    // Separate users into deletable and skipped
+    const deletableUserIds: string[] = [];
+    for (const userId of userIds) {
+      const counts = bracketCountsMap.get(userId) || { submitted: 0, inProgress: 0, deleted: 0 };
+      if (counts.submitted > 0 || counts.inProgress > 0 || counts.deleted > 0) {
+        skippedIds.push(userId);
+      } else {
+        deletableUserIds.push(userId);
+      }
+    }
+
+    if (deletableUserIds.length > 0) {
+      try {
+        // Batch delete tokens first (foreign key constraint)
         await sql`
           DELETE FROM tokens 
-          WHERE user_id = ${userId} AND environment = ${environment}
+          WHERE user_id = ANY(${deletableUserIds}) AND environment = ${environment}
         `;
 
-        // Delete user
-        const result = await sql`
+        // Batch delete users
+        const deleteResult = await sql`
           DELETE FROM users 
-          WHERE id = ${userId} AND environment = ${environment}
+          WHERE id = ANY(${deletableUserIds}) AND environment = ${environment}
+          RETURNING id
         `;
 
-        if ((result.rowCount ?? 0) > 0) {
-          deletedIds.push(userId);
-        }
+        deletedIds.push(...deleteResult.rows.map(row => row.id as string));
       } catch (error) {
-        console.error(`Error deleting user ${userId}:`, error);
-        // Continue with next user
+        console.error('Error in batch delete:', error);
+        throw error;
       }
     }
 
