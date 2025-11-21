@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
-import { Trash2, CheckCircle, Key, Edit2, X, Search, Disc } from 'lucide-react';
+import { Trash2, CheckCircle, Key, Edit2, X, Search, Save, RefreshCw } from 'lucide-react';
 
 interface User {
   id: string;
@@ -309,13 +309,23 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
             />
           </div>
         </div>
-        <button
-          onClick={handleBulkDelete}
-          disabled={isDeleting || filteredUsers.length === 0}
-          className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
-        >
-          {isDeleting ? 'Deleting...' : 'Bulk Delete'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={onReload}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors flex items-center gap-2"
+            title="Refresh user list"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </button>
+          <button
+            onClick={handleBulkDelete}
+            disabled={isDeleting || filteredUsers.length === 0}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
+          >
+            {isDeleting ? 'Deleting...' : 'Bulk Delete'}
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -467,7 +477,7 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
                               className="p-1.5 rounded border border-transparent bg-blue-600 hover:bg-blue-700 text-white focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 transition-colors"
                               title="Save changes"
                             >
-                              <Disc className="h-4 w-4" />
+                              <Save className="h-4 w-4" />
                             </button>
                             <button
                               onClick={handleCancelEdit}
