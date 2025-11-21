@@ -25,7 +25,6 @@ export async function GET(request: Request) {
     }
     
     // Debug: Check for happy_path_email_test
-    const url = new URL(request.url);
     if (url.searchParams.get('debug') === 'true') {
       return NextResponse.json({ 
         success: true, 

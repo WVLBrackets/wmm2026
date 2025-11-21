@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/lib/adminAuth';
 import { sql } from '@vercel/postgres';
-import { getCurrentEnvironment } from '@/lib/secureDatabase';
+import { getCurrentEnvironment } from '@/lib/databaseConfig';
 
 /**
  * PUT /api/admin/users/[id] - Update user name and/or email (admin only)

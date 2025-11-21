@@ -3,7 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/lib/adminAuth';
 import { sql } from '@vercel/postgres';
-import { getCurrentEnvironment, getUserBracketCounts } from '@/lib/secureDatabase';
+import { getCurrentEnvironment } from '@/lib/databaseConfig';
+import { getUserBracketCounts } from '@/lib/secureDatabase';
 
 /**
  * POST /api/admin/users/bulk-delete - Bulk delete users (admin only)
