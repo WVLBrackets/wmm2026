@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
-import { Trash2, CheckCircle, Key, Edit2, X, Save, Search, Disk } from 'lucide-react';
+import { Trash2, CheckCircle, Key, Edit2, X, Save, Search, Disc } from 'lucide-react';
 
 interface User {
   id: string;
@@ -467,7 +467,7 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
                               className="p-1.5 rounded border border-transparent bg-blue-600 hover:bg-blue-700 text-white focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 transition-colors"
                               title="Save changes"
                             >
-                              <Disk className="h-4 w-4" />
+                              <Disc className="h-4 w-4" />
                             </button>
                             <button
                               onClick={handleCancelEdit}
