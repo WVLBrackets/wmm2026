@@ -7,10 +7,42 @@ import { test, expect } from '@playwright/test';
  * for creating a new account.
  */
 test.describe('Account Creation', () => {
+  let passedCount = 0;
+  let failedCount = 0;
+  let skippedCount = 0;
+  let hasLoggedStart = false;
+
+  test.beforeAll(() => {
+    // Log start (may appear multiple times due to parallel workers)
+    if (!hasLoggedStart) {
+      console.log('\n📋 Account Creation - Starting...');
+      hasLoggedStart = true;
+    }
+  });
+
   test.beforeEach(async ({ page }) => {
     // Navigate to signup page before each test
     await page.goto('/auth/signup', { waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('domcontentloaded');
+  });
+
+  test.afterEach(({}, testInfo) => {
+    if (testInfo.status === 'passed') {
+      passedCount++;
+    } else if (testInfo.status === 'failed') {
+      failedCount++;
+    } else if (testInfo.status === 'skipped') {
+      skippedCount++;
+    }
+  });
+
+  test.afterAll(() => {
+    const statusParts = [];
+    if (passedCount > 0) statusParts.push(`${passedCount} passed`);
+    if (failedCount > 0) statusParts.push(`${failedCount} failed`);
+    if (skippedCount > 0) statusParts.push(`${skippedCount} skipped`);
+    const status = statusParts.length > 0 ? statusParts.join(', ') : '0 tests';
+    console.log(`✅ Account Creation - Complete: ${status}\n`);
   });
 
   test('should display signup form with all required fields', async ({ page }) => {
@@ -30,10 +62,15 @@ test.describe('Account Creation', () => {
     await page.getByTestId('signup-password-input').fill('password123');
     await page.getByTestId('signup-confirm-password-input').fill('differentpassword');
 
-    await page.getByTestId('signup-submit-button').click();
+    const submitButton = page.getByTestId('signup-submit-button');
+    await submitButton.click();
 
-    // Wait for error message
-    await expect(page.getByTestId('signup-error-message')).toBeVisible();
+    // Client-side validation - wait for button to be enabled again (handler completed)
+    await expect(submitButton).toBeEnabled({ timeout: 3000 });
+
+    // Wait for error message (React needs a moment to re-render after state update)
+    // Firefox may need more time for React state updates
+    await expect(page.getByTestId('signup-error-message')).toBeVisible({ timeout: 8000 });
     await expect(page.getByText(/passwords do not match/i)).toBeVisible();
   });
 
@@ -45,56 +82,55 @@ test.describe('Account Creation', () => {
     await page.getByTestId('signup-password-input').fill('12345');
     await page.getByTestId('signup-confirm-password-input').fill('12345');
 
-    await page.getByTestId('signup-submit-button').click();
+    const submitButton = page.getByTestId('signup-submit-button');
+    await submitButton.click();
 
-    // Wait for error message
-    await expect(page.getByTestId('signup-error-message')).toBeVisible();
+    // Client-side validation sets isLoading to false, so button should be enabled again
+    // Wait for button to be enabled (indicates handler completed)
+    await expect(submitButton).toBeEnabled({ timeout: 2000 });
+
+    // Wait for error message (React needs a moment to re-render after state update)
+    await expect(page.getByTestId('signup-error-message')).toBeVisible({ timeout: 5000 });
     await expect(page.getByText(/password must be at least 6 characters/i)).toBeVisible();
   });
 
-  test('should successfully create account with valid data', async ({ page, request }) => {
-    // Get site config to retrieve the happy_path_email_test
+  test('should successfully create account with valid data', async ({ page, request }, testInfo) => {
+    // Get site config to retrieve the browser-specific happy_path_email_test
     const baseURL = process.env.PLAYWRIGHT_TEST_BASE_URL || 
                     (process.env.TEST_ENV === 'production' || process.env.TEST_ENV === 'prod'
                       ? (process.env.PRODUCTION_URL || 'https://warrensmm.com')
                       : (process.env.STAGING_URL || 'https://wmm2026-git-staging-ncaatourney-gmailcoms-projects.vercel.app'));
     
+    // Determine which browser is running the test
+    const browserName = testInfo.project.name; // 'chromium' or 'firefox'
+    const emailConfigKey = browserName === 'chromium' 
+      ? 'happy_path_email_test_chrome' 
+      : browserName === 'firefox'
+      ? 'happy_path_email_test_firefox'
+      : 'happy_path_email_test'; // Fallback to original
+    
     let testEmail: string;
     try {
-      // Fetch site config from API with debug mode and cache-busting timestamp
+      // Fetch site config from API with cache-busting timestamp
       // Add timestamp to ensure we get fresh config (bypasses unstable_cache)
-      const configResponse = await request.get(`${baseURL}/api/site-config?debug=true&_t=${Date.now()}`);
+      const configResponse = await request.get(`${baseURL}/api/site-config?_t=${Date.now()}`);
       if (configResponse.ok()) {
         const configData = await configResponse.json();
         const siteConfig = configData.data || configData;
         
-        // Debug: Log the debug info
-        if (configData.debug) {
-          console.log('Debug info:', configData.debug);
-        }
-        
-        // Debug: Log the config to see what we're getting
-        console.log('All config keys (first 20):', Object.keys(siteConfig).slice(0, 20));
-        console.log('Config keys with "happy" or "test":', Object.keys(siteConfig).filter(k => k.toLowerCase().includes('happy') || k.toLowerCase().includes('test')));
-        console.log('happy_path_email_test value:', siteConfig.happy_path_email_test);
-        
-        testEmail = siteConfig.happy_path_email_test;
+        // Use browser-specific email, fallback to generic, then generated
+        testEmail = siteConfig[emailConfigKey] || siteConfig.happy_path_email_test;
         
         // Fallback to generated email if config doesn't have the parameter
         if (!testEmail || testEmail.trim() === '') {
           testEmail = `test-${Date.now()}@example.com`;
-          console.log('⚠️ happy_path_email_test not found or empty in config, using generated email');
-        } else {
-          console.log(`✅ Using email from config: ${testEmail}`);
         }
       } else {
         testEmail = `test-${Date.now()}@example.com`;
-        console.log('⚠️ Failed to fetch site config (non-200 response), using generated email');
       }
     } catch (error) {
       // Fallback to generated email if config fetch fails
       testEmail = `test-${Date.now()}@example.com`;
-      console.log('⚠️ Failed to fetch site config, using generated email:', error);
     }
 
     const password = 'testpassword123';
@@ -104,15 +140,29 @@ test.describe('Account Creation', () => {
     await page.getByTestId('signup-password-input').fill(password);
     await page.getByTestId('signup-confirm-password-input').fill(password);
 
+    // Set up response listener BEFORE clicking (more reliable)
+    const responsePromise = page.waitForResponse(
+      response => 
+        response.url().includes('/api/auth/register') && response.status() === 200,
+      { timeout: 30000 }
+    );
+
+    // Click submit button
     await page.getByTestId('signup-submit-button').click();
 
+    // Wait for API response
+    await responsePromise;
+
     // Wait for success message
-    await expect(page.getByTestId('signup-success-header')).toBeVisible();
+    await expect(page.getByTestId('signup-success-header')).toBeVisible({ timeout: 15000 });
   });
 
   test('should show error for duplicate email', async ({ page, request }) => {
     // Create a user first via API
-    const baseURL = process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:3000';
+    const baseURL = process.env.PLAYWRIGHT_TEST_BASE_URL || 
+                    (process.env.TEST_ENV === 'production' || process.env.TEST_ENV === 'prod'
+                      ? (process.env.PRODUCTION_URL || 'https://warrensmm.com')
+                      : (process.env.STAGING_URL || 'https://wmm2026-git-staging-ncaatourney-gmailcoms-projects.vercel.app'));
     const uniqueEmail = `test-${Date.now()}@example.com`;
     const password = 'testpassword123';
 
@@ -131,7 +181,18 @@ test.describe('Account Creation', () => {
     await page.getByTestId('signup-password-input').fill(password);
     await page.getByTestId('signup-confirm-password-input').fill(password);
 
+    // Set up response listener BEFORE clicking (more reliable)
+    const responsePromise = page.waitForResponse(
+      response => 
+        response.url().includes('/api/auth/register') && response.status() === 409,
+      { timeout: 30000 }
+    );
+
+    // Click submit button
     await page.getByTestId('signup-submit-button').click();
+
+    // Wait for API response
+    await responsePromise;
 
     // Wait for error message
     await expect(page.getByTestId('signup-error-message')).toBeVisible();
@@ -147,26 +208,29 @@ test.describe('Account Creation', () => {
     const passwordInput = page.getByTestId('signup-password-input');
     await expect(passwordInput).toHaveAttribute('type', 'password');
 
-    // Find the password visibility toggle button using a more reliable approach
-    // The button contains an SVG icon (Eye or EyeOff), so we can find it by role or by the icon
-    // First, find the input's parent container with class "relative"
-    const passwordField = page.locator('div:has(input[data-testid="signup-password-input"])').filter({ hasText: '' });
+    // Find the password visibility toggle button - use a more reliable selector
+    // The button is in the same container as the input
+    const inputContainer = page.locator('input[data-testid="signup-password-input"]').locator('xpath=ancestor::div[contains(@class, "relative")]');
+    const toggleButton = inputContainer.locator('button[type="button"]').first();
     
-    // Find the button within that container - it's the button with type="button" that's positioned absolutely
-    // We'll use a more specific selector: button inside the relative container
-    const toggleButton = page.locator('input[data-testid="signup-password-input"]')
-      .locator('xpath=ancestor::div[contains(@class, "relative")]')
-      .locator('button[type="button"]')
-      .first();
-    
-    // Wait for button to be visible
+    // Wait for button to be visible and actionable
     await expect(toggleButton).toBeVisible({ timeout: 5000 });
+    await expect(toggleButton).toBeEnabled({ timeout: 2000 });
     
-    // Click using JavaScript to ensure it works even if the button is overlapped
-    await toggleButton.evaluate((button: HTMLButtonElement) => button.click());
+    // For Firefox, use evaluate to directly call the click handler
+    // This bypasses any event propagation issues
+    await toggleButton.evaluate((button: HTMLButtonElement) => {
+      // Trigger both click and mousedown/mouseup events for maximum compatibility
+      button.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+      button.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+      button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    });
+    
+    // Give Firefox more time to process the state change
+    await page.waitForTimeout(1000);
 
     // Wait for the input type to change to 'text'
-    await expect(passwordInput).toHaveAttribute('type', 'text', { timeout: 3000 });
+    await expect(passwordInput).toHaveAttribute('type', 'text', { timeout: 8000 });
   });
 
   test('should navigate to sign in page from signup page', async ({ page }) => {

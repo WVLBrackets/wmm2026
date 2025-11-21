@@ -108,6 +108,8 @@ export interface SiteConfigData {
   finalMessageSubmitOff?: string;
   // Test configuration
   happy_path_email_test?: string;
+  happy_path_email_test_chrome?: string;
+  happy_path_email_test_firefox?: string;
 }
 
 /**
@@ -445,6 +447,12 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
             break;
           case 'happy_path_email_test':
             config.happy_path_email_test = value;
+            break;
+          case 'happy_path_email_test_chrome':
+            config.happy_path_email_test_chrome = value;
+            break;
+          case 'happy_path_email_test_firefox':
+            config.happy_path_email_test_firefox = value;
             break;
           default:
             // Unknown parameter - log for debugging (only in development)
