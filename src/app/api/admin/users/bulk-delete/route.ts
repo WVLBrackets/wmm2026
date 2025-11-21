@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/lib/adminAuth';
-import { sql } from '@vercel/postgres';
+import { Pool } from 'pg';
 import { getCurrentEnvironment } from '@/lib/databaseConfig';
 
 /**
@@ -34,20 +34,32 @@ export async function POST(request: NextRequest) {
     const deletedIds: string[] = [];
     const skippedIds: string[] = [];
 
-    // Batch check bracket counts for all users at once
-    // Build IN clause with individual parameters for each user ID
-    const userIdPlaceholders = userIds.map((_, i) => `$${i + 1}`).join(', ');
-    const bracketCountsQuery = `
-      SELECT 
-        user_id,
-        SUM(CASE WHEN status = 'submitted' THEN 1 ELSE 0 END) as submitted_count,
-        SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress_count,
-        SUM(CASE WHEN status = 'deleted' THEN 1 ELSE 0 END) as deleted_count
-      FROM brackets
-      WHERE user_id IN (${userIdPlaceholders}) AND environment = $${userIds.length + 1}
-      GROUP BY user_id
-    `;
-    const bracketCountsResult = await sql.query(bracketCountsQuery, [...userIds, environment]);
+    // Use pg Pool for dynamic queries with arrays
+    const postgresUrl = process.env.POSTGRES_URL;
+    if (!postgresUrl) {
+      throw new Error('POSTGRES_URL environment variable is not set');
+    }
+    
+    const pool = new Pool({
+      connectionString: postgresUrl,
+      ssl: { rejectUnauthorized: false },
+    });
+
+    try {
+      // Batch check bracket counts for all users at once
+      // Build IN clause with individual parameters for each user ID
+      const userIdPlaceholders = userIds.map((_, i) => `$${i + 1}`).join(', ');
+      const bracketCountsQuery = `
+        SELECT 
+          user_id,
+          SUM(CASE WHEN status = 'submitted' THEN 1 ELSE 0 END) as submitted_count,
+          SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress_count,
+          SUM(CASE WHEN status = 'deleted' THEN 1 ELSE 0 END) as deleted_count
+        FROM brackets
+        WHERE user_id IN (${userIdPlaceholders}) AND environment = $${userIds.length + 1}
+        GROUP BY user_id
+      `;
+      const bracketCountsResult = await pool.query(bracketCountsQuery, [...userIds, environment]);
 
     // Create a map of userId -> bracket counts
     const bracketCountsMap = new Map<string, { submitted: number; inProgress: number; deleted: number }>();
@@ -70,15 +82,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (deletableUserIds.length > 0) {
-      try {
+      if (deletableUserIds.length > 0) {
         // Batch delete tokens first (foreign key constraint)
         const tokenDeletePlaceholders = deletableUserIds.map((_, i) => `$${i + 1}`).join(', ');
         const tokenDeleteQuery = `
           DELETE FROM tokens 
           WHERE user_id IN (${tokenDeletePlaceholders}) AND environment = $${deletableUserIds.length + 1}
         `;
-        await sql.query(tokenDeleteQuery, [...deletableUserIds, environment]);
+        await pool.query(tokenDeleteQuery, [...deletableUserIds, environment]);
 
         // Batch delete users
         const userDeletePlaceholders = deletableUserIds.map((_, i) => `$${i + 1}`).join(', ');
@@ -87,22 +98,21 @@ export async function POST(request: NextRequest) {
           WHERE id IN (${userDeletePlaceholders}) AND environment = $${deletableUserIds.length + 1}
           RETURNING id
         `;
-        const deleteResult = await sql.query(userDeleteQuery, [...deletableUserIds, environment]);
+        const deleteResult = await pool.query(userDeleteQuery, [...deletableUserIds, environment]);
 
         deletedIds.push(...deleteResult.rows.map(row => row.id as string));
-      } catch (error) {
-        console.error('Error in batch delete:', error);
-        throw error;
       }
-    }
 
-    return NextResponse.json({
-      success: true,
-      deleted: deletedIds.length,
-      skipped: skippedIds.length,
-      deletedIds,
-      skippedIds,
-    });
+      return NextResponse.json({
+        success: true,
+        deleted: deletedIds.length,
+        skipped: skippedIds.length,
+        deletedIds,
+        skippedIds,
+      });
+    } finally {
+      await pool.end();
+    }
   } catch (error) {
     console.error('Error in bulk delete:', error);
     return NextResponse.json(
