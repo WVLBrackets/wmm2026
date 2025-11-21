@@ -106,6 +106,8 @@ export interface SiteConfigData {
   stopSubmitToggle?: string;
   finalMessageTooLate?: string;
   finalMessageSubmitOff?: string;
+  // Test configuration
+  happy_path_email_test?: string;
 }
 
 /**
@@ -149,18 +151,43 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
     // Parse the CSV data
     const config: Partial<SiteConfigData> = {};
     
-    // Process ALL rows - don't skip any (except empty ones)
+    // Debug: Track all parameters for debugging
+    const allParameters: string[] = [];
+    const matchingParameters: Array<{raw: string, normalized: string, value: string}> = [];
+    
+    // Process ALL rows - continue until we encounter two consecutive blank rows
+    let consecutiveBlanks = 0;
     for (let i = 1; i < lines.length; i++) { // Skip header row
       const line = lines[i].trim();
-      // Only skip completely empty lines
+      
+      // Check if this line is blank
       if (!line || line.length === 0) {
+        consecutiveBlanks++;
+        // Stop if we encounter two consecutive blank rows
+        if (consecutiveBlanks >= 2) {
+          break;
+        }
         continue;
       }
       
+      // Reset consecutive blanks counter when we find a non-blank line
+      consecutiveBlanks = 0;
+      
       const fields = parseCSVLine(line);
       if (fields.length >= 2) {
-        const parameter = fields[0].trim().toLowerCase(); // Normalize to lowercase
+        const parameterRaw = fields[0].trim();
+        // Normalize: lowercase, replace spaces with underscores, replace hyphens with underscores
+        const parameter = parameterRaw.toLowerCase().replace(/\s+/g, '_').replace(/-/g, '_');
         const value = fields[1].trim();
+        
+        // Track all parameters for debugging
+        allParameters.push(parameterRaw);
+        
+        // Debug: Log parameters that might match
+        if (parameter.includes('happy') || (parameter.includes('test') && parameter.includes('email'))) {
+          matchingParameters.push({raw: parameterRaw, normalized: parameter, value});
+          console.log(`[SiteConfig] Found matching parameter: "${parameterRaw}" (normalized: "${parameter}") = "${value}"`);
+        }
         
         // Map parameters to config properties (case-insensitive matching)
         switch (parameter) {
@@ -416,12 +443,35 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
           case 'print_bracket_trophy':
             config.printBracketTrophy = value;
             break;
+          case 'happy_path_email_test':
+            config.happy_path_email_test = value;
+            break;
           default:
-            // Unknown parameter - skip it silently
+            // Unknown parameter - log for debugging (only in development)
+            if (process.env.NODE_ENV === 'development') {
+              console.log(`Unknown config parameter: ${parameter} = ${value}`);
+            }
             break;
         }
       }
       // Skip rows that don't have at least 2 fields
+    }
+    
+    // Debug: Log if we didn't find happy_path_email_test
+    if (!config.happy_path_email_test) {
+      if (matchingParameters.length > 0) {
+        console.log(`[SiteConfig] Found ${matchingParameters.length} potential happy_path_email_test parameters:`, matchingParameters);
+      } else {
+        const happyParams = allParameters.filter(p => {
+          const lower = p.toLowerCase();
+          return lower.includes('happy') || (lower.includes('test') && lower.includes('email'));
+        });
+        if (happyParams.length > 0) {
+          console.log(`[SiteConfig] Found potential parameters (not normalized): ${happyParams.join(', ')}`);
+        } else {
+          console.log(`[SiteConfig] No parameters found matching 'happy_path_email_test'. Total parameters parsed: ${allParameters.length}`);
+        }
+      }
     }
     
     // Validate that we have all required fields
