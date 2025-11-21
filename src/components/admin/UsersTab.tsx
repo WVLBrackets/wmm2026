@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
-import { Trash2, CheckCircle, Key, Edit2, X, Save, Search } from 'lucide-react';
+import { Trash2, CheckCircle, Key, Edit2, X, Save, Search, Disk } from 'lucide-react';
 
 interface User {
   id: string;
@@ -457,24 +457,24 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {isEditing ? (
-                        <div className="space-y-2 min-w-[200px]">
+                        <div className="space-y-1">
                           {editError && (
-                            <div className="text-xs text-red-600">{editError}</div>
+                            <div className="text-xs text-red-600 mb-1">{editError}</div>
                           )}
-                          <div className="flex items-center space-x-2">
+                          <div className="flex items-center space-x-1">
                             <button
                               onClick={() => handleSaveEdit(user.id)}
-                              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="p-1.5 rounded border border-transparent bg-blue-600 hover:bg-blue-700 text-white focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 transition-colors"
+                              title="Save changes"
                             >
-                              <Save className="h-3 w-3 inline mr-1" />
-                              Save
+                              <Disk className="h-4 w-4" />
                             </button>
                             <button
                               onClick={handleCancelEdit}
-                              className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs rounded focus:outline-none focus:ring-2 focus:ring-gray-500"
+                              className="p-1.5 rounded border border-transparent bg-red-600 hover:bg-red-700 text-white focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-500 transition-colors"
+                              title="Cancel editing"
                             >
-                              <X className="h-3 w-3 inline mr-1" />
-                              Cancel
+                              <X className="h-4 w-4" />
                             </button>
                           </div>
                         </div>
