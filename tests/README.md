@@ -2,6 +2,15 @@
 
 This directory contains automated tests for the WMM2026 application using Playwright.
 
+## Quick Start
+
+**New to running these tests?** See [RUNNING_TESTS.md](./RUNNING_TESTS.md) for a detailed step-by-step guide.
+
+**Quick commands:**
+- `npm test` - Run all tests
+- `npm run test:ui` - Interactive test UI (recommended for first-time users)
+- `npm run test:report` - View test results in browser
+
 ## Test Structure
 
 - **`tests/api/`** - API tests that use Playwright's request API to test backend endpoints without the browser

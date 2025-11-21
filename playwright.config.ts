@@ -3,9 +3,32 @@ import { defineConfig, devices } from '@playwright/test';
 /**
  * Playwright configuration for WMM2026 testing
  * 
- * This configuration separates API tests from UI tests and uses different
- * base URLs and configurations as needed.
+ * This configuration is designed to test against staging and production environments.
+ * 
+ * Usage:
+ *   - Staging: npm run test:staging
+ *   - Production: npm run test:prod
+ *   - Custom URL: PLAYWRIGHT_TEST_BASE_URL=https://your-url.com npm test
  */
+
+// Determine the base URL from environment
+const getBaseURL = () => {
+  // Explicit URL override (highest priority)
+  if (process.env.PLAYWRIGHT_TEST_BASE_URL) {
+    return process.env.PLAYWRIGHT_TEST_BASE_URL;
+  }
+  
+  // Environment-specific defaults
+  if (process.env.TEST_ENV === 'production' || process.env.TEST_ENV === 'prod') {
+    // TODO: Replace with your actual production URL
+    return process.env.PRODUCTION_URL || 'https://warrensmm.com';
+  }
+  
+  // Default to staging
+  // TODO: Replace with your actual staging URL
+  return process.env.STAGING_URL || 'https://wmm2026-git-staging-ncaatourney-gmailcoms-projects.vercel.app';
+};
+
 export default defineConfig({
   testDir: './tests',
   
@@ -27,10 +50,16 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:3000',
+    baseURL: getBaseURL(),
     
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
+    
+    /* Handle Vercel authentication if needed */
+    /* If your staging requires Vercel login, you can set these headers */
+    // extraHTTPHeaders: {
+    //   'Authorization': 'Bearer YOUR_TOKEN', // If using token auth
+    // },
   },
 
   /* Configure projects for major browsers */
@@ -45,28 +74,13 @@ export default defineConfig({
       use: { ...devices['Desktop Firefox'] },
     },
 
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
-
-    /* Test against mobile viewports. */
+    /* WebKit disabled - known SSL issues on Windows */
+    /* Uncomment if you need Safari testing (usually only needed for Mac-specific issues) */
     // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] },
+    //   name: 'webkit',
+    //   use: { ...devices['Desktop Safari'] },
     // },
   ],
 
-  /* Run your local dev server before starting the tests */
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-  },
+  /* No local server - tests run against staging/production */
 });
-
