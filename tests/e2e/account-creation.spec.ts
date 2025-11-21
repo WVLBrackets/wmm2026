@@ -86,11 +86,12 @@ test.describe('Account Creation', () => {
     await submitButton.click();
 
     // Client-side validation sets isLoading to false, so button should be enabled again
-    // Wait for button to be enabled (indicates handler completed)
-    await expect(submitButton).toBeEnabled({ timeout: 2000 });
+    // Wait for button to be enabled (indicates handler completed) - Firefox needs this
+    await expect(submitButton).toBeEnabled({ timeout: 3000 });
 
     // Wait for error message (React needs a moment to re-render after state update)
-    await expect(page.getByTestId('signup-error-message')).toBeVisible({ timeout: 5000 });
+    // Firefox may need more time for React state updates
+    await expect(page.getByTestId('signup-error-message')).toBeVisible({ timeout: 8000 });
     await expect(page.getByText(/password must be at least 6 characters/i)).toBeVisible();
   });
 

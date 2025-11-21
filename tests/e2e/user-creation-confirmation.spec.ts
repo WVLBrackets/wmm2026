@@ -12,6 +12,38 @@ import { getConfirmationTokenForUser } from '../fixtures/test-helpers';
  * 5. Full confirmation flow works end-to-end
  */
 test.describe('User Creation and Confirmation', () => {
+  let passedCount = 0;
+  let failedCount = 0;
+  let skippedCount = 0;
+  let hasLoggedStart = false;
+
+  test.beforeAll(() => {
+    // Log start (may appear multiple times due to parallel workers)
+    if (!hasLoggedStart) {
+      console.log('\n📋 User Creation and Confirmation - Starting...');
+      hasLoggedStart = true;
+    }
+  });
+
+  test.afterEach(({}, testInfo) => {
+    if (testInfo.status === 'passed') {
+      passedCount++;
+    } else if (testInfo.status === 'failed') {
+      failedCount++;
+    } else if (testInfo.status === 'skipped') {
+      skippedCount++;
+    }
+  });
+
+  test.afterAll(() => {
+    const statusParts = [];
+    if (passedCount > 0) statusParts.push(`${passedCount} passed`);
+    if (failedCount > 0) statusParts.push(`${failedCount} failed`);
+    if (skippedCount > 0) statusParts.push(`${skippedCount} skipped`);
+    const status = statusParts.length > 0 ? statusParts.join(', ') : '0 tests';
+    console.log(`✅ User Creation and Confirmation - Complete: ${status}\n`);
+  });
+
   // Get baseURL for test helpers
   const getBaseURL = () => {
     if (process.env.PLAYWRIGHT_TEST_BASE_URL) {
@@ -32,7 +64,6 @@ test.describe('User Creation and Confirmation', () => {
   test.afterAll(async () => {
     // Cleanup is handled manually via: npm run cleanup:test-data
     // This avoids security risks from API endpoints
-    console.log('🧹 Test data cleanup: Run "npm run cleanup:test-data" to clean up test users');
   });
 
   /**
@@ -54,19 +85,32 @@ test.describe('User Creation and Confirmation', () => {
     await page.goto('/auth/signup', { waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('domcontentloaded');
 
+    // Ensure form is ready
+    await expect(page.getByTestId('signup-submit-button')).toBeVisible();
+    await expect(page.getByTestId('signup-submit-button')).toBeEnabled();
+
     // Fill in the signup form
     await page.getByTestId('signup-name-input').fill(user.name);
     await page.getByTestId('signup-email-input').fill(user.email);
     await page.getByTestId('signup-password-input').fill(user.password);
     await page.getByTestId('signup-confirm-password-input').fill(user.password);
 
-    // Submit the form and wait for navigation or success state
-    await Promise.all([
-      page.waitForResponse(response => 
-        response.url().includes('/api/auth/register') && response.status() === 200
-      ),
-      page.getByTestId('signup-submit-button').click(),
-    ]);
+    // Wait a moment for form state to update (Firefox may need this)
+    await page.waitForTimeout(100);
+
+    // Set up response listener BEFORE clicking (more reliable)
+    const responsePromise = page.waitForResponse(
+      response => 
+        response.url().includes('/api/auth/register') && response.status() === 200,
+      { timeout: 30000 }
+    );
+
+    // Click submit button
+    const submitButton = page.getByTestId('signup-submit-button');
+    await submitButton.click();
+
+    // Wait for API response
+    await responsePromise;
 
     // Wait for success message to appear (with longer timeout for email sending)
     await expect(page.getByTestId('signup-success-header')).toBeVisible({ timeout: 15000 });
@@ -78,8 +122,6 @@ test.describe('User Creation and Confirmation', () => {
     // Verify the success message mentions checking email (common pattern)
     const pageText = await page.textContent('body');
     expect(pageText).toContain(user.email);
-
-    console.log(`✅ Successfully created account for ${user.email}`);
   });
 
   test('should show error for duplicate email during signup', async ({ page, request }) => {
@@ -104,20 +146,34 @@ test.describe('User Creation and Confirmation', () => {
     await page.goto('/auth/signup', { waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('domcontentloaded');
 
+    // Ensure form is ready
+    await expect(page.getByTestId('signup-submit-button')).toBeVisible();
+
     await page.getByTestId('signup-name-input').fill(user.name);
     await page.getByTestId('signup-email-input').fill(user.email);
     await page.getByTestId('signup-password-input').fill(user.password);
     await page.getByTestId('signup-confirm-password-input').fill(user.password);
 
+    // Set up response listener BEFORE clicking (more reliable)
+    // For Firefox, use synchronous response matcher (async doesn't work well)
+    const responsePromise = page.waitForResponse(
+      (response) => {
+        return response.url().includes('/api/auth/register') && response.status() === 409;
+      },
+      { timeout: 30000 }
+    );
+
+    // Click submit button
     await page.getByTestId('signup-submit-button').click();
+
+    // Wait for API response
+    await responsePromise;
 
     // Should show error message
     await expect(page.getByTestId('signup-error-message')).toBeVisible({ timeout: 10000 });
     
     const errorText = await page.getByTestId('signup-error-message').textContent();
     expect(errorText?.toLowerCase()).toMatch(/already exists|failed to create/i);
-
-    console.log(`✅ Correctly rejected duplicate email: ${user.email}`);
   });
 
   test('should display confirmation page with invalid token', async ({ page }) => {
@@ -138,8 +194,6 @@ test.describe('User Creation and Confirmation', () => {
     // Check that we're not on a redirect or error page
     const currentUrl = page.url();
     expect(currentUrl).toContain('/auth/confirm');
-    
-    console.log('✅ Confirmation page handled invalid token correctly');
   });
 
   test('should display confirmation page with missing token', async ({ page }) => {
@@ -156,12 +210,11 @@ test.describe('User Creation and Confirmation', () => {
     // Should be on confirmation page
     const currentUrl = page.url();
     expect(currentUrl).toContain('/auth/confirm');
-    
-    console.log('✅ Confirmation page handled missing token correctly');
   });
 
   test('should navigate from signup success to signin page', async ({ page }) => {
     const user = generateTestUser();
+    const baseURL = getBaseURL();
 
     // Create account
     await page.goto('/auth/signup', { waitUntil: 'domcontentloaded' });
@@ -171,10 +224,22 @@ test.describe('User Creation and Confirmation', () => {
     await page.getByTestId('signup-email-input').fill(user.email);
     await page.getByTestId('signup-password-input').fill(user.password);
     await page.getByTestId('signup-confirm-password-input').fill(user.password);
+
+    // Set up response listener BEFORE clicking (more reliable for Firefox)
+    const responsePromise = page.waitForResponse(
+      response => 
+        response.url().includes('/api/auth/register') && response.status() === 200,
+      { timeout: 30000 }
+    );
+
+    // Click submit button
     await page.getByTestId('signup-submit-button').click();
 
+    // Wait for API response
+    await responsePromise;
+
     // Wait for success page
-    await expect(page.getByTestId('signup-success-header')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('signup-success-header')).toBeVisible({ timeout: 15000 });
 
     // Find and click the button/link to go to signin
     // The button text comes from siteConfig, so we'll look for a link or button
@@ -189,8 +254,6 @@ test.describe('User Creation and Confirmation', () => {
     // Verify signin page loaded
     const heading = page.getByRole('heading', { name: /sign in/i });
     await expect(heading).toBeVisible();
-
-    console.log('✅ Navigation from signup success to signin works correctly');
   });
 
   test.skip('should complete full confirmation flow: create account, get token, confirm email', async ({ page, request }) => {
@@ -222,7 +285,6 @@ test.describe('User Creation and Confirmation', () => {
     expect(createResponse.ok()).toBeTruthy();
     const createData = await createResponse.json();
     expect(createData.userId).toBeDefined();
-    console.log(`✅ Created test account: ${user.email}`);
 
     // Step 2: Get confirmation token - NOT AVAILABLE (security restriction)
     // We cannot retrieve tokens via API endpoint for security reasons
