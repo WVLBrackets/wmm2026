@@ -61,8 +61,9 @@ test.describe('Account Creation', () => {
     
     let testEmail: string;
     try {
-      // Fetch site config from API with debug mode
-      const configResponse = await request.get(`${baseURL}/api/site-config?debug=true`);
+      // Fetch site config from API with debug mode and cache-busting timestamp
+      // Add timestamp to ensure we get fresh config (bypasses unstable_cache)
+      const configResponse = await request.get(`${baseURL}/api/site-config?debug=true&_t=${Date.now()}`);
       if (configResponse.ok()) {
         const configData = await configResponse.json();
         const siteConfig = configData.data || configData;

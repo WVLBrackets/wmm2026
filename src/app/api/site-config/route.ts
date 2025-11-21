@@ -7,7 +7,15 @@ import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
  */
 export async function GET(request: Request) {
   try {
-    const config = await getSiteConfigFromGoogleSheets();
+    // Check if we should bypass cache (for testing or when fresh data is needed)
+    const url = new URL(request.url);
+    const bypassCache = url.searchParams.has('_t') || url.searchParams.get('fresh') === 'true';
+    
+    // Import the fresh function if we need to bypass cache
+    const { getSiteConfigFromGoogleSheetsFresh } = await import('@/lib/siteConfig');
+    const config = bypassCache 
+      ? await getSiteConfigFromGoogleSheetsFresh()
+      : await getSiteConfigFromGoogleSheets();
     
     if (!config) {
       return NextResponse.json(
