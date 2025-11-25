@@ -9,9 +9,10 @@ import { test, expect } from '@playwright/test';
  * 3. We can navigate to the target environment (staging/prod)
  */
 test.describe('Basic Page Loads', () => {
-  test('should load the homepage', async ({ page, baseURL }) => {
-    // Use baseURL from config (staging or prod)
-    await page.goto('/', { waitUntil: 'domcontentloaded' });
+  test('should load the homepage', async ({ page, baseURL, browserName }) => {
+    // Firefox needs longer timeout in CI
+    const timeout = browserName === 'firefox' ? 60000 : 30000;
+    await page.goto('/', { waitUntil: 'domcontentloaded', timeout });
     
     // Wait for page to have content (more reliable than networkidle)
     await page.waitForLoadState('domcontentloaded');
@@ -36,9 +37,11 @@ test.describe('Basic Page Loads', () => {
     console.log(`Page title: ${title}`);
   });
 
-  test('should load the signup page', async ({ page }) => {
+  test('should load the signup page', async ({ page, browserName }) => {
     // Navigate to signup page
-    await page.goto('/auth/signup', { waitUntil: 'domcontentloaded' });
+    // Firefox needs longer timeout in CI
+    const timeout = browserName === 'firefox' ? 60000 : 30000;
+    await page.goto('/auth/signup', { waitUntil: 'domcontentloaded', timeout });
     
     // Wait for page to load (use domcontentloaded instead of networkidle for reliability)
     await page.waitForLoadState('domcontentloaded');
@@ -75,9 +78,11 @@ test.describe('Basic Page Loads', () => {
     console.log('✅ Signup page loaded successfully with all required elements');
   });
 
-  test('should load the signin page', async ({ page }) => {
+  test('should load the signin page', async ({ page, browserName }) => {
     // Navigate to signin page
-    await page.goto('/auth/signin', { waitUntil: 'domcontentloaded' });
+    // Firefox needs longer timeout in CI
+    const timeout = browserName === 'firefox' ? 60000 : 30000;
+    await page.goto('/auth/signin', { waitUntil: 'domcontentloaded', timeout });
     
     // Wait for page to load
     await page.waitForLoadState('domcontentloaded');
@@ -105,9 +110,11 @@ test.describe('Basic Page Loads', () => {
     console.log('✅ Signin page loaded successfully with all required elements');
   });
 
-  test('should navigate from signup to signin page', async ({ page }) => {
+  test('should navigate from signup to signin page', async ({ page, browserName }) => {
     // Start on signup page
-    await page.goto('/auth/signup', { waitUntil: 'domcontentloaded' });
+    // Firefox needs longer timeout in CI
+    const timeout = browserName === 'firefox' ? 60000 : 30000;
+    await page.goto('/auth/signup', { waitUntil: 'domcontentloaded', timeout });
     
     // Find and click the "sign in to your existing account" link
     const signInLink = page.getByRole('link', { name: /sign in to your existing account/i });
@@ -127,9 +134,11 @@ test.describe('Basic Page Loads', () => {
     console.log('✅ Navigation from signup to signin works correctly');
   });
 
-  test('should navigate from signin to signup page', async ({ page }) => {
+  test('should navigate from signin to signup page', async ({ page, browserName }) => {
     // Start on signin page
-    await page.goto('/auth/signin', { waitUntil: 'domcontentloaded' });
+    // Firefox needs longer timeout in CI
+    const timeout = browserName === 'firefox' ? 60000 : 30000;
+    await page.goto('/auth/signin', { waitUntil: 'domcontentloaded', timeout });
     
     // Find and click the "create a new account" link
     const signUpLink = page.getByRole('link', { name: /create a new account/i });
