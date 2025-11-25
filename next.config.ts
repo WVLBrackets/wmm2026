@@ -13,6 +13,8 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Exclude test files from production build
+  // Test files are excluded via tsconfig.json exclude patterns
 };
 
 export default nextConfig;
