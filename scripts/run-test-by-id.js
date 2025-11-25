@@ -132,7 +132,14 @@ const testId = process.argv[2];
 const env = process.env.TEST_ENV || 'staging';
 
 // Get additional Playwright arguments (everything after testId)
-const playwrightArgs = process.argv.slice(3).join(' ');
+// Handle '--' separator that GitHub Actions might pass
+let playwrightArgs = process.argv.slice(3).join(' ');
+// Remove leading '--' if present (GitHub Actions passes it as separator)
+if (playwrightArgs.startsWith('-- ')) {
+  playwrightArgs = playwrightArgs.substring(3);
+} else if (playwrightArgs.startsWith('--')) {
+  playwrightArgs = playwrightArgs.substring(2).trim();
+}
 
 if (!testId) {
   console.error('Usage: node scripts/run-test-by-id.js <test-id> [playwright-args]');
