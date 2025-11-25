@@ -135,10 +135,17 @@ const env = process.env.TEST_ENV || 'staging';
 // Handle '--' separator that GitHub Actions might pass
 let playwrightArgs = process.argv.slice(3).join(' ');
 // Remove leading '--' if present (GitHub Actions passes it as separator)
+// But preserve the '--' prefix for Playwright flags like '--project'
 if (playwrightArgs.startsWith('-- ')) {
-  playwrightArgs = playwrightArgs.substring(3);
-} else if (playwrightArgs.startsWith('--')) {
+  playwrightArgs = playwrightArgs.substring(3); // Remove '-- ' but keep the rest
+} else if (playwrightArgs.startsWith('--') && !playwrightArgs.startsWith('--project') && !playwrightArgs.startsWith('--headed')) {
+  // If it's just '--' without a flag, remove it
+  // But if it's already a flag like '--project', keep it
   playwrightArgs = playwrightArgs.substring(2).trim();
+}
+// Ensure --project has the -- prefix if it's missing
+if (playwrightArgs && playwrightArgs.includes('project=') && !playwrightArgs.includes('--project')) {
+  playwrightArgs = playwrightArgs.replace(/project=/g, '--project=');
 }
 
 if (!testId) {
