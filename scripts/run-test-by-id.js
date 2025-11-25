@@ -134,11 +134,20 @@ const env = process.env.TEST_ENV || 'staging';
 // Get additional Playwright arguments (everything after testId)
 // Handle '--' separator that GitHub Actions might pass
 let playwrightArgs = process.argv.slice(3).join(' ');
-// Remove leading '--' if present (GitHub Actions passes it as separator)
+
+// Remove leading '-- ' separator (GitHub Actions uses this to separate arguments)
+// But preserve any actual flags like '--project=chromium'
 if (playwrightArgs.startsWith('-- ')) {
-  playwrightArgs = playwrightArgs.substring(3);
-} else if (playwrightArgs.startsWith('--')) {
-  playwrightArgs = playwrightArgs.substring(2).trim();
+  // Remove the '-- ' separator, keep the rest (which should be the actual flag)
+  playwrightArgs = playwrightArgs.substring(3).trim();
+} else if (playwrightArgs === '--' || playwrightArgs.startsWith('-- ') || (playwrightArgs.startsWith('--') && playwrightArgs.length === 2)) {
+  // If it's just '--' by itself (separator with nothing after), remove it
+  playwrightArgs = '';
+}
+
+// Ensure --project has the -- prefix if it's missing (common issue)
+if (playwrightArgs && playwrightArgs.includes('project=') && !playwrightArgs.includes('--project')) {
+  playwrightArgs = playwrightArgs.replace(/project=/g, '--project=');
 }
 
 if (!testId) {

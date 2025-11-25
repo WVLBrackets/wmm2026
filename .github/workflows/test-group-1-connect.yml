@@ -58,7 +58,7 @@ jobs:
           if [ "${{ inputs.browser }}" == "all" ]; then
             node scripts/run-test-by-id.js 1
           else
-            node scripts/run-test-by-id.js 1 --project=${{ inputs.browser }}
+            node scripts/run-test-by-id.js 1 -- --project=${{ inputs.browser }}
           fi
       
       - name: Upload test results
