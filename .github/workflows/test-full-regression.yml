@@ -3,12 +3,30 @@ name: Full Regression Tests
 on:
   # Manual trigger only - no automated triggers
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Test environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      browser:
+        description: 'Browser to test'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - chromium
+          - firefox
 
 jobs:
   full-regression:
     name: Full Regression Test Suite
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     
     steps:
       - name: Checkout code
@@ -24,28 +42,77 @@ jobs:
         run: npm ci
       
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium firefox
-      
-      - name: Determine test environment
-        id: env
         run: |
-          # Default to staging unless explicitly main/master
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]] || [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
-            echo "environment=production" >> $GITHUB_OUTPUT
-            echo "TEST_ENV=production" >> $GITHUB_ENV
+          if [ "${{ inputs.browser }}" == "all" ]; then
+            npx playwright install --with-deps chromium firefox
           else
-            # All other branches (including staging) test against staging
-            echo "environment=staging" >> $GITHUB_OUTPUT
-            echo "TEST_ENV=staging" >> $GITHUB_ENV
+            npx playwright install --with-deps ${{ inputs.browser }}
           fi
       
-      - name: Run full regression tests
+      - name: Run Group 1 - Basic Connectivity & Navigation
         env:
           TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
           TEST_USER_PASSWORD_STAGING: ${{ secrets.TEST_USER_PASSWORD_STAGING }}
           TEST_USER_PASSWORD_PRODUCTION: ${{ secrets.TEST_USER_PASSWORD_PRODUCTION }}
-          TEST_ENV: ${{ steps.env.outputs.environment }}
-        run: npm test
+          TEST_ENV: ${{ inputs.environment }}
+        run: |
+          if [ "${{ inputs.browser }}" == "all" ]; then
+            node scripts/run-test-by-id.js 1
+          else
+            node scripts/run-test-by-id.js 1 -- --project=${{ inputs.browser }}
+          fi
+      
+      - name: Run Group 2 - Account Creation & Validation
+        env:
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD_STAGING: ${{ secrets.TEST_USER_PASSWORD_STAGING }}
+          TEST_USER_PASSWORD_PRODUCTION: ${{ secrets.TEST_USER_PASSWORD_PRODUCTION }}
+          TEST_ENV: ${{ inputs.environment }}
+        run: |
+          if [ "${{ inputs.browser }}" == "all" ]; then
+            node scripts/run-test-by-id.js 2
+          else
+            node scripts/run-test-by-id.js 2 -- --project=${{ inputs.browser }}
+          fi
+      
+      - name: Run Group 3 - User Authentication & Session
+        env:
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD_STAGING: ${{ secrets.TEST_USER_PASSWORD_STAGING }}
+          TEST_USER_PASSWORD_PRODUCTION: ${{ secrets.TEST_USER_PASSWORD_PRODUCTION }}
+          TEST_ENV: ${{ inputs.environment }}
+        run: |
+          if [ "${{ inputs.browser }}" == "all" ]; then
+            node scripts/run-test-by-id.js 3
+          else
+            node scripts/run-test-by-id.js 3 -- --project=${{ inputs.browser }}
+          fi
+      
+      - name: Run Group 4 - Bracket Creation & Management
+        env:
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD_STAGING: ${{ secrets.TEST_USER_PASSWORD_STAGING }}
+          TEST_USER_PASSWORD_PRODUCTION: ${{ secrets.TEST_USER_PASSWORD_PRODUCTION }}
+          TEST_ENV: ${{ inputs.environment }}
+        run: |
+          if [ "${{ inputs.browser }}" == "all" ]; then
+            node scripts/run-test-by-id.js 4
+          else
+            node scripts/run-test-by-id.js 4 -- --project=${{ inputs.browser }}
+          fi
+      
+      - name: Run Group 5 - Backend API Validation
+        env:
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD_STAGING: ${{ secrets.TEST_USER_PASSWORD_STAGING }}
+          TEST_USER_PASSWORD_PRODUCTION: ${{ secrets.TEST_USER_PASSWORD_PRODUCTION }}
+          TEST_ENV: ${{ inputs.environment }}
+        run: |
+          if [ "${{ inputs.browser }}" == "all" ]; then
+            node scripts/run-test-by-id.js 5
+          else
+            node scripts/run-test-by-id.js 5 -- --project=${{ inputs.browser }}
+          fi
       
       - name: Upload test results
         if: always()
