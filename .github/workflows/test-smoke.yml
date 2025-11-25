@@ -68,17 +68,15 @@ jobs:
           retention-days: 7
       
       - name: Send notification on failure
-        if: failure()
+        if: failure() && secrets.SLACK_WEBHOOK_URL != ''
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
           text: 'Smoke tests failed on ${{ steps.env.outputs.environment }}! Check the workflow run for details.'
           webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
       
       - name: Send email on failure
-        if: failure()
+        if: failure() && secrets.EMAIL_USERNAME != '' && secrets.ALERT_EMAIL != ''
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
