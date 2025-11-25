@@ -1,18 +1,8 @@
 name: Health Check Tests
 
 on:
-  # Scheduled runs
-  schedule:
-    # Run every 6 hours
-    - cron: '0 */6 * * *'
-  # Also allow manual trigger
+  # Manual trigger only - no automated triggers
   workflow_dispatch:
-  # Run on push to staging (primary) and main
-  push:
-    branches:
-      - staging # Primary branch
-      - main
-      - master
 
 jobs:
   health-check:

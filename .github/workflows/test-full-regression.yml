@@ -1,21 +1,8 @@
 name: Full Regression Tests
 
 on:
-  # Trigger on staging (primary) and production deployments
-  workflow_dispatch: # Manual trigger
-  push:
-    branches:
-      - staging # Primary branch for full regression
-      - main # Production branch
-      - master
-    tags:
-      - 'v*' # Version tags (v1.0.0, etc.)
-  # Also trigger on pull requests
-  pull_request:
-    branches:
-      - staging
-      - main
-      - master
+  # Manual trigger only - no automated triggers
+  workflow_dispatch:
 
 jobs:
   full-regression:
