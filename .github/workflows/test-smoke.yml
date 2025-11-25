@@ -45,7 +45,9 @@ jobs:
           TEST_USER_PASSWORD_STAGING: ${{ secrets.TEST_USER_PASSWORD_STAGING }}
           TEST_USER_PASSWORD_PRODUCTION: ${{ secrets.TEST_USER_PASSWORD_PRODUCTION }}
           TEST_ENV: ${{ steps.env.outputs.environment }}
-        run: npm run test:smoke
+        run: |
+          # Use cross-env for cross-platform compatibility
+          npx cross-env TEST_ENV=${{ steps.env.outputs.environment }} npx playwright test tests/e2e/authentication.spec.ts tests/e2e/bracket-creation.spec.ts
       
       - name: Upload test results
         if: always()
