@@ -1,0 +1,79 @@
+name: Test Group 1 - Connect
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Test environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      browser:
+        description: 'Browser to test'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - chromium
+          - firefox
+
+jobs:
+  test-group-1:
+    name: Group 1 - Basic Connectivity & Navigation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install Playwright browsers
+        run: |
+          if [ "${{ inputs.browser }}" == "all" ]; then
+            npx playwright install --with-deps chromium firefox
+          else
+            npx playwright install --with-deps ${{ inputs.browser }}
+          fi
+      
+      - name: Run Group 1 tests (Connect)
+        env:
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD_STAGING: ${{ secrets.TEST_USER_PASSWORD_STAGING }}
+          TEST_USER_PASSWORD_PRODUCTION: ${{ secrets.TEST_USER_PASSWORD_PRODUCTION }}
+          TEST_ENV: ${{ inputs.environment }}
+        run: |
+          if [ "${{ inputs.browser }}" == "all" ]; then
+            node scripts/run-test-by-id.js 1
+          else
+            node scripts/run-test-by-id.js 1 -- --project=${{ inputs.browser }}
+          fi
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: group-1-connect-report
+          path: playwright-report/
+          retention-days: 7
+      
+      - name: Upload test traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: group-1-connect-traces
+          path: test-results/
+          retention-days: 7
+
