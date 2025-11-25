@@ -1,0 +1,86 @@
+import { defineConfig, devices } from '@playwright/test';
+
+/**
+ * Playwright configuration for WMM2026 testing
+ * 
+ * This configuration is designed to test against staging and production environments.
+ * 
+ * Usage:
+ *   - Staging: npm run test:staging
+ *   - Production: npm run test:prod
+ *   - Custom URL: PLAYWRIGHT_TEST_BASE_URL=https://your-url.com npm test
+ */
+
+// Determine the base URL from environment
+const getBaseURL = () => {
+  // Explicit URL override (highest priority)
+  if (process.env.PLAYWRIGHT_TEST_BASE_URL) {
+    return process.env.PLAYWRIGHT_TEST_BASE_URL;
+  }
+  
+  // Environment-specific defaults
+  if (process.env.TEST_ENV === 'production' || process.env.TEST_ENV === 'prod') {
+    // TODO: Replace with your actual production URL
+    return process.env.PRODUCTION_URL || 'https://warrensmm.com';
+  }
+  
+  // Default to staging
+  // TODO: Replace with your actual staging URL
+  return process.env.STAGING_URL || 'https://wmm2026-git-staging-ncaatourney-gmailcoms-projects.vercel.app';
+};
+
+export default defineConfig({
+  testDir: './tests',
+  
+  /* Run tests in files in parallel */
+  fullyParallel: true,
+  
+  /* Fail the build on CI if you accidentally left test.only in the source code. */
+  forbidOnly: !!process.env.CI,
+  
+  /* Retry on CI only */
+  retries: process.env.CI ? 2 : 0,
+  
+  /* Opt out of parallel tests on CI. */
+  workers: process.env.CI ? 1 : undefined,
+  
+  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
+  reporter: 'html',
+  
+  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
+  use: {
+    /* Base URL to use in actions like `await page.goto('/')`. */
+    baseURL: getBaseURL(),
+    
+    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
+    trace: 'on-first-retry',
+    
+    /* Handle Vercel authentication if needed */
+    /* If your staging requires Vercel login, you can set these headers */
+    // extraHTTPHeaders: {
+    //   'Authorization': 'Bearer YOUR_TOKEN', // If using token auth
+    // },
+  },
+
+  /* Configure projects for major browsers */
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+    },
+
+    {
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] },
+    },
+
+    /* WebKit disabled - known SSL issues on Windows */
+    /* Uncomment if you need Safari testing (usually only needed for Mac-specific issues) */
+    // {
+    //   name: 'webkit',
+    //   use: { ...devices['Desktop Safari'] },
+    // },
+  ],
+
+  /* No local server - tests run against staging/production */
+});
