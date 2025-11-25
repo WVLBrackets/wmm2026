@@ -154,7 +154,7 @@ export async function signInUserViaUI(
     
     if (errorVisible) {
       // Get the error text
-      const errorText = await page.locator(errorSelector).first().textContent().catch(() => '');
+      const errorText = await page.locator(errorSelector).first().textContent().catch(() => '') || '';
       
       // Check specifically for email confirmation errors (not just any mention of "email")
       if (errorText.toLowerCase().includes('confirm')) {
