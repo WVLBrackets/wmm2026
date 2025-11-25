@@ -1,17 +1,19 @@
 name: Full Regression Tests
 
 on:
-  # Trigger on production deployments (major builds)
+  # Trigger on staging (primary) and production deployments
   workflow_dispatch: # Manual trigger
   push:
     branches:
+      - staging # Primary branch for full regression
       - main # Production branch
       - master
     tags:
       - 'v*' # Version tags (v1.0.0, etc.)
-  # Also trigger on pull requests to main (optional)
+  # Also trigger on pull requests
   pull_request:
     branches:
+      - staging
       - main
       - master
 
@@ -37,12 +39,25 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium firefox
       
+      - name: Determine test environment
+        id: env
+        run: |
+          # Default to staging unless explicitly main/master
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]] || [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "TEST_ENV=production" >> $GITHUB_ENV
+          else
+            # All other branches (including staging) test against staging
+            echo "environment=staging" >> $GITHUB_OUTPUT
+            echo "TEST_ENV=staging" >> $GITHUB_ENV
+          fi
+      
       - name: Run full regression tests
         env:
           TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
           TEST_USER_PASSWORD_STAGING: ${{ secrets.TEST_USER_PASSWORD_STAGING }}
           TEST_USER_PASSWORD_PRODUCTION: ${{ secrets.TEST_USER_PASSWORD_PRODUCTION }}
-          TEST_ENV: staging
+          TEST_ENV: ${{ steps.env.outputs.environment }}
         run: npm test
       
       - name: Upload test results

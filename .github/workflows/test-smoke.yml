@@ -1,17 +1,20 @@
 name: Smoke Tests
 
 on:
-  # Trigger on every deployment (preview and production)
+  # Trigger on staging branch (primary) and other branches
   workflow_dispatch: # Manual trigger
   push:
     branches:
-      - '**' # All branches (preview deployments)
+      - staging # Primary branch for testing
+      - '**' # All other branches (preview deployments)
       - main
       - master
   # Also trigger on pull requests
   pull_request:
     branches:
-      - '**'
+      - staging
+      - main
+      - master
 
 jobs:
   smoke-test:
@@ -38,10 +41,12 @@ jobs:
       - name: Determine test environment
         id: env
         run: |
+          # Default to staging unless explicitly main/master
           if [[ "${{ github.ref }}" == "refs/heads/main" ]] || [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
             echo "environment=production" >> $GITHUB_OUTPUT
             echo "TEST_ENV=production" >> $GITHUB_ENV
           else
+            # All other branches (including staging) test against staging
             echo "environment=staging" >> $GITHUB_OUTPUT
             echo "TEST_ENV=staging" >> $GITHUB_ENV
           fi

@@ -7,9 +7,10 @@ on:
     - cron: '0 */6 * * *'
   # Also allow manual trigger
   workflow_dispatch:
-  # Run on push to main (optional - for immediate health check after deploy)
+  # Run on push to staging (primary) and main
   push:
     branches:
+      - staging # Primary branch
       - main
       - master
 
