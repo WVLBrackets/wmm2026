@@ -1,0 +1,94 @@
+name: Smoke Tests
+
+on:
+  # Trigger on every deployment (preview and production)
+  workflow_dispatch: # Manual trigger
+  push:
+    branches:
+      - '**' # All branches (preview deployments)
+      - main
+      - master
+  # Also trigger on pull requests
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  smoke-test:
+    name: Smoke Test Suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      
+      - name: Determine test environment
+        id: env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]] || [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "TEST_ENV=production" >> $GITHUB_ENV
+          else
+            echo "environment=staging" >> $GITHUB_OUTPUT
+            echo "TEST_ENV=staging" >> $GITHUB_ENV
+          fi
+      
+      - name: Run smoke tests
+        env:
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD_STAGING: ${{ secrets.TEST_USER_PASSWORD_STAGING }}
+          TEST_USER_PASSWORD_PRODUCTION: ${{ secrets.TEST_USER_PASSWORD_PRODUCTION }}
+        run: npm run test:smoke
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-report
+          path: playwright-report/
+          retention-days: 7
+      
+      - name: Send notification on failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: 'Smoke tests failed on ${{ steps.env.outputs.environment }}! Check the workflow run for details.'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      
+      - name: Send email on failure
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: '⚠️ Smoke Tests Failed - WMM2026 (${{ steps.env.outputs.environment }})'
+          to: ${{ secrets.ALERT_EMAIL }}
+          from: ${{ secrets.EMAIL_USERNAME }}
+          body: |
+            Smoke tests have failed on ${{ steps.env.outputs.environment }}.
+            
+            Workflow: ${{ github.workflow }}
+            Run: ${{ github.run_id }}
+            Commit: ${{ github.sha }}
+            Branch: ${{ github.ref }}
+            
+            View details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
