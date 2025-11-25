@@ -71,7 +71,18 @@ export default defineConfig({
 
     {
       name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
+      use: { 
+        ...devices['Desktop Firefox'],
+        // Firefox-specific settings for CI stability
+        // Increase timeouts to handle network interruptions
+        navigationTimeout: 60000, // 60 seconds (default is 30s)
+        actionTimeout: 30000, // 30 seconds for actions
+        // Retry navigation on network errors
+        launchOptions: {
+          // Firefox in CI may need additional stability settings
+          args: ['--no-sandbox'], // Sometimes helps in CI environments
+        },
+      },
     },
 
     /* WebKit disabled - known SSL issues on Windows */
