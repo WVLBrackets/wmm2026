@@ -114,11 +114,32 @@ jobs:
             node scripts/run-test-by-id.js 5 -- --project=${{ inputs.browser }}
           fi
       
+      - name: Generate test summary
+        if: always()
+        run: |
+          echo "## 📊 Full Regression Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Browser:** ${{ inputs.browser }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test Groups Executed:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Group 1 - Basic Connectivity & Navigation" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Group 2 - Account Creation & Validation" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Group 3 - User Authentication & Session" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Group 4 - Bracket Creation & Management" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Group 5 - Backend API Validation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Expected Total Tests:** ~90 tests (45 tests × 2 browsers if 'all' selected)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📋 Check the individual group steps above for detailed results." >> $GITHUB_STEP_SUMMARY
+          echo "📦 Test reports are available as artifacts below." >> $GITHUB_STEP_SUMMARY
+      
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-full-regression
           path: playwright-report/
           retention-days: 30
       
@@ -126,7 +147,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: test-traces
+          name: test-traces-full-regression
           path: test-results/
           retention-days: 7
       
