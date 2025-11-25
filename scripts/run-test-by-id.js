@@ -156,7 +156,12 @@ if (groupMapping[testId]) {
                     testId === '4' ? 'bracket' : testId === 'bracket' ? '4' :
                     testId === '5' ? 'api' : testId === 'api' ? '5' : testId;
   
-  const command = `npx cross-env TEST_ENV=${env} npx playwright test ${filePattern} ${playwrightArgs}`.trim();
+  // Build command - ensure playwrightArgs are properly separated
+  let command = `npx cross-env TEST_ENV=${env} npx playwright test ${filePattern}`;
+  if (playwrightArgs && playwrightArgs.trim()) {
+    command += ` ${playwrightArgs.trim()}`;
+  }
+  command = command.trim();
   console.log(`\n📋 Running Group ${testId} (${groupName})`);
   console.log(`   Files: ${filePattern}`);
   console.log(`   Environment: ${env}`);
