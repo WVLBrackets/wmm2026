@@ -24,14 +24,14 @@ export async function GET(request: Request) {
       );
     }
     
-    // Debug: Check for happy_path_email_test
+    // Debug mode (if needed in future)
     if (url.searchParams.get('debug') === 'true') {
       return NextResponse.json({ 
         success: true, 
         data: config,
         debug: {
-          hasHappyPathEmailTest: !!config.happy_path_email_test,
-          happyPathEmailTestValue: config.happy_path_email_test,
+          hasHappyPathEmailTestChrome: !!config.happy_path_email_test_chrome,
+          hasHappyPathEmailTestFirefox: !!config.happy_path_email_test_firefox,
           allKeys: Object.keys(config).filter(k => k.toLowerCase().includes('happy') || k.toLowerCase().includes('test'))
         }
       });
