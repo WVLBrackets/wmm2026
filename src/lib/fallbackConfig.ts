@@ -75,6 +75,7 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   regEmailGreeting: 'Hi {Name},',
   regEmailMessage1: 'Thank you for signing up for Warren\'s March Madness {Year}!',
   regEmailMessage2: 'To complete your account setup, please confirm your email address by clicking the button below:',
+  regEmailSpamReminder: '💡 <strong>Can\'t find this email?</strong> Please check your spam or junk mail folder. If you still don\'t see it, the email may take a few minutes to arrive.',
   regEmailFooter: 'If you didn\'t create an account with Warren\'s March Madness, please ignore this email.',
   // Account creation success page defaults
   acctCreateSuccessHeader: 'Check Your Email!',

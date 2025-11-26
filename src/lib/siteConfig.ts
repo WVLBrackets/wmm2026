@@ -77,6 +77,7 @@ export interface SiteConfigData {
   regEmailGreeting?: string;
   regEmailMessage1?: string;
   regEmailMessage2?: string;
+  regEmailSpamReminder?: string;
   regEmailFooter?: string;
   // Account creation success page content
   acctCreateSuccessHeader?: string;
@@ -398,6 +399,9 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
             break;
           case 'reg_email_message2':
             config.regEmailMessage2 = value;
+            break;
+          case 'reg_email_spam_reminder':
+            config.regEmailSpamReminder = value;
             break;
           case 'reg_email_footer':
             config.regEmailFooter = value;
