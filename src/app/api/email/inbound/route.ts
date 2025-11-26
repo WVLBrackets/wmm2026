@@ -12,10 +12,6 @@ import crypto from 'crypto';
  */
 export async function POST(request: NextRequest) {
   try {
-    // Verify webhook signature (if Resend provides one)
-    const signature = request.headers.get('resend-signature');
-    const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
-    
     // Get raw body for signature verification (if needed)
     const rawBody = await request.text();
     let body: any;
