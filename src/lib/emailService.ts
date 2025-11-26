@@ -169,8 +169,14 @@ class EmailService {
     if (this.config.provider === 'resend' && this.resend) {
       try {
         const fromEmail = isProduction
-          ? (process.env.FROM_EMAIL_PRODUCTION || process.env.FROM_EMAIL || 'donotreply@warrensmm.com')
-          : (process.env.FROM_EMAIL_STAGING || process.env.FROM_EMAIL || 'donotreply-staging@warrensmm.com');
+          ? (process.env.FROM_EMAIL_PRODUCTION || process.env.FROM_EMAIL)
+          : (process.env.FROM_EMAIL_STAGING || process.env.FROM_EMAIL);
+        
+        if (!fromEmail) {
+          throw new Error('FROM_EMAIL not configured for Resend');
+        }
+        
+        console.log(`[EmailService] Attempting to send via Resend from: ${fromEmail}`);
 
         const resendOptions: {
           from: string;
@@ -225,6 +231,8 @@ class EmailService {
       }
 
       if (emailUser && emailPass) {
+        console.log(`[EmailService] Attempting Gmail fallback using: ${emailUser.substring(0, emailUser.indexOf('@'))}@...`);
+        
         // Create Gmail transporter for fallback
         const gmailTransporter = nodemailer.createTransport({
           service: 'gmail',
@@ -265,82 +273,18 @@ class EmailService {
         }
 
         const result = await gmailTransporter.sendMail(mailOptions);
-        console.log(`[EmailService] Email sent successfully via Gmail (fallback): ${result.messageId}`);
+        console.log(`[EmailService] ✅ Email sent successfully via Gmail (fallback): ${result.messageId}`);
         return true;
+      } else {
+        console.error('[EmailService] ❌ Gmail fallback not available - credentials not configured');
       }
     } catch (gmailError) {
-      console.error('[EmailService] Gmail fallback also failed:', gmailError);
+      console.error('[EmailService] ❌ Gmail fallback failed:', gmailError);
     }
 
-    // If we get here, try the original provider logic as last resort
-    try {
-      switch (this.config.provider) {
-        case 'gmail':
-        case 'sendgrid':
-          if (!this.transporter) {
-            throw new Error('Email transporter not initialized');
-          }
-          
-          interface MailOptions {
-            from: string;
-            to: string;
-            subject: string;
-            html: string;
-            text?: string;
-            attachments?: Array<{
-              filename: string;
-              content: Buffer | string;
-              contentType: string;
-            }>;
-          }
-
-          const mailOptions: MailOptions = {
-            from: `"Warren's March Madness" <${this.config.user || 'noreply@warrensmarchmadness.com'}>`,
-            to: options.to,
-            subject: options.subject,
-            html: options.html,
-            text: options.text,
-          };
-
-          // Add attachments if provided
-          if (options.attachments && options.attachments.length > 0) {
-            mailOptions.attachments = options.attachments.map(att => ({
-              filename: att.filename,
-              content: att.content,
-              contentType: att.contentType || 'application/pdf',
-            }));
-          }
-
-          const result = await this.transporter.sendMail(mailOptions);
-          console.log(`[EmailService] Email sent successfully: ${result.messageId}`);
-          return true;
-
-        case 'console':
-          console.log('📧 EMAIL (Development Mode):');
-          console.log('To:', options.to);
-          console.log('Subject:', options.subject);
-          console.log('HTML:', options.html);
-          console.log('Text:', options.text);
-          if (options.attachments && options.attachments.length > 0) {
-            console.log('Attachments:', options.attachments.map(att => ({
-              filename: att.filename,
-              contentType: att.contentType,
-              size: att.content instanceof Buffer ? att.content.length : att.content.length,
-            })));
-          }
-          return true;
-
-        case 'disabled':
-          console.error('[EmailService] Email service is disabled. Cannot send email to:', options.to);
-          return false;
-
-        default:
-          throw new Error(`Unknown email provider: ${this.config.provider}`);
-      }
-    } catch (error) {
-      console.error('[EmailService] All email providers failed:', error);
-      return false;
-    }
+    // If we get here, both Resend and Gmail failed
+    console.error('[EmailService] ❌ All email providers failed. Email not sent.');
+    return false;
   }
 
   isConfigured(): boolean {
