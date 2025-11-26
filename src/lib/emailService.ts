@@ -42,16 +42,30 @@ class EmailService {
     
     let emailUser: string | undefined;
     let emailPass: string | undefined;
+    let source: string;
     
     if (isProduction) {
       // Production: Use production-specific credentials, fallback to general
       emailUser = process.env.EMAIL_USER_PRODUCTION || process.env.EMAIL_USER;
       emailPass = process.env.EMAIL_PASS_PRODUCTION || process.env.EMAIL_PASS;
+      source = process.env.EMAIL_USER_PRODUCTION ? 'EMAIL_USER_PRODUCTION' : 
+               (process.env.EMAIL_USER ? 'EMAIL_USER (fallback)' : 'none');
     } else {
       // Staging/Preview: Use staging-specific credentials, fallback to general
       emailUser = process.env.EMAIL_USER_STAGING || process.env.EMAIL_USER;
       emailPass = process.env.EMAIL_PASS_STAGING || process.env.EMAIL_PASS;
+      source = process.env.EMAIL_USER_STAGING ? 'EMAIL_USER_STAGING' : 
+               (process.env.EMAIL_USER ? 'EMAIL_USER (fallback)' : 'none');
     }
+    
+    // Log which account is being used (for debugging)
+    console.log(`[EmailService] Environment: ${vercelEnv} (${isProduction ? 'production' : 'staging/preview'})`);
+    console.log(`[EmailService] Using email account: ${emailUser ? emailUser.substring(0, emailUser.indexOf('@')) + '@...' : 'none'} (source: ${source})`);
+    console.log(`[EmailService] EMAIL_USER_STAGING: ${process.env.EMAIL_USER_STAGING ? 'set' : 'not set'}`);
+    console.log(`[EmailService] EMAIL_PASS_STAGING: ${process.env.EMAIL_PASS_STAGING ? 'set' : 'not set'}`);
+    console.log(`[EmailService] EMAIL_USER_PRODUCTION: ${process.env.EMAIL_USER_PRODUCTION ? 'set' : 'not set'}`);
+    console.log(`[EmailService] EMAIL_PASS_PRODUCTION: ${process.env.EMAIL_PASS_PRODUCTION ? 'set' : 'not set'}`);
+    console.log(`[EmailService] EMAIL_USER (fallback): ${process.env.EMAIL_USER ? 'set' : 'not set'}`);
     
     // Check for Gmail configuration
     if (emailUser && emailPass) {
