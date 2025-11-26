@@ -1,4 +1,5 @@
 import { SiteConfigData } from './siteConfig';
+import { FALLBACK_CONFIG } from './fallbackConfig';
 
 /**
  * Template variables that can be used in email content
@@ -76,6 +77,33 @@ async function loadEmailTemplate(templateType: EmailTemplateType = 'pdf'): Promi
  * @param variables - Template variables to replace
  * @param templateType - Type of email template ('pdf' for on-demand PDF email, 'submit' for automated submission email)
  */
+/**
+ * Generate spam reminder HTML and text
+ * Uses generic emailSpamReminder or falls back to regEmailSpamReminder
+ */
+function generateSpamReminder(
+  siteConfig: SiteConfigData | null
+): { html: string; text: string } {
+  const spamReminderText = siteConfig?.emailSpamReminder || 
+    siteConfig?.regEmailSpamReminder || 
+    FALLBACK_CONFIG.regEmailSpamReminder || 
+    '💡 <strong>Can\'t find this email?</strong> Please check your spam or junk mail folder. If you still don\'t see it, the email may take a few minutes to arrive.';
+  
+  // Generate HTML version (with yellow warning box styling)
+  const html = `
+    <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 16px; margin: 20px 0; border-radius: 4px;">
+      <p style="margin: 0; font-size: 13px; color: #856404;">
+        ${spamReminderText}
+      </p>
+    </div>
+  `;
+  
+  // Generate text version (strip HTML tags)
+  const text = `\n\n${spamReminderText.replace(/<[^>]*>/g, '')}\n`;
+  
+  return { html, text };
+}
+
 /**
  * Generate "Do Not Reply" notice HTML and text
  * Replaces {contactEmail} with the actual contact address from config
@@ -199,7 +227,8 @@ export async function renderEmailTemplate(
     );
   }
   
-  // Generate "Do Not Reply" notice
+  // Generate spam reminder and "Do Not Reply" notice
+  const spamReminder = generateSpamReminder(siteConfig);
   const doNotReplyNotice = generateDoNotReplyNotice(siteConfig);
   
   // Replace template placeholders
@@ -209,6 +238,7 @@ export async function renderEmailTemplate(
   template = template.replace(/\{\{message1\}\}/g, message1);
   template = template.replace(/\{\{message2\}\}/g, message2);
   template = template.replace(/\{\{message3\}\}/g, message3);
+  template = template.replace(/\{\{spamReminder\}\}/g, spamReminder.html);
   template = template.replace(/\{\{doNotReplyNotice\}\}/g, doNotReplyNotice.html);
   template = template.replace(/\{\{footer\}\}/g, footer);
   
@@ -244,6 +274,7 @@ ${message2Text ? replaceVariables(message2Text, variables) : ''}
 
 ${message3Text ? replaceVariables(message3Text, variables) : ''}
 
+${spamReminder.text}
 ${doNotReplyNotice.text}${replaceVariables(footerText, variables)}
   `.trim();
   

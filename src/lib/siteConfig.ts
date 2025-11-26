@@ -113,6 +113,8 @@ export interface SiteConfigData {
   // Email "Do Not Reply" notice configuration
   emailDoNotReplyNotice?: string;
   emailContactAddress?: string;
+  // Generic spam reminder for all emails (falls back to regEmailSpamReminder if not set)
+  emailSpamReminder?: string;
 }
 
 /**
@@ -462,6 +464,9 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
             break;
           case 'email_contact_address':
             config.emailContactAddress = value;
+            break;
+          case 'email_spam_reminder':
+            config.emailSpamReminder = value;
             break;
           default:
             // Unknown parameter - log for debugging (only in development)

@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
 import type { SiteConfigData } from '@/lib/siteConfig';
+import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 
 export interface EmailServiceConfig {
   provider: 'gmail' | 'sendgrid' | 'resend' | 'console' | 'disabled';
@@ -364,6 +365,33 @@ function escapeHtml(text: string): string {
 }
 
 /**
+ * Generate spam reminder HTML and text
+ * Uses generic emailSpamReminder or falls back to regEmailSpamReminder
+ */
+function generateSpamReminder(
+  siteConfig?: Pick<SiteConfigData, 'emailSpamReminder' | 'regEmailSpamReminder'> | null
+): { html: string; text: string } {
+  const spamReminderText = siteConfig?.emailSpamReminder || 
+    siteConfig?.regEmailSpamReminder || 
+    FALLBACK_CONFIG.regEmailSpamReminder || 
+    '💡 <strong>Can\'t find this email?</strong> Please check your spam or junk mail folder. If you still don\'t see it, the email may take a few minutes to arrive.';
+  
+  // Generate HTML version (with yellow warning box styling)
+  const html = `
+    <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 16px; margin: 20px 0; border-radius: 4px;">
+      <p style="margin: 0; font-size: 13px; color: #856404;">
+        ${spamReminderText}
+      </p>
+    </div>
+  `;
+  
+  // Generate text version (strip HTML tags)
+  const text = `\n\n${spamReminderText.replace(/<[^>]*>/g, '')}\n`;
+  
+  return { html, text };
+}
+
+/**
  * Generate "Do Not Reply" notice HTML and text
  * Replaces {contactEmail} with the actual contact address from config
  */
@@ -646,6 +674,7 @@ export async function sendPasswordResetEmail(
         <p style="word-break: break-all; color: #666;">${resetLink}</p>
         <p>Your reset code is: <strong>${resetCode}</strong></p>
         <p>This link will expire in 1 hour.</p>
+        ${generateSpamReminder(siteConfig).html}
         ${generateDoNotReplyNotice(siteConfig).html}
         <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
         <p style="font-size: 12px; color: #666; text-align: center;">
@@ -670,6 +699,7 @@ export async function sendPasswordResetEmail(
     
     This link will expire in 1 hour.
     
+    ${generateSpamReminder(siteConfig).text}
     ${generateDoNotReplyNotice(siteConfig).text}If you didn't request a password reset, please ignore this email. Your password will remain unchanged.
   `;
 
