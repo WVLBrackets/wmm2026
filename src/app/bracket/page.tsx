@@ -90,7 +90,7 @@ function BracketContent() {
               sessionStorage.removeItem('bracketCurrentStep');
               hasRestoredState.current = false; // Reset restoration flag
             }
-          } catch (error) {
+          } catch {
             // If parsing fails, clear it anyway
             sessionStorage.removeItem('bracketState');
             sessionStorage.removeItem('bracketCurrentStep');
