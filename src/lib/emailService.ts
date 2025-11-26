@@ -31,12 +31,34 @@ class EmailService {
   }
 
   private detectEmailConfig(): EmailServiceConfig {
+    // Determine environment (staging/preview vs production)
+    const vercelEnv = process.env.VERCEL_ENV || 'production';
+    const isProduction = vercelEnv === 'production';
+    
+    // Use environment-specific Gmail accounts
+    // Staging/Preview: Use EMAIL_USER_STAGING and EMAIL_PASS_STAGING
+    // Production: Use EMAIL_USER_PRODUCTION and EMAIL_PASS_PRODUCTION
+    // Fallback: Use EMAIL_USER and EMAIL_PASS (for personal/human notifications)
+    
+    let emailUser: string | undefined;
+    let emailPass: string | undefined;
+    
+    if (isProduction) {
+      // Production: Use production-specific credentials, fallback to general
+      emailUser = process.env.EMAIL_USER_PRODUCTION || process.env.EMAIL_USER;
+      emailPass = process.env.EMAIL_PASS_PRODUCTION || process.env.EMAIL_PASS;
+    } else {
+      // Staging/Preview: Use staging-specific credentials, fallback to general
+      emailUser = process.env.EMAIL_USER_STAGING || process.env.EMAIL_USER;
+      emailPass = process.env.EMAIL_PASS_STAGING || process.env.EMAIL_PASS;
+    }
+    
     // Check for Gmail configuration
-    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    if (emailUser && emailPass) {
       return {
         provider: 'gmail',
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: emailUser,
+        pass: emailPass,
       };
     }
 
