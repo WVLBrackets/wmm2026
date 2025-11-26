@@ -545,6 +545,13 @@ export async function sendConfirmationEmail(
     false // Text version doesn't need HTML escaping
   );
   
+  const textSpamReminder = replaceRegEmailVariables(
+    siteConfig?.regEmailSpamReminder || FALLBACK_CONFIG.regEmailSpamReminder || '💡 Can\'t find this email? Please check your spam or junk mail folder. If you still don\'t see it, the email may take a few minutes to arrive.',
+    name,
+    tournamentYear,
+    false // Text version doesn't need HTML escaping
+  ).replace(/<[^>]*>/g, ''); // Strip HTML tags for text version
+  
   const textFooter = replaceRegEmailVariables(
     siteConfig?.regEmailFooter || FALLBACK_CONFIG.regEmailFooter || 'If you didn\'t create an account with Warren\'s March Madness, please ignore this email.',
     name,
