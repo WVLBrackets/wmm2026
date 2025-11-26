@@ -1,5 +1,4 @@
 import { SiteConfigData } from './siteConfig';
-import { FALLBACK_CONFIG } from './fallbackConfig';
 
 /**
  * Template variables that can be used in email content

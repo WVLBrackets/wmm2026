@@ -1,7 +1,6 @@
 import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
 import type { SiteConfigData } from '@/lib/siteConfig';
-import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 
 export interface EmailServiceConfig {
   provider: 'gmail' | 'sendgrid' | 'resend' | 'console' | 'disabled';
