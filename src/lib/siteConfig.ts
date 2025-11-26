@@ -106,8 +106,7 @@ export interface SiteConfigData {
   stopSubmitToggle?: string;
   finalMessageTooLate?: string;
   finalMessageSubmitOff?: string;
-  // Test configuration
-  happy_path_email_test?: string;
+  // Test configuration (browser-specific to avoid duplication)
   happy_path_email_test_chrome?: string;
   happy_path_email_test_firefox?: string;
 }
@@ -445,9 +444,6 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
           case 'print_bracket_trophy':
             config.printBracketTrophy = value;
             break;
-          case 'happy_path_email_test':
-            config.happy_path_email_test = value;
-            break;
           case 'happy_path_email_test_chrome':
             config.happy_path_email_test_chrome = value;
             break;
@@ -465,22 +461,8 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
       // Skip rows that don't have at least 2 fields
     }
     
-    // Debug: Log if we didn't find happy_path_email_test
-    if (!config.happy_path_email_test) {
-      if (matchingParameters.length > 0) {
-        console.log(`[SiteConfig] Found ${matchingParameters.length} potential happy_path_email_test parameters:`, matchingParameters);
-      } else {
-        const happyParams = allParameters.filter(p => {
-          const lower = p.toLowerCase();
-          return lower.includes('happy') || (lower.includes('test') && lower.includes('email'));
-        });
-        if (happyParams.length > 0) {
-          console.log(`[SiteConfig] Found potential parameters (not normalized): ${happyParams.join(', ')}`);
-        } else {
-          console.log(`[SiteConfig] No parameters found matching 'happy_path_email_test'. Total parameters parsed: ${allParameters.length}`);
-        }
-      }
-    }
+    // Browser-specific test emails are used (happy_path_email_test_chrome, happy_path_email_test_firefox)
+    // No generic happy_path_email_test needed - browser-specific versions prevent duplication
     
     // Validate that we have all required fields
     if (config.tournamentYear && config.lastYearWinner && config.siteName) {

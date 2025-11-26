@@ -119,8 +119,8 @@ test.describe('Account Creation', () => {
         const configData = await configResponse.json();
         const siteConfig = configData.data || configData;
         
-        // Use browser-specific email, fallback to generic, then generated
-        testEmail = siteConfig[emailConfigKey] || siteConfig.happy_path_email_test;
+        // Use browser-specific email, fallback to generated if not found
+        testEmail = siteConfig[emailConfigKey];
         
         // Fallback to generated email if config doesn't have the parameter
         if (!testEmail || testEmail.trim() === '') {
