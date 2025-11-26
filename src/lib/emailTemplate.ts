@@ -76,6 +76,46 @@ async function loadEmailTemplate(templateType: EmailTemplateType = 'pdf'): Promi
  * @param variables - Template variables to replace
  * @param templateType - Type of email template ('pdf' for on-demand PDF email, 'submit' for automated submission email)
  */
+/**
+ * Generate "Do Not Reply" notice HTML and text
+ * Replaces {contactEmail} with the actual contact address from config
+ */
+function generateDoNotReplyNotice(
+  siteConfig: SiteConfigData | null
+): { html: string; text: string } {
+  const noticeText = siteConfig?.emailDoNotReplyNotice || 
+    'Please do not reply to this email. This is an automated message from an unmonitored mailbox. If you need assistance, please contact us at {contactEmail}.';
+  const contactEmail = siteConfig?.emailContactAddress || 'support@warrensmm.com';
+  
+  // Replace {contactEmail} variable
+  const noticeWithEmail = noticeText.replace(/\{contactEmail\}/g, contactEmail);
+  
+  // Generate HTML version (escape HTML for safety)
+  const escapeHtml = (text: string): string => {
+    const map: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;',
+    };
+    return text.replace(/[&<>"']/g, (m) => map[m]);
+  };
+  
+  const html = `
+    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+      <p style="font-size: 12px; color: #666; font-style: italic; margin: 0;">
+        ${escapeHtml(noticeWithEmail)}
+      </p>
+    </div>
+  `;
+  
+  // Generate text version
+  const text = `\n\n${noticeWithEmail}\n`;
+  
+  return { html, text };
+}
+
 export async function renderEmailTemplate(
   siteConfig: SiteConfigData | null,
   variables: EmailTemplateVariables,
@@ -159,6 +199,9 @@ export async function renderEmailTemplate(
     );
   }
   
+  // Generate "Do Not Reply" notice
+  const doNotReplyNotice = generateDoNotReplyNotice(siteConfig);
+  
   // Replace template placeholders
   template = template.replace(/\{\{subject\}\}/g, subject);
   template = template.replace(/\{\{heading\}\}/g, heading);
@@ -166,6 +209,7 @@ export async function renderEmailTemplate(
   template = template.replace(/\{\{message1\}\}/g, message1);
   template = template.replace(/\{\{message2\}\}/g, message2);
   template = template.replace(/\{\{message3\}\}/g, message3);
+  template = template.replace(/\{\{doNotReplyNotice\}\}/g, doNotReplyNotice.html);
   template = template.replace(/\{\{footer\}\}/g, footer);
   
   // Generate plain text version
@@ -200,7 +244,7 @@ ${message2Text ? replaceVariables(message2Text, variables) : ''}
 
 ${message3Text ? replaceVariables(message3Text, variables) : ''}
 
-${replaceVariables(footerText, variables)}
+${doNotReplyNotice.text}${replaceVariables(footerText, variables)}
   `.trim();
   
   return {

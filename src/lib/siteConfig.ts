@@ -109,6 +109,9 @@ export interface SiteConfigData {
   // Test configuration (browser-specific to avoid duplication)
   happy_path_email_test_chrome?: string;
   happy_path_email_test_firefox?: string;
+  // Email "Do Not Reply" notice configuration
+  emailDoNotReplyNotice?: string;
+  emailContactAddress?: string;
 }
 
 /**
@@ -449,6 +452,12 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
             break;
           case 'happy_path_email_test_firefox':
             config.happy_path_email_test_firefox = value;
+            break;
+          case 'email_do_not_reply_notice':
+            config.emailDoNotReplyNotice = value;
+            break;
+          case 'email_contact_address':
+            config.emailContactAddress = value;
             break;
           default:
             // Unknown parameter - log for debugging (only in development)
