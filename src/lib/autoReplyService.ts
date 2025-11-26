@@ -30,11 +30,6 @@ export async function sendAutoReplyEmail(
     // Replace {contactEmail} variable
     const noticeWithEmail = doNotReplyNotice.replace(/\{contactEmail\}/g, contactEmail);
 
-    // Create auto-reply subject
-    const subject = originalSubject?.startsWith('Re:') 
-      ? originalSubject 
-      : `Re: ${originalSubject || 'Your Message'}`;
-
     // Create auto-reply HTML
     const html = `
       <!DOCTYPE html>
@@ -81,10 +76,15 @@ We apologize for any inconvenience. For the fastest response, please send your i
 ${noticeWithEmail}
     `.trim();
 
+    // Create auto-reply subject
+    const replySubject = originalSubject?.startsWith('Re:') 
+      ? `${originalSubject} - Do Not Reply`
+      : `Re: ${originalSubject || 'Your Message'} - Do Not Reply`;
+
     // Send the auto-reply email
     const emailSent = await emailService.sendEmail({
       to: originalSenderEmail,
-      subject: `Re: ${originalSubject || 'Your Message'} - Do Not Reply`,
+      subject: replySubject,
       html,
       text,
     });

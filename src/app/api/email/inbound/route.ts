@@ -14,11 +14,30 @@ export async function POST(request: NextRequest) {
   try {
     // Get raw body for signature verification (if needed)
     const rawBody = await request.text();
-    let body: any;
+    
+    // Define webhook payload type
+    interface ResendWebhookPayload {
+      type?: string;
+      event?: string;
+      data?: {
+        from?: { email?: string } | string;
+        sender?: { email?: string };
+        subject?: string;
+        to?: string;
+        recipient?: string;
+      };
+      from?: { email?: string } | string;
+      sender?: { email?: string };
+      subject?: string;
+      to?: string;
+      recipient?: string;
+    }
+    
+    let body: ResendWebhookPayload;
     
     try {
-      body = JSON.parse(rawBody);
-    } catch (error) {
+      body = JSON.parse(rawBody) as ResendWebhookPayload;
+    } catch {
       console.error('[InboundEmail] Invalid JSON payload');
       return NextResponse.json(
         { error: 'Invalid JSON payload' },

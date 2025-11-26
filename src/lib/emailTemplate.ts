@@ -78,33 +78,6 @@ async function loadEmailTemplate(templateType: EmailTemplateType = 'pdf'): Promi
  * @param templateType - Type of email template ('pdf' for on-demand PDF email, 'submit' for automated submission email)
  */
 /**
- * Generate spam reminder HTML and text
- * Uses generic emailSpamReminder or falls back to regEmailSpamReminder
- */
-function generateSpamReminder(
-  siteConfig: SiteConfigData | null
-): { html: string; text: string } {
-  const spamReminderText = siteConfig?.emailSpamReminder || 
-    siteConfig?.regEmailSpamReminder || 
-    FALLBACK_CONFIG.regEmailSpamReminder || 
-    '💡 <strong>Can\'t find this email?</strong> Please check your spam or junk mail folder. If you still don\'t see it, the email may take a few minutes to arrive.';
-  
-  // Generate HTML version (with yellow warning box styling)
-  const html = `
-    <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 16px; margin: 20px 0; border-radius: 4px;">
-      <p style="margin: 0; font-size: 13px; color: #856404;">
-        ${spamReminderText}
-      </p>
-    </div>
-  `;
-  
-  // Generate text version (strip HTML tags)
-  const text = `\n\n${spamReminderText.replace(/<[^>]*>/g, '')}\n`;
-  
-  return { html, text };
-}
-
-/**
  * Generate "Do Not Reply" notice HTML and text
  * Replaces {contactEmail} with the actual contact address from config
  */
