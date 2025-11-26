@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createPasswordResetToken, getUserByEmail } from '@/lib/secureDatabase';
 import { sendPasswordResetEmail } from '@/lib/emailService';
 import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
-import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
 
 export async function POST(request: NextRequest) {
   try {
