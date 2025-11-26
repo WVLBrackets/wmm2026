@@ -605,7 +605,13 @@ ${generateDoNotReplyNotice(siteConfig).text}${textFooter}
   return emailSent;
 }
 
-export async function sendPasswordResetEmail(to: string, name: string, resetLink: string, resetCode: string): Promise<boolean> {
+export async function sendPasswordResetEmail(
+  to: string, 
+  name: string, 
+  resetLink: string, 
+  resetCode: string,
+  siteConfig?: { emailDoNotReplyNotice?: string; emailContactAddress?: string } | null
+): Promise<boolean> {
   // Only show badge for non-production environments
   const environment = process.env.VERCEL_ENV || 'production';
   const isProduction = environment === 'production';
@@ -639,7 +645,7 @@ export async function sendPasswordResetEmail(to: string, name: string, resetLink
         <p style="word-break: break-all; color: #666;">${resetLink}</p>
         <p>Your reset code is: <strong>${resetCode}</strong></p>
         <p>This link will expire in 1 hour.</p>
-        ${generateDoNotReplyNotice(null).html}
+        ${generateDoNotReplyNotice(siteConfig).html}
         <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
         <p style="font-size: 12px; color: #666; text-align: center;">
           If you didn't request a password reset, please ignore this email. Your password will remain unchanged.
