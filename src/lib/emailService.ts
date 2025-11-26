@@ -84,15 +84,6 @@ class EmailService {
       console.log(`[EmailService] FROM_EMAIL_PRODUCTION: ${process.env.FROM_EMAIL_PRODUCTION ? 'set' : 'not set'}`);
     }
     
-    // Check for Gmail configuration
-    if (emailUser && emailPass) {
-      return {
-        provider: 'gmail',
-        user: emailUser,
-        pass: emailPass,
-      };
-    }
-
     // Check for SendGrid configuration
     if (process.env.SENDGRID_API_KEY) {
       return {
@@ -101,7 +92,7 @@ class EmailService {
       };
     }
 
-    // Check if Resend is configured
+    // Check if Resend is configured (PRIORITY: Resend first, Gmail as fallback)
     // Use environment-specific FROM_EMAIL if available
     let fromEmail: string | undefined;
     if (isProduction) {
@@ -111,9 +102,18 @@ class EmailService {
     }
     
     if (process.env.RESEND_API_KEY && fromEmail) {
-      // Use Resend for email
+      // Use Resend as primary (Gmail will be used as fallback if Resend fails)
       return {
         provider: 'resend',
+      };
+    }
+
+    // Check for Gmail configuration (fallback if Resend not configured)
+    if (emailUser && emailPass) {
+      return {
+        provider: 'gmail',
+        user: emailUser,
+        pass: emailPass,
       };
     }
 
@@ -161,119 +161,130 @@ class EmailService {
   }
 
   async sendEmail(options: EmailOptions): Promise<boolean> {
-    try {
-      switch (this.config.provider) {
-        case 'gmail':
-        case 'sendgrid':
-          if (!this.transporter) {
-            throw new Error('Email transporter not initialized');
-          }
-          
-          interface MailOptions {
-            from: string;
-            to: string;
-            subject: string;
-            html: string;
-            text?: string;
-            attachments?: Array<{
-              filename: string;
-              content: Buffer | string;
-              contentType: string;
-            }>;
-          }
+    // Determine environment for FROM_EMAIL selection
+    const vercelEnv = process.env.VERCEL_ENV || 'production';
+    const isProduction = vercelEnv === 'production';
+    
+    // Try Resend first if configured
+    if (this.config.provider === 'resend' && this.resend) {
+      try {
+        const fromEmail = isProduction
+          ? (process.env.FROM_EMAIL_PRODUCTION || process.env.FROM_EMAIL)
+          : (process.env.FROM_EMAIL_STAGING || process.env.FROM_EMAIL);
+        
+        if (!fromEmail) {
+          throw new Error('FROM_EMAIL not configured for Resend');
+        }
+        
+        console.log(`[EmailService] Attempting to send via Resend from: ${fromEmail}`);
 
-          const mailOptions: MailOptions = {
-            from: `"Warren's March Madness" <${this.config.user || 'noreply@warrensmarchmadness.com'}>`,
-            to: options.to,
-            subject: options.subject,
-            html: options.html,
-            text: options.text,
-          };
+        const resendOptions: {
+          from: string;
+          to: string;
+          subject: string;
+          html: string;
+          text?: string;
+          attachments?: Array<{
+            filename: string;
+            content: Buffer | string;
+          }>;
+        } = {
+          from: `"Warren's March Madness" <${fromEmail}>`,
+          to: options.to,
+          subject: options.subject,
+          html: options.html,
+        };
 
-          // Add attachments if provided
-          if (options.attachments && options.attachments.length > 0) {
-            mailOptions.attachments = options.attachments.map(att => ({
-              filename: att.filename,
-              content: att.content,
-              contentType: att.contentType || 'application/pdf',
-            }));
-          }
+        if (options.text) {
+          resendOptions.text = options.text;
+        }
 
-          const result = await this.transporter.sendMail(mailOptions);
-          console.log('Email sent successfully:', result.messageId);
-          return true;
+        // Add attachments if provided
+        if (options.attachments && options.attachments.length > 0) {
+          resendOptions.attachments = options.attachments.map(att => ({
+            filename: att.filename,
+            content: att.content instanceof Buffer ? att.content : Buffer.from(att.content),
+          }));
+        }
 
-        case 'resend':
-          if (!this.resend) {
-            throw new Error('Resend client not initialized');
-          }
-
-          // Determine FROM_EMAIL based on environment
-          const vercelEnv = process.env.VERCEL_ENV || 'production';
-          const isProduction = vercelEnv === 'production';
-          const fromEmail = isProduction
-            ? (process.env.FROM_EMAIL_PRODUCTION || process.env.FROM_EMAIL || 'donotreply@warrensmm.com')
-            : (process.env.FROM_EMAIL_STAGING || process.env.FROM_EMAIL || 'donotreply@warrensmm.com');
-
-          const resendOptions: {
-            from: string;
-            to: string;
-            subject: string;
-            html: string;
-            text?: string;
-            attachments?: Array<{
-              filename: string;
-              content: Buffer | string;
-            }>;
-          } = {
-            from: `"Warren's March Madness" <${fromEmail}>`,
-            to: options.to,
-            subject: options.subject,
-            html: options.html,
-          };
-
-          if (options.text) {
-            resendOptions.text = options.text;
-          }
-
-          // Add attachments if provided
-          if (options.attachments && options.attachments.length > 0) {
-            resendOptions.attachments = options.attachments.map(att => ({
-              filename: att.filename,
-              content: att.content instanceof Buffer ? att.content : Buffer.from(att.content),
-            }));
-          }
-
-          const result = await this.resend.emails.send(resendOptions);
-          console.log('Email sent successfully via Resend:', result.id);
-          return true;
-
-        case 'console':
-          console.log('📧 EMAIL (Development Mode):');
-          console.log('To:', options.to);
-          console.log('Subject:', options.subject);
-          console.log('HTML:', options.html);
-          console.log('Text:', options.text);
-          if (options.attachments && options.attachments.length > 0) {
-            console.log('Attachments:', options.attachments.map(att => ({
-              filename: att.filename,
-              contentType: att.contentType,
-              size: att.content instanceof Buffer ? att.content.length : att.content.length,
-            })));
-          }
-          return true;
-
-        case 'disabled':
-          console.error('Email service is disabled. Cannot send email to:', options.to);
-          return false;
-
-        default:
-          throw new Error(`Unknown email provider: ${this.config.provider}`);
+        const result = await this.resend.emails.send(resendOptions);
+        console.log(`[EmailService] Email sent successfully via Resend: ${result.id}`);
+        return true;
+      } catch (resendError) {
+        console.error('[EmailService] Resend failed, attempting Gmail fallback:', resendError);
+        // Fall through to Gmail fallback
       }
-    } catch (error) {
-      console.error('Error sending email:', error);
-      return false;
     }
+
+    // Fallback to Gmail if Resend failed or not configured
+    try {
+      // Get Gmail credentials for fallback
+      let emailUser: string | undefined;
+      let emailPass: string | undefined;
+      
+      if (isProduction) {
+        emailUser = process.env.EMAIL_USER_PRODUCTION || process.env.EMAIL_USER;
+        emailPass = process.env.EMAIL_PASS_PRODUCTION || process.env.EMAIL_PASS;
+      } else {
+        emailUser = process.env.EMAIL_USER_STAGING || process.env.EMAIL_USER;
+        emailPass = process.env.EMAIL_PASS_STAGING || process.env.EMAIL_PASS;
+      }
+
+      if (emailUser && emailPass) {
+        console.log(`[EmailService] Attempting Gmail fallback using: ${emailUser.substring(0, emailUser.indexOf('@'))}@...`);
+        
+        // Create Gmail transporter for fallback
+        const gmailTransporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: {
+            user: emailUser,
+            pass: emailPass,
+          },
+        });
+
+        interface MailOptions {
+          from: string;
+          to: string;
+          subject: string;
+          html: string;
+          text?: string;
+          attachments?: Array<{
+            filename: string;
+            content: Buffer | string;
+            contentType: string;
+          }>;
+        }
+
+        const mailOptions: MailOptions = {
+          from: `"Warren's March Madness" <${emailUser}>`,
+          to: options.to,
+          subject: options.subject,
+          html: options.html,
+          text: options.text,
+        };
+
+        // Add attachments if provided
+        if (options.attachments && options.attachments.length > 0) {
+          mailOptions.attachments = options.attachments.map(att => ({
+            filename: att.filename,
+            content: att.content,
+            contentType: att.contentType || 'application/pdf',
+          }));
+        }
+
+        const gmailResult = await gmailTransporter.sendMail(mailOptions);
+        console.log(`[EmailService] ✅ Email sent successfully via Gmail (fallback): ${gmailResult.messageId}`);
+        return true;
+      } else {
+        console.error('[EmailService] ❌ Gmail fallback not available - credentials not configured');
+      }
+    } catch (gmailError) {
+      console.error('[EmailService] ❌ Gmail fallback failed:', gmailError);
+    }
+
+    // If we get here, both Resend and Gmail failed
+    console.error('[EmailService] ❌ All email providers failed. Email not sent.');
+    return false;
   }
 
   isConfigured(): boolean {
