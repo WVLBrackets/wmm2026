@@ -135,6 +135,11 @@ export default function SignUpPage() {
                     ));
                   })()}
                 </p>
+                <div className="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+                  <p className="text-sm text-yellow-800 text-center">
+                    💡 <strong>Can't find the email?</strong> Please check your spam or junk mail folder. If you still don't see it, the email may take a few minutes to arrive.
+                  </p>
+                </div>
                 <div className="mt-6">
                   <Link
                     href="/auth/signin"
