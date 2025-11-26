@@ -75,6 +75,8 @@ export async function POST(request: NextRequest) {
     // Resend webhook format (adjust based on actual Resend webhook structure)
     // Expected format: { type: 'email.received', data: { from: string, subject: string, ... } }
     const eventType = body.type || body.event;
+    
+    // Get email data - could be in body.data or directly in body
     const emailData = body.data || body;
 
     // Only process email.received events (inbound emails)
@@ -87,30 +89,21 @@ export async function POST(request: NextRequest) {
     // Handle from field which can be string or object
     let fromEmail: string | undefined;
     
-    // Check data object first (Resend webhook format)
-    if (emailData.data) {
-      if (typeof emailData.data.from === 'string') {
-        fromEmail = emailData.data.from;
-      } else if (emailData.data.from && typeof emailData.data.from === 'object' && 'email' in emailData.data.from) {
-        fromEmail = emailData.data.from.email;
-      } else if (emailData.data.sender && typeof emailData.data.sender === 'object' && 'email' in emailData.data.sender) {
-        fromEmail = emailData.data.sender.email;
-      }
+    // Check if from is a string
+    if (typeof emailData.from === 'string') {
+      fromEmail = emailData.from;
+    } 
+    // Check if from is an object with email property
+    else if (emailData.from && typeof emailData.from === 'object' && 'email' in emailData.from) {
+      fromEmail = emailData.from.email;
+    } 
+    // Check sender object
+    else if (emailData.sender && typeof emailData.sender === 'object' && 'email' in emailData.sender) {
+      fromEmail = emailData.sender.email;
     }
     
-    // Fallback to top-level fields
-    if (!fromEmail) {
-      if (typeof emailData.from === 'string') {
-        fromEmail = emailData.from;
-      } else if (emailData.from && typeof emailData.from === 'object' && 'email' in emailData.from) {
-        fromEmail = emailData.from.email;
-      } else if (emailData.sender && typeof emailData.sender === 'object' && 'email' in emailData.sender) {
-        fromEmail = emailData.sender.email;
-      }
-    }
-    
-    const subject = emailData.subject || emailData.data?.subject || '';
-    const toEmail = emailData.to || emailData.recipient || emailData.data?.to || emailData.data?.recipient;
+    const subject = emailData.subject || '';
+    const toEmail = emailData.to || emailData.recipient;
 
     if (!fromEmail) {
       console.error('[InboundEmail] Missing sender email address');
