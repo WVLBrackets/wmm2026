@@ -227,8 +227,7 @@ export async function renderEmailTemplate(
     );
   }
   
-  // Generate spam reminder and "Do Not Reply" notice
-  const spamReminder = generateSpamReminder(siteConfig);
+  // Generate "Do Not Reply" notice
   const doNotReplyNotice = generateDoNotReplyNotice(siteConfig);
   
   // Replace template placeholders
@@ -238,7 +237,7 @@ export async function renderEmailTemplate(
   template = template.replace(/\{\{message1\}\}/g, message1);
   template = template.replace(/\{\{message2\}\}/g, message2);
   template = template.replace(/\{\{message3\}\}/g, message3);
-  template = template.replace(/\{\{spamReminder\}\}/g, spamReminder.html);
+  template = template.replace(/\{\{spamReminder\}\}/g, ''); // Remove spam reminder placeholder
   template = template.replace(/\{\{doNotReplyNotice\}\}/g, doNotReplyNotice.html);
   template = template.replace(/\{\{footer\}\}/g, footer);
   
@@ -274,7 +273,6 @@ ${message2Text ? replaceVariables(message2Text, variables) : ''}
 
 ${message3Text ? replaceVariables(message3Text, variables) : ''}
 
-${spamReminder.text}
 ${doNotReplyNotice.text}${replaceVariables(footerText, variables)}
   `.trim();
   

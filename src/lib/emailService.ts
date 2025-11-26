@@ -488,13 +488,6 @@ export async function sendConfirmationEmail(
     true // HTML content needs escaping
   );
   
-  const spamReminder = replaceRegEmailVariables(
-    siteConfig?.regEmailSpamReminder || FALLBACK_CONFIG.regEmailSpamReminder || '💡 <strong>Can\'t find this email?</strong> Please check your spam or junk mail folder. If you still don\'t see it, the email may take a few minutes to arrive.',
-    name,
-    tournamentYear,
-    false // HTML content already includes HTML tags
-  );
-  
   const footer = replaceRegEmailVariables(
     siteConfig?.regEmailFooter || FALLBACK_CONFIG.regEmailFooter || 'If you didn\'t create an account with Warren\'s March Madness, please ignore this email.',
     name,
@@ -530,11 +523,6 @@ export async function sendConfirmationEmail(
         <p style="word-break: break-all; color: #666;">${confirmationLink}</p>
         <p>Your confirmation code is: <strong>${confirmationCode}</strong></p>
         <p>This link will expire in 24 hours.</p>
-        <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 16px; margin: 20px 0; border-radius: 4px;">
-          <p style="margin: 0; font-size: 13px; color: #856404;">
-            ${spamReminder}
-          </p>
-        </div>
         ${generateDoNotReplyNotice(siteConfig).html}
         <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
         <p style="font-size: 12px; color: #666; text-align: center;">
@@ -574,13 +562,6 @@ export async function sendConfirmationEmail(
     false // Text version doesn't need HTML escaping
   );
   
-  const textSpamReminder = replaceRegEmailVariables(
-    siteConfig?.regEmailSpamReminder || FALLBACK_CONFIG.regEmailSpamReminder || '💡 Can\'t find this email? Please check your spam or junk mail folder. If you still don\'t see it, the email may take a few minutes to arrive.',
-    name,
-    tournamentYear,
-    false // Text version doesn't need HTML escaping
-  ).replace(/<[^>]*>/g, ''); // Strip HTML tags for text version
-  
   const textFooter = replaceRegEmailVariables(
     siteConfig?.regEmailFooter || FALLBACK_CONFIG.regEmailFooter || 'If you didn\'t create an account with Warren\'s March Madness, please ignore this email.',
     name,
@@ -603,8 +584,6 @@ ${confirmationLink}
 Your confirmation code is: ${confirmationCode}
 
 This link will expire in 24 hours.
-
-${textSpamReminder}
 
 ${generateDoNotReplyNotice(siteConfig).text}${textFooter}
   `;
@@ -674,7 +653,6 @@ export async function sendPasswordResetEmail(
         <p style="word-break: break-all; color: #666;">${resetLink}</p>
         <p>Your reset code is: <strong>${resetCode}</strong></p>
         <p>This link will expire in 1 hour.</p>
-        ${generateSpamReminder(siteConfig).html}
         ${generateDoNotReplyNotice(siteConfig).html}
         <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
         <p style="font-size: 12px; color: #666; text-align: center;">
@@ -699,7 +677,6 @@ export async function sendPasswordResetEmail(
     
     This link will expire in 1 hour.
     
-    ${generateSpamReminder(siteConfig).text}
     ${generateDoNotReplyNotice(siteConfig).text}If you didn't request a password reset, please ignore this email. Your password will remain unchanged.
   `;
 
