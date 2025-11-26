@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 export interface EmailServiceConfig {
   provider: 'gmail' | 'sendgrid' | 'resend' | 'console' | 'disabled';
@@ -23,6 +24,7 @@ export interface EmailOptions {
 
 class EmailService {
   private transporter: nodemailer.Transporter | null = null;
+  private resend: Resend | null = null;
   private config: EmailServiceConfig;
 
   constructor() {
@@ -60,12 +62,27 @@ class EmailService {
     
     // Log which account is being used (for debugging)
     console.log(`[EmailService] Environment: ${vercelEnv} (${isProduction ? 'production' : 'staging/preview'})`);
-    console.log(`[EmailService] Using email account: ${emailUser ? emailUser.substring(0, emailUser.indexOf('@')) + '@...' : 'none'} (source: ${source})`);
-    console.log(`[EmailService] EMAIL_USER_STAGING: ${process.env.EMAIL_USER_STAGING ? 'set' : 'not set'}`);
-    console.log(`[EmailService] EMAIL_PASS_STAGING: ${process.env.EMAIL_PASS_STAGING ? 'set' : 'not set'}`);
-    console.log(`[EmailService] EMAIL_USER_PRODUCTION: ${process.env.EMAIL_USER_PRODUCTION ? 'set' : 'not set'}`);
-    console.log(`[EmailService] EMAIL_PASS_PRODUCTION: ${process.env.EMAIL_PASS_PRODUCTION ? 'set' : 'not set'}`);
-    console.log(`[EmailService] EMAIL_USER (fallback): ${process.env.EMAIL_USER ? 'set' : 'not set'}`);
+    
+    // Log Gmail configuration
+    if (emailUser && emailPass) {
+      console.log(`[EmailService] Using Gmail account: ${emailUser.substring(0, emailUser.indexOf('@')) + '@...'} (source: ${source})`);
+      console.log(`[EmailService] EMAIL_USER_STAGING: ${process.env.EMAIL_USER_STAGING ? 'set' : 'not set'}`);
+      console.log(`[EmailService] EMAIL_PASS_STAGING: ${process.env.EMAIL_PASS_STAGING ? 'set' : 'not set'}`);
+      console.log(`[EmailService] EMAIL_USER_PRODUCTION: ${process.env.EMAIL_USER_PRODUCTION ? 'set' : 'not set'}`);
+      console.log(`[EmailService] EMAIL_PASS_PRODUCTION: ${process.env.EMAIL_PASS_PRODUCTION ? 'set' : 'not set'}`);
+      console.log(`[EmailService] EMAIL_USER (fallback): ${process.env.EMAIL_USER ? 'set' : 'not set'}`);
+    }
+    
+    // Log Resend configuration
+    if (process.env.RESEND_API_KEY) {
+      const fromEmail = isProduction
+        ? (process.env.FROM_EMAIL_PRODUCTION || process.env.FROM_EMAIL || 'not set')
+        : (process.env.FROM_EMAIL_STAGING || process.env.FROM_EMAIL || 'not set');
+      console.log(`[EmailService] RESEND_API_KEY: set`);
+      console.log(`[EmailService] FROM_EMAIL: ${fromEmail}`);
+      console.log(`[EmailService] FROM_EMAIL_STAGING: ${process.env.FROM_EMAIL_STAGING ? 'set' : 'not set'}`);
+      console.log(`[EmailService] FROM_EMAIL_PRODUCTION: ${process.env.FROM_EMAIL_PRODUCTION ? 'set' : 'not set'}`);
+    }
     
     // Check for Gmail configuration
     if (emailUser && emailPass) {
@@ -84,17 +101,25 @@ class EmailService {
       };
     }
 
-    // Check if email is configured
-    if (!process.env.RESEND_API_KEY || !process.env.FROM_EMAIL) {
-      // Without email config, disable email service
+    // Check if Resend is configured
+    // Use environment-specific FROM_EMAIL if available
+    let fromEmail: string | undefined;
+    if (isProduction) {
+      fromEmail = process.env.FROM_EMAIL_PRODUCTION || process.env.FROM_EMAIL;
+    } else {
+      fromEmail = process.env.FROM_EMAIL_STAGING || process.env.FROM_EMAIL;
+    }
+    
+    if (process.env.RESEND_API_KEY && fromEmail) {
+      // Use Resend for email
       return {
-        provider: 'disabled',
+        provider: 'resend',
       };
     }
 
-    // Use Resend for email
+    // Without email config, disable email service
     return {
-      provider: 'resend',
+      provider: 'disabled',
     };
   }
 
@@ -120,6 +145,12 @@ class EmailService {
             pass: this.config.apiKey,
           },
         });
+        break;
+      
+      case 'resend':
+        if (process.env.RESEND_API_KEY) {
+          this.resend = new Resend(process.env.RESEND_API_KEY);
+        }
         break;
       
       case 'console':
@@ -172,6 +203,51 @@ class EmailService {
           console.log('Email sent successfully:', result.messageId);
           return true;
 
+        case 'resend':
+          if (!this.resend) {
+            throw new Error('Resend client not initialized');
+          }
+
+          // Determine FROM_EMAIL based on environment
+          const vercelEnv = process.env.VERCEL_ENV || 'production';
+          const isProduction = vercelEnv === 'production';
+          const fromEmail = isProduction
+            ? (process.env.FROM_EMAIL_PRODUCTION || process.env.FROM_EMAIL || 'donotreply@warrensmm.com')
+            : (process.env.FROM_EMAIL_STAGING || process.env.FROM_EMAIL || 'donotreply@warrensmm.com');
+
+          const resendOptions: {
+            from: string;
+            to: string;
+            subject: string;
+            html: string;
+            text?: string;
+            attachments?: Array<{
+              filename: string;
+              content: Buffer | string;
+            }>;
+          } = {
+            from: `"Warren's March Madness" <${fromEmail}>`,
+            to: options.to,
+            subject: options.subject,
+            html: options.html,
+          };
+
+          if (options.text) {
+            resendOptions.text = options.text;
+          }
+
+          // Add attachments if provided
+          if (options.attachments && options.attachments.length > 0) {
+            resendOptions.attachments = options.attachments.map(att => ({
+              filename: att.filename,
+              content: att.content instanceof Buffer ? att.content : Buffer.from(att.content),
+            }));
+          }
+
+          const result = await this.resend.emails.send(resendOptions);
+          console.log('Email sent successfully via Resend:', result.id);
+          return true;
+
         case 'console':
           console.log('📧 EMAIL (Development Mode):');
           console.log('To:', options.to);
@@ -221,6 +297,12 @@ class EmailService {
           configured: true,
           provider: 'SendGrid',
           message: 'SendGrid is configured and ready to send emails',
+        };
+      case 'resend':
+        return {
+          configured: true,
+          provider: 'Resend',
+          message: 'Resend is configured and ready to send emails',
         };
       case 'console':
         return {
