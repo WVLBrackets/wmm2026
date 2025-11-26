@@ -208,7 +208,10 @@ class EmailService {
         }
 
         const result = await this.resend.emails.send(resendOptions);
-        console.log(`[EmailService] Email sent successfully via Resend: ${result.id}`);
+        if (result.error) {
+          throw new Error(result.error.message || 'Resend API error');
+        }
+        console.log(`[EmailService] ✅ Email sent successfully via Resend: ${result.data?.id || 'unknown'}`);
         return true;
       } catch (resendError) {
         console.error('[EmailService] Resend failed, attempting Gmail fallback:', resendError);
