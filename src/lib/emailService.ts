@@ -272,8 +272,8 @@ class EmailService {
           }));
         }
 
-        const result = await gmailTransporter.sendMail(mailOptions);
-        console.log(`[EmailService] ✅ Email sent successfully via Gmail (fallback): ${result.messageId}`);
+        const gmailResult = await gmailTransporter.sendMail(mailOptions);
+        console.log(`[EmailService] ✅ Email sent successfully via Gmail (fallback): ${gmailResult.messageId}`);
         return true;
       } else {
         console.error('[EmailService] ❌ Gmail fallback not available - credentials not configured');
