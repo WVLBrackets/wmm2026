@@ -413,7 +413,7 @@ export async function sendConfirmationEmail(
   name: string, 
   confirmationLink: string, 
   confirmationCode: string,
-  siteConfig?: { regEmailSubject?: string; regEmailHeader?: string; regEmailGreeting?: string; regEmailMessage1?: string; regEmailMessage2?: string; regEmailFooter?: string; tournamentYear?: string } | null
+  siteConfig?: { regEmailSubject?: string; regEmailHeader?: string; regEmailGreeting?: string; regEmailMessage1?: string; regEmailMessage2?: string; regEmailFooter?: string; tournamentYear?: string; regEmailSpamReminder?: string } | null
 ): Promise<boolean> {
   // Only show badge for non-production environments
   const environment = process.env.VERCEL_ENV || 'production';
