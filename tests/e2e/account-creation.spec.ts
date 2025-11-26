@@ -106,9 +106,7 @@ test.describe('Account Creation', () => {
     const browserName = testInfo.project.name; // 'chromium' or 'firefox'
     const emailConfigKey = browserName === 'chromium' 
       ? 'happy_path_email_test_chrome' 
-      : browserName === 'firefox'
-      ? 'happy_path_email_test_firefox'
-      : 'happy_path_email_test'; // Fallback to original
+      : 'happy_path_email_test_firefox'; // Firefox or any other browser
     
     let testEmail: string;
     try {
