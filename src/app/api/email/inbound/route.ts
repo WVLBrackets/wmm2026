@@ -79,6 +79,11 @@ export async function POST(request: NextRequest) {
     // Get email data - could be in body.data or directly in body
     const emailData = body.data || body;
 
+    // Log webhook payload for debugging (first few webhooks)
+    console.log('[InboundEmail] Webhook payload:', JSON.stringify(body, null, 2));
+    console.log('[InboundEmail] Event type:', eventType);
+    console.log('[InboundEmail] Email data:', JSON.stringify(emailData, null, 2));
+
     // Only process email.received events (inbound emails)
     if (eventType !== 'email.received' && eventType !== 'email.replied') {
       console.log(`[InboundEmail] Ignoring event type: ${eventType}`);
@@ -103,7 +108,15 @@ export async function POST(request: NextRequest) {
     }
     
     const subject = emailData.subject || '';
-    const toEmail = emailData.to || emailData.recipient;
+    // toEmail could be string, array, or object - normalize to string
+    let toEmail: string | undefined;
+    if (typeof emailData.to === 'string') {
+      toEmail = emailData.to;
+    } else if (Array.isArray(emailData.to)) {
+      toEmail = emailData.to[0]; // Take first email if array
+    } else if (emailData.recipient) {
+      toEmail = typeof emailData.recipient === 'string' ? emailData.recipient : undefined;
+    }
 
     if (!fromEmail) {
       console.error('[InboundEmail] Missing sender email address');
@@ -121,10 +134,12 @@ export async function POST(request: NextRequest) {
       'ncaatourney@gmail.com',
     ];
 
-    const isDoNotReply = doNotReplyAddresses.some(addr => 
-      toEmail?.toLowerCase().includes(addr.toLowerCase()) ||
-      emailData.to?.toLowerCase().includes(addr.toLowerCase())
-    );
+    // Only check if toEmail is a string
+    const isDoNotReply = toEmail && typeof toEmail === 'string' 
+      ? doNotReplyAddresses.some(addr => 
+          toEmail.toLowerCase().includes(addr.toLowerCase())
+        )
+      : false;
 
     if (!isDoNotReply) {
       console.log(`[InboundEmail] Email not to do-not-reply address, ignoring`);
