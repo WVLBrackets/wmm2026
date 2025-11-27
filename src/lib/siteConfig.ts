@@ -77,6 +77,7 @@ export interface SiteConfigData {
   regEmailGreeting?: string;
   regEmailMessage1?: string;
   regEmailMessage2?: string;
+  regEmailSpamReminder?: string;
   regEmailFooter?: string;
   // Account creation success page content
   acctCreateSuccessHeader?: string;
@@ -109,6 +110,16 @@ export interface SiteConfigData {
   // Test configuration (browser-specific to avoid duplication)
   happy_path_email_test_chrome?: string;
   happy_path_email_test_firefox?: string;
+  // Email "Do Not Reply" notice configuration
+  emailDoNotReplyNotice?: string;
+  emailContactAddress?: string;
+  // Generic spam reminder for all emails (falls back to regEmailSpamReminder if not set)
+  emailSpamReminder?: string;
+  // Auto-reply message configuration (for do-not-reply addresses)
+  autoReplyHeading?: string;
+  autoReplyGreeting?: string;
+  autoReplyMainMessage?: string;
+  autoReplyClosing?: string;
 }
 
 /**
@@ -396,6 +407,9 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
           case 'reg_email_message2':
             config.regEmailMessage2 = value;
             break;
+          case 'reg_email_spam_reminder':
+            config.regEmailSpamReminder = value;
+            break;
           case 'reg_email_footer':
             config.regEmailFooter = value;
             break;
@@ -449,6 +463,27 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
             break;
           case 'happy_path_email_test_firefox':
             config.happy_path_email_test_firefox = value;
+            break;
+          case 'email_do_not_reply_notice':
+            config.emailDoNotReplyNotice = value;
+            break;
+          case 'email_contact_address':
+            config.emailContactAddress = value;
+            break;
+          case 'email_spam_reminder':
+            config.emailSpamReminder = value;
+            break;
+          case 'auto_reply_heading':
+            config.autoReplyHeading = value;
+            break;
+          case 'auto_reply_greeting':
+            config.autoReplyGreeting = value;
+            break;
+          case 'auto_reply_main_message':
+            config.autoReplyMainMessage = value;
+            break;
+          case 'auto_reply_closing':
+            config.autoReplyClosing = value;
             break;
           default:
             // Unknown parameter - log for debugging (only in development)

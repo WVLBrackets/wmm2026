@@ -75,6 +75,7 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   regEmailGreeting: 'Hi {Name},',
   regEmailMessage1: 'Thank you for signing up for Warren\'s March Madness {Year}!',
   regEmailMessage2: 'To complete your account setup, please confirm your email address by clicking the button below:',
+  regEmailSpamReminder: '💡 <strong>Can\'t find this email?</strong> Please check your spam or junk mail folder. If you still don\'t see it, the email may take a few minutes to arrive.',
   regEmailFooter: 'If you didn\'t create an account with Warren\'s March Madness, please ignore this email.',
   // Account creation success page defaults
   acctCreateSuccessHeader: 'Check Your Email!',
@@ -103,6 +104,11 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   stopSubmitDateTime: '',
   stopSubmitToggle: 'No',
   finalMessageTooLate: 'Bracket submissions are closed. The deadline has passed.',
-  finalMessageSubmitOff: 'Bracket submissions are currently disabled.'
+  finalMessageSubmitOff: 'Bracket submissions are currently disabled.',
+  // Auto-reply message configuration (for do-not-reply addresses)
+  autoReplyHeading: 'Automatic Reply',
+  autoReplyGreeting: 'Hello,',
+  autoReplyMainMessage: 'Thank you for your message. However, you have replied to an automated email address that is not monitored.',
+  autoReplyClosing: 'We apologize for any inconvenience. For the fastest response, please send your inquiry directly to the email address above.'
 };
 

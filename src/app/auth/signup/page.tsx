@@ -135,6 +135,36 @@ export default function SignUpPage() {
                     ));
                   })()}
                 </p>
+                <div className="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+                  <p className="text-sm text-yellow-800 text-center">
+                    {(() => {
+                      // Get spam reminder from config
+                      const spamReminder = siteConfig?.regEmailSpamReminder || FALLBACK_CONFIG.regEmailSpamReminder || '';
+                      
+                      // Extract the part after the question mark (after "Can't find this email?" or "Can't find the email?")
+                      // The config value format is: "💡 <strong>Can't find this email?</strong> [rest of message]"
+                      // We want to extract just the [rest of message] part
+                      let reminderText = spamReminder
+                        .replace(/^💡\s*/, '') // Remove leading emoji and space
+                        .replace(/<strong>.*?<\/strong>\s*/i, '') // Remove <strong>Can't find this email?</strong>
+                        .replace(/Can&apos;t find (the|this) email\?\s*/i, '') // Remove "Can't find the email?" or "Can't find this email?"
+                        .replace(/Can't find (the|this) email\?\s*/i, '') // Remove without HTML entities
+                        .trim();
+                      
+                      // Fallback if extraction didn't work
+                      if (!reminderText) {
+                        reminderText = 'Please check your spam or junk mail folder. If you still don\'t see it, the email may take a few minutes to arrive.';
+                      }
+                      
+                      // Fixed prefix + config value
+                      return (
+                        <>
+                          💡 <strong>Can&apos;t find the email?</strong> {reminderText}
+                        </>
+                      );
+                    })()}
+                  </p>
+                </div>
                 <div className="mt-6">
                   <Link
                     href="/auth/signin"

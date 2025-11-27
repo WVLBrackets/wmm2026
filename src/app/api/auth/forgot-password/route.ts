@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPasswordResetToken, getUserByEmail } from '@/lib/secureDatabase';
 import { sendPasswordResetEmail } from '@/lib/emailService';
+import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,8 +62,10 @@ export async function POST(request: NextRequest) {
     }
     
     const resetLink = `${baseUrl}/auth/reset-password?token=${resetToken}`;
+    // Get site config for email notice
+    const siteConfig = await getSiteConfigFromGoogleSheets();
     // Our email templating builds the link from the provided code, so pass the token as the code
-    const emailSent = await sendPasswordResetEmail(email, user.name, resetLink, resetToken);
+    const emailSent = await sendPasswordResetEmail(email, user.name, resetLink, resetToken, siteConfig);
 
     if (!emailSent) {
       return NextResponse.json(

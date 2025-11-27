@@ -1,0 +1,247 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { sendAutoReplyEmail } from '@/lib/autoReplyService';
+import crypto from 'crypto';
+
+/**
+ * POST /api/email/inbound
+ * 
+ * Webhook endpoint for receiving inbound emails from Resend
+ * This handles replies to do-not-reply addresses and sends auto-replies
+ * 
+ * Resend webhook documentation: https://resend.com/docs/dashboard/webhooks
+ */
+export async function POST(request: NextRequest) {
+  try {
+    // Get raw body for signature verification (if needed)
+    const rawBody = await request.text();
+    
+    // Define webhook payload type
+    interface ResendWebhookPayload {
+      type?: string;
+      event?: string;
+      data?: {
+        from?: { email?: string } | string;
+        sender?: { email?: string };
+        subject?: string;
+        to?: string;
+        recipient?: string;
+      };
+      from?: { email?: string } | string;
+      sender?: { email?: string };
+      subject?: string;
+      to?: string;
+      recipient?: string;
+    }
+    
+    let body: ResendWebhookPayload;
+    
+    try {
+      body = JSON.parse(rawBody) as ResendWebhookPayload;
+    } catch {
+      console.error('[InboundEmail] Invalid JSON payload');
+      return NextResponse.json(
+        { error: 'Invalid JSON payload' },
+        { status: 400 }
+      );
+    }
+
+    // Verify webhook signature (if configured)
+    const signature = request.headers.get('resend-signature') || 
+                     request.headers.get('x-resend-signature') ||
+                     request.headers.get('signature');
+    const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
+    const vercelEnv = process.env.VERCEL_ENV || 'production';
+    const isProduction = vercelEnv === 'production';
+    
+    // Log signature verification status for debugging
+    console.log('[InboundEmail] Signature verification status:', {
+      hasSecret: !!webhookSecret,
+      hasSignature: !!signature,
+      signatureHeader: signature ? 'present' : 'missing',
+      environment: vercelEnv,
+      isProduction,
+    });
+    
+    if (webhookSecret && signature) {
+      // Create a new request with the raw body for signature verification
+      const requestForVerification = new NextRequest(request.url, {
+        method: request.method,
+        headers: request.headers,
+        body: rawBody,
+      });
+      
+      const isValid = await verifyResendSignature(requestForVerification, signature, webhookSecret);
+      if (!isValid) {
+        console.error('[InboundEmail] Invalid webhook signature');
+        return NextResponse.json(
+          { error: 'Invalid signature' },
+          { status: 401 }
+        );
+      }
+      console.log('[InboundEmail] Webhook signature verified successfully');
+    } else if (isProduction) {
+      // In production, warn if signature verification is not configured
+      if (!webhookSecret) {
+        console.warn('[InboundEmail] WARNING: RESEND_WEBHOOK_SECRET not set in environment variables');
+      }
+      if (!signature) {
+        console.warn('[InboundEmail] WARNING: Resend webhook signature header not present in request');
+      }
+    }
+    
+    // Resend webhook format (adjust based on actual Resend webhook structure)
+    // Expected format: { type: 'email.received', data: { from: string, subject: string, ... } }
+    const eventType = body.type || body.event;
+    
+    // Get email data - could be in body.data or directly in body
+    const emailData = body.data || body;
+
+    // Log webhook payload for debugging (first few webhooks)
+    console.log('[InboundEmail] Webhook payload:', JSON.stringify(body, null, 2));
+    console.log('[InboundEmail] Event type:', eventType);
+    console.log('[InboundEmail] Email data:', JSON.stringify(emailData, null, 2));
+
+    // Only process email.received events (inbound emails)
+    if (eventType !== 'email.received' && eventType !== 'email.replied') {
+      console.log(`[InboundEmail] Ignoring event type: ${eventType}`);
+      return NextResponse.json({ received: true });
+    }
+
+    // Extract email information
+    // Handle from field which can be string or object
+    let fromEmail: string | undefined;
+    
+    // Check if from is a string
+    if (typeof emailData.from === 'string') {
+      fromEmail = emailData.from;
+    } 
+    // Check if from is an object with email property
+    else if (emailData.from && typeof emailData.from === 'object' && 'email' in emailData.from) {
+      fromEmail = emailData.from.email;
+    } 
+    // Check sender object
+    else if (emailData.sender && typeof emailData.sender === 'object' && 'email' in emailData.sender) {
+      fromEmail = emailData.sender.email;
+    }
+    
+    const subject = emailData.subject || '';
+    // toEmail could be string, array, or object - normalize to string
+    let toEmail: string | undefined;
+    if (typeof emailData.to === 'string') {
+      toEmail = emailData.to;
+    } else if (Array.isArray(emailData.to)) {
+      toEmail = emailData.to[0]; // Take first email if array
+    } else if (emailData.recipient) {
+      toEmail = typeof emailData.recipient === 'string' ? emailData.recipient : undefined;
+    }
+
+    if (!fromEmail) {
+      console.error('[InboundEmail] Missing sender email address');
+      return NextResponse.json(
+        { error: 'Missing sender email' },
+        { status: 400 }
+      );
+    }
+
+    // Check if this is a reply to a do-not-reply address
+    const doNotReplyAddresses = [
+      'donotreply@warrensmm.com',
+      'donotreply-staging@warrensmm.com',
+      'donotreply.wmm.stage@gmail.com',
+      'ncaatourney@gmail.com',
+    ];
+
+    // Only check if toEmail is a string
+    const isDoNotReply = toEmail && typeof toEmail === 'string' 
+      ? doNotReplyAddresses.some(addr => 
+          toEmail.toLowerCase().includes(addr.toLowerCase())
+        )
+      : false;
+
+    if (!isDoNotReply) {
+      console.log(`[InboundEmail] Email not to do-not-reply address, ignoring`);
+      return NextResponse.json({ received: true });
+    }
+
+    // Send auto-reply
+    console.log(`[InboundEmail] Processing reply from ${fromEmail} to do-not-reply address`);
+    const autoReplySent = await sendAutoReplyEmail(fromEmail, subject);
+
+    if (autoReplySent) {
+      console.log(`[InboundEmail] Auto-reply sent successfully to ${fromEmail}`);
+    } else {
+      console.error(`[InboundEmail] Failed to send auto-reply to ${fromEmail}`);
+    }
+
+    return NextResponse.json({
+      received: true,
+      autoReplySent,
+      message: 'Email processed successfully',
+    });
+
+  } catch (error) {
+    console.error('[InboundEmail] Error processing inbound email:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * Verify Resend webhook signature
+ * 
+ * Resend webhook signatures use HMAC SHA256
+ * Format: The signature header contains the HMAC hash of the request body
+ * 
+ * Note: This implementation may need adjustment based on Resend's actual format
+ * Check Resend documentation for the exact signature format
+ */
+async function verifyResendSignature(
+  request: NextRequest,
+  signature: string,
+  secret: string
+): Promise<boolean> {
+  try {
+    // Get the raw request body for signature verification
+    // Note: Next.js request body can only be read once, so we need to clone
+    const clonedRequest = request.clone();
+    const bodyText = await clonedRequest.text();
+    
+    // Resend typically uses HMAC SHA256 with the secret
+    // Signature format may be: "sha256=<hash>" or just the hash
+    const signatureHash = signature.replace('sha256=', '');
+    
+    // Calculate expected signature
+    const expectedSignature = crypto
+      .createHmac('sha256', secret)
+      .update(bodyText)
+      .digest('hex');
+    
+    // Compare signatures using constant-time comparison to prevent timing attacks
+    const isValid = crypto.timingSafeEqual(
+      Buffer.from(signatureHash, 'hex'),
+      Buffer.from(expectedSignature, 'hex')
+    );
+    
+    return isValid;
+  } catch (error) {
+    console.error('[InboundEmail] Signature verification error:', error);
+    // If verification fails, log but don't block (for development/testing)
+    // In production, you may want to return false to block unverified requests
+    return process.env.NODE_ENV === 'production' ? false : true;
+  }
+}
+
+/**
+ * GET /api/email/inbound
+ * Health check endpoint
+ */
+export async function GET() {
+  return NextResponse.json({
+    status: 'ok',
+    message: 'Inbound email webhook endpoint is active',
+    timestamp: new Date().toISOString(),
+  });
+}
+

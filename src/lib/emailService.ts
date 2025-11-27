@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
+import type { SiteConfigData } from '@/lib/siteConfig';
 
 export interface EmailServiceConfig {
   provider: 'gmail' | 'sendgrid' | 'resend' | 'console' | 'disabled';
@@ -363,6 +364,35 @@ function escapeHtml(text: string): string {
 }
 
 /**
+ * Generate "Do Not Reply" notice HTML and text
+ * Replaces {contactEmail} with the actual contact address from config
+ */
+function generateDoNotReplyNotice(
+  siteConfig?: Pick<SiteConfigData, 'emailDoNotReplyNotice' | 'emailContactAddress'> | null
+): { html: string; text: string } {
+  const noticeText = siteConfig?.emailDoNotReplyNotice || 
+    'Please do not reply to this email. This is an automated message from an unmonitored mailbox. If you need assistance, please contact us at {contactEmail}.';
+  const contactEmail = siteConfig?.emailContactAddress || 'support@warrensmm.com';
+  
+  // Replace {contactEmail} variable
+  const noticeWithEmail = noticeText.replace(/\{contactEmail\}/g, contactEmail);
+  
+  // Generate HTML version (escape HTML for safety)
+  const html = `
+    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+      <p style="font-size: 12px; color: #666; font-style: italic; margin: 0;">
+        ${escapeHtml(noticeWithEmail)}
+      </p>
+    </div>
+  `;
+  
+  // Generate text version
+  const text = `\n\n${noticeWithEmail}\n`;
+  
+  return { html, text };
+}
+
+/**
  * Replace template variables in registration email text
  * Supports {Name} and {Year} syntax
  * Note: Values are escaped for HTML safety
@@ -384,7 +414,7 @@ export async function sendConfirmationEmail(
   name: string, 
   confirmationLink: string, 
   confirmationCode: string,
-  siteConfig?: { regEmailSubject?: string; regEmailHeader?: string; regEmailGreeting?: string; regEmailMessage1?: string; regEmailMessage2?: string; regEmailFooter?: string; tournamentYear?: string } | null
+  siteConfig?: SiteConfigData | null
 ): Promise<boolean> {
   // Only show badge for non-production environments
   const environment = process.env.VERCEL_ENV || 'production';
@@ -465,6 +495,7 @@ export async function sendConfirmationEmail(
         <p style="word-break: break-all; color: #666;">${confirmationLink}</p>
         <p>Your confirmation code is: <strong>${confirmationCode}</strong></p>
         <p>This link will expire in 24 hours.</p>
+        ${generateDoNotReplyNotice(siteConfig).html}
         <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
         <p style="font-size: 12px; color: #666; text-align: center;">
           ${footer}
@@ -526,7 +557,7 @@ Your confirmation code is: ${confirmationCode}
 
 This link will expire in 24 hours.
 
-${textFooter}
+${generateDoNotReplyNotice(siteConfig).text}${textFooter}
   `;
 
   const emailSent = await emailService.sendEmail({
@@ -554,7 +585,13 @@ ${textFooter}
   return emailSent;
 }
 
-export async function sendPasswordResetEmail(to: string, name: string, resetLink: string, resetCode: string): Promise<boolean> {
+export async function sendPasswordResetEmail(
+  to: string, 
+  name: string, 
+  resetLink: string, 
+  resetCode: string,
+  siteConfig?: SiteConfigData | null
+): Promise<boolean> {
   // Only show badge for non-production environments
   const environment = process.env.VERCEL_ENV || 'production';
   const isProduction = environment === 'production';
@@ -588,6 +625,7 @@ export async function sendPasswordResetEmail(to: string, name: string, resetLink
         <p style="word-break: break-all; color: #666;">${resetLink}</p>
         <p>Your reset code is: <strong>${resetCode}</strong></p>
         <p>This link will expire in 1 hour.</p>
+        ${generateDoNotReplyNotice(siteConfig).html}
         <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
         <p style="font-size: 12px; color: #666; text-align: center;">
           If you didn't request a password reset, please ignore this email. Your password will remain unchanged.
@@ -611,7 +649,7 @@ export async function sendPasswordResetEmail(to: string, name: string, resetLink
     
     This link will expire in 1 hour.
     
-    If you didn't request a password reset, please ignore this email. Your password will remain unchanged.
+    ${generateDoNotReplyNotice(siteConfig).text}If you didn't request a password reset, please ignore this email. Your password will remain unchanged.
   `;
 
   const emailSent = await emailService.sendEmail({
