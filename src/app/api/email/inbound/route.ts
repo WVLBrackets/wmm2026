@@ -50,6 +50,17 @@ export async function POST(request: NextRequest) {
                      request.headers.get('x-resend-signature') ||
                      request.headers.get('signature');
     const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
+    const vercelEnv = process.env.VERCEL_ENV || 'production';
+    const isProduction = vercelEnv === 'production';
+    
+    // Log signature verification status for debugging
+    console.log('[InboundEmail] Signature verification status:', {
+      hasSecret: !!webhookSecret,
+      hasSignature: !!signature,
+      signatureHeader: signature ? 'present' : 'missing',
+      environment: vercelEnv,
+      isProduction,
+    });
     
     if (webhookSecret && signature) {
       // Create a new request with the raw body for signature verification
@@ -67,9 +78,15 @@ export async function POST(request: NextRequest) {
           { status: 401 }
         );
       }
-    } else if (process.env.NODE_ENV === 'production') {
+      console.log('[InboundEmail] Webhook signature verified successfully');
+    } else if (isProduction) {
       // In production, warn if signature verification is not configured
-      console.warn('[InboundEmail] WARNING: Webhook signature verification not configured');
+      if (!webhookSecret) {
+        console.warn('[InboundEmail] WARNING: RESEND_WEBHOOK_SECRET not set in environment variables');
+      }
+      if (!signature) {
+        console.warn('[InboundEmail] WARNING: Resend webhook signature header not present in request');
+      }
     }
     
     // Resend webhook format (adjust based on actual Resend webhook structure)
