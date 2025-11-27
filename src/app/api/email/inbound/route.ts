@@ -144,12 +144,26 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if this is a reply to a do-not-reply address
-    const doNotReplyAddresses = [
-      'donotreply@warrensmm.com',
-      'donotreply-staging@warrensmm.com',
-      'donotreply.wmm.stage@gmail.com',
-      'ncaatourney@gmail.com',
-    ];
+    // Only check addresses for the current environment to prevent duplicate replies
+    const vercelEnv = process.env.VERCEL_ENV || 'production';
+    const isProduction = vercelEnv === 'production';
+    
+    // Environment-specific do-not-reply addresses
+    // Production should only respond to production addresses
+    // Staging/preview should only respond to staging addresses
+    const doNotReplyAddresses = isProduction
+      ? [
+          'donotreply@warrensmm.com',
+          'ncaatourney@gmail.com', // Legacy production address
+        ]
+      : [
+          'donotreply-staging@warrensmm.com',
+          'donotreply.wmm.stage@gmail.com',
+        ];
+
+    console.log(`[InboundEmail] Environment: ${vercelEnv} (${isProduction ? 'production' : 'staging/preview'})`);
+    console.log(`[InboundEmail] Checking against addresses: ${doNotReplyAddresses.join(', ')}`);
+    console.log(`[InboundEmail] Email sent to: ${toEmail}`);
 
     // Only check if toEmail is a string
     const isDoNotReply = toEmail && typeof toEmail === 'string' 
@@ -159,7 +173,7 @@ export async function POST(request: NextRequest) {
       : false;
 
     if (!isDoNotReply) {
-      console.log(`[InboundEmail] Email not to do-not-reply address, ignoring`);
+      console.log(`[InboundEmail] Email not to a do-not-reply address for this environment, ignoring`);
       return NextResponse.json({ received: true });
     }
 
