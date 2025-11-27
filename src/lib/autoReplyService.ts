@@ -20,6 +20,14 @@ export async function sendAutoReplyEmail(
       siteConfig = await getSiteConfigFromGoogleSheets();
     }
 
+    // Get configurable fields from site config
+    const { FALLBACK_CONFIG } = await import('./fallbackConfig');
+    
+    const heading = siteConfig?.autoReplyHeading || FALLBACK_CONFIG.autoReplyHeading || 'Automatic Reply';
+    const greeting = siteConfig?.autoReplyGreeting || FALLBACK_CONFIG.autoReplyGreeting || 'Hello,';
+    const mainMessage = siteConfig?.autoReplyMainMessage || FALLBACK_CONFIG.autoReplyMainMessage || 'Thank you for your message. However, you have replied to an automated email address that is not monitored.';
+    const closing = siteConfig?.autoReplyClosing || FALLBACK_CONFIG.autoReplyClosing || 'We apologize for any inconvenience. For the fastest response, please send your inquiry directly to the email address above.';
+    
     // Get contact email from config
     const contactEmail = siteConfig?.emailContactAddress || 'support@warrensmm.com';
     
@@ -27,7 +35,12 @@ export async function sendAutoReplyEmail(
     const doNotReplyNotice = siteConfig?.emailDoNotReplyNotice || 
       'Please do not reply to this email. This is an automated message from an unmonitored mailbox. If you need assistance, please contact us at {contactEmail}.';
     
-    // Replace {contactEmail} variable
+    // Replace {contactEmail} variable in the notice
+    // For HTML, we'll make the email a clickable link
+    const noticeWithEmailHtml = doNotReplyNotice.replace(
+      /\{contactEmail\}/g, 
+      `<a href="mailto:${contactEmail}" style="color: #856404; font-weight: bold;">${contactEmail}</a>`
+    );
     const noticeWithEmail = doNotReplyNotice.replace(/\{contactEmail\}/g, contactEmail);
 
     // Create auto-reply HTML
@@ -36,22 +49,19 @@ export async function sendAutoReplyEmail(
       <html>
       <head>
         <meta charset="utf-8">
-        <title>Auto-Reply: Do Not Reply Address</title>
+        <title>${heading}</title>
       </head>
       <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px;">
-          <h2 style="color: #2c3e50; text-align: center;">Automatic Reply</h2>
-          <p>Hello,</p>
-          <p>Thank you for your message. However, you have replied to an automated email address that is not monitored.</p>
+          <h2 style="color: #2c3e50; text-align: center;">${heading}</h2>
+          <p>${greeting}</p>
+          <p>${mainMessage}</p>
           <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 16px; margin: 20px 0; border-radius: 4px;">
             <p style="margin: 0; font-size: 13px; color: #856404;">
-              <strong>This mailbox is not monitored.</strong> If you need assistance, please contact us directly at:
-            </p>
-            <p style="margin: 8px 0 0 0; font-size: 13px; color: #856404;">
-              <a href="mailto:${contactEmail}" style="color: #856404; font-weight: bold;">${contactEmail}</a>
+              ${noticeWithEmailHtml}
             </p>
           </div>
-          <p>We apologize for any inconvenience. For the fastest response, please send your inquiry directly to the email address above.</p>
+          <p>${closing}</p>
           <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
           <p style="font-size: 12px; color: #666; text-align: center;">
             ${noticeWithEmail}
@@ -63,15 +73,15 @@ export async function sendAutoReplyEmail(
 
     // Create plain text version
     const text = `
-Automatic Reply
+${heading}
 
-Hello,
+${greeting}
 
-Thank you for your message. However, you have replied to an automated email address that is not monitored.
+${mainMessage}
 
-This mailbox is not monitored. If you need assistance, please contact us directly at: ${contactEmail}
+${noticeWithEmail}
 
-We apologize for any inconvenience. For the fastest response, please send your inquiry directly to the email address above.
+${closing}
 
 ${noticeWithEmail}
     `.trim();

@@ -115,6 +115,11 @@ export interface SiteConfigData {
   emailContactAddress?: string;
   // Generic spam reminder for all emails (falls back to regEmailSpamReminder if not set)
   emailSpamReminder?: string;
+  // Auto-reply message configuration (for do-not-reply addresses)
+  autoReplyHeading?: string;
+  autoReplyGreeting?: string;
+  autoReplyMainMessage?: string;
+  autoReplyClosing?: string;
 }
 
 /**
@@ -467,6 +472,18 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
             break;
           case 'email_spam_reminder':
             config.emailSpamReminder = value;
+            break;
+          case 'auto_reply_heading':
+            config.autoReplyHeading = value;
+            break;
+          case 'auto_reply_greeting':
+            config.autoReplyGreeting = value;
+            break;
+          case 'auto_reply_main_message':
+            config.autoReplyMainMessage = value;
+            break;
+          case 'auto_reply_closing':
+            config.autoReplyClosing = value;
             break;
           default:
             // Unknown parameter - log for debugging (only in development)

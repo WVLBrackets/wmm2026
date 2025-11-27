@@ -139,3 +139,4 @@ Gmail SMTP uses Google's infrastructure, so SPF/DKIM/DMARC are automatically han
 - [SPF Record Syntax](https://www.openspf.org/SPF_Record_Syntax)
 - [DMARC Guide](https://dmarc.org/wiki/FAQ)
 
+

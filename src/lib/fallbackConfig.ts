@@ -104,6 +104,11 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   stopSubmitDateTime: '',
   stopSubmitToggle: 'No',
   finalMessageTooLate: 'Bracket submissions are closed. The deadline has passed.',
-  finalMessageSubmitOff: 'Bracket submissions are currently disabled.'
+  finalMessageSubmitOff: 'Bracket submissions are currently disabled.',
+  // Auto-reply message configuration (for do-not-reply addresses)
+  autoReplyHeading: 'Automatic Reply',
+  autoReplyGreeting: 'Hello,',
+  autoReplyMainMessage: 'Thank you for your message. However, you have replied to an automated email address that is not monitored.',
+  autoReplyClosing: 'We apologize for any inconvenience. For the fastest response, please send your inquiry directly to the email address above.'
 };
 
