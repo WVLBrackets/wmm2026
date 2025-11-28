@@ -39,6 +39,15 @@ jobs:
             echo "TEST_ENV=staging" >> $GITHUB_ENV
           fi
       
+      - name: Display test configuration
+        run: |
+          echo "## 🧪 Test Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ steps.env.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Browser:** chromium (smoke tests only)" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+      
       - name: Run smoke tests
         env:
           TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}

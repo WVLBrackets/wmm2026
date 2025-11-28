@@ -40,6 +40,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
+      - name: Display test configuration
+        run: |
+          echo "## 🧪 Test Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Browser:** ${{ inputs.browser }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+      
       - name: Install Playwright browsers
         run: |
           if [ "${{ inputs.browser }}" == "all" ]; then

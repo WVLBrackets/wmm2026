@@ -26,6 +26,15 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
       
+      - name: Display test configuration
+        run: |
+          echo "## 🧪 Test Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** staging (health checks only)" >> $GITHUB_STEP_SUMMARY
+          echo "**Browser:** chromium" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+      
       - name: Run health check tests
         env:
           TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
