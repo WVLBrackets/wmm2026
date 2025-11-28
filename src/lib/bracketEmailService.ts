@@ -109,11 +109,13 @@ export async function sendSubmissionConfirmationEmail(
         content: Buffer;
         contentType: string;
       }>;
+      siteConfig?: SiteConfigData | null;
     } = {
       to: user.email,
       subject: emailContent.subject,
       html: emailContent.html,
       text: emailContent.text,
+      siteConfig, // Pass siteConfig for test user detection
     };
     
     // Add PDF attachment if generated successfully
@@ -242,6 +244,7 @@ export async function sendOnDemandPdfEmail(
           contentType: 'application/pdf',
         },
       ],
+      siteConfig, // Pass siteConfig for test user detection
     });
     
     // Log email event (Bracket Email - attachment expected)
