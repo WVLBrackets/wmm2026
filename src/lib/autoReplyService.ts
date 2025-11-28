@@ -1,5 +1,5 @@
 import { emailService } from './emailService';
-import { getSiteConfigFromGoogleSheetsFresh } from './siteConfig';
+import { getSiteConfigFromGoogleSheets } from './siteConfig';
 import type { SiteConfigData } from './siteConfig';
 
 /**
@@ -15,9 +15,10 @@ export async function sendAutoReplyEmail(
   siteConfig?: SiteConfigData | null
 ): Promise<boolean> {
   try {
-    // Get site config if not provided (use fresh to bypass cache)
+    // Get site config if not provided (use cached version - auto-reply messages don't need real-time updates)
+    // Using cached config prevents timeouts and improves reliability
     if (!siteConfig) {
-      siteConfig = await getSiteConfigFromGoogleSheetsFresh();
+      siteConfig = await getSiteConfigFromGoogleSheets();
     }
 
     // Get configurable fields from site config

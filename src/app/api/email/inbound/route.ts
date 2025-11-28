@@ -104,11 +104,13 @@ export async function POST(request: NextRequest) {
       console.log('[InboundEmail] Webhook signature verified successfully');
     } else if (isProduction) {
       // In production, warn if signature verification is not configured
+      // Note: Resend may not send signatures for inbound email webhooks (only for outbound)
+      // This is informational - the system will still function without signature verification
       if (!webhookSecret) {
         console.warn('[InboundEmail] WARNING: RESEND_WEBHOOK_SECRET not set in environment variables');
       }
       if (!signature) {
-        console.warn('[InboundEmail] WARNING: Resend webhook signature header not present in request');
+        console.log('[InboundEmail] INFO: Resend webhook signature header not present. This may be normal for inbound email webhooks - Resend may not send signatures for this event type.');
       }
     }
     
