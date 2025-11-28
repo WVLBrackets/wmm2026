@@ -25,11 +25,11 @@ if (!testId || !mode || !browser) {
   process.exit(1);
 }
 
-// Get projects from helper script
+// Get projects from helper script (returns JSON array to handle spaces in project names)
 let projects;
 try {
   const projectsOutput = execSync(`node scripts/get-playwright-projects.js ${mode} ${browser}`, { encoding: 'utf-8' });
-  projects = projectsOutput.trim().split(' ');
+  projects = JSON.parse(projectsOutput.trim());
 } catch (error) {
   console.error(`Error determining projects: ${error.message}`);
   process.exit(1);
