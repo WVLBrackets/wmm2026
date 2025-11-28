@@ -143,25 +143,99 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // EARLY CROSS-ENVIRONMENT CHECK - Do this immediately after extracting toEmail
+    // This prevents production from processing staging emails and vice versa
+    if (toEmail && typeof toEmail === 'string') {
+      // Extract just the email address if it's in angle brackets or has a name
+      let cleanToEmail = toEmail.toLowerCase().trim();
+      // Extract email from "Name <email@domain.com>" format
+      const angleBracketMatch = cleanToEmail.match(/<([^>]+)>/);
+      if (angleBracketMatch) {
+        cleanToEmail = angleBracketMatch[1].trim();
+      }
+      // Remove any leading/trailing whitespace or quotes
+      cleanToEmail = cleanToEmail.replace(/^["']|["']$/g, '').trim();
+
+      // Check if this is a staging email but we're in production, or vice versa
+      const isStagingEmail = cleanToEmail === 'donotreply-staging@warrensmm.com' || 
+                            cleanToEmail === 'donotreply.wmm.stage@gmail.com';
+      const isProductionEmail = cleanToEmail === 'donotreply@warrensmm.com' || 
+                                cleanToEmail === 'ncaatourney@gmail.com';
+      
+      if (isProduction && isStagingEmail) {
+        console.log(`[InboundEmail] 🚫 BLOCKED: Production environment received staging email (${cleanToEmail}), ignoring immediately`);
+        return NextResponse.json({ received: true, blocked: 'cross-environment', reason: 'production-received-staging-email' });
+      }
+      
+      if (!isProduction && isProductionEmail) {
+        console.log(`[InboundEmail] 🚫 BLOCKED: Staging environment received production email (${cleanToEmail}), ignoring immediately`);
+        return NextResponse.json({ received: true, blocked: 'cross-environment', reason: 'staging-received-production-email' });
+      }
+      
+      console.log(`[InboundEmail] ✓ Email (${cleanToEmail}) passed cross-environment check for ${isProduction ? 'production' : 'staging'} environment`);
+    }
+
     // Check if this is a reply to a do-not-reply address
-    const doNotReplyAddresses = [
-      'donotreply@warrensmm.com',
-      'donotreply-staging@warrensmm.com',
-      'donotreply.wmm.stage@gmail.com',
-      'ncaatourney@gmail.com',
-    ];
+    // Only check addresses for the current environment to prevent duplicate replies
+    // (vercelEnv and isProduction are already defined above)
+    
+    // Environment-specific do-not-reply addresses
+    // Production should only respond to production addresses
+    // Staging/preview should only respond to staging addresses
+    const doNotReplyAddresses = isProduction
+      ? [
+          'donotreply@warrensmm.com',
+          'ncaatourney@gmail.com', // Legacy production address
+        ]
+      : [
+          'donotreply-staging@warrensmm.com',
+          'donotreply.wmm.stage@gmail.com',
+        ];
 
-    // Only check if toEmail is a string
-    const isDoNotReply = toEmail && typeof toEmail === 'string' 
-      ? doNotReplyAddresses.some(addr => 
-          toEmail.toLowerCase().includes(addr.toLowerCase())
-        )
-      : false;
+    console.log(`[InboundEmail] Environment: ${vercelEnv} (${isProduction ? 'production' : 'staging/preview'})`);
+    console.log(`[InboundEmail] Checking against addresses: ${doNotReplyAddresses.join(', ')}`);
+    console.log(`[InboundEmail] Email sent to: ${toEmail}`);
+    console.log(`[InboundEmail] Raw toEmail type: ${typeof toEmail}, value: ${JSON.stringify(toEmail)}`);
 
-    if (!isDoNotReply) {
-      console.log(`[InboundEmail] Email not to do-not-reply address, ignoring`);
+    // Early return if toEmail is missing
+    if (!toEmail || typeof toEmail !== 'string') {
+      console.log(`[InboundEmail] Missing or invalid toEmail, ignoring`);
       return NextResponse.json({ received: true });
     }
+
+    // Extract just the email address if it's in angle brackets or has a name
+    let cleanToEmail = toEmail.toLowerCase().trim();
+    // Extract email from "Name <email@domain.com>" format
+    const angleBracketMatch = cleanToEmail.match(/<([^>]+)>/);
+    if (angleBracketMatch) {
+      cleanToEmail = angleBracketMatch[1].trim();
+    }
+    // Remove any leading/trailing whitespace or quotes
+    cleanToEmail = cleanToEmail.replace(/^["']|["']$/g, '').trim();
+
+    console.log(`[InboundEmail] Cleaned toEmail: ${cleanToEmail}`);
+
+    // Use exact matching to prevent false positives (e.g., donotreply-staging matching donotreply)
+    // Note: Cross-environment blocking already happened above, so we can proceed with matching
+    const isDoNotReply = doNotReplyAddresses.some(addr => {
+      const normalizedAddr = addr.toLowerCase().trim();
+      
+      // Exact match only
+      if (cleanToEmail === normalizedAddr) {
+        console.log(`[InboundEmail] ✓ Exact match found: ${cleanToEmail} === ${normalizedAddr}`);
+        return true;
+      }
+      
+      console.log(`[InboundEmail] ✗ No match: ${cleanToEmail} !== ${normalizedAddr}`);
+      return false;
+    });
+
+    if (!isDoNotReply) {
+      console.log(`[InboundEmail] Email not to a do-not-reply address for this environment, ignoring`);
+      return NextResponse.json({ received: true });
+    }
+
+    console.log(`[InboundEmail] ✓ Email matches do-not-reply address for this environment, proceeding with auto-reply`);
 
     // Send auto-reply
     console.log(`[InboundEmail] Processing reply from ${fromEmail} to do-not-reply address`);
