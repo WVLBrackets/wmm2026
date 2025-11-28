@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
 import type { SiteConfigData } from '@/lib/siteConfig';
+import { isTestUserEmail, getTestUserReason } from '@/lib/testUserDetection';
 
 export interface EmailServiceConfig {
   provider: 'gmail' | 'sendgrid' | 'resend' | 'console' | 'disabled';
@@ -21,6 +22,7 @@ export interface EmailOptions {
   html: string;
   text?: string;
   attachments?: EmailAttachment[];
+  siteConfig?: SiteConfigData | null; // Optional site config for test user detection
 }
 
 class EmailService {
@@ -162,6 +164,32 @@ class EmailService {
   }
 
   async sendEmail(options: EmailOptions): Promise<boolean> {
+    // Check for email suppression (test users only)
+    const suppressEmails = process.env.SUPPRESS_TEST_EMAILS === 'true';
+    const recipientEmail = options.to;
+    
+    if (suppressEmails) {
+      const isTestUser = isTestUserEmail(recipientEmail, options.siteConfig || null);
+      
+      if (isTestUser) {
+        const reason = getTestUserReason(recipientEmail, options.siteConfig || null);
+        console.log(`[EmailService] 🚫 EMAIL SUPPRESSED - Test user detected`);
+        console.log(`[EmailService]    Recipient: ${recipientEmail}`);
+        console.log(`[EmailService]    Subject: ${options.subject}`);
+        console.log(`[EmailService]    Suppression Condition: SUPPRESS_TEST_EMAILS=true AND test user detected`);
+        console.log(`[EmailService]    Test User Reason: ${reason || 'pattern match'}`);
+        console.log(`[EmailService]    Email would have been sent but was suppressed to avoid hitting email limits`);
+        // Return true to indicate "success" (email was handled, just suppressed)
+        // This allows tests to pass even when emails are suppressed
+        return true;
+      } else {
+        // Real user - always send email regardless of suppression flag
+        console.log(`[EmailService] ✅ Email will be sent - Real user detected (not a test user)`);
+        console.log(`[EmailService]    Recipient: ${recipientEmail}`);
+        console.log(`[EmailService]    Note: SUPPRESS_TEST_EMAILS=true but recipient is not a test user, so email will be sent`);
+      }
+    }
+    
     // Determine environment for FROM_EMAIL selection
     const vercelEnv = process.env.VERCEL_ENV || 'production';
     const isProduction = vercelEnv === 'production';
@@ -580,6 +608,7 @@ ${generateDoNotReplyNotice(siteConfig).text}${textFooter}
     subject,
     html,
     text,
+    siteConfig, // Pass siteConfig for test user detection
   });
 
   // Log email event (Account Creation - no attachment expected)
@@ -672,6 +701,7 @@ export async function sendPasswordResetEmail(
     subject: "Password Reset - Warren's March Madness",
     html,
     text,
+    siteConfig, // Pass siteConfig for test user detection
   });
 
   // Log email event (Password Reset - no attachment expected)

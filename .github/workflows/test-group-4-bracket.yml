@@ -30,6 +30,14 @@ on:
           - chrome
           - firefox
           - webkit
+      send_emails:
+        description: 'Send emails during tests'
+        required: true
+        default: 'No'
+        type: choice
+        options:
+          - Yes
+          - No
 
 jobs:
   test-group-4:
@@ -64,6 +72,7 @@ jobs:
           echo "**Environment:** ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
           echo "**Mode:** ${{ inputs.mode }}" >> $GITHUB_STEP_SUMMARY
           echo "**Browser:** ${{ inputs.browser }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Send Emails:** ${{ inputs.send_emails }}" >> $GITHUB_STEP_SUMMARY
           echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Projects:** ${{ steps.projects.outputs.projects }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -79,6 +88,7 @@ jobs:
           TEST_USER_PASSWORD_STAGING: ${{ secrets.TEST_USER_PASSWORD_STAGING }}
           TEST_USER_PASSWORD_PRODUCTION: ${{ secrets.TEST_USER_PASSWORD_PRODUCTION }}
           TEST_ENV: ${{ inputs.environment }}
+          SUPPRESS_TEST_EMAILS: ${{ inputs.send_emails == 'No' && 'true' || 'false' }}
         run: |
           node scripts/run-tests-with-projects.js 4 ${{ inputs.mode }} ${{ inputs.browser }}
       
