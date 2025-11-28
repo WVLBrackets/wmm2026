@@ -133,16 +133,51 @@ const env = process.env.TEST_ENV || 'staging';
 
 // Get additional Playwright arguments (everything after testId)
 // Handle '--' separator that GitHub Actions might pass
-let playwrightArgs = process.argv.slice(3).join(' ');
+const rawArgs = process.argv.slice(3);
 
-// Remove leading '-- ' separator (GitHub Actions uses this to separate arguments)
-// But preserve any actual flags like '--project=chromium'
-if (playwrightArgs.startsWith('-- ')) {
-  // Remove the '-- ' separator, keep the rest (which should be the actual flag)
-  playwrightArgs = playwrightArgs.substring(3).trim();
-} else if (playwrightArgs === '--' || playwrightArgs.startsWith('-- ') || (playwrightArgs.startsWith('--') && playwrightArgs.length === 2)) {
-  // If it's just '--' by itself (separator with nothing after), remove it
-  playwrightArgs = '';
+// Find the '--' separator index
+let separatorIndex = rawArgs.indexOf('--');
+if (separatorIndex === -1) {
+  separatorIndex = rawArgs.length;
+}
+
+// Get arguments after the separator (or all args if no separator)
+const argsAfterSeparator = rawArgs.slice(separatorIndex + 1);
+
+// Process arguments to handle --project flags properly
+// Support both --project=name and --project name formats
+let playwrightArgs = '';
+if (argsAfterSeparator.length > 0) {
+  const processedArgs = [];
+  for (let i = 0; i < argsAfterSeparator.length; i++) {
+    const arg = argsAfterSeparator[i];
+    if (arg === '--project') {
+      // Handle --project name format (separate arguments)
+      if (i + 1 < argsAfterSeparator.length) {
+        const projectName = argsAfterSeparator[i + 1];
+        // Quote project name if it contains spaces or special characters
+        if (projectName.includes(' ') || projectName.includes('(') || projectName.includes(')')) {
+          processedArgs.push(`--project="${projectName}"`);
+        } else {
+          processedArgs.push(`--project=${projectName}`);
+        }
+        i++; // Skip the next argument as we've consumed it
+      }
+    } else if (arg.startsWith('--project=')) {
+      // Handle --project=name format
+      const projectName = arg.substring('--project='.length);
+      // Quote project name if it contains spaces or special characters and isn't already quoted
+      if ((projectName.includes(' ') || projectName.includes('(') || projectName.includes(')')) && !projectName.startsWith('"')) {
+        processedArgs.push(`--project="${projectName}"`);
+      } else {
+        processedArgs.push(arg);
+      }
+    } else {
+      // Other arguments pass through as-is
+      processedArgs.push(arg);
+    }
+  }
+  playwrightArgs = processedArgs.join(' ');
 }
 
 // Ensure --project has the -- prefix if it's missing (common issue)

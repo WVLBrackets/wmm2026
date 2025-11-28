@@ -11,7 +11,7 @@
  *   node scripts/run-tests-with-projects.js 2 both all
  */
 
-const { execSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
 
 const testId = process.argv[2];
 const mode = process.argv[3];
@@ -40,8 +40,13 @@ if (projects.length === 0) {
   process.exit(1);
 }
 
-// Build --project flags (handle spaces in project names)
-const projectFlags = projects.map(p => `--project="${p}"`).join(' ');
+// Build --project flags with proper quoting for project names with spaces/parentheses
+// Use JSON.stringify to properly escape quotes and special characters
+const projectFlags = projects.map(p => {
+  // Use JSON.stringify to properly escape the project name
+  const quoted = JSON.stringify(p);
+  return `--project=${quoted}`;
+}).join(' ');
 
 // Run the test with the project flags
 const env = process.env.TEST_ENV || 'staging';
@@ -51,7 +56,7 @@ console.log(`   Mode: ${mode}, Browser: ${browser}`);
 console.log('');
 
 // Use run-test-by-id.js which will handle the project flags
-// Pass the project flags as additional arguments
+// Pass the project flags as a string with properly quoted project names
 try {
   execSync(
     `npx cross-env TEST_ENV=${env} node scripts/run-test-by-id.js ${testId} -- ${projectFlags}`,
