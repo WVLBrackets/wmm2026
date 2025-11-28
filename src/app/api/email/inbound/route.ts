@@ -145,8 +145,7 @@ export async function POST(request: NextRequest) {
 
     // Check if this is a reply to a do-not-reply address
     // Only check addresses for the current environment to prevent duplicate replies
-    const vercelEnv = process.env.VERCEL_ENV || 'production';
-    const isProduction = vercelEnv === 'production';
+    // (vercelEnv and isProduction are already defined above)
     
     // Environment-specific do-not-reply addresses
     // Production should only respond to production addresses
