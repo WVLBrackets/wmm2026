@@ -14,7 +14,7 @@ on:
       mode:
         description: 'Device mode'
         required: true
-        default: 'desktop'
+        default: 'both'
         type: choice
         options:
           - desktop
@@ -61,12 +61,14 @@ jobs:
       - name: Determine Playwright projects
         id: projects
         run: |
-          PROJECTS=$(node scripts/get-playwright-projects.js ${{ inputs.mode }} ${{ inputs.browser }})
-          echo "projects=$PROJECTS" >> $GITHUB_OUTPUT
-          echo "Selected projects: $PROJECTS"
+          PROJECTS_JSON=$(node scripts/get-playwright-projects.js ${{ inputs.mode }} ${{ inputs.browser }})
+          PROJECTS_DISPLAY=$(node -e "console.log(JSON.parse('$PROJECTS_JSON').join(', '))")
+          echo "projects=$PROJECTS_JSON" >> $GITHUB_OUTPUT
+          echo "Selected projects: $PROJECTS_DISPLAY"
       
       - name: Display test configuration
         run: |
+          PROJECTS_DISPLAY=$(node -e "console.log(JSON.parse('${{ steps.projects.outputs.projects }}').join(', '))")
           echo "## 🧪 Test Configuration" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Environment:** ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
@@ -74,7 +76,7 @@ jobs:
           echo "**Browser:** ${{ inputs.browser }}" >> $GITHUB_STEP_SUMMARY
           echo "**Send Emails:** ${{ inputs.send_emails }}" >> $GITHUB_STEP_SUMMARY
           echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Projects:** ${{ steps.projects.outputs.projects }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Projects:** $PROJECTS_DISPLAY" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
       
       - name: Install Playwright browsers

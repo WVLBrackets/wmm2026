@@ -9,7 +9,7 @@
  *   node scripts/get-playwright-projects.js mobile all
  *   node scripts/get-playwright-projects.js both firefox
  * 
- * Output: Space-separated list of project names for --project flags
+ * Output: JSON array of project names (handles spaces in project names correctly)
  */
 
 const mode = process.argv[2]; // 'desktop', 'mobile', or 'both'
@@ -58,7 +58,6 @@ if (projects.length === 0) {
   process.exit(1);
 }
 
-// Output space-separated project names (for use in bash loops)
-// Note: Project names with spaces will need to be quoted when used
-console.log(projects.join(' '));
+// Output as JSON array to handle project names with spaces correctly
+console.log(JSON.stringify(projects));
 
