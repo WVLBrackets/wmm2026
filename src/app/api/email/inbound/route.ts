@@ -165,10 +165,25 @@ export async function POST(request: NextRequest) {
     console.log(`[InboundEmail] Email sent to: ${toEmail}`);
 
     // Only check if toEmail is a string
+    // Use exact matching to prevent false positives (e.g., donotreply-staging matching donotreply)
     const isDoNotReply = toEmail && typeof toEmail === 'string' 
-      ? doNotReplyAddresses.some(addr => 
-          toEmail.toLowerCase().includes(addr.toLowerCase())
-        )
+      ? doNotReplyAddresses.some(addr => {
+          const normalizedTo = toEmail.toLowerCase().trim();
+          const normalizedAddr = addr.toLowerCase().trim();
+          
+          // Exact match
+          if (normalizedTo === normalizedAddr) {
+            return true;
+          }
+          
+          // Match if email is in angle brackets (e.g., "Name <donotreply@warrensmm.com>")
+          if (normalizedTo.includes(`<${normalizedAddr}>`)) {
+            return true;
+          }
+          
+          // No substring matching - this prevents donotreply-staging from matching donotreply
+          return false;
+        })
       : false;
 
     if (!isDoNotReply) {
