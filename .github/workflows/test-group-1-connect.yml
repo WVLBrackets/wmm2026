@@ -11,6 +11,15 @@ on:
         options:
           - staging
           - production
+      mode:
+        description: 'Device mode'
+        required: true
+        default: 'desktop'
+        type: choice
+        options:
+          - desktop
+          - mobile
+          - both
       browser:
         description: 'Browser to test'
         required: true
@@ -18,7 +27,7 @@ on:
         type: choice
         options:
           - all
-          - chromium
+          - chrome
           - firefox
           - webkit
 
@@ -41,22 +50,28 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
+      - name: Determine Playwright projects
+        id: projects
+        run: |
+          PROJECTS=$(node scripts/get-playwright-projects.js ${{ inputs.mode }} ${{ inputs.browser }})
+          echo "projects=$PROJECTS" >> $GITHUB_OUTPUT
+          echo "Selected projects: $PROJECTS"
+      
       - name: Display test configuration
         run: |
           echo "## 🧪 Test Configuration" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Environment:** ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Mode:** ${{ inputs.mode }}" >> $GITHUB_STEP_SUMMARY
           echo "**Browser:** ${{ inputs.browser }}" >> $GITHUB_STEP_SUMMARY
           echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Projects:** ${{ steps.projects.outputs.projects }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
       
       - name: Install Playwright browsers
         run: |
-          if [ "${{ inputs.browser }}" == "all" ]; then
-            npx playwright install --with-deps chromium firefox webkit
-          else
-            npx playwright install --with-deps ${{ inputs.browser }}
-          fi
+          # Install all browsers needed (chromium, firefox, webkit for desktop and mobile)
+          npx playwright install --with-deps chromium firefox webkit
       
       - name: Run Group 1 tests (Connect)
         env:
@@ -65,11 +80,7 @@ jobs:
           TEST_USER_PASSWORD_PRODUCTION: ${{ secrets.TEST_USER_PASSWORD_PRODUCTION }}
           TEST_ENV: ${{ inputs.environment }}
         run: |
-          if [ "${{ inputs.browser }}" == "all" ]; then
-            node scripts/run-test-by-id.js 1
-          else
-            node scripts/run-test-by-id.js 1 -- --project=${{ inputs.browser }}
-          fi
+          node scripts/run-tests-with-projects.js 1 ${{ inputs.mode }} ${{ inputs.browser }}
       
       - name: Upload test results
         if: always()
