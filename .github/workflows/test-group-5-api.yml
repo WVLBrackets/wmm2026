@@ -33,11 +33,11 @@ on:
       send_emails:
         description: 'Send emails during tests'
         required: true
-        default: 'No'
+        default: 'false'
         type: choice
         options:
-          - Yes
-          - No
+          - 'true'
+          - 'false'
 
 jobs:
   test-group-5:
@@ -91,7 +91,7 @@ jobs:
           TEST_USER_PASSWORD_STAGING: ${{ secrets.TEST_USER_PASSWORD_STAGING }}
           TEST_USER_PASSWORD_PRODUCTION: ${{ secrets.TEST_USER_PASSWORD_PRODUCTION }}
           TEST_ENV: ${{ inputs.environment }}
-          SUPPRESS_TEST_EMAILS: ${{ inputs.send_emails == 'No' && 'true' || 'false' }}
+          SUPPRESS_TEST_EMAILS: ${{ inputs.send_emails == 'false' && 'true' || 'false' }}
         run: |
           node scripts/run-tests-with-projects.js 5 ${{ inputs.mode }} ${{ inputs.browser }}
       
