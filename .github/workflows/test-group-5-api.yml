@@ -68,7 +68,8 @@ jobs:
       
       - name: Display test configuration
         run: |
-          PROJECTS_DISPLAY=$(node -e "console.log(JSON.parse('${{ steps.projects.outputs.projects }}').join(', '))")
+          PROJECTS_JSON='${{ steps.projects.outputs.projects }}'
+          PROJECTS_DISPLAY=$(node -e "console.log(JSON.parse(process.argv[1]).join(', '))" "$PROJECTS_JSON")
           echo "## 🧪 Test Configuration" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Environment:** ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY

@@ -125,6 +125,8 @@ jobs:
       - name: Generate test summary
         if: always()
         run: |
+          PROJECTS_JSON='${{ steps.projects.outputs.projects }}'
+          PROJECTS_DISPLAY=$(node -e "console.log(JSON.parse(process.argv[1]).join(', '))" "$PROJECTS_JSON")
           echo "## 📊 Full Regression Test Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Environment:** ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
@@ -132,7 +134,6 @@ jobs:
           echo "**Browser:** ${{ inputs.browser }}" >> $GITHUB_STEP_SUMMARY
           echo "**Send Emails:** ${{ inputs.send_emails }}" >> $GITHUB_STEP_SUMMARY
           echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          PROJECTS_DISPLAY=$(node -e "console.log(JSON.parse('${{ steps.projects.outputs.projects }}').join(', '))")
           echo "**Projects:** $PROJECTS_DISPLAY" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Test Groups Executed:" >> $GITHUB_STEP_SUMMARY
