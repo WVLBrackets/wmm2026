@@ -143,6 +143,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // EARLY CROSS-ENVIRONMENT CHECK - Do this immediately after extracting toEmail
+    // This prevents production from processing staging emails and vice versa
+    if (toEmail && typeof toEmail === 'string') {
+      // Extract just the email address if it's in angle brackets or has a name
+      let cleanToEmail = toEmail.toLowerCase().trim();
+      // Extract email from "Name <email@domain.com>" format
+      const angleBracketMatch = cleanToEmail.match(/<([^>]+)>/);
+      if (angleBracketMatch) {
+        cleanToEmail = angleBracketMatch[1].trim();
+      }
+      // Remove any leading/trailing whitespace or quotes
+      cleanToEmail = cleanToEmail.replace(/^["']|["']$/g, '').trim();
+
+      // Check if this is a staging email but we're in production, or vice versa
+      const isStagingEmail = cleanToEmail === 'donotreply-staging@warrensmm.com' || 
+                            cleanToEmail === 'donotreply.wmm.stage@gmail.com';
+      const isProductionEmail = cleanToEmail === 'donotreply@warrensmm.com' || 
+                                cleanToEmail === 'ncaatourney@gmail.com';
+      
+      if (isProduction && isStagingEmail) {
+        console.log(`[InboundEmail] 🚫 BLOCKED: Production environment received staging email (${cleanToEmail}), ignoring immediately`);
+        return NextResponse.json({ received: true, blocked: 'cross-environment', reason: 'production-received-staging-email' });
+      }
+      
+      if (!isProduction && isProductionEmail) {
+        console.log(`[InboundEmail] 🚫 BLOCKED: Staging environment received production email (${cleanToEmail}), ignoring immediately`);
+        return NextResponse.json({ received: true, blocked: 'cross-environment', reason: 'staging-received-production-email' });
+      }
+      
+      console.log(`[InboundEmail] ✓ Email (${cleanToEmail}) passed cross-environment check for ${isProduction ? 'production' : 'staging'} environment`);
+    }
+
     // Check if this is a reply to a do-not-reply address
     // Only check addresses for the current environment to prevent duplicate replies
     // (vercelEnv and isProduction are already defined above)
@@ -183,24 +215,8 @@ export async function POST(request: NextRequest) {
 
     console.log(`[InboundEmail] Cleaned toEmail: ${cleanToEmail}`);
 
-    // CRITICAL: Early check - if this is a staging email but we're in production, or vice versa, ignore immediately
-    // This prevents cross-environment processing when Resend sends webhooks to both endpoints
-    const isStagingEmail = cleanToEmail === 'donotreply-staging@warrensmm.com' || 
-                          cleanToEmail === 'donotreply.wmm.stage@gmail.com';
-    const isProductionEmail = cleanToEmail === 'donotreply@warrensmm.com' || 
-                              cleanToEmail === 'ncaatourney@gmail.com';
-    
-    if (isProduction && isStagingEmail) {
-      console.log(`[InboundEmail] BLOCKED: Production environment received staging email (${cleanToEmail}), ignoring`);
-      return NextResponse.json({ received: true, blocked: 'cross-environment' });
-    }
-    
-    if (!isProduction && isProductionEmail) {
-      console.log(`[InboundEmail] BLOCKED: Staging environment received production email (${cleanToEmail}), ignoring`);
-      return NextResponse.json({ received: true, blocked: 'cross-environment' });
-    }
-
     // Use exact matching to prevent false positives (e.g., donotreply-staging matching donotreply)
+    // Note: Cross-environment blocking already happened above, so we can proceed with matching
     const isDoNotReply = doNotReplyAddresses.some(addr => {
       const normalizedAddr = addr.toLowerCase().trim();
       
