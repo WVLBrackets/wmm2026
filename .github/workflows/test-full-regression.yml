@@ -21,6 +21,7 @@ on:
           - all
           - chromium
           - firefox
+          - webkit
 
 jobs:
   full-regression:
@@ -44,7 +45,7 @@ jobs:
       - name: Install Playwright browsers
         run: |
           if [ "${{ inputs.browser }}" == "all" ]; then
-            npx playwright install --with-deps chromium firefox
+            npx playwright install --with-deps chromium firefox webkit
           else
             npx playwright install --with-deps ${{ inputs.browser }}
           fi
@@ -130,7 +131,7 @@ jobs:
           echo "- ✅ Group 4 - Bracket Creation & Management" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Group 5 - Backend API Validation" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Expected Total Tests:** ~90 tests (45 tests × 2 browsers if 'all' selected)" >> $GITHUB_STEP_SUMMARY
+          echo "**Expected Total Tests:** ~135 tests (45 tests × 3 browsers if 'all' selected)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "📋 Check the individual group steps above for detailed results." >> $GITHUB_STEP_SUMMARY
           echo "📦 Test reports are available as artifacts below." >> $GITHUB_STEP_SUMMARY

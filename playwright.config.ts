@@ -88,12 +88,15 @@ export default defineConfig({
       },
     },
 
-    /* WebKit disabled - known SSL issues on Windows */
-    /* Uncomment if you need Safari testing (usually only needed for Mac-specific issues) */
-    // {
-    //   name: 'webkit',
-    //   use: { ...devices['Desktop Safari'] },
-    // },
+    {
+      name: 'webkit',
+      use: { 
+        ...devices['Desktop Safari'],
+        // WebKit (Safari engine) - works on Linux runners in CI
+        // Note: This is WebKit, not native Safari, but uses the same engine
+        // and provides excellent Safari compatibility testing
+      },
+    },
   ],
 
   /* No local server - tests run against staging/production */
