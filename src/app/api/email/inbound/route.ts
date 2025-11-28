@@ -200,16 +200,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ received: true, blocked: 'cross-environment' });
     }
 
-    // Extract just the email address if it's in angle brackets or has a name
-    let cleanToEmail = toEmail.toLowerCase().trim();
-    // Extract email from "Name <email@domain.com>" format
-    const angleBracketMatch = cleanToEmail.match(/<([^>]+)>/);
-    if (angleBracketMatch) {
-      cleanToEmail = angleBracketMatch[1].trim();
-    }
-    // Remove any leading/trailing whitespace or quotes
-    cleanToEmail = cleanToEmail.replace(/^["']|["']$/g, '').trim();
-
     // Use exact matching to prevent false positives (e.g., donotreply-staging matching donotreply)
     const isDoNotReply = doNotReplyAddresses.some(addr => {
       const normalizedAddr = addr.toLowerCase().trim();
