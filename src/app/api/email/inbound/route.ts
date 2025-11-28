@@ -163,33 +163,46 @@ export async function POST(request: NextRequest) {
     console.log(`[InboundEmail] Environment: ${vercelEnv} (${isProduction ? 'production' : 'staging/preview'})`);
     console.log(`[InboundEmail] Checking against addresses: ${doNotReplyAddresses.join(', ')}`);
     console.log(`[InboundEmail] Email sent to: ${toEmail}`);
+    console.log(`[InboundEmail] Raw toEmail type: ${typeof toEmail}, value: ${JSON.stringify(toEmail)}`);
 
-    // Only check if toEmail is a string
+    // Early return if toEmail is missing
+    if (!toEmail || typeof toEmail !== 'string') {
+      console.log(`[InboundEmail] Missing or invalid toEmail, ignoring`);
+      return NextResponse.json({ received: true });
+    }
+
+    // Extract just the email address if it's in angle brackets or has a name
+    let cleanToEmail = toEmail.toLowerCase().trim();
+    // Extract email from "Name <email@domain.com>" format
+    const angleBracketMatch = cleanToEmail.match(/<([^>]+)>/);
+    if (angleBracketMatch) {
+      cleanToEmail = angleBracketMatch[1].trim();
+    }
+    // Remove any leading/trailing whitespace or quotes
+    cleanToEmail = cleanToEmail.replace(/^["']|["']$/g, '').trim();
+
+    console.log(`[InboundEmail] Cleaned toEmail: ${cleanToEmail}`);
+
     // Use exact matching to prevent false positives (e.g., donotreply-staging matching donotreply)
-    const isDoNotReply = toEmail && typeof toEmail === 'string' 
-      ? doNotReplyAddresses.some(addr => {
-          const normalizedTo = toEmail.toLowerCase().trim();
-          const normalizedAddr = addr.toLowerCase().trim();
-          
-          // Exact match
-          if (normalizedTo === normalizedAddr) {
-            return true;
-          }
-          
-          // Match if email is in angle brackets (e.g., "Name <donotreply@warrensmm.com>")
-          if (normalizedTo.includes(`<${normalizedAddr}>`)) {
-            return true;
-          }
-          
-          // No substring matching - this prevents donotreply-staging from matching donotreply
-          return false;
-        })
-      : false;
+    const isDoNotReply = doNotReplyAddresses.some(addr => {
+      const normalizedAddr = addr.toLowerCase().trim();
+      
+      // Exact match only
+      if (cleanToEmail === normalizedAddr) {
+        console.log(`[InboundEmail] ✓ Exact match found: ${cleanToEmail} === ${normalizedAddr}`);
+        return true;
+      }
+      
+      console.log(`[InboundEmail] ✗ No match: ${cleanToEmail} !== ${normalizedAddr}`);
+      return false;
+    });
 
     if (!isDoNotReply) {
       console.log(`[InboundEmail] Email not to a do-not-reply address for this environment, ignoring`);
       return NextResponse.json({ received: true });
     }
+
+    console.log(`[InboundEmail] ✓ Email matches do-not-reply address for this environment, proceeding with auto-reply`);
 
     // Send auto-reply
     console.log(`[InboundEmail] Processing reply from ${fromEmail} to do-not-reply address`);
