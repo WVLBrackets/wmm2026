@@ -2,6 +2,27 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sendAutoReplyEmail } from '@/lib/autoReplyService';
 import crypto from 'crypto';
 
+// In-memory cache to track processed email IDs for idempotency
+// Prevents duplicate auto-replies when Resend retries webhooks
+// Note: In a distributed system, consider using Redis or a database
+const processedEmailIds = new Map<string, number>();
+
+// Clean up old entries every 24 hours to prevent memory leaks
+const CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const MAX_AGE_MS = 24 * 60 * 60 * 1000; // Keep entries for 24 hours
+
+// Run cleanup periodically
+if (typeof setInterval !== 'undefined') {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [emailId, timestamp] of processedEmailIds.entries()) {
+      if (now - timestamp > MAX_AGE_MS) {
+        processedEmailIds.delete(emailId);
+      }
+    }
+  }, CLEANUP_INTERVAL_MS);
+}
+
 /**
  * POST /api/email/inbound
  * 
@@ -20,12 +41,14 @@ export async function POST(request: NextRequest) {
       type?: string;
       event?: string;
       data?: {
+        email_id?: string;
         from?: { email?: string } | string;
         sender?: { email?: string };
         subject?: string;
         to?: string;
         recipient?: string;
       };
+      email_id?: string;
       from?: { email?: string } | string;
       sender?: { email?: string };
       subject?: string;
@@ -95,10 +118,14 @@ export async function POST(request: NextRequest) {
     
     // Get email data - could be in body.data or directly in body
     const emailData = body.data || body;
+    
+    // Get email_id for idempotency (prevent duplicate processing on webhook retries)
+    const emailId = emailData.email_id || body.email_id;
 
     // Log webhook payload for debugging (first few webhooks)
     console.log('[InboundEmail] Webhook payload:', JSON.stringify(body, null, 2));
     console.log('[InboundEmail] Event type:', eventType);
+    console.log('[InboundEmail] Email ID:', emailId);
     console.log('[InboundEmail] Email data:', JSON.stringify(emailData, null, 2));
 
     // Only process email.received events (inbound emails)
@@ -236,6 +263,26 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`[InboundEmail] ✓ Email matches do-not-reply address for this environment, proceeding with auto-reply`);
+
+    // Check idempotency: prevent duplicate processing if Resend retries the webhook
+    if (emailId) {
+      const now = Date.now();
+      const lastProcessed = processedEmailIds.get(emailId);
+      
+      if (lastProcessed && (now - lastProcessed) < MAX_AGE_MS) {
+        console.log(`[InboundEmail] ⚠️ Email ID ${emailId} already processed ${Math.round((now - lastProcessed) / 1000)}s ago. Skipping to prevent duplicate auto-reply.`);
+        return NextResponse.json({
+          received: true,
+          autoReplySent: false,
+          message: 'Email already processed (idempotency check)',
+          duplicate: true,
+        });
+      }
+      
+      // Mark as processed
+      processedEmailIds.set(emailId, now);
+      console.log(`[InboundEmail] ✓ Email ID ${emailId} marked as processed`);
+    }
 
     // Send auto-reply
     console.log(`[InboundEmail] Processing reply from ${fromEmail} to do-not-reply address`);
