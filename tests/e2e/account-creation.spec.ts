@@ -102,11 +102,35 @@ test.describe('Account Creation', () => {
                       ? (process.env.PRODUCTION_URL || 'https://warrensmm.com')
                       : (process.env.STAGING_URL || 'https://wmm2026-git-staging-ncaatourney-gmailcoms-projects.vercel.app'));
     
-    // Determine which browser is running the test
-    const browserName = testInfo.project.name; // 'chromium' or 'firefox'
-    const emailConfigKey = browserName === 'chromium' 
-      ? 'happy_path_email_test_chrome' 
-      : 'happy_path_email_test_firefox'; // Firefox or any other browser
+    // Determine which browser and device type is running the test
+    const projectName = testInfo.project.name; // e.g., 'chromium', 'firefox', 'webkit', 'Mobile Chrome', 'Mobile Safari', 'Mobile Safari (Pro)'
+    const isMobile = projectName.startsWith('Mobile');
+    
+    // Extract browser name and determine config key
+    let emailConfigKey: string;
+    if (isMobile) {
+      // Mobile projects: 'Mobile Chrome', 'Mobile Safari', 'Mobile Safari (Pro)'
+      if (projectName.includes('Chrome')) {
+        emailConfigKey = 'happy_path_email_test_mobile_chrome';
+      } else if (projectName.includes('Safari')) {
+        emailConfigKey = 'happy_path_email_test_mobile_webkit';
+      } else {
+        // Fallback for any other mobile browser
+        emailConfigKey = 'happy_path_email_test_mobile_chrome';
+      }
+    } else {
+      // Desktop projects: 'chromium', 'firefox', 'webkit'
+      if (projectName === 'chromium') {
+        emailConfigKey = 'happy_path_email_test_chrome';
+      } else if (projectName === 'firefox') {
+        emailConfigKey = 'happy_path_email_test_firefox';
+      } else if (projectName === 'webkit') {
+        emailConfigKey = 'happy_path_email_test_webkit';
+      } else {
+        // Fallback for any other desktop browser
+        emailConfigKey = 'happy_path_email_test_chrome';
+      }
+    }
     
     let testEmail: string;
     try {

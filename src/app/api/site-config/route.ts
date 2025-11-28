@@ -32,6 +32,10 @@ export async function GET(request: Request) {
         debug: {
           hasHappyPathEmailTestChrome: !!config.happy_path_email_test_chrome,
           hasHappyPathEmailTestFirefox: !!config.happy_path_email_test_firefox,
+          hasHappyPathEmailTestWebkit: !!config.happy_path_email_test_webkit,
+          hasHappyPathEmailTestMobileChrome: !!config.happy_path_email_test_mobile_chrome,
+          hasHappyPathEmailTestMobileFirefox: !!config.happy_path_email_test_mobile_firefox,
+          hasHappyPathEmailTestMobileWebkit: !!config.happy_path_email_test_mobile_webkit,
           allKeys: Object.keys(config).filter(k => k.toLowerCase().includes('happy') || k.toLowerCase().includes('test'))
         }
       });

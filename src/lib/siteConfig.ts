@@ -110,6 +110,10 @@ export interface SiteConfigData {
   // Test configuration (browser-specific to avoid duplication)
   happy_path_email_test_chrome?: string;
   happy_path_email_test_firefox?: string;
+  happy_path_email_test_webkit?: string;
+  happy_path_email_test_mobile_chrome?: string;
+  happy_path_email_test_mobile_firefox?: string;
+  happy_path_email_test_mobile_webkit?: string;
   // Email "Do Not Reply" notice configuration
   emailDoNotReplyNotice?: string;
   emailContactAddress?: string;
@@ -464,6 +468,18 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
           case 'happy_path_email_test_firefox':
             config.happy_path_email_test_firefox = value;
             break;
+          case 'happy_path_email_test_webkit':
+            config.happy_path_email_test_webkit = value;
+            break;
+          case 'happy_path_email_test_mobile_chrome':
+            config.happy_path_email_test_mobile_chrome = value;
+            break;
+          case 'happy_path_email_test_mobile_firefox':
+            config.happy_path_email_test_mobile_firefox = value;
+            break;
+          case 'happy_path_email_test_mobile_webkit':
+            config.happy_path_email_test_mobile_webkit = value;
+            break;
           case 'email_do_not_reply_notice':
             config.emailDoNotReplyNotice = value;
             break;
@@ -496,8 +512,9 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
       // Skip rows that don't have at least 2 fields
     }
     
-    // Browser-specific test emails are used (happy_path_email_test_chrome, happy_path_email_test_firefox)
-    // No generic happy_path_email_test needed - browser-specific versions prevent duplication
+    // Browser-specific test emails are used (happy_path_email_test_chrome, happy_path_email_test_firefox, happy_path_email_test_webkit)
+    // Mobile-specific test emails are used (happy_path_email_test_mobile_chrome, happy_path_email_test_mobile_firefox, happy_path_email_test_mobile_webkit)
+    // No generic happy_path_email_test needed - browser/device-specific versions prevent duplication
     
     // Validate that we have all required fields
     if (config.tournamentYear && config.lastYearWinner && config.siteName) {

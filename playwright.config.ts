@@ -97,6 +97,34 @@ export default defineConfig({
         // and provides excellent Safari compatibility testing
       },
     },
+
+    /* Mobile device emulation - tests responsive design and touch interactions */
+    {
+      name: 'Mobile Chrome',
+      use: { 
+        ...devices['Pixel 5'],
+        // Google Pixel 5 - Android device with Chrome
+        // Viewport: 393x851, touch enabled, mobile user agent
+      },
+    },
+
+    {
+      name: 'Mobile Safari',
+      use: { 
+        ...devices['iPhone 13'],
+        // iPhone 13 - iOS device with Safari
+        // Viewport: 390x844, touch enabled, iOS user agent
+      },
+    },
+
+    {
+      name: 'Mobile Safari (Pro)',
+      use: { 
+        ...devices['iPhone 13 Pro'],
+        // iPhone 13 Pro - Larger iOS device
+        // Viewport: 390x844, touch enabled, iOS user agent
+      },
+    },
   ],
 
   /* No local server - tests run against staging/production */
