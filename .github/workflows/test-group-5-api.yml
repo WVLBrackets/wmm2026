@@ -20,6 +20,7 @@ on:
           - all
           - chromium
           - firefox
+          - webkit
 
 jobs:
   test-group-5:
@@ -52,7 +53,7 @@ jobs:
       - name: Install Playwright browsers
         run: |
           if [ "${{ inputs.browser }}" == "all" ]; then
-            npx playwright install --with-deps chromium firefox
+            npx playwright install --with-deps chromium firefox webkit
           else
             npx playwright install --with-deps ${{ inputs.browser }}
           fi
