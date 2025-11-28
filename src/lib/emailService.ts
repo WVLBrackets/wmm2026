@@ -215,8 +215,23 @@ class EmailService {
         console.log(`[EmailService] ✅ Email sent successfully via Resend: ${result.data?.id || 'unknown'}`);
         return true;
       } catch (resendError) {
+        const errorMessage = resendError instanceof Error ? resendError.message : String(resendError);
+        
+        // Don't fall back to Gmail for "internal server error" - email may have been sent
+        // Resend's "Internal server error" often means the email was queued/sent but they had an issue processing the response
+        // This prevents duplicate sends when Resend times out or has server issues
+        if (errorMessage.includes('Internal server error') || 
+            errorMessage.includes('unable to process your request') ||
+            errorMessage.includes('timeout') ||
+            errorMessage.includes('timed out')) {
+          console.error(`[EmailService] ⚠️ Resend error (${errorMessage}). Email may have been sent. Not using Gmail fallback to prevent duplicates.`);
+          // Return true to indicate we attempted to send (even if we're not sure)
+          // This prevents duplicate sends via Gmail fallback
+          return true;
+        }
+        
         console.error('[EmailService] Resend failed, attempting Gmail fallback:', resendError);
-        // Fall through to Gmail fallback
+        // Fall through to Gmail fallback for other errors
       }
     }
 
