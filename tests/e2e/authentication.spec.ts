@@ -78,9 +78,10 @@ test.describe('Authentication', () => {
     const currentUrl = page.url();
     expect(currentUrl).not.toContain('/auth/signin');
     
-    // Try to access bracket page (protected route)
-    await page.goto('/bracket');
-    await expect(page).not.toHaveURL(/.*\/auth\/signin/);
+    // Try to access bracket page (protected route) - wait for navigation
+    await page.goto('/bracket', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.waitForTimeout(500); // Give WebKit time for any redirects
+    await expect(page).not.toHaveURL(/.*\/auth\/signin/, { timeout: 10000 });
   });
 
   test('should show error with invalid email', async ({ page }) => {
