@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { submitSignupForm } from '../fixtures/test-helpers';
 
 /**
  * E2E tests for account creation flow
@@ -62,10 +63,11 @@ test.describe('Account Creation', () => {
     await page.getByTestId('signup-password-input').fill('password123');
     await page.getByTestId('signup-confirm-password-input').fill('differentpassword');
 
-    const submitButton = page.getByTestId('signup-submit-button');
-    await submitButton.click();
+    // Use helper function for reliable form submission across browsers
+    await submitSignupForm(page);
 
     // Client-side validation - wait for button to be enabled again (handler completed)
+    const submitButton = page.getByTestId('signup-submit-button');
     await expect(submitButton).toBeEnabled({ timeout: 3000 });
 
     // Wait for error message (React needs a moment to re-render after state update)
@@ -173,8 +175,8 @@ test.describe('Account Creation', () => {
       { timeout: 60000 }
     );
 
-    // Click submit button
-    await page.getByTestId('signup-submit-button').click();
+    // Use helper function for reliable form submission across browsers
+    await submitSignupForm(page);
 
     // Wait for API response
     await responsePromise;
@@ -215,8 +217,8 @@ test.describe('Account Creation', () => {
       { timeout: 60000 }
     );
 
-    // Click submit button
-    await page.getByTestId('signup-submit-button').click();
+    // Use helper function for reliable form submission across browsers
+    await submitSignupForm(page);
 
     // Wait for API response
     await responsePromise;

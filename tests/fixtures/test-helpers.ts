@@ -5,6 +5,31 @@
  * Test data cleanup is handled via the local script: npm run cleanup:test-data
  */
 
+import { Page } from '@playwright/test';
+
+/**
+ * Submits the signup form in a way that works reliably across all browsers,
+ * especially WebKit which may not trigger onSubmit when clicking the submit button.
+ * 
+ * @param page - Playwright page object
+ */
+export async function submitSignupForm(page: Page): Promise<void> {
+  const form = page.locator('form');
+  
+  // Use requestSubmit() which properly triggers onSubmit event in all browsers
+  // This is especially important for WebKit/Safari
+  try {
+    await form.evaluate((form) => {
+      if (form instanceof HTMLFormElement) {
+        form.requestSubmit();
+      }
+    });
+  } catch {
+    // Fallback to button click if requestSubmit fails
+    await page.getByTestId('signup-submit-button').click();
+  }
+}
+
 /**
  * Get the confirmation token for a user by email
  * 

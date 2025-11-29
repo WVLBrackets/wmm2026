@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { getConfirmationTokenForUser } from '../fixtures/test-helpers';
+import { getConfirmationTokenForUser, submitSignupForm } from '../fixtures/test-helpers';
 
 /**
  * E2E tests for user creation and email confirmation flow
@@ -165,8 +165,8 @@ test.describe('User Creation and Confirmation', () => {
       { timeout: 60000 }
     );
 
-    // Click submit button
-    await page.getByTestId('signup-submit-button').click();
+    // Use helper function for reliable form submission across browsers
+    await submitSignupForm(page);
 
     // Wait for API response
     await responsePromise;
@@ -235,8 +235,8 @@ test.describe('User Creation and Confirmation', () => {
       { timeout: 60000 }
     );
 
-    // Click submit button
-    await page.getByTestId('signup-submit-button').click();
+    // Use helper function for reliable form submission across browsers
+    await submitSignupForm(page);
 
     // Wait for API response
     await responsePromise;

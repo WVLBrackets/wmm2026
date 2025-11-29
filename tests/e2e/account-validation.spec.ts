@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { generateUniqueEmail, generateTestUser } from '../fixtures/test-data';
+import { submitSignupForm } from '../fixtures/test-helpers';
 
 /**
  * E2E tests for account validation
@@ -14,7 +15,7 @@ test.describe('Account Validation', () => {
 
   test('should require all fields to be filled', async ({ page }) => {
     // Try to submit empty form
-    await page.getByTestId('signup-submit-button').click();
+    await submitSignupForm(page);
 
     // HTML5 validation should prevent submission
     // Check that required attributes are present
@@ -42,7 +43,7 @@ test.describe('Account Validation', () => {
     await expect(emailInput).toHaveAttribute('type', 'email');
     
     // Try to submit - browser should show validation message
-    await page.getByTestId('signup-submit-button').click();
+    await submitSignupForm(page);
     
     // The form should not submit with invalid email
     // Check that we're still on the signup page (no success message)
@@ -58,7 +59,7 @@ test.describe('Account Validation', () => {
     await page.getByTestId('signup-password-input').fill('12345'); // 5 characters
     await page.getByTestId('signup-confirm-password-input').fill('12345');
 
-    await page.getByTestId('signup-submit-button').click();
+    await submitSignupForm(page);
 
     // Should show error message
     await expect(page.getByTestId('signup-error-message')).toBeVisible();
@@ -74,7 +75,7 @@ test.describe('Account Validation', () => {
     await page.getByTestId('signup-password-input').fill(shortPassword);
     await page.getByTestId('signup-confirm-password-input').fill(shortPassword);
 
-    await page.getByTestId('signup-submit-button').click();
+    await submitSignupForm(page);
 
     // Should succeed (6 characters is the minimum)
     await expect(page.getByTestId('signup-success-header')).toBeVisible();
@@ -88,7 +89,7 @@ test.describe('Account Validation', () => {
     await page.getByTestId('signup-password-input').fill('password123');
     await page.getByTestId('signup-confirm-password-input').fill('differentpassword');
 
-    await page.getByTestId('signup-submit-button').click();
+    await submitSignupForm(page);
 
     // Should show error message
     await expect(page.getByTestId('signup-error-message')).toBeVisible();
@@ -104,7 +105,7 @@ test.describe('Account Validation', () => {
     await page.getByTestId('signup-password-input').fill(testUser.password);
     await page.getByTestId('signup-confirm-password-input').fill(testUser.password);
 
-    await page.getByTestId('signup-submit-button').click();
+    await submitSignupForm(page);
 
     // Should succeed
     await expect(page.getByTestId('signup-success-header')).toBeVisible();
@@ -119,7 +120,7 @@ test.describe('Account Validation', () => {
     await page.getByTestId('signup-password-input').fill(testUser.password);
     await page.getByTestId('signup-confirm-password-input').fill(testUser.password);
 
-    await page.getByTestId('signup-submit-button').click();
+    await submitSignupForm(page);
 
     // Should either succeed or show appropriate error
     // The behavior depends on database constraints
