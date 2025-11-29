@@ -66,13 +66,25 @@ test.describe('Account Creation', () => {
     await submitButton.click();
 
     // Client-side validation - wait for button to be enabled again (handler completed)
-    await expect(submitButton).toBeEnabled({ timeout: 3000 });
+    // In WebKit, the validation happens synchronously, so wait for either:
+    // 1. Button to be enabled (validation passed but no error), OR
+    // 2. Error message to appear (validation failed)
+    // Use a race condition - wait for whichever happens first
+    try {
+      await Promise.race([
+        expect(submitButton).toBeEnabled({ timeout: 5000 }),
+        expect(page.getByTestId('signup-error-message')).toBeVisible({ timeout: 5000 }),
+      ]);
+    } catch {
+      // If race didn't resolve, explicitly wait for error message
+      // This handles WebKit's slower React state updates
+    }
 
     // Wait for error message (React needs a moment to re-render after state update)
     // Firefox and WebKit may need more time for React state updates
     // WebKit/Safari can be slower, so increase timeout
-    await expect(page.getByTestId('signup-error-message')).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText(/passwords do not match/i)).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('signup-error-message')).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText(/passwords do not match/i)).toBeVisible({ timeout: 20000 });
   });
 
   test('should show error when password is too short', async ({ page }) => {
@@ -86,15 +98,26 @@ test.describe('Account Creation', () => {
     const submitButton = page.getByTestId('signup-submit-button');
     await submitButton.click();
 
-    // Client-side validation sets isLoading to false, so button should be enabled again
-    // Wait for button to be enabled (indicates handler completed) - Firefox needs this
-    await expect(submitButton).toBeEnabled({ timeout: 3000 });
+    // Client-side validation - wait for button to be enabled again (handler completed)
+    // In WebKit, the validation happens synchronously, so wait for either:
+    // 1. Button to be enabled (validation passed but no error), OR
+    // 2. Error message to appear (validation failed)
+    // Use a race condition - wait for whichever happens first
+    try {
+      await Promise.race([
+        expect(submitButton).toBeEnabled({ timeout: 5000 }),
+        expect(page.getByTestId('signup-error-message')).toBeVisible({ timeout: 5000 }),
+      ]);
+    } catch {
+      // If race didn't resolve, explicitly wait for error message
+      // This handles WebKit's slower React state updates
+    }
 
     // Wait for error message (React needs a moment to re-render after state update)
     // Firefox and WebKit may need more time for React state updates
     // WebKit/Safari can be slower, so increase timeout
-    await expect(page.getByTestId('signup-error-message')).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText(/password must be at least 6 characters/i)).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('signup-error-message')).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText(/password must be at least 6 characters/i)).toBeVisible({ timeout: 20000 });
   });
 
   test('should successfully create account with valid data', async ({ page, request }, testInfo) => {

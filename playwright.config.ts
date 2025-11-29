@@ -106,6 +106,8 @@ export default defineConfig({
         expect: {
           timeout: 10000, // 10 seconds for assertions (default is 5s)
         },
+        // Increase test timeout to allow waitForResponse with 60s timeout
+        testTimeout: 90000, // 90 seconds (default is 30s) - allows for 60s API waits
       },
     },
 
@@ -131,6 +133,8 @@ export default defineConfig({
         expect: {
           timeout: 10000, // 10 seconds for assertions
         },
+        // Increase test timeout to allow waitForResponse with 60s timeout
+        testTimeout: 90000, // 90 seconds - allows for 60s API waits
       },
     },
 
@@ -146,6 +150,8 @@ export default defineConfig({
         expect: {
           timeout: 10000, // 10 seconds for assertions
         },
+        // Increase test timeout to allow waitForResponse with 60s timeout
+        testTimeout: 90000, // 90 seconds - allows for 60s API waits
       },
     },
   ],
