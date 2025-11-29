@@ -61,20 +61,39 @@ export async function signInUser(
     throw new Error(`Sign-in failed: ${errorText || signInResponse.statusText()}`);
   }
   
-  // Step 4: Verify authentication by checking session
+  // Step 4: Wait for cookies to be set (WebKit/Safari needs this)
   // The cookies are automatically set in the browser context when using page.request
-  // Navigate to bracket page to verify we're authenticated
-  await page.goto('/bracket');
+  // But WebKit may need a moment for cookies to be properly available
+  await page.waitForTimeout(500);
   
-  // Step 5: Verify we're not redirected to sign-in (means we're authenticated)
-  const currentUrl = page.url();
-  if (currentUrl.includes('/auth/signin')) {
-    throw new Error('Sign-in failed - still redirected to sign-in page (authentication did not work)');
+  // Step 5: Verify authentication by checking session
+  // Navigate to bracket page to verify we're authenticated
+  // Use waitForURL to handle redirects properly, especially for WebKit
+  try {
+    await page.goto('/bracket', { waitUntil: 'domcontentloaded', timeout: 30000 });
+  } catch (error) {
+    // If navigation was interrupted (redirect), wait for the final URL
+    await page.waitForLoadState('domcontentloaded', { timeout: 10000 }).catch(() => {});
   }
   
-  // Step 6: Verify we're on the bracket page
-  if (!currentUrl.includes('/bracket')) {
-    throw new Error(`Sign-in failed - redirected to unexpected page: ${currentUrl}`);
+  // Step 6: Wait a moment for any redirects to complete (WebKit can be slow)
+  await page.waitForTimeout(500);
+  
+  // Step 7: Verify we're not redirected to sign-in (means we're authenticated)
+  const currentUrl = page.url();
+  if (currentUrl.includes('/auth/signin')) {
+    // Give WebKit one more chance - sometimes it needs a retry
+    await page.waitForTimeout(1000);
+    const retryUrl = page.url();
+    if (retryUrl.includes('/auth/signin')) {
+      throw new Error('Sign-in failed - still redirected to sign-in page (authentication did not work)');
+    }
+  }
+  
+  // Step 8: Verify we're on the bracket page
+  const finalUrl = page.url();
+  if (!finalUrl.includes('/bracket')) {
+    throw new Error(`Sign-in failed - redirected to unexpected page: ${finalUrl}`);
   }
   
   // Success! The browser context now has the session cookie and can be used normally
