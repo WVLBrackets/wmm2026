@@ -61,10 +61,57 @@ export async function signInUser(
     throw new Error(`Sign-in failed: ${errorText || signInResponse.statusText()}`);
   }
   
-  // Step 4: Wait for cookies to be set (WebKit/Safari needs this)
-  // The cookies are automatically set in the browser context when using page.request
-  // But WebKit may need a moment for cookies to be properly available
-  await page.waitForTimeout(500);
+  // Step 4: Extract and manually set cookies for WebKit/Safari compatibility
+  // WebKit doesn't always properly transfer cookies from page.request to the browser context
+  const cookies = signInResponse.headers()['set-cookie'];
+  if (cookies) {
+    const cookieArray = Array.isArray(cookies) ? cookies : [cookies];
+    const parsedCookies = cookieArray.map(cookie => {
+      const [nameValue, ...attributes] = cookie.split(';');
+      const [name, value] = nameValue.split('=');
+      const cookieObj: any = {
+        name: name.trim(),
+        value: value?.trim() || '',
+        domain: new URL(baseURL).hostname,
+        path: '/',
+      };
+      
+      // Parse attributes
+      for (const attr of attributes) {
+        const [key, val] = attr.trim().split('=');
+        const lowerKey = key.toLowerCase();
+        if (lowerKey === 'max-age') {
+          cookieObj.maxAge = parseInt(val || '0', 10);
+        } else if (lowerKey === 'expires') {
+          cookieObj.expires = new Date(val || Date.now()).getTime() / 1000;
+        } else if (lowerKey === 'httponly') {
+          cookieObj.httpOnly = true;
+        } else if (lowerKey === 'secure') {
+          cookieObj.secure = true;
+        } else if (lowerKey === 'samesite') {
+          // Playwright requires capitalized: 'Strict', 'Lax', or 'None'
+          const sameSiteValue = val?.toLowerCase() || 'lax';
+          if (sameSiteValue === 'strict') {
+            cookieObj.sameSite = 'Strict';
+          } else if (sameSiteValue === 'none') {
+            cookieObj.sameSite = 'None';
+          } else {
+            cookieObj.sameSite = 'Lax'; // Default
+          }
+        }
+      }
+      
+      return cookieObj;
+    }).filter(c => c.name && c.value);
+    
+    // Add cookies to browser context (especially important for WebKit)
+    if (parsedCookies.length > 0) {
+      await page.context().addCookies(parsedCookies);
+    }
+  }
+  
+  // Step 5: Wait for cookies to be set (WebKit/Safari needs this)
+  await page.waitForTimeout(1000); // Increased wait for WebKit
   
   // Step 5: Verify authentication by checking session
   // Navigate to bracket page to verify we're authenticated
