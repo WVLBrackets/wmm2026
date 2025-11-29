@@ -23,6 +23,7 @@ export interface EmailOptions {
   text?: string;
   attachments?: EmailAttachment[];
   siteConfig?: SiteConfigData | null; // Optional site config for test user detection
+  suppressTestEmails?: boolean; // Optional flag to suppress emails for test users
 }
 
 class EmailService {
@@ -165,14 +166,26 @@ class EmailService {
 
   async sendEmail(options: EmailOptions): Promise<boolean> {
     // Check for email suppression (test users only)
-    const suppressEmails = process.env.SUPPRESS_TEST_EMAILS === 'true';
+    // Check both environment variable and explicit option flag
+    const suppressEmails = process.env.SUPPRESS_TEST_EMAILS === 'true' || options.suppressTestEmails === true;
     const recipientEmail = options.to;
     
     if (suppressEmails) {
-      const isTestUser = isTestUserEmail(recipientEmail, options.siteConfig || null);
+      // Fetch site config if not provided (needed for test user detection)
+      let siteConfig = options.siteConfig;
+      if (!siteConfig) {
+        try {
+          const { getSiteConfigFromGoogleSheets } = await import('@/lib/siteConfig');
+          siteConfig = await getSiteConfigFromGoogleSheets();
+        } catch (error) {
+          console.warn('[EmailService] Could not fetch site config for test user detection:', error);
+        }
+      }
+      
+      const isTestUser = isTestUserEmail(recipientEmail, siteConfig || null);
       
       if (isTestUser) {
-        const reason = getTestUserReason(recipientEmail, options.siteConfig || null);
+        const reason = getTestUserReason(recipientEmail, siteConfig || null);
         console.log(`[EmailService] 🚫 EMAIL SUPPRESSED - Test user detected`);
         console.log(`[EmailService]    Recipient: ${recipientEmail}`);
         console.log(`[EmailService]    Subject: ${options.subject}`);

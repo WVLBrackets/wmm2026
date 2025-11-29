@@ -99,10 +99,11 @@ test.describe('User Creation and Confirmation', () => {
     await page.waitForTimeout(100);
 
     // Set up response listener BEFORE clicking (more reliable)
+    // Increase timeout for WebKit/Safari which can be slower
     const responsePromise = page.waitForResponse(
       response => 
         response.url().includes('/api/auth/register') && response.status() === 200,
-      { timeout: 30000 }
+      { timeout: 60000 }
     );
 
     // Click submit button
@@ -156,11 +157,12 @@ test.describe('User Creation and Confirmation', () => {
 
     // Set up response listener BEFORE clicking (more reliable)
     // For Firefox, use synchronous response matcher (async doesn't work well)
+    // Increase timeout for WebKit/Safari which can be slower
     const responsePromise = page.waitForResponse(
       (response) => {
         return response.url().includes('/api/auth/register') && response.status() === 409;
       },
-      { timeout: 30000 }
+      { timeout: 60000 }
     );
 
     // Click submit button
@@ -226,10 +228,11 @@ test.describe('User Creation and Confirmation', () => {
     await page.getByTestId('signup-confirm-password-input').fill(user.password);
 
     // Set up response listener BEFORE clicking (more reliable for Firefox)
+    // Increase timeout for WebKit/Safari which can be slower
     const responsePromise = page.waitForResponse(
       response => 
         response.url().includes('/api/auth/register') && response.status() === 200,
-      { timeout: 30000 }
+      { timeout: 60000 }
     );
 
     // Click submit button

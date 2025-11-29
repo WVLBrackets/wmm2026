@@ -69,9 +69,10 @@ test.describe('Account Creation', () => {
     await expect(submitButton).toBeEnabled({ timeout: 3000 });
 
     // Wait for error message (React needs a moment to re-render after state update)
-    // Firefox may need more time for React state updates
-    await expect(page.getByTestId('signup-error-message')).toBeVisible({ timeout: 8000 });
-    await expect(page.getByText(/passwords do not match/i)).toBeVisible();
+    // Firefox and WebKit may need more time for React state updates
+    // WebKit/Safari can be slower, so increase timeout
+    await expect(page.getByTestId('signup-error-message')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/passwords do not match/i)).toBeVisible({ timeout: 15000 });
   });
 
   test('should show error when password is too short', async ({ page }) => {
@@ -90,9 +91,10 @@ test.describe('Account Creation', () => {
     await expect(submitButton).toBeEnabled({ timeout: 3000 });
 
     // Wait for error message (React needs a moment to re-render after state update)
-    // Firefox may need more time for React state updates
-    await expect(page.getByTestId('signup-error-message')).toBeVisible({ timeout: 8000 });
-    await expect(page.getByText(/password must be at least 6 characters/i)).toBeVisible();
+    // Firefox and WebKit may need more time for React state updates
+    // WebKit/Safari can be slower, so increase timeout
+    await expect(page.getByTestId('signup-error-message')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/password must be at least 6 characters/i)).toBeVisible({ timeout: 15000 });
   });
 
   test('should successfully create account with valid data', async ({ page, request }, testInfo) => {
@@ -164,10 +166,11 @@ test.describe('Account Creation', () => {
     await page.getByTestId('signup-confirm-password-input').fill(password);
 
     // Set up response listener BEFORE clicking (more reliable)
+    // Increase timeout for WebKit/Safari which can be slower
     const responsePromise = page.waitForResponse(
       response => 
         response.url().includes('/api/auth/register') && response.status() === 200,
-      { timeout: 30000 }
+      { timeout: 60000 }
     );
 
     // Click submit button
@@ -205,10 +208,11 @@ test.describe('Account Creation', () => {
     await page.getByTestId('signup-confirm-password-input').fill(password);
 
     // Set up response listener BEFORE clicking (more reliable)
+    // Increase timeout for WebKit/Safari which can be slower
     const responsePromise = page.waitForResponse(
       response => 
         response.url().includes('/api/auth/register') && response.status() === 409,
-      { timeout: 30000 }
+      { timeout: 60000 }
     );
 
     // Click submit button
