@@ -116,7 +116,9 @@ test.describe('Account Creation', () => {
       // Mobile projects: 'Mobile Chrome', 'Mobile Safari', 'Mobile Safari (Pro)'
       if (projectName.includes('Chrome')) {
         emailConfigKey = 'happy_path_email_test_mobile_chrome';
-      } else if (projectName.includes('Safari')) {
+      } else if (projectName === 'Mobile Safari (Pro)') {
+        emailConfigKey = 'happy_path_email_test_mobile_webkit_pro';
+      } else if (projectName === 'Mobile Safari') {
         emailConfigKey = 'happy_path_email_test_mobile_webkit';
       } else {
         // Fallback for any other mobile browser

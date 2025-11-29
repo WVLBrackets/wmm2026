@@ -31,9 +31,18 @@ const desktopProjects = {
 
 const mobileProjects = {
   chrome: 'Mobile Chrome',
-  firefox: 'Mobile Safari', // Note: Currently maps to Mobile Safari (no mobile Firefox project yet)
-  webkit: 'Mobile Safari (Pro)', // Note: Maps to Mobile Safari (Pro) for webkit
+  webkit: 'Mobile Safari', // Maps to Mobile Safari (iPhone 13)
 };
+
+// Mobile Safari (Pro) is only included when 'all' is selected
+const mobileSafariPro = 'Mobile Safari (Pro)'; // iPhone 13 Pro
+
+// Check for invalid combinations
+if (mode === 'mobile' && browser === 'firefox') {
+  console.error('Error: Mobile + Firefox is not a valid combination.');
+  console.error('Mobile Firefox is not supported. Please select Chrome or WebKit for mobile testing.');
+  process.exit(1);
+}
 
 let projects = [];
 
@@ -47,7 +56,9 @@ if (mode === 'desktop' || mode === 'both') {
 
 if (mode === 'mobile' || mode === 'both') {
   if (browser === 'all') {
+    // When 'all' is selected, include all mobile projects: Chrome, Safari, and Safari Pro
     projects.push(...Object.values(mobileProjects));
+    projects.push(mobileSafariPro);
   } else if (mobileProjects[browser]) {
     projects.push(mobileProjects[browser]);
   }
