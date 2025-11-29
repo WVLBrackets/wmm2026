@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { submitSignupForm } from '../fixtures/test-helpers';
+import { submitSignupForm, fillInputReliably } from '../fixtures/test-helpers';
 
 /**
  * E2E tests for account creation flow
@@ -58,10 +58,10 @@ test.describe('Account Creation', () => {
   test('should show error when passwords do not match', async ({ page }) => {
     const uniqueEmail = `test-${Date.now()}@example.com`;
 
-    await page.getByTestId('signup-name-input').fill('Test User');
-    await page.getByTestId('signup-email-input').fill(uniqueEmail);
-    await page.getByTestId('signup-password-input').fill('password123');
-    await page.getByTestId('signup-confirm-password-input').fill('differentpassword');
+    await fillInputReliably(page.getByTestId('signup-name-input'), 'Test User');
+    await fillInputReliably(page.getByTestId('signup-email-input'), uniqueEmail);
+    await fillInputReliably(page.getByTestId('signup-password-input'), 'password123');
+    await fillInputReliably(page.getByTestId('signup-confirm-password-input'), 'differentpassword');
 
     // Use helper function for reliable form submission across browsers
     await submitSignupForm(page);
@@ -80,10 +80,10 @@ test.describe('Account Creation', () => {
   test('should show error when password is too short', async ({ page }) => {
     const uniqueEmail = `test-${Date.now()}@example.com`;
 
-    await page.getByTestId('signup-name-input').fill('Test User');
-    await page.getByTestId('signup-email-input').fill(uniqueEmail);
-    await page.getByTestId('signup-password-input').fill('12345');
-    await page.getByTestId('signup-confirm-password-input').fill('12345');
+    await fillInputReliably(page.getByTestId('signup-name-input'), 'Test User');
+    await fillInputReliably(page.getByTestId('signup-email-input'), uniqueEmail);
+    await fillInputReliably(page.getByTestId('signup-password-input'), '12345');
+    await fillInputReliably(page.getByTestId('signup-confirm-password-input'), '12345');
 
     const submitButton = page.getByTestId('signup-submit-button');
     await submitButton.click();
@@ -162,10 +162,10 @@ test.describe('Account Creation', () => {
 
     const password = 'testpassword123';
 
-    await page.getByTestId('signup-name-input').fill('Test User');
-    await page.getByTestId('signup-email-input').fill(testEmail);
-    await page.getByTestId('signup-password-input').fill(password);
-    await page.getByTestId('signup-confirm-password-input').fill(password);
+    await fillInputReliably(page.getByTestId('signup-name-input'), 'Test User');
+    await fillInputReliably(page.getByTestId('signup-email-input'), testEmail);
+    await fillInputReliably(page.getByTestId('signup-password-input'), password);
+    await fillInputReliably(page.getByTestId('signup-confirm-password-input'), password);
 
     // Set up response listener BEFORE clicking (more reliable)
     // Increase timeout for WebKit/Safari which can be slower
@@ -231,7 +231,7 @@ test.describe('Account Creation', () => {
   test('should toggle password visibility', async ({ page }) => {
     const password = 'testpassword123';
 
-    await page.getByTestId('signup-password-input').fill(password);
+    await fillInputReliably(page.getByTestId('signup-password-input'), password);
     
     // Password should be hidden by default
     const passwordInput = page.getByTestId('signup-password-input');
@@ -246,17 +246,21 @@ test.describe('Account Creation', () => {
     await expect(toggleButton).toBeVisible({ timeout: 5000 });
     await expect(toggleButton).toBeEnabled({ timeout: 2000 });
     
-    // For Firefox, use evaluate to directly call the click handler
-    // This bypasses any event propagation issues
-    await toggleButton.evaluate((button: HTMLButtonElement) => {
-      // Trigger both click and mousedown/mouseup events for maximum compatibility
-      button.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
-      button.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
-      button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    });
+    // For WebKit/Firefox, try multiple approaches to ensure the click works
+    try {
+      // First try: Normal click
+      await toggleButton.click({ timeout: 5000 });
+    } catch {
+      // Second try: Use evaluate to dispatch events directly
+      await toggleButton.evaluate((button: HTMLButtonElement) => {
+        button.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+        button.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+        button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      });
+    }
     
-    // Give Firefox more time to process the state change
-    await page.waitForTimeout(1000);
+    // Give browsers time to process the state change
+    await page.waitForTimeout(1500);
 
     // Wait for the input type to change to 'text'
     await expect(passwordInput).toHaveAttribute('type', 'text', { timeout: 8000 });

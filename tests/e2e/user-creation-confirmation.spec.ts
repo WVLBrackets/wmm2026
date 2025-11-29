@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { getConfirmationTokenForUser, submitSignupForm } from '../fixtures/test-helpers';
+import { getConfirmationTokenForUser, submitSignupForm, fillInputReliably } from '../fixtures/test-helpers';
 
 /**
  * E2E tests for user creation and email confirmation flow
@@ -89,11 +89,11 @@ test.describe('User Creation and Confirmation', () => {
     await expect(page.getByTestId('signup-submit-button')).toBeVisible();
     await expect(page.getByTestId('signup-submit-button')).toBeEnabled();
 
-    // Fill in the signup form
-    await page.getByTestId('signup-name-input').fill(user.name);
-    await page.getByTestId('signup-email-input').fill(user.email);
-    await page.getByTestId('signup-password-input').fill(user.password);
-    await page.getByTestId('signup-confirm-password-input').fill(user.password);
+    // Fill in the signup form - use reliable filling for WebKit
+    await fillInputReliably(page.getByTestId('signup-name-input'), user.name);
+    await fillInputReliably(page.getByTestId('signup-email-input'), user.email);
+    await fillInputReliably(page.getByTestId('signup-password-input'), user.password);
+    await fillInputReliably(page.getByTestId('signup-confirm-password-input'), user.password);
 
     // Wait a moment for form state to update (Firefox may need this)
     await page.waitForTimeout(100);

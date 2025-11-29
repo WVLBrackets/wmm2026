@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { generateUniqueEmail, generateTestUser } from '../fixtures/test-data';
-import { submitSignupForm } from '../fixtures/test-helpers';
+import { submitSignupForm, fillInputReliably } from '../fixtures/test-helpers';
 
 /**
  * E2E tests for account validation
@@ -33,10 +33,10 @@ test.describe('Account Validation', () => {
   test('should validate email format', async ({ page }) => {
     const testUser = generateTestUser();
 
-    await page.getByTestId('signup-name-input').fill(testUser.name);
-    await page.getByTestId('signup-email-input').fill('invalid-email');
-    await page.getByTestId('signup-password-input').fill(testUser.password);
-    await page.getByTestId('signup-confirm-password-input').fill(testUser.password);
+    await fillInputReliably(page.getByTestId('signup-name-input'), testUser.name);
+    await fillInputReliably(page.getByTestId('signup-email-input'), 'invalid-email');
+    await fillInputReliably(page.getByTestId('signup-password-input'), testUser.password);
+    await fillInputReliably(page.getByTestId('signup-confirm-password-input'), testUser.password);
 
     // HTML5 email validation should prevent invalid email format
     const emailInput = page.getByTestId('signup-email-input');
@@ -54,10 +54,10 @@ test.describe('Account Validation', () => {
   test('should validate password minimum length', async ({ page }) => {
     const testUser = generateTestUser();
 
-    await page.getByTestId('signup-name-input').fill(testUser.name);
-    await page.getByTestId('signup-email-input').fill(testUser.email);
-    await page.getByTestId('signup-password-input').fill('12345'); // 5 characters
-    await page.getByTestId('signup-confirm-password-input').fill('12345');
+    await fillInputReliably(page.getByTestId('signup-name-input'), testUser.name);
+    await fillInputReliably(page.getByTestId('signup-email-input'), testUser.email);
+    await fillInputReliably(page.getByTestId('signup-password-input'), '12345'); // 5 characters
+    await fillInputReliably(page.getByTestId('signup-confirm-password-input'), '12345');
 
     await submitSignupForm(page);
 
@@ -70,10 +70,10 @@ test.describe('Account Validation', () => {
     const testUser = generateTestUser();
     const shortPassword = '123456'; // Exactly 6 characters
 
-    await page.getByTestId('signup-name-input').fill(testUser.name);
-    await page.getByTestId('signup-email-input').fill(testUser.email);
-    await page.getByTestId('signup-password-input').fill(shortPassword);
-    await page.getByTestId('signup-confirm-password-input').fill(shortPassword);
+    await fillInputReliably(page.getByTestId('signup-name-input'), testUser.name);
+    await fillInputReliably(page.getByTestId('signup-email-input'), testUser.email);
+    await fillInputReliably(page.getByTestId('signup-password-input'), shortPassword);
+    await fillInputReliably(page.getByTestId('signup-confirm-password-input'), shortPassword);
 
     await submitSignupForm(page);
 
@@ -84,10 +84,10 @@ test.describe('Account Validation', () => {
   test('should validate password confirmation match', async ({ page }) => {
     const testUser = generateTestUser();
 
-    await page.getByTestId('signup-name-input').fill(testUser.name);
-    await page.getByTestId('signup-email-input').fill(testUser.email);
-    await page.getByTestId('signup-password-input').fill('password123');
-    await page.getByTestId('signup-confirm-password-input').fill('differentpassword');
+    await fillInputReliably(page.getByTestId('signup-name-input'), testUser.name);
+    await fillInputReliably(page.getByTestId('signup-email-input'), testUser.email);
+    await fillInputReliably(page.getByTestId('signup-password-input'), 'password123');
+    await fillInputReliably(page.getByTestId('signup-confirm-password-input'), 'differentpassword');
 
     await submitSignupForm(page);
 
@@ -100,10 +100,10 @@ test.describe('Account Validation', () => {
     const testUser = generateTestUser();
     const nameWithSpecialChars = "O'Brien-Smith";
 
-    await page.getByTestId('signup-name-input').fill(nameWithSpecialChars);
-    await page.getByTestId('signup-email-input').fill(testUser.email);
-    await page.getByTestId('signup-password-input').fill(testUser.password);
-    await page.getByTestId('signup-confirm-password-input').fill(testUser.password);
+    await fillInputReliably(page.getByTestId('signup-name-input'), nameWithSpecialChars);
+    await fillInputReliably(page.getByTestId('signup-email-input'), testUser.email);
+    await fillInputReliably(page.getByTestId('signup-password-input'), testUser.password);
+    await fillInputReliably(page.getByTestId('signup-confirm-password-input'), testUser.password);
 
     await submitSignupForm(page);
 
@@ -115,10 +115,10 @@ test.describe('Account Validation', () => {
     const testUser = generateTestUser();
     const longEmail = `verylongemailaddress${'a'.repeat(100)}@example.com`;
 
-    await page.getByTestId('signup-name-input').fill(testUser.name);
-    await page.getByTestId('signup-email-input').fill(longEmail);
-    await page.getByTestId('signup-password-input').fill(testUser.password);
-    await page.getByTestId('signup-confirm-password-input').fill(testUser.password);
+    await fillInputReliably(page.getByTestId('signup-name-input'), testUser.name);
+    await fillInputReliably(page.getByTestId('signup-email-input'), longEmail);
+    await fillInputReliably(page.getByTestId('signup-password-input'), testUser.password);
+    await fillInputReliably(page.getByTestId('signup-confirm-password-input'), testUser.password);
 
     await submitSignupForm(page);
 
@@ -134,10 +134,10 @@ test.describe('Account Validation', () => {
   test('should disable submit button while loading', async ({ page }) => {
     const testUser = generateTestUser();
 
-    await page.getByTestId('signup-name-input').fill(testUser.name);
-    await page.getByTestId('signup-email-input').fill(testUser.email);
-    await page.getByTestId('signup-password-input').fill(testUser.password);
-    await page.getByTestId('signup-confirm-password-input').fill(testUser.password);
+    await fillInputReliably(page.getByTestId('signup-name-input'), testUser.name);
+    await fillInputReliably(page.getByTestId('signup-email-input'), testUser.email);
+    await fillInputReliably(page.getByTestId('signup-password-input'), testUser.password);
+    await fillInputReliably(page.getByTestId('signup-confirm-password-input'), testUser.password);
 
     const submitButton = page.getByTestId('signup-submit-button');
     await submitButton.click();
