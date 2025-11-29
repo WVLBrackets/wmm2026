@@ -203,11 +203,14 @@ test.describe('Account Creation', () => {
       },
     });
 
-    // Now try to create duplicate via UI
-    await page.getByTestId('signup-name-input').fill('Test User 2');
-    await page.getByTestId('signup-email-input').fill(uniqueEmail);
-    await page.getByTestId('signup-password-input').fill(password);
-    await page.getByTestId('signup-confirm-password-input').fill(password);
+    // Now try to create duplicate via UI - use reliable filling for WebKit
+    await fillInputReliably(page.getByTestId('signup-name-input'), 'Test User 2');
+    await fillInputReliably(page.getByTestId('signup-email-input'), uniqueEmail);
+    await fillInputReliably(page.getByTestId('signup-password-input'), password);
+    await fillInputReliably(page.getByTestId('signup-confirm-password-input'), password);
+
+    // Wait a moment for form state to update
+    await page.waitForTimeout(100);
 
     // Set up response listener BEFORE clicking (more reliable)
     // Increase timeout for WebKit/Safari which can be slower
@@ -217,8 +220,9 @@ test.describe('Account Creation', () => {
       { timeout: 60000 }
     );
 
-    // Use helper function for reliable form submission across browsers
-    await submitSignupForm(page);
+    // Click submit button directly (more reliable than helper in some cases)
+    const submitButton = page.getByTestId('signup-submit-button');
+    await submitButton.click();
 
     // Wait for API response
     await responsePromise;
