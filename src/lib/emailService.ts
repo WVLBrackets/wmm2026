@@ -87,7 +87,7 @@ class EmailService {
       console.log(`[EmailService] FROM_EMAIL_STAGING: ${process.env.FROM_EMAIL_STAGING ? 'set' : 'not set'}`);
       console.log(`[EmailService] FROM_EMAIL_PRODUCTION: ${process.env.FROM_EMAIL_PRODUCTION ? 'set' : 'not set'}`);
     }
-
+    
     // Check for SendGrid configuration
     if (process.env.SENDGRID_API_KEY) {
       return {
@@ -121,9 +121,9 @@ class EmailService {
       };
     }
 
-      // Without email config, disable email service
-      return {
-        provider: 'disabled',
+    // Without email config, disable email service
+    return {
+      provider: 'disabled',
     };
   }
 
@@ -301,40 +301,40 @@ class EmailService {
             pass: emailPass,
           },
         });
-          
-          interface MailOptions {
-            from: string;
-            to: string;
-            subject: string;
-            html: string;
-            text?: string;
-            attachments?: Array<{
-              filename: string;
-              content: Buffer | string;
-              contentType: string;
-            }>;
-          }
 
-          const mailOptions: MailOptions = {
+        interface MailOptions {
+          from: string;
+          to: string;
+          subject: string;
+          html: string;
+          text?: string;
+          attachments?: Array<{
+            filename: string;
+            content: Buffer | string;
+            contentType: string;
+          }>;
+        }
+
+        const mailOptions: MailOptions = {
           from: `"Warren's March Madness" <${emailUser}>`,
-            to: options.to,
-            subject: options.subject,
-            html: options.html,
-            text: options.text,
-          };
+          to: options.to,
+          subject: options.subject,
+          html: options.html,
+          text: options.text,
+        };
 
-          // Add attachments if provided
-          if (options.attachments && options.attachments.length > 0) {
-            mailOptions.attachments = options.attachments.map(att => ({
-              filename: att.filename,
-              content: att.content,
-              contentType: att.contentType || 'application/pdf',
-            }));
-          }
+        // Add attachments if provided
+        if (options.attachments && options.attachments.length > 0) {
+          mailOptions.attachments = options.attachments.map(att => ({
+            filename: att.filename,
+            content: att.content,
+            contentType: att.contentType || 'application/pdf',
+          }));
+        }
 
         const gmailResult = await gmailTransporter.sendMail(mailOptions);
         console.log(`[EmailService] ✅ Email sent successfully via Gmail (fallback): ${gmailResult.messageId}`);
-          return true;
+        return true;
       } else {
         console.error('[EmailService] ❌ Gmail fallback not available - credentials not configured');
       }
@@ -344,7 +344,7 @@ class EmailService {
 
     // If we get here, both Resend and Gmail failed
     console.error('[EmailService] ❌ All email providers failed. Email not sent.');
-      return false;
+    return false;
   }
 
   isConfigured(): boolean {

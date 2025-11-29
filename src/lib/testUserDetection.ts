@@ -21,8 +21,8 @@ export function isTestUserEmail(email: string, siteConfig: SiteConfigData | null
       siteConfig.happy_path_email_test_firefox,
       siteConfig.happy_path_email_test_webkit,
       siteConfig.happy_path_email_test_mobile_chrome,
-      siteConfig.happy_path_email_test_mobile_firefox,
       siteConfig.happy_path_email_test_mobile_webkit,
+      siteConfig.happy_path_email_test_mobile_webkit_pro,
     ].filter((email): email is string => !!email && typeof email === 'string');
 
     for (const testEmail of testEmails) {
@@ -78,8 +78,8 @@ export function getTestUserReason(email: string, siteConfig: SiteConfigData | nu
       { key: 'happy_path_email_test_firefox', value: siteConfig.happy_path_email_test_firefox },
       { key: 'happy_path_email_test_webkit', value: siteConfig.happy_path_email_test_webkit },
       { key: 'happy_path_email_test_mobile_chrome', value: siteConfig.happy_path_email_test_mobile_chrome },
-      { key: 'happy_path_email_test_mobile_firefox', value: siteConfig.happy_path_email_test_mobile_firefox },
       { key: 'happy_path_email_test_mobile_webkit', value: siteConfig.happy_path_email_test_mobile_webkit },
+      { key: 'happy_path_email_test_mobile_webkit_pro', value: siteConfig.happy_path_email_test_mobile_webkit_pro },
     ];
 
     for (const config of testEmailConfigs) {

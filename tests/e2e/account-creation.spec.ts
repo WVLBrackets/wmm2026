@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { submitSignupForm, fillInputReliably } from '../fixtures/test-helpers';
 
 /**
  * E2E tests for account creation flow
@@ -57,28 +58,23 @@ test.describe('Account Creation', () => {
   test('should show error when passwords do not match', async ({ page }) => {
     const uniqueEmail = `test-${Date.now()}@example.com`;
 
-    await page.getByTestId('signup-name-input').fill('Test User');
-    await page.getByTestId('signup-email-input').fill(uniqueEmail);
-    await page.getByTestId('signup-password-input').fill('password123');
-    await page.getByTestId('signup-confirm-password-input').fill('differentpassword');
+    await fillInputReliably(page.getByTestId('signup-name-input'), 'Test User');
+    await fillInputReliably(page.getByTestId('signup-email-input'), uniqueEmail);
+    await fillInputReliably(page.getByTestId('signup-password-input'), 'password123');
+    await fillInputReliably(page.getByTestId('signup-confirm-password-input'), 'differentpassword');
 
-    const submitButton = page.getByTestId('signup-submit-button');
-    await submitButton.click();
+    // Use helper function for reliable form submission across browsers
+    await submitSignupForm(page);
 
     // Client-side validation - wait for button to be enabled again (handler completed)
+<<<<<<< HEAD
     // In WebKit, the validation happens synchronously, so wait for either:
     // 1. Button to be enabled (validation passed but no error), OR
     // 2. Error message to appear (validation failed)
     // Use a race condition - wait for whichever happens first
-    try {
-      await Promise.race([
-        expect(submitButton).toBeEnabled({ timeout: 5000 }),
-        expect(page.getByTestId('signup-error-message')).toBeVisible({ timeout: 5000 }),
-      ]);
-    } catch {
-      // If race didn't resolve, explicitly wait for error message
-      // This handles WebKit's slower React state updates
-    }
+    // Client-side validation - wait for button to be enabled again (handler completed)
+    const submitButton = page.getByTestId('signup-submit-button');
+    await expect(submitButton).toBeEnabled({ timeout: 3000 });
 
     // Wait for error message (React needs a moment to re-render after state update)
     // Firefox and WebKit may need more time for React state updates
@@ -90,10 +86,10 @@ test.describe('Account Creation', () => {
   test('should show error when password is too short', async ({ page }) => {
     const uniqueEmail = `test-${Date.now()}@example.com`;
 
-    await page.getByTestId('signup-name-input').fill('Test User');
-    await page.getByTestId('signup-email-input').fill(uniqueEmail);
-    await page.getByTestId('signup-password-input').fill('12345');
-    await page.getByTestId('signup-confirm-password-input').fill('12345');
+    await fillInputReliably(page.getByTestId('signup-name-input'), 'Test User');
+    await fillInputReliably(page.getByTestId('signup-email-input'), uniqueEmail);
+    await fillInputReliably(page.getByTestId('signup-password-input'), '12345');
+    await fillInputReliably(page.getByTestId('signup-confirm-password-input'), '12345');
 
     const submitButton = page.getByTestId('signup-submit-button');
     await submitButton.click();
@@ -137,7 +133,9 @@ test.describe('Account Creation', () => {
       // Mobile projects: 'Mobile Chrome', 'Mobile Safari', 'Mobile Safari (Pro)'
       if (projectName.includes('Chrome')) {
         emailConfigKey = 'happy_path_email_test_mobile_chrome';
-      } else if (projectName.includes('Safari')) {
+      } else if (projectName === 'Mobile Safari (Pro)') {
+        emailConfigKey = 'happy_path_email_test_mobile_webkit_pro';
+      } else if (projectName === 'Mobile Safari') {
         emailConfigKey = 'happy_path_email_test_mobile_webkit';
       } else {
         // Fallback for any other mobile browser
@@ -183,10 +181,10 @@ test.describe('Account Creation', () => {
 
     const password = 'testpassword123';
 
-    await page.getByTestId('signup-name-input').fill('Test User');
-    await page.getByTestId('signup-email-input').fill(testEmail);
-    await page.getByTestId('signup-password-input').fill(password);
-    await page.getByTestId('signup-confirm-password-input').fill(password);
+    await fillInputReliably(page.getByTestId('signup-name-input'), 'Test User');
+    await fillInputReliably(page.getByTestId('signup-email-input'), testEmail);
+    await fillInputReliably(page.getByTestId('signup-password-input'), password);
+    await fillInputReliably(page.getByTestId('signup-confirm-password-input'), password);
 
     // Set up response listener BEFORE clicking (more reliable)
     // Increase timeout for WebKit/Safari which can be slower
@@ -196,8 +194,8 @@ test.describe('Account Creation', () => {
       { timeout: 60000 }
     );
 
-    // Click submit button
-    await page.getByTestId('signup-submit-button').click();
+    // Use helper function for reliable form submission across browsers
+    await submitSignupForm(page);
 
     // Wait for API response
     await responsePromise;
@@ -224,11 +222,14 @@ test.describe('Account Creation', () => {
       },
     });
 
-    // Now try to create duplicate via UI
-    await page.getByTestId('signup-name-input').fill('Test User 2');
-    await page.getByTestId('signup-email-input').fill(uniqueEmail);
-    await page.getByTestId('signup-password-input').fill(password);
-    await page.getByTestId('signup-confirm-password-input').fill(password);
+    // Now try to create duplicate via UI - use reliable filling for WebKit
+    await fillInputReliably(page.getByTestId('signup-name-input'), 'Test User 2');
+    await fillInputReliably(page.getByTestId('signup-email-input'), uniqueEmail);
+    await fillInputReliably(page.getByTestId('signup-password-input'), password);
+    await fillInputReliably(page.getByTestId('signup-confirm-password-input'), password);
+
+    // Wait a moment for form state to update
+    await page.waitForTimeout(100);
 
     // Set up response listener BEFORE clicking (more reliable)
     // Increase timeout for WebKit/Safari which can be slower
@@ -238,8 +239,9 @@ test.describe('Account Creation', () => {
       { timeout: 60000 }
     );
 
-    // Click submit button
-    await page.getByTestId('signup-submit-button').click();
+    // Click submit button directly (more reliable than helper in some cases)
+    const submitButton = page.getByTestId('signup-submit-button');
+    await submitButton.click();
 
     // Wait for API response
     await responsePromise;
@@ -252,7 +254,7 @@ test.describe('Account Creation', () => {
   test('should toggle password visibility', async ({ page }) => {
     const password = 'testpassword123';
 
-    await page.getByTestId('signup-password-input').fill(password);
+    await fillInputReliably(page.getByTestId('signup-password-input'), password);
     
     // Password should be hidden by default
     const passwordInput = page.getByTestId('signup-password-input');
@@ -267,17 +269,21 @@ test.describe('Account Creation', () => {
     await expect(toggleButton).toBeVisible({ timeout: 5000 });
     await expect(toggleButton).toBeEnabled({ timeout: 2000 });
     
-    // For Firefox, use evaluate to directly call the click handler
-    // This bypasses any event propagation issues
-    await toggleButton.evaluate((button: HTMLButtonElement) => {
-      // Trigger both click and mousedown/mouseup events for maximum compatibility
-      button.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
-      button.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
-      button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    });
+    // For WebKit/Firefox, try multiple approaches to ensure the click works
+    try {
+      // First try: Normal click
+      await toggleButton.click({ timeout: 5000 });
+    } catch {
+      // Second try: Use evaluate to dispatch events directly
+      await toggleButton.evaluate((button: HTMLButtonElement) => {
+        button.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+        button.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+        button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      });
+    }
     
-    // Give Firefox more time to process the state change
-    await page.waitForTimeout(1000);
+    // Give browsers time to process the state change
+    await page.waitForTimeout(1500);
 
     // Wait for the input type to change to 'text'
     await expect(passwordInput).toHaveAttribute('type', 'text', { timeout: 8000 });

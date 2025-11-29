@@ -32,6 +32,9 @@ const getBaseURL = () => {
 export default defineConfig({
   testDir: './tests',
   
+  /* Global test timeout - increase for WebKit which can be slower */
+  timeout: 90000, // 90 seconds (default is 30s) - allows for 60s API waits
+  
   /* Run tests in files in parallel */
   fullyParallel: true,
   
