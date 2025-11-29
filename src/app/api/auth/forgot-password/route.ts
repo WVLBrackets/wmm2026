@@ -64,6 +64,14 @@ export async function POST(request: NextRequest) {
     const resetLink = `${baseUrl}/auth/reset-password?token=${resetToken}`;
     // Get site config for email notice
     const siteConfig = await getSiteConfigFromGoogleSheets();
+    
+    // Check for email suppression header from test environment
+    const suppressTestEmails = request.headers.get('X-Suppress-Test-Emails') === 'true';
+    if (suppressTestEmails) {
+      // Set environment variable for email service to check
+      process.env.SUPPRESS_TEST_EMAILS = 'true';
+    }
+    
     // Our email templating builds the link from the provided code, so pass the token as the code
     const emailSent = await sendPasswordResetEmail(email, user.name, resetLink, resetToken, siteConfig);
 

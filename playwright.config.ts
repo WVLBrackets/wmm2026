@@ -58,6 +58,11 @@ export default defineConfig({
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
     
+    /* Set header to suppress test emails when SUPPRESS_TEST_EMAILS is enabled */
+    extraHTTPHeaders: process.env.SUPPRESS_TEST_EMAILS === 'true' 
+      ? { 'X-Suppress-Test-Emails': 'true' }
+      : {},
+    
     /* Handle Vercel authentication if needed */
     /* If your staging requires Vercel login, you can set these headers */
     // extraHTTPHeaders: {
@@ -95,6 +100,12 @@ export default defineConfig({
         // WebKit (Safari engine) - works on Linux runners in CI
         // Note: This is WebKit, not native Safari, but uses the same engine
         // and provides excellent Safari compatibility testing
+        // Increase timeouts for WebKit which can be slower
+        navigationTimeout: 60000, // 60 seconds (default is 30s)
+        actionTimeout: 30000, // 30 seconds for actions
+        expect: {
+          timeout: 10000, // 10 seconds for assertions (default is 5s)
+        },
       },
     },
 
@@ -114,6 +125,12 @@ export default defineConfig({
         ...devices['iPhone 13'],
         // iPhone 13 - iOS device with Safari
         // Viewport: 390x844, touch enabled, iOS user agent
+        // Increase timeouts for Mobile Safari which can be slower
+        navigationTimeout: 60000, // 60 seconds
+        actionTimeout: 30000, // 30 seconds
+        expect: {
+          timeout: 10000, // 10 seconds for assertions
+        },
       },
     },
 
@@ -123,6 +140,12 @@ export default defineConfig({
         ...devices['iPhone 13 Pro'],
         // iPhone 13 Pro - Larger iOS device
         // Viewport: 390x844, touch enabled, iOS user agent
+        // Increase timeouts for Mobile Safari which can be slower
+        navigationTimeout: 60000, // 60 seconds
+        actionTimeout: 30000, // 30 seconds
+        expect: {
+          timeout: 10000, // 10 seconds for assertions
+        },
       },
     },
   ],

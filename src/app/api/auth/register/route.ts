@@ -100,6 +100,13 @@ export async function POST(request: NextRequest) {
       // Continue with fallback config
     }
     
+    // Check for email suppression header from test environment
+    const suppressTestEmails = request.headers.get('X-Suppress-Test-Emails') === 'true';
+    if (suppressTestEmails) {
+      // Set environment variable for email service to check
+      process.env.SUPPRESS_TEST_EMAILS = 'true';
+    }
+    
     const emailSent = await sendConfirmationEmail(email, name, confirmationLink, token, siteConfig);
 
     if (!emailSent) {
