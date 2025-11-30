@@ -1,4 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
+import { config } from 'dotenv';
+import { resolve } from 'path';
+
+// Load .env.test file if it exists (for local testing with Vercel credentials)
+config({ path: resolve(__dirname, '.env.test') });
 
 /**
  * Playwright configuration for WMM2026 testing
