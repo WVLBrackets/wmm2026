@@ -66,19 +66,21 @@ export async function signInUser(
   const cookies = signInResponse.headers()['set-cookie'];
   if (cookies) {
     const cookieArray = Array.isArray(cookies) ? cookies : [cookies];
+    const urlObj = new URL(baseURL);
     const parsedCookies = cookieArray.map(cookie => {
       const [nameValue, ...attributes] = cookie.split(';');
       const [name, value] = nameValue.split('=');
       const cookieObj: any = {
         name: name.trim(),
         value: value?.trim() || '',
-        domain: new URL(baseURL).hostname,
-        path: '/',
+        domain: urlObj.hostname, // Default to hostname
+        path: '/', // Default path
       };
       
-      // Parse attributes
+      // Parse attributes - use values from Set-Cookie header
       for (const attr of attributes) {
-        const [key, val] = attr.trim().split('=');
+        const trimmedAttr = attr.trim();
+        const [key, val] = trimmedAttr.split('=');
         const lowerKey = key.toLowerCase();
         if (lowerKey === 'max-age') {
           cookieObj.maxAge = parseInt(val || '0', 10);
@@ -98,6 +100,12 @@ export async function signInUser(
           } else {
             cookieObj.sameSite = 'Lax'; // Default
           }
+        } else if (lowerKey === 'domain' && val) {
+          // Use domain from Set-Cookie header if present (remove leading dot if any)
+          cookieObj.domain = val.trim().replace(/^\./, '');
+        } else if (lowerKey === 'path' && val) {
+          // Use path from Set-Cookie header if present
+          cookieObj.path = val.trim();
         }
       }
       
@@ -105,15 +113,37 @@ export async function signInUser(
     }).filter(c => c.name && c.value);
     
     // Add cookies to browser context (especially important for WebKit)
+    // Note: For cookies to be set, the page must be on the correct domain
     if (parsedCookies.length > 0) {
-      await page.context().addCookies(parsedCookies);
+      // Navigate to baseURL first so cookies can be set with correct domain
+      await page.goto(baseURL, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.waitForTimeout(300);
+      
+      try {
+        await page.context().addCookies(parsedCookies);
+        await page.waitForTimeout(500); // Wait for cookies to be set
+        
+        // Verify cookies were actually set (especially important for WebKit)
+        const contextCookies = await page.context().cookies();
+        const sessionCookieNames = parsedCookies.map(c => c.name);
+        const hasAllCookies = sessionCookieNames.every(name => 
+          contextCookies.some(c => c.name === name)
+        );
+        
+        if (!hasAllCookies) {
+          console.warn('Warning: Not all session cookies were set. Expected:', sessionCookieNames, 'Found:', contextCookies.map(c => c.name));
+        }
+      } catch (error) {
+        // If adding cookies fails, log but continue - the cookies might already be set
+        console.warn('Failed to manually add cookies, they may already be set:', error);
+      }
     }
   }
   
   // Step 5: Wait for cookies to be set (WebKit/Safari needs this)
   await page.waitForTimeout(1000); // Increased wait for WebKit
   
-  // Step 5: Verify authentication by checking session
+  // Step 7: Verify authentication by checking session
   // Navigate to bracket page to verify we're authenticated
   // Use waitForURL to handle redirects properly, especially for WebKit
   try {

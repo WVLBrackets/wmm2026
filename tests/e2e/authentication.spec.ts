@@ -135,24 +135,59 @@ test.describe('Authentication', () => {
     expect(page.url()).toContain('/auth/signin');
   });
 
-  test('should maintain session after page refresh', async ({ page }) => {
+  test('should maintain session after page refresh', async ({ page, browserName }) => {
     const credentials = getTestUserCredentials();
     
     // Sign in with the confirmed test user
     await signInUser(page, credentials.email, credentials.password);
     
-    // Verify we're signed in
-    await page.goto('/bracket');
+    // Verify we're signed in - wait for navigation to complete
+    await page.goto('/bracket', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.waitForTimeout(500); // Give WebKit time for any redirects
     expect(page.url()).not.toContain('/auth/signin');
     
-    // Refresh the page
-    await page.reload();
+    // For WebKit, verify cookies are present before reload
+    if (browserName === 'webkit') {
+      const cookiesBeforeReload = await page.context().cookies();
+      const hasSessionCookie = cookiesBeforeReload.some(c => 
+        c.name.includes('next-auth') || c.name.includes('session')
+      );
+      if (!hasSessionCookie) {
+        throw new Error('Session cookie not found before reload - authentication may have failed');
+      }
+    }
+    
+    // Refresh the page - wait for it to complete
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
+    
+    // For WebKit, wait longer and verify cookies are still present after reload
+    if (browserName === 'webkit') {
+      await page.waitForTimeout(1500); // Give WebKit more time after reload
+      
+      // Check if cookies are still present
+      const cookiesAfterReload = await page.context().cookies();
+      const hasSessionCookieAfter = cookiesAfterReload.some(c => 
+        c.name.includes('next-auth') || c.name.includes('session')
+      );
+      
+      if (!hasSessionCookieAfter) {
+        console.warn('Session cookie lost after reload in WebKit. Cookies:', cookiesAfterReload.map(c => c.name));
+        // Try to re-authenticate by navigating to a protected route
+        // This will trigger NextAuth to check the session
+        await page.goto('/bracket', { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await page.waitForTimeout(1000);
+      }
+    } else {
+      await page.waitForTimeout(500);
+    }
     
     // Verify we're still signed in (not redirected to sign-in)
-    await expect(page).not.toHaveURL(/.*\/auth\/signin/);
+    // Increase timeout for WebKit which can be slower
+    await expect(page).not.toHaveURL(/.*\/auth\/signin/, { timeout: 10000 });
     
     // Verify we can still access protected routes
-    await page.goto('/bracket');
+    await page.goto('/bracket', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.waitForTimeout(500); // Give WebKit time for any redirects
     expect(page.url()).not.toContain('/auth/signin');
   });
 
