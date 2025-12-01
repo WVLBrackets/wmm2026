@@ -566,9 +566,6 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
                 Entry Name
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Tie Breaker
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -577,7 +574,7 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Updated
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ minWidth: '200px' }}>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ minWidth: '180px', width: '180px' }}>
                 Actions
               </th>
             </tr>
@@ -585,7 +582,7 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredBrackets.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
                   No brackets found
                 </td>
               </tr>
@@ -631,20 +628,6 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {editingBracket === bracket.id ? (
-                      <input
-                        type="number"
-                        min="100"
-                        max="300"
-                        value={editForm.tieBreaker || ''}
-                        onChange={(e) => setEditForm({ ...editForm, tieBreaker: parseInt(e.target.value) })}
-                        className="border border-gray-300 rounded px-2 py-1 text-sm w-20"
-                      />
-                    ) : (
-                      <div className="text-sm text-gray-900">{bracket.tieBreaker || 'N/A'}</div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {editingBracket === bracket.id ? (
                       <select
                         value={editForm.status || ''}
                         onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
@@ -674,7 +657,7 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {new Date(bracket.updatedAt).toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4 text-right text-sm font-medium" style={{ overflow: 'visible', minWidth: '200px', width: '200px' }}>
+                  <td className="px-6 py-4 text-right text-sm font-medium" style={{ overflow: 'visible', minWidth: '180px', width: '180px' }}>
                     {editingBracket === bracket.id ? (
                       <div className="flex items-center justify-end space-x-2">
                         <button
