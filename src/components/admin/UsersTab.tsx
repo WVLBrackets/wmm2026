@@ -540,6 +540,26 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
                             </button>
                           </div>
                         </div>
+                      ) : pendingDeleteUserId === user.id ? (
+                        <div className="flex items-center justify-end">
+                          <div className="flex items-center space-x-2 bg-red-50 border border-red-200 rounded px-2 py-1">
+                            <span className="text-xs text-red-700 font-medium whitespace-nowrap">Delete?</span>
+                            <button
+                              onClick={() => handleConfirmDeleteUser(user.id)}
+                              disabled={deletingUserId === user.id}
+                              className="bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              Yes
+                            </button>
+                            <button
+                              onClick={handleCancelDeleteUser}
+                              disabled={deletingUserId === user.id}
+                              className="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              No
+                            </button>
+                          </div>
+                        </div>
                       ) : (
                         <div className="flex items-center space-x-1">
                           <button
@@ -565,57 +585,37 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
                           >
                             <Key className="h-4 w-4" />
                           </button>
-                          {pendingDeleteUserId === user.id ? (
-                            <div className="flex items-center space-x-2 bg-red-50 border border-red-200 rounded px-2 py-1">
-                              <span className="text-xs text-red-700 font-medium whitespace-nowrap">Delete?</span>
-                              <button
-                                onClick={() => handleConfirmDeleteUser(user.id)}
-                                disabled={deletingUserId === user.id}
-                                className="bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                Yes
-                              </button>
-                              <button
-                                onClick={handleCancelDeleteUser}
-                                disabled={deletingUserId === user.id}
-                                className="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                No
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => handleDeleteUser(user.id, user.name, user.bracketCounts)}
-                              disabled={
-                                deletingUserId === user.id ||
-                                (user.bracketCounts && (
-                                  (user.bracketCounts.submitted > 0) || 
-                                  (user.bracketCounts.inProgress > 0) || 
-                                  (user.bracketCounts.deleted > 0)
-                                ))
-                              }
-                              className={`p-1.5 rounded border border-transparent focus:outline-none focus:ring-2 focus:ring-offset-1 transition-colors ${
-                                (user.bracketCounts && (
-                                  (user.bracketCounts.submitted > 0) || 
-                                  (user.bracketCounts.inProgress > 0) || 
-                                  (user.bracketCounts.deleted > 0)
-                                ))
-                                  ? 'bg-gray-400 text-white cursor-not-allowed opacity-50'
-                                  : 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500'
-                              }`}
-                              title={
-                                (user.bracketCounts && (
-                                  (user.bracketCounts.submitted > 0) || 
-                                  (user.bracketCounts.inProgress > 0) || 
-                                  (user.bracketCounts.deleted > 0)
-                                ))
-                                  ? 'Cannot delete user with existing brackets'
-                                  : 'Delete User'
-                              }
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          )}
+                          <button
+                            onClick={() => handleDeleteUser(user.id, user.name, user.bracketCounts)}
+                            disabled={
+                              deletingUserId === user.id ||
+                              (user.bracketCounts && (
+                                (user.bracketCounts.submitted > 0) || 
+                                (user.bracketCounts.inProgress > 0) || 
+                                (user.bracketCounts.deleted > 0)
+                              ))
+                            }
+                            className={`p-1.5 rounded border border-transparent focus:outline-none focus:ring-2 focus:ring-offset-1 transition-colors ${
+                              (user.bracketCounts && (
+                                (user.bracketCounts.submitted > 0) || 
+                                (user.bracketCounts.inProgress > 0) || 
+                                (user.bracketCounts.deleted > 0)
+                              ))
+                                ? 'bg-gray-400 text-white cursor-not-allowed opacity-50'
+                                : 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500'
+                            }`}
+                            title={
+                              (user.bracketCounts && (
+                                (user.bracketCounts.submitted > 0) || 
+                                (user.bracketCounts.inProgress > 0) || 
+                                (user.bracketCounts.deleted > 0)
+                              ))
+                                ? 'Cannot delete user with existing brackets'
+                                : 'Delete User'
+                            }
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </div>
                       )}
                     </td>
