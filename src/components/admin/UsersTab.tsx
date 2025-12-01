@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
-import { Trash2, CheckCircle, Key, Edit2, X, Search, Save, RefreshCw } from 'lucide-react';
+import { Trash2, CheckCircle, Key, Edit2, X, Search, Save, RefreshCw, Clock } from 'lucide-react';
 
 interface User {
   id: string;
@@ -47,6 +47,7 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [pendingDeleteUserId, setPendingDeleteUserId] = useState<string | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [protectConfirmed, setProtectConfirmed] = useState<boolean>(true);
 
   // Calculate counts
   const totalUsers = users.length;
@@ -245,18 +246,41 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
 
   const handleBulkDelete = async () => {
     // Get users that can be deleted (no bracket counts)
-    const deletableUsers = filteredUsers.filter(user => {
+    let deletableUsers = filteredUsers.filter(user => {
       const counts = user.bracketCounts;
       return !counts || (counts.submitted === 0 && counts.inProgress === 0 && counts.deleted === 0);
     });
 
+    // Filter out confirmed users if protection is enabled
+    let protectedCount = 0;
+    if (protectConfirmed) {
+      const confirmedUsers = deletableUsers.filter(user => user.emailConfirmed);
+      protectedCount = confirmedUsers.length;
+      deletableUsers = deletableUsers.filter(user => !user.emailConfirmed);
+    }
+
     if (deletableUsers.length === 0) {
-      alert('No users can be deleted. All users in the current view have brackets.');
+      const reasons = [];
+      if (protectedCount > 0) {
+        reasons.push(`${protectedCount} confirmed user(s) are protected`);
+      }
+      const bracketCount = filteredUsers.length - deletableUsers.length - protectedCount;
+      if (bracketCount > 0) {
+        reasons.push(`${bracketCount} user(s) have brackets`);
+      }
+      alert(`No users can be deleted. ${reasons.join(' and ')}.`);
       return;
     }
 
-    const skippedCount = filteredUsers.length - deletableUsers.length;
-    const message = `This will delete ${deletableUsers.length} user(s) from the current view.\n\n${skippedCount > 0 ? `${skippedCount} user(s) will be skipped because they have brackets.\n\n` : ''}This action cannot be undone. Are you sure you want to continue?`;
+    const skippedCount = filteredUsers.length - deletableUsers.length - protectedCount;
+    let message = `This will delete ${deletableUsers.length} user(s) from the current view.\n\n`;
+    if (protectedCount > 0) {
+      message += `${protectedCount} confirmed user(s) will be protected and not deleted.\n`;
+    }
+    if (skippedCount > 0) {
+      message += `${skippedCount} user(s) will be skipped because they have brackets.\n`;
+    }
+    message += '\nThis action cannot be undone. Are you sure you want to continue?';
 
     if (!confirm(message)) {
       return;
@@ -311,16 +335,30 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
 
       {/* Search and Bulk Delete */}
       <div className="mb-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex-1 max-w-md">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <div className="flex items-center gap-4 flex-1">
+          <div className="flex items-center gap-2">
             <input
-              type="text"
-              placeholder="Search by any field..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              type="checkbox"
+              id="protectConfirmed"
+              checked={protectConfirmed}
+              onChange={(e) => setProtectConfirmed(e.target.checked)}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
             />
+            <label htmlFor="protectConfirmed" className="text-sm font-medium text-gray-700">
+              Protect Confirmed
+            </label>
+          </div>
+          <div className="flex-1 max-w-md">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by any field..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
           </div>
         </div>
         <div className="flex gap-2">
@@ -359,9 +397,6 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
                 Email
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Role
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -384,7 +419,7 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredUsers.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
                   {searchQuery ? 'No users match your search' : 'No users found'}
                 </td>
               </tr>
@@ -406,17 +441,24 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
                           placeholder="Name"
                         />
                       ) : (
-                        <div 
-                          className="text-sm font-medium text-gray-900 cursor-help"
-                          title={user.name.length > 15 ? user.name : undefined}
-                          onClick={() => {
-                            // On mobile, show full text on click
-                            if (window.innerWidth < 768 && user.name.length > 15) {
-                              alert(user.name);
-                            }
-                          }}
-                        >
-                          {truncateText(user.name, 15)}
+                        <div className="flex items-center gap-2">
+                          {user.emailConfirmed ? (
+                            <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" title="Confirmed" />
+                          ) : (
+                            <Clock className="h-4 w-4 text-yellow-600 flex-shrink-0" title="Pending" />
+                          )}
+                          <div 
+                            className="text-sm font-medium text-gray-900 cursor-help"
+                            title={user.name.length > 15 ? user.name : undefined}
+                            onClick={() => {
+                              // On mobile, show full text on click
+                              if (window.innerWidth < 768 && user.name.length > 15) {
+                                alert(user.name);
+                              }
+                            }}
+                          >
+                            {truncateText(user.name, 15)}
+                          </div>
                         </div>
                       )}
                     </td>
@@ -443,15 +485,6 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
                           {truncateText(user.email, 15)}
                         </div>
                       )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        user.emailConfirmed
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {user.emailConfirmed ? 'Confirmed' : 'Pending'}
-                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
