@@ -45,6 +45,8 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
   const [editEmail, setEditEmail] = useState('');
   const [editError, setEditError] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [pendingDeleteUserId, setPendingDeleteUserId] = useState<string | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
   // Calculate counts
   const totalUsers = users.length;
@@ -203,29 +205,41 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
     }
   };
 
-  const handleDeleteUser = async (userId: string, userName: string, bracketCounts?: { submitted: number; inProgress: number; deleted: number }) => {
+  const handleDeleteUser = (userId: string, userName: string, bracketCounts?: { submitted: number; inProgress: number; deleted: number }) => {
     if (bracketCounts && (bracketCounts.submitted > 0 || bracketCounts.inProgress > 0 || bracketCounts.deleted > 0)) {
       alert(`Cannot delete user "${userName}". User has brackets: ${bracketCounts.submitted} submitted, ${bracketCounts.inProgress} in progress, ${bracketCounts.deleted} deleted.`);
       return;
     }
 
-    if (confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone.`)) {
-      try {
-        const response = await fetch(`/api/admin/users/${userId}`, {
-          method: 'DELETE',
-        });
+    // Show inline confirmation
+    setPendingDeleteUserId(userId);
+  };
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          setError(errorData.error || 'Failed to delete user');
-          return;
-        }
+  const handleCancelDeleteUser = () => {
+    setPendingDeleteUserId(null);
+  };
 
-        await onReload();
-      } catch (error) {
-        console.error('Error deleting user:', error);
-        setError('Failed to delete user');
+  const handleConfirmDeleteUser = async (userId: string) => {
+    setDeletingUserId(userId);
+    setPendingDeleteUserId(null);
+
+    try {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        setError(errorData.error || 'Failed to delete user');
+        return;
       }
+
+      await onReload();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      setError('Failed to delete user');
+    } finally {
+      setDeletingUserId(null);
     }
   };
 
@@ -551,36 +565,57 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
                           >
                             <Key className="h-4 w-4" />
                           </button>
-                          <button
-                            onClick={() => handleDeleteUser(user.id, user.name, user.bracketCounts)}
-                            disabled={
-                              user.bracketCounts && (
-                                (user.bracketCounts.submitted > 0) || 
-                                (user.bracketCounts.inProgress > 0) || 
-                                (user.bracketCounts.deleted > 0)
-                              )
-                            }
-                            className={`p-1.5 rounded border border-transparent focus:outline-none focus:ring-2 focus:ring-offset-1 transition-colors ${
-                              (user.bracketCounts && (
-                                (user.bracketCounts.submitted > 0) || 
-                                (user.bracketCounts.inProgress > 0) || 
-                                (user.bracketCounts.deleted > 0)
-                              ))
-                                ? 'bg-gray-400 text-white cursor-not-allowed opacity-50'
-                                : 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500'
-                            }`}
-                            title={
-                              (user.bracketCounts && (
-                                (user.bracketCounts.submitted > 0) || 
-                                (user.bracketCounts.inProgress > 0) || 
-                                (user.bracketCounts.deleted > 0)
-                              ))
-                                ? 'Cannot delete user with existing brackets'
-                                : 'Delete User'
-                            }
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          {pendingDeleteUserId === user.id ? (
+                            <div className="flex items-center space-x-2 bg-red-50 border border-red-200 rounded px-2 py-1">
+                              <span className="text-xs text-red-700 font-medium whitespace-nowrap">Delete?</span>
+                              <button
+                                onClick={() => handleConfirmDeleteUser(user.id)}
+                                disabled={deletingUserId === user.id}
+                                className="bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                Yes
+                              </button>
+                              <button
+                                onClick={handleCancelDeleteUser}
+                                disabled={deletingUserId === user.id}
+                                className="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                No
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handleDeleteUser(user.id, user.name, user.bracketCounts)}
+                              disabled={
+                                deletingUserId === user.id ||
+                                (user.bracketCounts && (
+                                  (user.bracketCounts.submitted > 0) || 
+                                  (user.bracketCounts.inProgress > 0) || 
+                                  (user.bracketCounts.deleted > 0)
+                                ))
+                              }
+                              className={`p-1.5 rounded border border-transparent focus:outline-none focus:ring-2 focus:ring-offset-1 transition-colors ${
+                                (user.bracketCounts && (
+                                  (user.bracketCounts.submitted > 0) || 
+                                  (user.bracketCounts.inProgress > 0) || 
+                                  (user.bracketCounts.deleted > 0)
+                                ))
+                                  ? 'bg-gray-400 text-white cursor-not-allowed opacity-50'
+                                  : 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500'
+                              }`}
+                              title={
+                                (user.bracketCounts && (
+                                  (user.bracketCounts.submitted > 0) || 
+                                  (user.bracketCounts.inProgress > 0) || 
+                                  (user.bracketCounts.deleted > 0)
+                                ))
+                                  ? 'Cannot delete user with existing brackets'
+                                  : 'Delete User'
+                              }
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
                       )}
                     </td>

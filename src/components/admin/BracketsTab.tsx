@@ -50,6 +50,8 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
   const [editForm, setEditForm] = useState<EditForm>({});
   const [isExporting, setIsExporting] = useState(false);
   const [protectSubmitted, setProtectSubmitted] = useState<boolean>(true);
+  const [pendingDeleteBracketId, setPendingDeleteBracketId] = useState<string | null>(null);
+  const [deletingBracketId, setDeletingBracketId] = useState<string | null>(null);
 
   // Filter brackets when filters or brackets change
   useEffect(() => {
@@ -157,10 +159,18 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
     }
   };
 
-  const handleDelete = async (bracketId: string, entryName: string) => {
-    if (!confirm(`Are you sure you want to delete the bracket "${entryName}"? This cannot be undone.`)) {
-      return;
-    }
+  const handleDelete = (bracketId: string) => {
+    // Show inline confirmation
+    setPendingDeleteBracketId(bracketId);
+  };
+
+  const handleCancelDelete = () => {
+    setPendingDeleteBracketId(null);
+  };
+
+  const handleConfirmDelete = async (bracketId: string) => {
+    setDeletingBracketId(bracketId);
+    setPendingDeleteBracketId(null);
     
     try {
       const response = await fetch(`/api/admin/brackets/${bracketId}`, {
@@ -177,6 +187,8 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
     } catch (error) {
       console.error('Error deleting bracket:', error);
       alert('Failed to delete bracket');
+    } finally {
+      setDeletingBracketId(null);
     }
   };
 
@@ -609,13 +621,34 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
                         >
                           <Edit className="w-5 h-5" />
                         </button>
-                        <button
-                          onClick={() => handleDelete(bracket.id, bracket.entryName)}
-                          className="text-red-600 hover:text-red-900"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
+                        {pendingDeleteBracketId === bracket.id ? (
+                          <div className="flex items-center space-x-2 bg-red-50 border border-red-200 rounded px-2 py-1">
+                            <span className="text-xs text-red-700 font-medium whitespace-nowrap">Delete?</span>
+                            <button
+                              onClick={() => handleConfirmDelete(bracket.id)}
+                              disabled={deletingBracketId === bracket.id}
+                              className="bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              Yes
+                            </button>
+                            <button
+                              onClick={handleCancelDelete}
+                              disabled={deletingBracketId === bracket.id}
+                              className="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              No
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleDelete(bracket.id)}
+                            disabled={deletingBracketId === bracket.id}
+                            className="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        )}
                       </div>
                     )}
                   </td>
