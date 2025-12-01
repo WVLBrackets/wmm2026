@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Trash2, Edit, Save, X, Edit3, Download } from 'lucide-react';
+import { Trash2, Edit, Save, X, Edit3, Download, RefreshCw } from 'lucide-react';
 
 interface User {
   id: string;
@@ -52,6 +52,41 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
   const [protectSubmitted, setProtectSubmitted] = useState<boolean>(true);
   const [pendingDeleteBracketId, setPendingDeleteBracketId] = useState<string | null>(null);
   const [deletingBracketId, setDeletingBracketId] = useState<string | null>(null);
+  const [tournamentYear, setTournamentYear] = useState<string>('');
+
+  // Calculate totals
+  const totalBrackets = brackets.length;
+  const totalSubmitted = brackets.filter(b => b.status === 'submitted').length;
+  const totalInProgress = brackets.filter(b => b.status === 'in_progress').length;
+  const totalDeleted = brackets.filter(b => b.status === 'deleted').length;
+
+  // Get available years from bracket data
+  const availableYears = Array.from(
+    new Set(brackets.map(b => b.year).filter(y => y !== undefined && y !== null))
+  ).sort((a, b) => (b || 0) - (a || 0));
+
+  // Load tournament year from config on mount
+  useEffect(() => {
+    const loadTournamentYear = async () => {
+      try {
+        const response = await fetch('/api/site-config');
+        const data = await response.json();
+        if (data.success && data.data?.tournamentYear) {
+          const year = data.data.tournamentYear;
+          setTournamentYear(year);
+          // Set default filter year to tournament year if available in brackets
+          const yearNum = parseInt(year);
+          if (availableYears.includes(yearNum)) {
+            setFilterYear(year);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading tournament year:', error);
+      }
+    };
+    loadTournamentYear();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Filter brackets when filters or brackets change
   useEffect(() => {
@@ -313,23 +348,42 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
-      {/* Filters */}
+      {/* Totals at the top */}
+      <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="text-sm font-medium text-blue-600">Total Brackets</div>
+          <div className="text-2xl font-bold text-blue-900">{totalBrackets}</div>
+        </div>
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="text-sm font-medium text-green-600">Total Submitted</div>
+          <div className="text-2xl font-bold text-green-900">{totalSubmitted}</div>
+        </div>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="text-sm font-medium text-yellow-600">Total In Progress</div>
+          <div className="text-2xl font-bold text-yellow-900">{totalInProgress}</div>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="text-sm font-medium text-red-600">Total Deleted</div>
+          <div className="text-2xl font-bold text-red-900">{totalDeleted}</div>
+        </div>
+      </div>
+
+      {/* Filters - Second row */}
       <div className="mb-6">
         <div className="flex items-center space-x-4 mb-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Filter by User
+              Filter by Year
             </label>
             <select
-              value={filterUser}
-              onChange={(e) => setFilterUser(e.target.value)}
+              value={filterYear}
+              onChange={(e) => setFilterYear(e.target.value)}
               className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              style={{ width: '40ch' }}
             >
-              <option value="all">All Users</option>
-              {users.map(user => (
-                <option key={user.id} value={user.id}>
-                  {user.name} ({user.email})
+              <option value="all">All Years</option>
+              {availableYears.map(year => (
+                <option key={year} value={year}>
+                  {year}
                 </option>
               ))}
             </select>
@@ -353,21 +407,20 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
           
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Filter by Year
+              Filter by User
             </label>
             <select
-              value={filterYear}
-              onChange={(e) => setFilterYear(e.target.value)}
+              value={filterUser}
+              onChange={(e) => setFilterUser(e.target.value)}
               className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              style={{ width: '40ch' }}
             >
-              <option value="all">All Years</option>
-              {Array.from(new Set(brackets.map(b => b.year).filter(y => y !== undefined && y !== null)))
-                .sort((a, b) => (b || 0) - (a || 0))
-                .map(year => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
+              <option value="all">All Users</option>
+              {users.map(user => (
+                <option key={user.id} value={user.id}>
+                  {user.name} ({user.email})
+                </option>
+              ))}
             </select>
           </div>
           
@@ -400,7 +453,7 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
               onClick={() => {
                 setFilterUser('all');
                 setFilterStatus('all');
-                setFilterYear('all');
+                setFilterYear(tournamentYear || 'all');
                 setFilterCreatedDate('');
                 setFilterUpdatedDate('');
               }}
@@ -411,39 +464,49 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
             </button>
           </div>
         </div>
+      </div>
         
-        {/* Action buttons on second line */}
-        <div className="flex gap-2 items-center">
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="protectSubmitted"
-              checked={protectSubmitted}
-              onChange={(e) => setProtectSubmitted(e.target.checked)}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <label htmlFor="protectSubmitted" className="text-sm font-medium text-gray-700">
-              Protect Submitted
-            </label>
-          </div>
+      {/* Action buttons - Third row */}
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="protectSubmitted"
+            checked={protectSubmitted}
+            onChange={(e) => setProtectSubmitted(e.target.checked)}
+            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+          />
+          <label htmlFor="protectSubmitted" className="text-sm font-medium text-gray-700">
+            Protect Submitted
+          </label>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={onReload}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors flex items-center gap-2"
+            title="Refresh bracket list"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </button>
           <button
             onClick={handleExportBrackets}
             disabled={filteredBrackets.length === 0 || isExporting}
-            className={`px-3 py-1.5 rounded text-sm font-medium ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
               filteredBrackets.length === 0 || isExporting
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-green-600 text-white hover:bg-green-700'
             }`}
             title={filteredBrackets.length === 0 ? 'No brackets to export' : `Export ${filteredBrackets.length} filtered bracket(s) to CSV`}
           >
             {isExporting ? (
               <>
-                <span className="animate-spin inline-block mr-1">⏳</span>
+                <span className="animate-spin inline-block">⏳</span>
                 Exporting...
               </>
             ) : (
               <>
-                <Download className="w-4 h-4 inline mr-1" />
+                <Download className="w-4 h-4" />
                 Extract ({filteredBrackets.length})
               </>
             )}
@@ -451,14 +514,14 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
           <button
             onClick={handleDeleteAllFiltered}
             disabled={filteredBrackets.length === 0}
-            className={`px-3 py-1.5 rounded text-sm font-medium ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
               filteredBrackets.length === 0
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-red-600 text-white hover:bg-red-700'
             }`}
             title={filteredBrackets.length === 0 ? 'No brackets to delete' : `Delete ${filteredBrackets.length} filtered bracket(s)`}
           >
-            <Trash2 className="w-4 h-4 inline mr-1" />
+            <Trash2 className="w-4 h-4" />
             Bulk Delete ({filteredBrackets.length})
           </button>
         </div>
