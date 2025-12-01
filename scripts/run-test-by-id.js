@@ -122,10 +122,12 @@ const groupMapping = {
   'account': 'tests/e2e/account-creation.spec.ts tests/e2e/account-validation.spec.ts tests/e2e/user-creation-confirmation.spec.ts',
   '3': 'tests/e2e/authentication.spec.ts',
   'auth': 'tests/e2e/authentication.spec.ts',
-  '4': 'tests/e2e/bracket-creation.spec.ts',
-  'bracket': 'tests/e2e/bracket-creation.spec.ts',
+  '4': 'tests/e2e/bracket-creation.spec.ts tests/e2e/bracket-interaction.spec.ts',
+  'bracket': 'tests/e2e/bracket-creation.spec.ts tests/e2e/bracket-interaction.spec.ts',
   '5': 'tests/api',
   'api': 'tests/api',
+  '6': 'tests/e2e/bracket-full-workflow.spec.ts',
+  'workflow': 'tests/e2e/bracket-full-workflow.spec.ts',
 };
 
 const testId = process.argv[2];
@@ -205,7 +207,8 @@ if (groupMapping[testId]) {
                     testId === '2' ? 'account' : testId === 'account' ? '2' :
                     testId === '3' ? 'auth' : testId === 'auth' ? '3' :
                     testId === '4' ? 'bracket' : testId === 'bracket' ? '4' :
-                    testId === '5' ? 'api' : testId === 'api' ? '5' : testId;
+                    testId === '5' ? 'api' : testId === 'api' ? '5' :
+                    testId === '6' ? 'workflow' : testId === 'workflow' ? '6' : testId;
   
   // Build command - ensure playwrightArgs are properly separated
   let command = `npx cross-env TEST_ENV=${env} npx playwright test ${filePattern}`;
@@ -249,7 +252,7 @@ if (testMapping[testId]) {
 
 console.error(`Error: Test ID "${testId}" not found.`);
 console.error('Valid test IDs:');
-console.error('  Groups: 1, 2, 3, 4, 5, connect, account, auth, bracket, api');
+console.error('  Groups: 1, 2, 3, 4, 5, 6, connect, account, auth, bracket, api, workflow');
 console.error('  Individual tests: See tests/TEST_MAPPING.md for full list');
 process.exit(1);
 

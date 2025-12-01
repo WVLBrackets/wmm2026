@@ -66,7 +66,7 @@ npx playwright test tests/e2e/authentication.spec.ts
 
 | Group ID | Name | Abbreviation | Test Files |
 |----------|------|--------------|------------|
-| 4 | Bracket Creation & Management | `bracket` | `tests/e2e/bracket-creation.spec.ts`<br>`tests/e2e/bracket-*.spec.ts` |
+| 4 | Bracket Creation & Management | `bracket` | `tests/e2e/bracket-creation.spec.ts`<br>`tests/e2e/bracket-interaction.spec.ts` |
 
 **Execution:**
 ```bash
@@ -79,7 +79,7 @@ node scripts/run-test-by-id.js bracket
 npm run test:bracket
 
 # Direct files (not recommended - use group ID instead)
-npx playwright test tests/e2e/bracket-*.spec.ts
+npx playwright test tests/e2e/bracket-creation.spec.ts tests/e2e/bracket-interaction.spec.ts
 ```
 
 ## Group 5: Backend API Validation (`api`)
@@ -102,6 +102,38 @@ npm run test:api
 npx playwright test tests/api
 ```
 
+## Group 6: Full Bracket Workflow (`workflow`)
+
+| Group ID | Name | Abbreviation | Test Files |
+|----------|------|--------------|------------|
+| 6 | Full Bracket Workflow | `workflow` | `tests/e2e/bracket-full-workflow.spec.ts` |
+
+**Note:** This group contains comprehensive end-to-end tests that simulate complete user workflows. These tests are longer-running (3 min timeout per test) and should be run sparingly.
+
+**Tests Include:**
+- Full bracket completion (happy path)
+- Pick invalidation logic across regions
+- Tiebreaker validation
+- Entry name validation
+- Submission flow
+- Copy bracket functionality
+- Read-only submitted bracket view
+- Print and Email functionality
+
+**Execution:**
+```bash
+# Using group number
+node scripts/run-test-by-id.js 6
+npm run test:group:6
+
+# Using abbreviation
+node scripts/run-test-by-id.js workflow
+npm run test:workflow
+
+# Direct file (not recommended - use group ID instead)
+npx playwright test tests/e2e/bracket-full-workflow.spec.ts
+```
+
 ## Summary Table
 
 | Group | Number | Abbreviation | File Pattern |
@@ -109,8 +141,9 @@ npx playwright test tests/api
 | Basic Connectivity & Navigation | 1 | `connect` | `tests/simple-test.spec.ts tests/e2e/public-pages.spec.ts` |
 | Account Creation & Validation | 2 | `account` | `tests/e2e/account-*.spec.ts` |
 | User Authentication & Session | 3 | `auth` | `tests/e2e/authentication.spec.ts` |
-| Bracket Creation & Management | 4 | `bracket` | `tests/e2e/bracket-*.spec.ts` |
+| Bracket Creation & Management | 4 | `bracket` | `tests/e2e/bracket-creation.spec.ts tests/e2e/bracket-interaction.spec.ts` |
 | Backend API Validation | 5 | `api` | `tests/api` |
+| Full Bracket Workflow | 6 | `workflow` | `tests/e2e/bracket-full-workflow.spec.ts` |
 
 ## Best Practice
 
