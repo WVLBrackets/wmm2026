@@ -116,8 +116,8 @@ const testMapping = {
 // Group mappings: number/abbreviation -> file pattern(s)
 // Note: For glob patterns, list files explicitly for Windows compatibility
 const groupMapping = {
-  '1': 'tests/simple-test.spec.ts',
-  'connect': 'tests/simple-test.spec.ts',
+  '1': 'tests/simple-test.spec.ts tests/e2e/public-pages.spec.ts',
+  'connect': 'tests/simple-test.spec.ts tests/e2e/public-pages.spec.ts',
   '2': 'tests/e2e/account-creation.spec.ts tests/e2e/account-validation.spec.ts tests/e2e/user-creation-confirmation.spec.ts',
   'account': 'tests/e2e/account-creation.spec.ts tests/e2e/account-validation.spec.ts tests/e2e/user-creation-confirmation.spec.ts',
   '3': 'tests/e2e/authentication.spec.ts',

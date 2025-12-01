@@ -6,7 +6,7 @@ This document clearly maps test groups (by number and abbreviation) to their act
 
 | Group ID | Name | Abbreviation | Test Files |
 |----------|------|--------------|------------|
-| 1 | Basic Connectivity & Navigation | `connect` | `tests/simple-test.spec.ts` |
+| 1 | Basic Connectivity & Navigation | `connect` | `tests/simple-test.spec.ts`<br>`tests/e2e/public-pages.spec.ts` |
 
 **Execution:**
 ```bash
@@ -18,8 +18,8 @@ npm run test:group:1
 node scripts/run-test-by-id.js connect
 npm run test:connect
 
-# Direct file (not recommended - use group ID instead)
-npx playwright test tests/simple-test.spec.ts
+# Direct files (not recommended - use group ID instead)
+npx playwright test tests/simple-test.spec.ts tests/e2e/public-pages.spec.ts
 ```
 
 ## Group 2: Account Creation & Validation (`account`)
@@ -106,7 +106,7 @@ npx playwright test tests/api
 
 | Group | Number | Abbreviation | File Pattern |
 |-------|--------|--------------|--------------|
-| Basic Connectivity & Navigation | 1 | `connect` | `tests/simple-test.spec.ts` |
+| Basic Connectivity & Navigation | 1 | `connect` | `tests/simple-test.spec.ts tests/e2e/public-pages.spec.ts` |
 | Account Creation & Validation | 2 | `account` | `tests/e2e/account-*.spec.ts` |
 | User Authentication & Session | 3 | `auth` | `tests/e2e/authentication.spec.ts` |
 | Bracket Creation & Management | 4 | `bracket` | `tests/e2e/bracket-*.spec.ts` |

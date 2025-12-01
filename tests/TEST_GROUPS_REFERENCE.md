@@ -6,7 +6,7 @@ Tests are organized into 5 groups based on user experience flow and dependencies
 
 | Number | Name | Abbreviation | Test Files | Description |
 |--------|------|--------------|------------|-------------|
-| 1 | Basic Connectivity & Navigation | `connect` | `tests/simple-test.spec.ts` | Verifies pages load correctly and navigation works. No authentication required. These are the simplest tests that validate the application is accessible. |
+| 1 | Basic Connectivity & Navigation | `connect` | `tests/simple-test.spec.ts`<br>`tests/e2e/public-pages.spec.ts` | Verifies pages load correctly and navigation works. No authentication required. Tests all public pages including info, rules, prizes, payments, hall-of-fame, standings, and password reset pages. |
 | 2 | Account Creation & Validation | `account` | `tests/e2e/account-*.spec.ts` | Tests the complete account creation flow including form validation, password requirements, and duplicate email handling. Creates its own test users, no dependencies. |
 | 3 | User Authentication & Session | `auth` | `tests/e2e/authentication.spec.ts` | Tests sign-in, sign-out, session persistence, and protected route access. Requires a pre-existing confirmed test user account. |
 | 4 | Bracket Creation & Management | `bracket` | `tests/e2e/bracket-*.spec.ts` | Tests creating, saving, and managing brackets. Requires authenticated user session. Tests core bracket functionality for logged-in users. |
