@@ -49,6 +49,7 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
   const [editingBracket, setEditingBracket] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditForm>({});
   const [isExporting, setIsExporting] = useState(false);
+  const [protectSubmitted, setProtectSubmitted] = useState<boolean>(true);
 
   // Filter brackets when filters or brackets change
   useEffect(() => {
@@ -239,14 +240,37 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
       return;
     }
 
-    const confirmMessage = `Are you sure you want to delete ${filteredBrackets.length} bracket(s)?\n\nThis action cannot be undone.`;
+    // Filter out submitted brackets if protection is enabled
+    let bracketsToDelete = filteredBrackets;
+    let protectedCount = 0;
+    
+    if (protectSubmitted) {
+      const submittedBrackets = bracketsToDelete.filter(b => b.status === 'submitted');
+      protectedCount = submittedBrackets.length;
+      bracketsToDelete = bracketsToDelete.filter(b => b.status !== 'submitted');
+    }
+
+    if (bracketsToDelete.length === 0) {
+      if (protectedCount > 0) {
+        alert(`Cannot delete brackets: ${protectedCount} submitted bracket(s) are protected. Turn off "Protect Submitted" to delete them.`);
+      } else {
+        alert('No brackets to delete.');
+      }
+      return;
+    }
+
+    const protectedMessage = protectedCount > 0 
+      ? `\n\nNote: ${protectedCount} submitted bracket(s) will be protected and not deleted.`
+      : '';
+    
+    const confirmMessage = `Are you sure you want to delete ${bracketsToDelete.length} bracket(s)?${protectedMessage}\n\nThis action cannot be undone.`;
     
     if (!confirm(confirmMessage)) {
       return;
     }
 
     try {
-      const deletePromises = filteredBrackets.map(bracket => 
+      const deletePromises = bracketsToDelete.map(bracket => 
         fetch(`/api/admin/brackets/${bracket.id}`, {
           method: 'DELETE',
         })
@@ -258,13 +282,16 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
       const failures = dataResults.filter(d => !d.success);
       
       if (failures.length > 0) {
-        alert(`Failed to delete ${failures.length} bracket(s). ${dataResults.length - failures.length} bracket(s) deleted successfully.`);
+        alert(`Failed to delete ${failures.length} bracket(s). ${dataResults.length - failures.length} bracket(s) deleted successfully.${protectedCount > 0 ? ` ${protectedCount} submitted bracket(s) were protected.` : ''}`);
       }
 
       await onReload();
       
       if (failures.length === 0) {
-        alert(`Successfully deleted ${filteredBrackets.length} bracket(s).`);
+        const successMessage = protectedCount > 0
+          ? `Successfully deleted ${bracketsToDelete.length} bracket(s). ${protectedCount} submitted bracket(s) were protected.`
+          : `Successfully deleted ${bracketsToDelete.length} bracket(s).`;
+        alert(successMessage);
       }
     } catch (error) {
       console.error('Error deleting filtered brackets:', error);
@@ -285,6 +312,7 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
               value={filterUser}
               onChange={(e) => setFilterUser(e.target.value)}
               className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              style={{ width: '40ch' }}
             >
               <option value="all">All Users</option>
               {users.map(user => (
@@ -373,7 +401,19 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
         </div>
         
         {/* Action buttons on second line */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="protectSubmitted"
+              checked={protectSubmitted}
+              onChange={(e) => setProtectSubmitted(e.target.checked)}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label htmlFor="protectSubmitted" className="text-sm font-medium text-gray-700">
+              Protect Submitted
+            </label>
+          </div>
           <button
             onClick={handleExportBrackets}
             disabled={filteredBrackets.length === 0 || isExporting}
@@ -407,7 +447,7 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
             title={filteredBrackets.length === 0 ? 'No brackets to delete' : `Delete ${filteredBrackets.length} filtered bracket(s)`}
           >
             <Trash2 className="w-4 h-4 inline mr-1" />
-            Delete All ({filteredBrackets.length})
+            Bulk Delete ({filteredBrackets.length})
           </button>
         </div>
       </div>
