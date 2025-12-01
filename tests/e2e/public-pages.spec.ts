@@ -78,10 +78,7 @@ test.describe('Public Pages', () => {
     test('should display entry and payment section', async ({ page }) => {
       await page.goto('/info', { waitUntil: 'domcontentloaded' });
       
-      // Wait for page to finish loading (has async data)
-      await page.waitForTimeout(2000);
-      
-      // Check for entry fee information
+      // Check for entry fee information (Playwright auto-waits for visibility)
       await expect(page.getByText(/\$5 per entry/i)).toBeVisible({ timeout: 10000 });
       
       // Check for payment-related content
@@ -91,10 +88,7 @@ test.describe('Public Pages', () => {
     test('should display scoring section', async ({ page }) => {
       await page.goto('/info', { waitUntil: 'domcontentloaded' });
       
-      // Wait for page to finish loading
-      await page.waitForTimeout(2000);
-      
-      // Check for scoring heading or content
+      // Check for scoring heading or content (Playwright auto-waits for visibility)
       await expect(page.getByText(/scoring/i).first()).toBeVisible({ timeout: 10000 });
       
       // Check for scoring values (1 point, 2 points, etc.)
@@ -104,10 +98,7 @@ test.describe('Public Pages', () => {
     test('should display prizes section', async ({ page }) => {
       await page.goto('/info', { waitUntil: 'domcontentloaded' });
       
-      // Wait for page to finish loading
-      await page.waitForTimeout(2000);
-      
-      // Check for prizes section
+      // Check for prizes section (Playwright auto-waits for visibility)
       await expect(page.getByText(/prize/i).first()).toBeVisible({ timeout: 10000 });
       
       // Check for place indicators (1st, 2nd, 3rd)
@@ -136,10 +127,7 @@ test.describe('Public Pages', () => {
     test('should display entry rules', async ({ page }) => {
       await page.goto('/rules', { waitUntil: 'domcontentloaded' });
       
-      // Wait for page to finish loading
-      await page.waitForTimeout(2000);
-      
-      // Check for entry section
+      // Check for entry section (Playwright auto-waits for visibility)
       await expect(page.getByText(/entry/i).first()).toBeVisible({ timeout: 10000 });
       
       // Check for $5 entry fee
@@ -149,10 +137,7 @@ test.describe('Public Pages', () => {
     test('should display scoring rules with point values', async ({ page }) => {
       await page.goto('/rules', { waitUntil: 'domcontentloaded' });
       
-      // Wait for page to finish loading
-      await page.waitForTimeout(2000);
-      
-      // Check for scoring section
+      // Check for scoring section (Playwright auto-waits for visibility)
       await expect(page.getByText(/scoring/i).first()).toBeVisible({ timeout: 10000 });
       
       // Check for tournament round names
@@ -164,10 +149,7 @@ test.describe('Public Pages', () => {
     test('should display underdog bonus information', async ({ page }) => {
       await page.goto('/rules', { waitUntil: 'domcontentloaded' });
       
-      // Wait for page to finish loading
-      await page.waitForTimeout(2000);
-      
-      // Check for underdog bonus section (use first() as text appears multiple times)
+      // Check for underdog bonus section (Playwright auto-waits for visibility)
       await expect(page.getByText(/underdog bonus/i).first()).toBeVisible({ timeout: 10000 });
       await expect(page.getByText(/2 point bonus/i).first()).toBeVisible();
     });
@@ -191,20 +173,14 @@ test.describe('Public Pages', () => {
     test('should display prize pool information', async ({ page }) => {
       await page.goto('/prizes', { waitUntil: 'domcontentloaded' });
       
-      // Wait for page to finish loading
-      await page.waitForTimeout(2000);
-      
-      // Check for prize pool header
+      // Check for prize pool header (Playwright auto-waits for visibility)
       await expect(page.getByText(/prize pool/i).first()).toBeVisible({ timeout: 10000 });
     });
 
     test('should display all three prize positions', async ({ page }) => {
       await page.goto('/prizes', { waitUntil: 'domcontentloaded' });
       
-      // Wait for page to finish loading
-      await page.waitForTimeout(2000);
-      
-      // Check for 1st, 2nd, 3rd place
+      // Check for 1st, 2nd, 3rd place (Playwright auto-waits for visibility)
       await expect(page.getByText(/1st place/i).first()).toBeVisible({ timeout: 10000 });
       await expect(page.getByText(/2nd place/i).first()).toBeVisible();
       await expect(page.getByText(/3rd place/i).first()).toBeVisible();
@@ -276,20 +252,14 @@ test.describe('Public Pages', () => {
     test('should display reigning champion', async ({ page }) => {
       await page.goto('/hall-of-fame', { waitUntil: 'domcontentloaded' });
       
-      // Wait for page to load (has async data)
-      await page.waitForTimeout(2000);
-      
-      // Check for reigning champion section
+      // Check for reigning champion section (Playwright auto-waits for visibility)
       await expect(page.getByText(/reigning champion/i)).toBeVisible({ timeout: 10000 });
     });
 
     test('should display tournament statistics', async ({ page }) => {
       await page.goto('/hall-of-fame', { waitUntil: 'domcontentloaded' });
       
-      // Wait for page to load
-      await page.waitForTimeout(2000);
-      
-      // Check for tournament statistics section
+      // Check for tournament statistics section (Playwright auto-waits for visibility)
       await expect(page.getByText(/tournament statistics/i)).toBeVisible({ timeout: 10000 });
       
       // Check for tournaments completed count
@@ -299,20 +269,14 @@ test.describe('Public Pages', () => {
     test('should display tournament history', async ({ page }) => {
       await page.goto('/hall-of-fame', { waitUntil: 'domcontentloaded' });
       
-      // Wait for page to load
-      await page.waitForTimeout(2000);
-      
-      // Check for tournament history section
+      // Check for tournament history section (Playwright auto-waits for visibility)
       await expect(page.getByText(/tournament history/i)).toBeVisible({ timeout: 10000 });
     });
 
     test('should display all-time leaders', async ({ page }) => {
       await page.goto('/hall-of-fame', { waitUntil: 'domcontentloaded' });
       
-      // Wait for page to load
-      await page.waitForTimeout(2000);
-      
-      // Check for all-time leaders section
+      // Check for all-time leaders section (Playwright auto-waits for visibility)
       await expect(page.getByText(/all time leaders/i)).toBeVisible({ timeout: 10000 });
     });
   });
@@ -335,8 +299,8 @@ test.describe('Public Pages', () => {
     test('should display standings table or content', async ({ page }) => {
       await page.goto('/standings', { waitUntil: 'domcontentloaded' });
       
-      // Wait for page content to load
-      await page.waitForTimeout(3000);
+      // Wait for page content to load by checking for body content
+      await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
       
       // The page should have meaningful content
       const bodyText = await page.locator('body').textContent();
@@ -364,7 +328,7 @@ test.describe('Public Pages', () => {
       await page.goto('/standings/previous-years', { waitUntil: 'domcontentloaded' });
       
       // Wait for page content to load
-      await page.waitForTimeout(3000);
+      await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
       
       // The page should have meaningful content
       const bodyText = await page.locator('body').textContent();
@@ -392,7 +356,7 @@ test.describe('Public Pages', () => {
       await page.goto('/print-bracket', { waitUntil: 'domcontentloaded' });
       
       // Wait for page content to load
-      await page.waitForTimeout(3000);
+      await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
       
       // The page should have meaningful content
       const bodyText = await page.locator('body').textContent();
@@ -483,7 +447,7 @@ test.describe('Public Pages', () => {
       await page.goto('/auth/reset-password', { waitUntil: 'domcontentloaded' });
       
       // Wait for page to process
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
       
       // Page should either show an error or redirect
       // We just verify it loaded without crashing
@@ -495,7 +459,7 @@ test.describe('Public Pages', () => {
       await page.goto('/auth/reset-password?token=invalid-token-12345', { waitUntil: 'domcontentloaded' });
       
       // Wait for page to process
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
       
       // Page should show error or password form
       // We verify it doesn't crash
@@ -511,18 +475,15 @@ test.describe('Public Pages', () => {
     test('should navigate from info page to rules via Quick Navigation', async ({ page }) => {
       await page.goto('/info', { waitUntil: 'domcontentloaded' });
       
-      // Wait for page to load
-      await page.waitForTimeout(2000);
-      
-      // Look for Quick Navigation section and click on Scoring (which links to #scoring-rules on same page)
+      // Wait for Quick Navigation to be visible (Playwright auto-waits)
       const scoringLink = page.getByRole('link', { name: /scoring/i }).first();
-      if (await scoringLink.isVisible()) {
-        await scoringLink.click();
-        await page.waitForTimeout(500);
-        // Should stay on info page (anchor link)
-        const currentUrl = page.url();
-        expect(currentUrl).toContain('/info');
-      }
+      await expect(scoringLink).toBeVisible({ timeout: 10000 });
+      
+      await scoringLink.click();
+      
+      // Should stay on info page (anchor link)
+      const currentUrl = page.url();
+      expect(currentUrl).toContain('/info');
       
       console.log('✅ Quick Navigation works on info page');
     });
@@ -530,8 +491,8 @@ test.describe('Public Pages', () => {
     test('should verify homepage has navigation to public pages', async ({ page }) => {
       await page.goto('/', { waitUntil: 'domcontentloaded' });
       
-      // Wait for page to load
-      await page.waitForTimeout(2000);
+      // Wait for page content to load
+      await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
       
       // The page should have some navigation elements
       const bodyText = await page.locator('body').textContent();
