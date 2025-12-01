@@ -376,7 +376,7 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
               >
                 Brackets
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ minWidth: '200px' }}>
                 Actions
               </th>
             </tr>
@@ -479,7 +479,7 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
                         {user.bracketCounts?.submitted ?? 0} / {user.bracketCounts?.inProgress ?? 0} / {user.bracketCounts?.deleted ?? 0}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm" style={{ overflow: 'visible', minWidth: '180px' }}>
+                    <td className="px-6 py-4 text-sm" style={{ overflow: 'visible', minWidth: '200px', width: '200px' }}>
                       {isEditing ? (
                         <div className="space-y-1">
                           {editError && (
@@ -541,20 +541,20 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
                           </div>
                         </div>
                       ) : pendingDeleteUserId === user.id ? (
-                        <div className="flex items-center justify-end">
-                          <div className="flex items-center space-x-2 bg-red-50 border border-red-200 rounded px-2 py-1 whitespace-nowrap">
+                        <div className="flex items-center justify-end w-full">
+                          <div className="flex items-center space-x-2 bg-red-50 border border-red-200 rounded px-2 py-1 whitespace-nowrap flex-shrink-0">
                             <span className="text-xs text-red-700 font-medium">Delete?</span>
                             <button
                               onClick={() => handleConfirmDeleteUser(user.id)}
                               disabled={deletingUserId === user.id}
-                              className="bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                             >
                               Yes
                             </button>
                             <button
                               onClick={handleCancelDeleteUser}
                               disabled={deletingUserId === user.id}
-                              className="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                             >
                               No
                             </button>
