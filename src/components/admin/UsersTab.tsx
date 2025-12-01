@@ -443,9 +443,13 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
                       ) : (
                         <div className="flex items-center gap-2">
                           {user.emailConfirmed ? (
-                            <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" title="Confirmed" />
+                            <span title="Confirmed">
+                              <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+                            </span>
                           ) : (
-                            <Clock className="h-4 w-4 text-yellow-600 flex-shrink-0" title="Pending" />
+                            <span title="Pending">
+                              <Clock className="h-4 w-4 text-yellow-600 flex-shrink-0" />
+                            </span>
                           )}
                           <div 
                             className="text-sm font-medium text-gray-900 cursor-help"
