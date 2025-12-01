@@ -22,15 +22,17 @@ This guide helps you get up and running on a new machine while preserving all co
    ```
    This creates `.env.test` with all necessary environment variables from Vercel.
 
-4. **Install Playwright browsers** (for testing)
+4. **Install Playwright browsers** (for local testing/debugging only)
    ```bash
    npx playwright install
    ```
+   Note: Most testing is done via staging preview deployments, not locally.
 
-5. **Run the development server**
+5. **Optional: Run the development server** (for local development/debugging)
    ```bash
    npm run dev
    ```
+   Note: This is optional. All testing is done on staging preview deployments via GitHub Actions workflows.
 
 ## Environment Variables
 
@@ -107,8 +109,17 @@ The following environment variables are required (automatically pulled via `pull
 - `src/components/admin/BracketsTab.tsx` - Brackets admin interface
 - `.github/workflows/` - GitHub Actions workflows for testing
 
-### Testing Commands
+### Testing Workflow
 
+**Primary Testing Method: GitHub Actions Workflows**
+- All testing is done via staging preview deployments
+- Manual workflow execution through GitHub Actions
+- Workflows available:
+  - Full Regression Tests
+  - Group 1-5 individual test groups
+  - Configure: Environment (Prod/Preview), Browser (Chrome/Firefox/WebKit/All), Mode (Desktop/Mobile/Both)
+
+**Local Testing (Optional - for debugging only)**
 ```bash
 # Run all tests locally
 npm test
@@ -125,6 +136,7 @@ npm run test:mobile
 # Run with email suppression
 SUPPRESS_TEST_EMAILS=true npm test
 ```
+Note: Local testing requires `.env.test` file with all environment variables.
 
 ### Database
 
@@ -170,8 +182,9 @@ Run `.\scripts\pull-env-all.ps1` to pull all environment variables from Vercel.
 
 ## Next Steps After Setup
 
-1. Verify environment variables are loaded: Check `.env.test` exists
-2. Run a simple test to verify setup: `npm run test:group-1`
-3. Start development server: `npm run dev`
-4. Review recent changes: `git log --oneline -10`
+1. Verify environment variables are loaded: Check `.env.test` exists (only needed for local testing)
+2. Review recent changes: `git log --oneline -10`
+3. Push changes to staging branch to trigger preview deployment
+4. Execute workflows via GitHub Actions for testing on staging preview
+5. (Optional) Run local tests for debugging: `npm run test:group-1`
 
