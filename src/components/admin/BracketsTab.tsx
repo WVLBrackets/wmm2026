@@ -674,7 +674,7 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {new Date(bracket.updatedAt).toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium" style={{ overflow: 'visible' }}>
+                  <td className="px-6 py-4 text-right text-sm font-medium" style={{ overflow: 'visible', minWidth: '180px' }}>
                     {editingBracket === bracket.id ? (
                       <div className="flex items-center justify-end space-x-2">
                         <button
@@ -693,9 +693,9 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
                         </button>
                       </div>
                     ) : pendingDeleteBracketId === bracket.id ? (
-                      <div className="relative flex items-center justify-end" style={{ minWidth: '200px' }}>
-                        <div className="flex items-center space-x-2 bg-red-50 border border-red-200 rounded px-2 py-1" style={{ position: 'absolute', right: 0, zIndex: 10, whiteSpace: 'nowrap' }}>
-                          <span className="text-xs text-red-700 font-medium whitespace-nowrap">Delete?</span>
+                      <div className="flex items-center justify-end">
+                        <div className="flex items-center space-x-2 bg-red-50 border border-red-200 rounded px-2 py-1 whitespace-nowrap">
+                          <span className="text-xs text-red-700 font-medium">Delete?</span>
                           <button
                             onClick={() => handleConfirmDelete(bracket.id)}
                             disabled={deletingBracketId === bracket.id}

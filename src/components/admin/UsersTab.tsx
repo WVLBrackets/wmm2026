@@ -479,7 +479,7 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
                         {user.bracketCounts?.submitted ?? 0} / {user.bracketCounts?.inProgress ?? 0} / {user.bracketCounts?.deleted ?? 0}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm" style={{ overflow: 'visible' }}>
+                    <td className="px-6 py-4 text-sm" style={{ overflow: 'visible', minWidth: '180px' }}>
                       {isEditing ? (
                         <div className="space-y-1">
                           {editError && (
@@ -541,9 +541,9 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
                           </div>
                         </div>
                       ) : pendingDeleteUserId === user.id ? (
-                        <div className="relative flex items-center justify-end" style={{ minWidth: '200px' }}>
-                          <div className="flex items-center space-x-2 bg-red-50 border border-red-200 rounded px-2 py-1" style={{ position: 'absolute', right: 0, zIndex: 10, whiteSpace: 'nowrap' }}>
-                            <span className="text-xs text-red-700 font-medium whitespace-nowrap">Delete?</span>
+                        <div className="flex items-center justify-end">
+                          <div className="flex items-center space-x-2 bg-red-50 border border-red-200 rounded px-2 py-1 whitespace-nowrap">
+                            <span className="text-xs text-red-700 font-medium">Delete?</span>
                             <button
                               onClick={() => handleConfirmDeleteUser(user.id)}
                               disabled={deletingUserId === user.id}
