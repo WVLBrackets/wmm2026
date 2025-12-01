@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Trash2, Edit, Save, X, Edit3, Download, RefreshCw } from 'lucide-react';
+import { Trash2, Edit, Save, X, Edit3, Download, RefreshCw, Search } from 'lucide-react';
 
 interface User {
   id: string;
@@ -45,6 +45,7 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
   const [filterYear, setFilterYear] = useState<string>('all');
   const [filterCreatedDate, setFilterCreatedDate] = useState<string>('');
   const [filterUpdatedDate, setFilterUpdatedDate] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [filteredBrackets, setFilteredBrackets] = useState<Bracket[]>([]);
   const [editingBracket, setEditingBracket] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditForm>({});
@@ -105,6 +106,14 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
       filtered = filtered.filter(b => b.year === yearNum);
     }
     
+    // Filter by entry name search
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(b => 
+        b.entryName.toLowerCase().includes(query)
+      );
+    }
+    
     // Filter by created date (match date only, ignore time)
     if (filterCreatedDate) {
       const [year, month, day] = filterCreatedDate.split('-').map(Number);
@@ -148,7 +157,7 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
     }
     
     setFilteredBrackets(filtered);
-  }, [brackets, filterUser, filterStatus, filterYear, filterCreatedDate, filterUpdatedDate]);
+  }, [brackets, filterUser, filterStatus, filterYear, filterCreatedDate, filterUpdatedDate, searchQuery]);
 
   const handleEdit = (bracket: Bracket) => {
     setEditingBracket(bracket.id);
@@ -456,6 +465,7 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
                 setFilterYear(tournamentYear || 'all');
                 setFilterCreatedDate('');
                 setFilterUpdatedDate('');
+                setSearchQuery('');
               }}
               className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-600 text-white hover:bg-gray-700"
               title="Clear all filters"
@@ -468,17 +478,31 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
         
       {/* Action buttons - Third row */}
       <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="protectSubmitted"
-            checked={protectSubmitted}
-            onChange={(e) => setProtectSubmitted(e.target.checked)}
-            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-          />
-          <label htmlFor="protectSubmitted" className="text-sm font-medium text-gray-700">
-            Protect Submitted
-          </label>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="protectSubmitted"
+              checked={protectSubmitted}
+              onChange={(e) => setProtectSubmitted(e.target.checked)}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label htmlFor="protectSubmitted" className="text-sm font-medium text-gray-700">
+              Protect Submitted
+            </label>
+          </div>
+          <div className="flex-1 max-w-md">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by Entry Name"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
         </div>
         <div className="flex gap-2">
           <button
