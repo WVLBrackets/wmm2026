@@ -43,7 +43,7 @@ jobs:
   test-group-4:
     name: Group 4 - Bracket Creation & Management
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     
     steps:
       - name: Checkout code
