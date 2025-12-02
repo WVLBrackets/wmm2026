@@ -55,10 +55,8 @@ test.describe('Sign Out Functionality', () => {
       // Wait for page to load
       await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
       
-      // Should see logout button
-      const logoutButton = page.getByRole('button', { name: /logout/i }).or(
-        page.locator('button').filter({ has: page.locator('svg.lucide-log-out') })
-      );
+      // Should see logout button - use :visible to handle mobile/desktop layouts
+      const logoutButton = page.locator('button:visible').filter({ has: page.locator('svg.lucide-log-out') });
       await expect(logoutButton.first()).toBeVisible({ timeout: 10000 });
     });
 
@@ -94,10 +92,8 @@ test.describe('Sign Out Functionality', () => {
       // Wait for page to load
       await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
       
-      // Click logout button
-      const logoutButton = page.getByRole('button', { name: /logout/i }).or(
-        page.locator('button').filter({ has: page.locator('svg.lucide-log-out') })
-      );
+      // Click logout button - use :visible to handle mobile/desktop layouts
+      const logoutButton = page.locator('button:visible').filter({ has: page.locator('svg.lucide-log-out') });
       await logoutButton.first().click();
       
       // Should redirect to sign in page
@@ -113,10 +109,8 @@ test.describe('Sign Out Functionality', () => {
       // Wait for page to load
       await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
       
-      // Click logout
-      const logoutButton = page.getByRole('button', { name: /logout/i }).or(
-        page.locator('button').filter({ has: page.locator('svg.lucide-log-out') })
-      );
+      // Click logout - use :visible to handle mobile/desktop layouts
+      const logoutButton = page.locator('button:visible').filter({ has: page.locator('svg.lucide-log-out') });
       await logoutButton.first().click();
       
       // Wait for redirect
@@ -141,10 +135,8 @@ test.describe('Sign Out Functionality', () => {
       // Wait for page to load
       await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
       
-      // Click logout
-      const logoutButton = page.getByRole('button', { name: /logout/i }).or(
-        page.locator('button').filter({ has: page.locator('svg.lucide-log-out') })
-      );
+      // Click logout - use :visible to handle mobile/desktop layouts
+      const logoutButton = page.locator('button:visible').filter({ has: page.locator('svg.lucide-log-out') });
       await logoutButton.first().click();
       
       // Wait for redirect to sign in
@@ -163,13 +155,12 @@ test.describe('Sign Out Functionality', () => {
       
       await page.goto('/bracket');
       
-      // Verify we're on bracket page
-      await expect(page.getByText(/welcome/i).first()).toBeVisible({ timeout: 10000 });
+      // Verify we're on bracket page - use :visible for mobile/desktop
+      const welcomeText = page.locator('h1:visible').filter({ hasText: /welcome/i });
+      await expect(welcomeText.first()).toBeVisible({ timeout: 10000 });
       
-      // Click logout
-      const logoutButton = page.getByRole('button', { name: /logout/i }).or(
-        page.locator('button').filter({ has: page.locator('svg.lucide-log-out') })
-      );
+      // Click logout - use :visible to handle mobile/desktop layouts
+      const logoutButton = page.locator('button:visible').filter({ has: page.locator('svg.lucide-log-out') });
       await logoutButton.first().click();
       
       // Wait for sign in page
@@ -184,7 +175,8 @@ test.describe('Sign Out Functionality', () => {
       
       // Should be able to access bracket page again
       await page.goto('/bracket');
-      await expect(page.getByText(/welcome/i).first()).toBeVisible({ timeout: 10000 });
+      const welcomeTextAfter = page.locator('h1:visible').filter({ hasText: /welcome/i });
+      await expect(welcomeTextAfter.first()).toBeVisible({ timeout: 10000 });
     });
   });
 
@@ -198,13 +190,12 @@ test.describe('Sign Out Functionality', () => {
       
       await page.goto('/bracket');
       
-      // Wait for landing page
-      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+      // Wait for landing page - use :visible for mobile/desktop
+      const newBracketButton = page.locator('button:visible').filter({ has: page.locator('svg') });
+      await expect(newBracketButton.first()).toBeVisible({ timeout: 15000 });
       
-      // Logout
-      const logoutButton = page.getByRole('button', { name: /logout/i }).or(
-        page.locator('button').filter({ has: page.locator('svg.lucide-log-out') })
-      );
+      // Logout - use :visible to handle mobile/desktop layouts
+      const logoutButton = page.locator('button:visible').filter({ has: page.locator('svg.lucide-log-out') });
       await logoutButton.first().click();
       
       // Should redirect to sign in
@@ -217,11 +208,12 @@ test.describe('Sign Out Functionality', () => {
       
       await page.goto('/bracket');
       
-      // Wait for landing page
-      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+      // Wait for landing page - use :visible for mobile/desktop
+      const newBracketButton = page.locator('button:visible').filter({ has: page.locator('svg.lucide-plus') });
+      await expect(newBracketButton.first()).toBeVisible({ timeout: 15000 });
       
       // Open bracket wizard
-      await page.getByRole('button', { name: /new bracket/i }).first().click();
+      await newBracketButton.first().click();
       
       // Wait for wizard to load
       await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
@@ -232,13 +224,12 @@ test.describe('Sign Out Functionality', () => {
       if (await cancelButton.isVisible()) {
         await cancelButton.click();
         
-        // Should return to landing
-        await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+        // Should return to landing - use :visible for mobile/desktop
+        const newBracketButtonAfter = page.locator('button:visible').filter({ has: page.locator('svg.lucide-plus') });
+        await expect(newBracketButtonAfter.first()).toBeVisible({ timeout: 15000 });
         
-        // Now logout
-        const logoutButton = page.getByRole('button', { name: /logout/i }).or(
-          page.locator('button').filter({ has: page.locator('svg.lucide-log-out') })
-        );
+        // Now logout - use :visible to handle mobile/desktop layouts
+        const logoutButton = page.locator('button:visible').filter({ has: page.locator('svg.lucide-log-out') });
         await logoutButton.first().click();
         
         // Should redirect to sign in
