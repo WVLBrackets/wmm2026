@@ -72,18 +72,7 @@ test.describe('Admin Security - Access Control', () => {
   });
 
   test.describe('Non-Admin Authenticated Access', () => {
-    // Helper to check if running on production
-    const isProduction = () => {
-      return process.env.TEST_ENV === 'production' || 
-             process.env.TEST_ENV === 'prod' ||
-             (process.env.PLAYWRIGHT_TEST_BASE_URL && 
-              process.env.PLAYWRIGHT_TEST_BASE_URL.includes('warrensmm.com'));
-    };
-
     test('should block non-admin user from /admin', async ({ page }) => {
-      // Skip on production - no test user available
-      test.skip(isProduction(), 'Skipping authenticated test on production - no test user');
-      
       const credentials = getTestUserCredentials();
       await signInUser(page, credentials.email, credentials.password);
       
@@ -99,8 +88,6 @@ test.describe('Admin Security - Access Control', () => {
     });
 
     test('should block non-admin user from /admin/users-across-environments', async ({ page }) => {
-      test.skip(isProduction(), 'Skipping authenticated test on production - no test user');
-      
       const credentials = getTestUserCredentials();
       await signInUser(page, credentials.email, credentials.password);
       
@@ -116,8 +103,6 @@ test.describe('Admin Security - Access Control', () => {
     });
 
     test('should block non-admin user from /admin/reset-password', async ({ page }) => {
-      test.skip(isProduction(), 'Skipping authenticated test on production - no test user');
-      
       const credentials = getTestUserCredentials();
       await signInUser(page, credentials.email, credentials.password);
       
@@ -133,8 +118,6 @@ test.describe('Admin Security - Access Control', () => {
     });
 
     test('should block non-admin user from /admin/tournament-builder', async ({ page }) => {
-      test.skip(isProduction(), 'Skipping authenticated test on production - no test user');
-      
       const credentials = getTestUserCredentials();
       await signInUser(page, credentials.email, credentials.password);
       
