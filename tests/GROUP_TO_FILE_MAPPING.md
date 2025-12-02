@@ -114,9 +114,37 @@ npm run test:workflow
 npx playwright test tests/e2e/bracket-full-workflow.spec.ts
 ```
 
-## Groups 6-7: Reserved
+## Group 6: Reserved
 
-Groups 6 and 7 are reserved for future UI-based use case groups.
+Group 6 is reserved for future UI-based use case groups.
+
+## Group 7: Password Reset & Sign Out (`pwdlogout`)
+
+| Group ID | Name | Abbreviation | Test Files |
+|----------|------|--------------|------------|
+| 7 | Password Reset & Sign Out | `pwdlogout` | `tests/e2e/password-reset.spec.ts`<br>`tests/e2e/sign-out.spec.ts` |
+
+**Tests Include:**
+- Forgot password page UI and flow
+- Reset password with valid/invalid tokens
+- Password validation during reset
+- Logout button visibility
+- Logout flow and redirect
+- Session cleared after logout
+
+**Execution:**
+```bash
+# Using group number
+node scripts/run-test-by-id.js 7
+npm run test:group:7
+
+# Using abbreviation
+node scripts/run-test-by-id.js pwdlogout
+npm run test:pwdlogout
+
+# Direct files (not recommended - use group ID instead)
+npx playwright test tests/e2e/password-reset.spec.ts tests/e2e/sign-out.spec.ts
+```
 
 ## Group 8: Backend API Validation (`api`)
 
@@ -148,7 +176,7 @@ npx playwright test tests/api
 | Bracket Creation & Management | 4 | `bracket` | `tests/e2e/bracket-creation.spec.ts tests/e2e/bracket-interaction.spec.ts` |
 | Full Bracket Workflow | 5 | `workflow` | `tests/e2e/bracket-full-workflow.spec.ts` |
 | *(Reserved)* | 6 | - | *(Future UI use cases)* |
-| *(Reserved)* | 7 | - | *(Future UI use cases)* |
+| Password Reset & Sign Out | 7 | `pwdlogout` | `tests/e2e/password-reset.spec.ts tests/e2e/sign-out.spec.ts` |
 | Backend API Validation | 8 | `api` | `tests/api` |
 
 ## Best Practice
