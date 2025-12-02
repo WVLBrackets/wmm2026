@@ -1,0 +1,113 @@
+name: Test Group 8 - API
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Test environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      mode:
+        description: 'Device mode'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - desktop
+          - mobile
+          - both
+      browser:
+        description: 'Browser to test'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - chrome
+          - firefox
+          - webkit
+      send_emails:
+        description: 'Send emails during tests'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+jobs:
+  test-group-8:
+    name: Group 8 - Backend API Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Determine Playwright projects
+        id: projects
+        run: |
+          PROJECTS_JSON=$(node scripts/get-playwright-projects.js ${{ inputs.mode }} ${{ inputs.browser }})
+          PROJECTS_DISPLAY=$(node -e "console.log(JSON.parse('$PROJECTS_JSON').join(', '))")
+          echo "projects=$PROJECTS_JSON" >> $GITHUB_OUTPUT
+          echo "Selected projects: $PROJECTS_DISPLAY"
+      
+      - name: Display test configuration
+        run: |
+          PROJECTS_JSON='${{ steps.projects.outputs.projects }}'
+          PROJECTS_DISPLAY=$(node -e "console.log(JSON.parse(process.argv[1]).join(', '))" "$PROJECTS_JSON")
+          echo "## 🧪 Test Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Mode:** ${{ inputs.mode }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Browser:** ${{ inputs.browser }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Send Emails:** ${{ inputs.send_emails }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Projects:** $PROJECTS_DISPLAY" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Install Playwright browsers
+        run: |
+          # Install all browsers needed (chromium, firefox, webkit for desktop and mobile)
+          npx playwright install --with-deps chromium firefox webkit
+      
+      - name: Run Group 8 tests (API)
+        env:
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD_STAGING: ${{ secrets.TEST_USER_PASSWORD_STAGING }}
+          TEST_USER_PASSWORD_PRODUCTION: ${{ secrets.TEST_USER_PASSWORD_PRODUCTION }}
+          TEST_ENV: ${{ inputs.environment }}
+          SUPPRESS_TEST_EMAILS: ${{ inputs.send_emails == 'false' && 'true' || 'false' }}
+        run: |
+          node scripts/run-tests-with-projects.js 8 ${{ inputs.mode }} ${{ inputs.browser }}
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: group-8-api-report
+          path: playwright-report/
+          retention-days: 7
+      
+      - name: Upload test traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: group-8-api-traces
+          path: test-results/
+          retention-days: 7
+

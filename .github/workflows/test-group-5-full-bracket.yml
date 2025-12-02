@@ -1,4 +1,4 @@
-name: Test Group 5 - API
+name: Test Group 5 - Full Bracket
 
 on:
   workflow_dispatch:
@@ -14,7 +14,7 @@ on:
       mode:
         description: 'Device mode'
         required: true
-        default: 'both'
+        default: 'desktop'
         type: choice
         options:
           - desktop
@@ -23,7 +23,7 @@ on:
       browser:
         description: 'Browser to test'
         required: true
-        default: 'all'
+        default: 'chrome'
         type: choice
         options:
           - all
@@ -41,9 +41,9 @@ on:
 
 jobs:
   test-group-5:
-    name: Group 5 - Backend API Validation
+    name: Group 5 - Full Bracket Workflow
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30  # Longer timeout for comprehensive workflow tests
     
     steps:
       - name: Checkout code
@@ -79,13 +79,17 @@ jobs:
           echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Projects:** $PROJECTS_DISPLAY" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ **Note:** This is a comprehensive workflow test group." >> $GITHUB_STEP_SUMMARY
+          echo "Tests include full bracket completion, pick invalidation, and submission flows." >> $GITHUB_STEP_SUMMARY
+          echo "Expected runtime: 5-10 minutes depending on browser/mode selection." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
       
       - name: Install Playwright browsers
         run: |
           # Install all browsers needed (chromium, firefox, webkit for desktop and mobile)
           npx playwright install --with-deps chromium firefox webkit
       
-      - name: Run Group 5 tests (API)
+      - name: Run Group 5 tests (Full Bracket Workflow)
         env:
           TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
           TEST_USER_PASSWORD_STAGING: ${{ secrets.TEST_USER_PASSWORD_STAGING }}
@@ -99,7 +103,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: group-5-api-report
+          name: group-5-full-bracket-report
           path: playwright-report/
           retention-days: 7
       
@@ -107,7 +111,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: group-5-api-traces
+          name: group-5-full-bracket-traces
           path: test-results/
           retention-days: 7
 

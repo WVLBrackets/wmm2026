@@ -19,7 +19,7 @@ const browser = process.argv[4];
 
 if (!testId || !mode || !browser) {
   console.error('Usage: node scripts/run-tests-with-projects.js <test-id> <mode> <browser>');
-  console.error('  test-id: Test group number (1-5) or abbreviation');
+  console.error('  test-id: Test group number (1-5, 8) or abbreviation');
   console.error('  mode: desktop, mobile, or both');
   console.error('  browser: chrome, firefox, webkit, or all');
   process.exit(1);

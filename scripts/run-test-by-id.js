@@ -115,6 +115,7 @@ const testMapping = {
 
 // Group mappings: number/abbreviation -> file pattern(s)
 // Note: For glob patterns, list files explicitly for Windows compatibility
+// Groups 6-7 are reserved for future UI-based use case groups
 const groupMapping = {
   '1': 'tests/simple-test.spec.ts tests/e2e/public-pages.spec.ts',
   'connect': 'tests/simple-test.spec.ts tests/e2e/public-pages.spec.ts',
@@ -124,10 +125,10 @@ const groupMapping = {
   'auth': 'tests/e2e/authentication.spec.ts',
   '4': 'tests/e2e/bracket-creation.spec.ts tests/e2e/bracket-interaction.spec.ts',
   'bracket': 'tests/e2e/bracket-creation.spec.ts tests/e2e/bracket-interaction.spec.ts',
-  '5': 'tests/api',
-  'api': 'tests/api',
-  '6': 'tests/e2e/bracket-full-workflow.spec.ts',
+  '5': 'tests/e2e/bracket-full-workflow.spec.ts',
   'workflow': 'tests/e2e/bracket-full-workflow.spec.ts',
+  '8': 'tests/api',
+  'api': 'tests/api',
 };
 
 const testId = process.argv[2];
@@ -207,8 +208,8 @@ if (groupMapping[testId]) {
                     testId === '2' ? 'account' : testId === 'account' ? '2' :
                     testId === '3' ? 'auth' : testId === 'auth' ? '3' :
                     testId === '4' ? 'bracket' : testId === 'bracket' ? '4' :
-                    testId === '5' ? 'api' : testId === 'api' ? '5' :
-                    testId === '6' ? 'workflow' : testId === 'workflow' ? '6' : testId;
+                    testId === '5' ? 'workflow' : testId === 'workflow' ? '5' :
+                    testId === '8' ? 'api' : testId === 'api' ? '8' : testId;
   
   // Build command - ensure playwrightArgs are properly separated
   let command = `npx cross-env TEST_ENV=${env} npx playwright test ${filePattern}`;
@@ -252,7 +253,8 @@ if (testMapping[testId]) {
 
 console.error(`Error: Test ID "${testId}" not found.`);
 console.error('Valid test IDs:');
-console.error('  Groups: 1, 2, 3, 4, 5, 6, connect, account, auth, bracket, api, workflow');
+console.error('  Groups: 1, 2, 3, 4, 5, 8, connect, account, auth, bracket, workflow, api');
+console.error('  Note: Groups 6-7 are reserved for future UI-based use case groups');
 console.error('  Individual tests: See tests/TEST_MAPPING.md for full list');
 process.exit(1);
 

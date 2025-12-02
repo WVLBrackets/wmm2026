@@ -82,31 +82,11 @@ npm run test:bracket
 npx playwright test tests/e2e/bracket-creation.spec.ts tests/e2e/bracket-interaction.spec.ts
 ```
 
-## Group 5: Backend API Validation (`api`)
+## Group 5: Full Bracket Workflow (`workflow`)
 
 | Group ID | Name | Abbreviation | Test Files |
 |----------|------|--------------|------------|
-| 5 | Backend API Validation | `api` | `tests/api/auth.spec.ts`<br>`tests/api/**/*.spec.ts` |
-
-**Execution:**
-```bash
-# Using group number
-node scripts/run-test-by-id.js 5
-npm run test:group:5
-
-# Using abbreviation
-node scripts/run-test-by-id.js api
-npm run test:api
-
-# Direct files (not recommended - use group ID instead)
-npx playwright test tests/api
-```
-
-## Group 6: Full Bracket Workflow (`workflow`)
-
-| Group ID | Name | Abbreviation | Test Files |
-|----------|------|--------------|------------|
-| 6 | Full Bracket Workflow | `workflow` | `tests/e2e/bracket-full-workflow.spec.ts` |
+| 5 | Full Bracket Workflow | `workflow` | `tests/e2e/bracket-full-workflow.spec.ts` |
 
 **Note:** This group contains comprehensive end-to-end tests that simulate complete user workflows. These tests are longer-running (3 min timeout per test) and should be run sparingly.
 
@@ -123,8 +103,8 @@ npx playwright test tests/api
 **Execution:**
 ```bash
 # Using group number
-node scripts/run-test-by-id.js 6
-npm run test:group:6
+node scripts/run-test-by-id.js 5
+npm run test:group:5
 
 # Using abbreviation
 node scripts/run-test-by-id.js workflow
@@ -132,6 +112,30 @@ npm run test:workflow
 
 # Direct file (not recommended - use group ID instead)
 npx playwright test tests/e2e/bracket-full-workflow.spec.ts
+```
+
+## Groups 6-7: Reserved
+
+Groups 6 and 7 are reserved for future UI-based use case groups.
+
+## Group 8: Backend API Validation (`api`)
+
+| Group ID | Name | Abbreviation | Test Files |
+|----------|------|--------------|------------|
+| 8 | Backend API Validation | `api` | `tests/api/auth.spec.ts`<br>`tests/api/**/*.spec.ts` |
+
+**Execution:**
+```bash
+# Using group number
+node scripts/run-test-by-id.js 8
+npm run test:group:8
+
+# Using abbreviation
+node scripts/run-test-by-id.js api
+npm run test:api
+
+# Direct files (not recommended - use group ID instead)
+npx playwright test tests/api
 ```
 
 ## Summary Table
@@ -142,8 +146,10 @@ npx playwright test tests/e2e/bracket-full-workflow.spec.ts
 | Account Creation & Validation | 2 | `account` | `tests/e2e/account-*.spec.ts` |
 | User Authentication & Session | 3 | `auth` | `tests/e2e/authentication.spec.ts` |
 | Bracket Creation & Management | 4 | `bracket` | `tests/e2e/bracket-creation.spec.ts tests/e2e/bracket-interaction.spec.ts` |
-| Backend API Validation | 5 | `api` | `tests/api` |
-| Full Bracket Workflow | 6 | `workflow` | `tests/e2e/bracket-full-workflow.spec.ts` |
+| Full Bracket Workflow | 5 | `workflow` | `tests/e2e/bracket-full-workflow.spec.ts` |
+| *(Reserved)* | 6 | - | *(Future UI use cases)* |
+| *(Reserved)* | 7 | - | *(Future UI use cases)* |
+| Backend API Validation | 8 | `api` | `tests/api` |
 
 ## Best Practice
 
