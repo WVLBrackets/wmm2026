@@ -44,7 +44,7 @@ jobs:
   full-regression:
     name: Full Regression Test Suite
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     
     steps:
       - name: Checkout code
@@ -72,7 +72,7 @@ jobs:
           # Install all browsers needed (chromium, firefox, webkit for desktop and mobile)
           npx playwright install --with-deps chromium firefox webkit
       
-      - name: Run Group 1 - Basic Connectivity & Navigation
+      - name: Run Group 1 - Basic Connectivity & Security
         env:
           TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
           TEST_USER_PASSWORD_STAGING: ${{ secrets.TEST_USER_PASSWORD_STAGING }}
@@ -102,7 +102,7 @@ jobs:
         run: |
           node scripts/run-tests-with-projects.js 3 ${{ inputs.mode }} ${{ inputs.browser }}
       
-      - name: Run Group 4 - Bracket Creation & Management
+      - name: Run Group 4 - Bracket Creation & Interaction
         env:
           TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
           TEST_USER_PASSWORD_STAGING: ${{ secrets.TEST_USER_PASSWORD_STAGING }}
@@ -112,7 +112,7 @@ jobs:
         run: |
           node scripts/run-tests-with-projects.js 4 ${{ inputs.mode }} ${{ inputs.browser }}
       
-      - name: Run Group 5 - Backend API Validation
+      - name: Run Group 5 - Full Bracket Workflow
         env:
           TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
           TEST_USER_PASSWORD_STAGING: ${{ secrets.TEST_USER_PASSWORD_STAGING }}
@@ -121,6 +121,26 @@ jobs:
           SUPPRESS_TEST_EMAILS: ${{ inputs.send_emails == 'false' && 'true' || 'false' }}
         run: |
           node scripts/run-tests-with-projects.js 5 ${{ inputs.mode }} ${{ inputs.browser }}
+      
+      - name: Run Group 7 - Password Reset & Sign Out
+        env:
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD_STAGING: ${{ secrets.TEST_USER_PASSWORD_STAGING }}
+          TEST_USER_PASSWORD_PRODUCTION: ${{ secrets.TEST_USER_PASSWORD_PRODUCTION }}
+          TEST_ENV: ${{ inputs.environment }}
+          SUPPRESS_TEST_EMAILS: ${{ inputs.send_emails == 'false' && 'true' || 'false' }}
+        run: |
+          node scripts/run-tests-with-projects.js 7 ${{ inputs.mode }} ${{ inputs.browser }}
+      
+      - name: Run Group 8 - Backend API Validation
+        env:
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD_STAGING: ${{ secrets.TEST_USER_PASSWORD_STAGING }}
+          TEST_USER_PASSWORD_PRODUCTION: ${{ secrets.TEST_USER_PASSWORD_PRODUCTION }}
+          TEST_ENV: ${{ inputs.environment }}
+          SUPPRESS_TEST_EMAILS: ${{ inputs.send_emails == 'false' && 'true' || 'false' }}
+        run: |
+          node scripts/run-tests-with-projects.js 8 ${{ inputs.mode }} ${{ inputs.browser }}
       
       - name: Generate test summary
         if: always()
@@ -137,11 +157,15 @@ jobs:
           echo "**Projects:** $PROJECTS_DISPLAY" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Test Groups Executed:" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Group 1 - Basic Connectivity & Navigation" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Group 2 - Account Creation & Validation" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Group 3 - User Authentication & Session" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Group 4 - Bracket Creation & Management" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Group 5 - Backend API Validation" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Group 1 - Basic Connectivity & Security (~53 tests)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Group 2 - Account Creation & Validation (~20 tests)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Group 3 - User Authentication & Session (~7 tests)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Group 4 - Bracket Creation & Interaction (~24 tests)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Group 5 - Full Bracket Workflow (20 tests)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Group 7 - Password Reset & Sign Out (30 tests)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Group 8 - Backend API Validation (48 tests)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Total: ~202 tests across 7 groups**" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "📋 Check the individual group steps above for detailed results." >> $GITHUB_STEP_SUMMARY
           echo "📦 Test reports are available as artifacts below." >> $GITHUB_STEP_SUMMARY
@@ -192,4 +216,3 @@ jobs:
             Branch: ${{ github.ref }}
             
             View details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
