@@ -67,7 +67,6 @@ test.describe('Account Creation', () => {
     await submitSignupForm(page);
 
     // Client-side validation - wait for button to be enabled again (handler completed)
-<<<<<<< HEAD
     // In WebKit, the validation happens synchronously, so wait for either:
     // 1. Button to be enabled (validation passed but no error), OR
     // 2. Error message to appear (validation failed)
