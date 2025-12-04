@@ -5,9 +5,9 @@ import { getHallOfFameData } from '@/lib/googleSheets';
 import TeamLogo from './TeamLogo';
 import { PageLogger } from '@/components/PageLogger';
 
-// ISR: Revalidate once per day (86400 seconds = 24 hours)
-// Hall of Fame data only changes once per year after tournament ends
-export const revalidate = 86400;
+// Static generation with on-demand revalidation
+// Page is rebuilt only when admin clicks "Rebuild Hall of Fame" button
+export const revalidate = false;
 
 export default async function HallOfFamePage() {
   // Fetch site config server-side

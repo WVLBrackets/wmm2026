@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Users, Trophy, LogOut, Link2, Table, Zap } from 'lucide-react';
+import { Users, Trophy, LogOut, Link2, Table, Zap, RefreshCw, Home, Info, Award } from 'lucide-react';
 import { useBracketMode } from '@/contexts/BracketModeContext';
 import UsersTab from '@/components/admin/UsersTab';
 import BracketsTab from '@/components/admin/BracketsTab';
@@ -51,6 +51,10 @@ export default function AdminPage() {
   const [brackets, setBrackets] = useState<Bracket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  
+  // Revalidation state
+  const [revalidating, setRevalidating] = useState<string | null>(null);
+  const [revalidateMessage, setRevalidateMessage] = useState<string | null>(null);
 
   // Tab state
   const [activeTab, setActiveTab] = useState<'brackets' | 'users' | 'data' | 'logs' | 'usage'>('users');
@@ -91,6 +95,36 @@ export default function AdminPage() {
       setError('Failed to load admin data');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  /**
+   * Trigger on-demand revalidation for a static page
+   */
+  const handleRevalidate = async (path: string, pageName: string) => {
+    setRevalidating(path);
+    setRevalidateMessage(null);
+    
+    try {
+      const response = await fetch('/api/admin/revalidate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setRevalidateMessage(`✅ ${pageName} rebuilt successfully`);
+      } else {
+        setRevalidateMessage(`❌ Failed to rebuild ${pageName}: ${result.error}`);
+      }
+    } catch (err) {
+      setRevalidateMessage(`❌ Failed to rebuild ${pageName}`);
+    } finally {
+      setRevalidating(null);
+      // Clear message after 3 seconds
+      setTimeout(() => setRevalidateMessage(null), 3000);
     }
   };
 
@@ -179,11 +213,77 @@ export default function AdminPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Admin Panel</h1>
               <p className="text-gray-600 mt-1">Manage users and brackets</p>
             </div>
+            
+            {/* Rebuild Buttons */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-gray-500 mr-1">Rebuild:</span>
+              <button
+                onClick={() => handleRevalidate('/', 'Home Page')}
+                disabled={revalidating !== null}
+                className={`flex items-center space-x-1 px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                  revalidating === '/'
+                    ? 'bg-gray-300 text-gray-500 cursor-wait'
+                    : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                }`}
+                title="Rebuild Home Page (announcements)"
+              >
+                {revalidating === '/' ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Home className="h-4 w-4" />
+                )}
+                <span>Home</span>
+              </button>
+              <button
+                onClick={() => handleRevalidate('/info', 'Info Page')}
+                disabled={revalidating !== null}
+                className={`flex items-center space-x-1 px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                  revalidating === '/info'
+                    ? 'bg-gray-300 text-gray-500 cursor-wait'
+                    : 'bg-green-100 text-green-700 hover:bg-green-200'
+                }`}
+                title="Rebuild Info Page (entry, scoring, prizes)"
+              >
+                {revalidating === '/info' ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Info className="h-4 w-4" />
+                )}
+                <span>Info</span>
+              </button>
+              <button
+                onClick={() => handleRevalidate('/hall-of-fame', 'Hall of Fame')}
+                disabled={revalidating !== null}
+                className={`flex items-center space-x-1 px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                  revalidating === '/hall-of-fame'
+                    ? 'bg-gray-300 text-gray-500 cursor-wait'
+                    : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                }`}
+                title="Rebuild Hall of Fame"
+              >
+                {revalidating === '/hall-of-fame' ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Award className="h-4 w-4" />
+                )}
+                <span>Hall of Fame</span>
+              </button>
+              
+              {/* Revalidate message */}
+              {revalidateMessage && (
+                <span className={`text-sm ml-2 ${
+                  revalidateMessage.startsWith('✅') ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {revalidateMessage}
+                </span>
+              )}
+            </div>
+            
             <div className="flex items-center space-x-4">
               {session?.user && (
                 <div className="text-right">

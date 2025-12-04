@@ -4,8 +4,9 @@ import { getSiteConfigFromGoogleSheets, SiteConfigData } from '@/lib/siteConfig'
 import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 import { PageLogger } from '@/components/PageLogger';
 
-// ISR: Revalidate every 5 minutes (300 seconds)
-export const revalidate = 300;
+// Static generation with on-demand revalidation
+// Page is rebuilt only when admin clicks "Rebuild Info" button
+export const revalidate = false;
 
 /**
  * Helper function to format the tournament deadline date

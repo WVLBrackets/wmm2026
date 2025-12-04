@@ -1,11 +1,17 @@
 import CountdownClock from '@/components/CountdownClock';
 import Announcements from '@/components/Announcements';
-import { getSiteConfig } from '@/config/site';
+import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
+import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 import HomePageLogo from '@/components/HomePageLogo';
 import { PageLogger } from '@/components/PageLogger';
 
+// Static generation with on-demand revalidation
+// Page is rebuilt only when admin clicks "Rebuild Home" button
+// Note: CountdownClock is a client component and updates dynamically
+export const revalidate = false;
+
 export default async function Home() {
-  const siteConfig = await getSiteConfig();
+  const siteConfig = await getSiteConfigFromGoogleSheets() || FALLBACK_CONFIG;
 
   return (
     <>
