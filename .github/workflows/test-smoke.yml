@@ -1,0 +1,127 @@
+name: Smoke Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      mode:
+        description: 'Device mode'
+        required: true
+        default: 'desktop'
+        type: choice
+        options:
+          - desktop
+          - mobile
+          - both
+      browser:
+        description: 'Browser to test'
+        required: true
+        default: 'chrome'
+        type: choice
+        options:
+          - chrome
+          - firefox
+          - webkit
+          - all
+
+jobs:
+  smoke-test:
+    name: Smoke Test - Critical Path
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Determine Playwright projects
+        id: projects
+        run: |
+          PROJECTS_JSON=$(node scripts/get-playwright-projects.js ${{ inputs.mode }} ${{ inputs.browser }})
+          PROJECTS_DISPLAY=$(node -e "console.log(JSON.parse('$PROJECTS_JSON').join(', '))")
+          echo "projects=$PROJECTS_JSON" >> $GITHUB_OUTPUT
+          echo "Selected projects: $PROJECTS_DISPLAY"
+      
+      - name: Display test configuration
+        run: |
+          PROJECTS_JSON='${{ steps.projects.outputs.projects }}'
+          PROJECTS_DISPLAY=$(node -e "console.log(JSON.parse(process.argv[1]).join(', '))" "$PROJECTS_JSON")
+          echo "## 🔥 Smoke Test Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Mode:** ${{ inputs.mode }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Browser:** ${{ inputs.browser }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Projects:** $PROJECTS_DISPLAY" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### What This Tests" >> $GITHUB_STEP_SUMMARY
+          echo "1. Homepage loads" >> $GITHUB_STEP_SUMMARY
+          echo "2. Public pages accessible (Info, Hall of Fame, Standings)" >> $GITHUB_STEP_SUMMARY
+          echo "3. User sign-in" >> $GITHUB_STEP_SUMMARY
+          echo "4. Bracket page access" >> $GITHUB_STEP_SUMMARY
+          echo "5. Create new bracket" >> $GITHUB_STEP_SUMMARY
+          echo "6. Fill and save/submit bracket" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Install Playwright browsers
+        run: |
+          npx playwright install --with-deps chromium firefox webkit
+      
+      - name: Run Smoke Test
+        env:
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD_STAGING: ${{ secrets.TEST_USER_PASSWORD_STAGING }}
+          TEST_USER_PASSWORD_PRODUCTION: ${{ secrets.TEST_USER_PASSWORD_PRODUCTION }}
+          TEST_ENV: ${{ inputs.environment }}
+        run: |
+          PROJECTS_JSON='${{ steps.projects.outputs.projects }}'
+          
+          # Build project arguments from JSON array
+          PROJECT_ARGS=$(node -e "
+            const projects = JSON.parse(process.argv[1]);
+            const args = projects.map(p => '--project=\"' + p + '\"').join(' ');
+            console.log(args);
+          " "$PROJECTS_JSON")
+          
+          echo "🔥 Running Smoke Test"
+          echo "Environment: ${{ inputs.environment }}"
+          echo "Projects: $PROJECTS_JSON"
+          echo ""
+          
+          eval "npx playwright test tests/e2e/smoke-test.spec.ts $PROJECT_ARGS --reporter=list"
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-report-${{ inputs.mode }}-${{ inputs.browser }}
+          path: playwright-report/
+          retention-days: 7
+      
+      - name: Test Summary
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "## ✅ Smoke Test Passed!" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Critical user journey verified successfully." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ Smoke Test Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Please check the test artifacts for details." >> $GITHUB_STEP_SUMMARY
+          fi

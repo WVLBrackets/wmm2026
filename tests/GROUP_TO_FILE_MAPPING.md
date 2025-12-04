@@ -166,6 +166,36 @@ npm run test:api
 npx playwright test tests/api
 ```
 
+## Smoke Test (`smoke`)
+
+| Type | Abbreviation | Test File |
+|------|--------------|-----------|
+| Smoke Test | `smoke` | `tests/e2e/smoke-test.spec.ts` |
+
+**Purpose:** Quick verification of the critical user journey in a single test (~3-5 minutes).
+
+**Coverage:**
+1. Homepage loads successfully
+2. Navigate public pages (Info, Hall of Fame, Standings)
+3. Sign in with test user
+4. Access authenticated bracket page
+5. Create a new bracket
+6. Fill out the bracket
+7. Submit the bracket
+8. Verify bracket appears in list
+
+**Execution:**
+```bash
+# Using abbreviation
+node scripts/run-test-by-id.js smoke
+npm run test:smoke
+
+# Via GitHub Actions workflow
+# Use "Smoke Test" workflow with platform/browser options
+```
+
+---
+
 ## Summary Table
 
 | Group | Number | Abbreviation | File Pattern |
@@ -178,6 +208,7 @@ npx playwright test tests/api
 | *(Reserved)* | 6 | - | *(Future UI use cases)* |
 | Password Reset & Sign Out | 7 | `pwdlogout` | `tests/e2e/password-reset.spec.ts tests/e2e/sign-out.spec.ts` |
 | Backend API Validation | 8 | `api` | `tests/api` |
+| **Smoke Test** | - | `smoke` | `tests/e2e/smoke-test.spec.ts` |
 
 ## Best Practice
 

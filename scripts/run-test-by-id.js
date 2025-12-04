@@ -131,6 +131,8 @@ const groupMapping = {
   'pwdlogout': 'tests/e2e/password-reset.spec.ts tests/e2e/sign-out.spec.ts',
   '8': 'tests/api',
   'api': 'tests/api',
+  // Smoke Test - quick verification of critical user journey
+  'smoke': 'tests/e2e/smoke-test.spec.ts',
 };
 
 const testId = process.argv[2];
@@ -212,7 +214,8 @@ if (groupMapping[testId]) {
                     testId === '4' ? 'bracket' : testId === 'bracket' ? '4' :
                     testId === '5' ? 'workflow' : testId === 'workflow' ? '5' :
                     testId === '7' ? 'pwdlogout' : testId === 'pwdlogout' ? '7' :
-                    testId === '8' ? 'api' : testId === 'api' ? '8' : testId;
+                    testId === '8' ? 'api' : testId === 'api' ? '8' :
+                    testId === 'smoke' ? 'Smoke Test' : testId;
   
   // Build command - ensure playwrightArgs are properly separated
   let command = `npx cross-env TEST_ENV=${env} npx playwright test ${filePattern}`;
@@ -257,6 +260,7 @@ if (testMapping[testId]) {
 console.error(`Error: Test ID "${testId}" not found.`);
 console.error('Valid test IDs:');
 console.error('  Groups: 1, 2, 3, 4, 5, 7, 8, connect, account, auth, bracket, workflow, pwdlogout, api');
+console.error('  Special: smoke (quick critical path verification)');
 console.error('  Note: Group 6 is reserved for future UI-based use case groups');
 console.error('  Individual tests: See tests/TEST_MAPPING.md for full list');
 process.exit(1);
