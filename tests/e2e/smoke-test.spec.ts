@@ -135,85 +135,97 @@ test.describe('Smoke Test', () => {
     console.log(`  ✓ Entry name set to: ${entryName}`);
     
     // ========================================
-    // STEP 6: Fill out bracket (simplified)
+    // STEP 6: Fill out bracket (all 5 pages)
     // ========================================
     console.log('📍 Step 6: Filling bracket picks...');
     
+    let totalPicksMade = 0;
+    
     // Fill picks on each page (4 regional pages + Final Four)
     for (let pageNum = 1; pageNum <= 5; pageNum++) {
-      // Click on team buttons to make picks
-      // Look for matchup containers and click the first team in each
-      const teamButtons = page.locator('[data-team-id], .team-button, button:has-text(/seed/i)');
-      const count = await teamButtons.count().catch(() => 0);
+      // Use the correct locator from bracket-full-workflow.spec.ts
+      // Teams are elements with cursor-pointer class, not disabled, showing seed numbers like #1, #16
+      const teamElements = page.locator('[class*="cursor-pointer"]:not([class*="opacity-50"])').filter({ hasText: /#\d+/ });
+      const teamCount = await teamElements.count();
       
-      // Click available team buttons (make picks)
-      for (let i = 0; i < Math.min(count, 20); i++) {
-        const button = teamButtons.nth(i);
-        if (await button.isVisible().catch(() => false) && await button.isEnabled().catch(() => false)) {
-          await button.click().catch(() => {});
-          await page.waitForTimeout(100); // Brief delay between clicks
+      console.log(`  Page ${pageNum}: Found ${teamCount} clickable teams`);
+      
+      // Click on alternating teams (every other one) to pick winners
+      // Games come in pairs - click first team of each pair
+      for (let i = 0; i < teamCount; i += 2) {
+        const team = teamElements.nth(i);
+        if (await team.isVisible() && await team.isEnabled()) {
+          await team.click();
+          await page.waitForTimeout(100); // Brief pause between clicks
+          totalPicksMade++;
         }
       }
       
       // Try to go to next page
-      const nextButton = page.getByRole('button', { name: /next|continue/i }).first();
-      if (await nextButton.isVisible().catch(() => false) && await nextButton.isEnabled().catch(() => false)) {
+      const nextButton = page.getByRole('button', { name: /next/i });
+      if (await nextButton.isVisible() && await nextButton.isEnabled()) {
         await nextButton.click();
-        await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+        await page.waitForTimeout(500); // Wait for page transition
         console.log(`  ✓ Page ${pageNum} completed`);
       } else {
-        // Might be on last page
+        // On last page (Final Four) - no more Next button
+        console.log(`  ✓ Page ${pageNum} completed (final page)`);
         break;
       }
     }
     
+    console.log(`  Total picks made: ${totalPicksMade}`);
+    
+    // Verify we actually made picks
+    expect(totalPicksMade).toBeGreaterThan(0);
+    
     // Set tiebreaker if visible
-    const tiebreakerInput = page.locator('input[name="tieBreaker"], input#tieBreaker, input[placeholder*="tiebreaker"], input[type="number"]').first();
-    if (await tiebreakerInput.isVisible().catch(() => false)) {
+    const tiebreakerInput = page.locator('input[type="number"]').first();
+    if (await tiebreakerInput.isVisible()) {
       await tiebreakerInput.fill('145');
-      console.log('  ✓ Tiebreaker set');
+      console.log('  ✓ Tiebreaker set to 145');
     }
     
     console.log('✅ Bracket filled');
     
     // ========================================
-    // STEP 7: Submit or Save bracket
+    // STEP 7: Save bracket
     // ========================================
-    console.log('📍 Step 7: Submitting bracket...');
+    console.log('📍 Step 7: Saving bracket...');
     
-    // Try to find Submit button first, then Save
-    const submitButton = page.getByRole('button', { name: /submit/i }).first();
-    const saveButton = page.getByRole('button', { name: /save/i }).first();
+    // For smoke test, we save the bracket (submit requires 100% completion)
+    const saveButton = page.getByRole('button', { name: /save/i });
+    await expect(saveButton).toBeVisible({ timeout: 5000 });
+    await saveButton.click();
+    console.log('  ✓ Save clicked');
     
-    if (await submitButton.isVisible().catch(() => false) && await submitButton.isEnabled().catch(() => false)) {
-      await submitButton.click();
-      console.log('  ✓ Submit clicked');
-    } else if (await saveButton.isVisible().catch(() => false) && await saveButton.isEnabled().catch(() => false)) {
-      await saveButton.click();
-      console.log('  ✓ Save clicked (bracket may be incomplete)');
-    }
-    
-    // Wait for action to complete
-    await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+    // Wait for save to complete and redirect to landing page
+    await page.waitForURL(/\/bracket/, { timeout: 15000 });
+    await page.waitForLoadState('networkidle', { timeout: 10000 });
     
     // ========================================
-    // STEP 8: Verify bracket exists
+    // STEP 8: Verify bracket exists in list
     // ========================================
     console.log('📍 Step 8: Verifying bracket saved...');
     
-    // Navigate back to landing to see the bracket in the list
-    await page.goto('/bracket', { waitUntil: 'domcontentloaded', timeout });
-    await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+    // Wait for landing page to fully load
+    await expect(page.getByRole('button', { name: /new bracket/i })).toBeVisible({ timeout: 10000 });
     
-    // Look for our entry name or any bracket in the table
-    const entryVisible = await page.getByText(entryName).isVisible().catch(() => false);
-    const tableVisible = await page.locator('table, [role="table"]').isVisible().catch(() => false);
-    const bracketExists = entryVisible || tableVisible;
+    // Look for our entry name in the bracket list
+    const entryRow = page.getByText(entryName);
+    const entryVisible = await entryRow.isVisible().catch(() => false);
     
-    if (bracketExists) {
-      console.log('✅ Bracket saved successfully');
+    if (entryVisible) {
+      console.log(`✅ Bracket "${entryName}" found in list`);
     } else {
-      console.log('⚠️ Could not verify bracket - may still be in wizard');
+      // Check if any In Progress bracket exists (fallback)
+      const inProgressExists = await page.getByText(/in progress/i).isVisible().catch(() => false);
+      if (inProgressExists) {
+        console.log('✅ Bracket saved (found In Progress entry)');
+      } else {
+        // Fail the test if we can't find the bracket
+        throw new Error(`Bracket "${entryName}" not found in list after save`);
+      }
     }
     
     // ========================================
