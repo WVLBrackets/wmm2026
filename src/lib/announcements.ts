@@ -44,10 +44,7 @@ export async function getAnnouncements(): Promise<Announcement[]> {
   try {
     const csvUrl = `https://docs.google.com/spreadsheets/d/${ANNOUNCEMENTS_SHEET_ID}/export?format=csv&gid=0`;
     
-    const response = await fetch(csvUrl, {
-      // No cache headers - we want fresh data when rebuilding
-      cache: 'no-store'
-    });
+    const response = await fetch(csvUrl);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
