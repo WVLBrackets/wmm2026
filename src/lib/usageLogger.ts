@@ -14,6 +14,15 @@ export interface UsageLogEntry {
   email?: string | null; // Optional email for logging when user is not logged in
 }
 
+/**
+ * Detect if running in an automated test environment (Playwright, Selenium, etc.)
+ * navigator.webdriver is set to true by automation tools
+ */
+const isTestEnvironment = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return !!(navigator as Navigator & { webdriver?: boolean }).webdriver;
+};
+
 class UsageLogger {
   private queue: UsageLogEntry[] = [];
   private batchSize = 10;
@@ -23,8 +32,14 @@ class UsageLogger {
 
   /**
    * Add a log entry to the queue
+   * Skips logging in automated test environments to keep usage data clean
    */
   log(eventType: EventType, location: Location, bracketId?: string | null, email?: string | null): void {
+    // Skip logging in test environments (Playwright, Selenium, etc.)
+    if (isTestEnvironment()) {
+      return;
+    }
+
     const entry: UsageLogEntry = {
       eventType,
       location,
