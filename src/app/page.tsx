@@ -4,6 +4,7 @@ import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
 import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 import HomePageLogo from '@/components/HomePageLogo';
 import { PageLogger } from '@/components/PageLogger';
+import { getAnnouncements } from '@/lib/announcements';
 
 // Static generation with on-demand revalidation
 // Page is rebuilt only when admin clicks "Rebuild Home" button
@@ -11,7 +12,9 @@ import { PageLogger } from '@/components/PageLogger';
 export const revalidate = false;
 
 export default async function Home() {
+  // Fetch all data server-side (baked into static HTML)
   const siteConfig = await getSiteConfigFromGoogleSheets() || FALLBACK_CONFIG;
+  const announcements = await getAnnouncements();
 
   return (
     <>
@@ -55,7 +58,7 @@ export default async function Home() {
 
         {/* Row 2: Announcements - Full Width */}
         <div className="w-full">
-          <Announcements />
+          <Announcements announcements={announcements} />
         </div>
       </main>
 
