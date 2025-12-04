@@ -9,10 +9,7 @@ import { test, expect } from '@playwright/test';
  * 3. Navigation links work correctly
  * 
  * Pages tested:
- * - /info - Tournament information
- * - /rules - Tournament rules
- * - /prizes - Prize information
- * - /payments - Payment information
+ * - /info - Tournament information (entry, payment, scoring, prizes)
  * - /hall-of-fame - Hall of Fame/Past winners
  * - /standings - Current standings
  * - /standings/previous-years - Historical standings
@@ -103,134 +100,6 @@ test.describe('Public Pages', () => {
       
       // Check for place indicators (1st, 2nd, 3rd)
       await expect(page.getByText(/1st place/i).first()).toBeVisible();
-    });
-  });
-
-  // ==========================================
-  // RULES PAGE TESTS
-  // ==========================================
-  test.describe('Rules Page', () => {
-    test('should load the rules page', async ({ page, browserName }) => {
-      const timeout = browserName === 'firefox' ? 60000 : 30000;
-      await page.goto('/rules', { waitUntil: 'domcontentloaded', timeout });
-      
-      const currentUrl = page.url();
-      expect(currentUrl).not.toContain('vercel.com/login');
-      expect(currentUrl).toContain('/rules');
-      
-      // Wait for content to load
-      await page.waitForLoadState('domcontentloaded');
-      
-      console.log('✅ Rules page loaded successfully');
-    });
-
-    test('should display entry rules', async ({ page }) => {
-      await page.goto('/rules', { waitUntil: 'domcontentloaded' });
-      
-      // Check for entry section (Playwright auto-waits for visibility)
-      await expect(page.getByText(/entry/i).first()).toBeVisible({ timeout: 10000 });
-      
-      // Check for $5 entry fee
-      await expect(page.getByText(/\$5/i).first()).toBeVisible();
-    });
-
-    test('should display scoring rules with point values', async ({ page }) => {
-      await page.goto('/rules', { waitUntil: 'domcontentloaded' });
-      
-      // Check for scoring section (Playwright auto-waits for visibility)
-      await expect(page.getByText(/scoring/i).first()).toBeVisible({ timeout: 10000 });
-      
-      // Check for tournament round names
-      await expect(page.getByText(/first round/i).first()).toBeVisible();
-      await expect(page.getByText(/sweet sixteen/i).first()).toBeVisible();
-      await expect(page.getByText(/championship/i).first()).toBeVisible();
-    });
-
-    test('should display underdog bonus information', async ({ page }) => {
-      await page.goto('/rules', { waitUntil: 'domcontentloaded' });
-      
-      // Check for underdog bonus section (Playwright auto-waits for visibility)
-      await expect(page.getByText(/underdog bonus/i).first()).toBeVisible({ timeout: 10000 });
-      await expect(page.getByText(/2 point bonus/i).first()).toBeVisible();
-    });
-  });
-
-  // ==========================================
-  // PRIZES PAGE TESTS
-  // ==========================================
-  test.describe('Prizes Page', () => {
-    test('should load the prizes page', async ({ page, browserName }) => {
-      const timeout = browserName === 'firefox' ? 60000 : 30000;
-      await page.goto('/prizes', { waitUntil: 'domcontentloaded', timeout });
-      
-      const currentUrl = page.url();
-      expect(currentUrl).not.toContain('vercel.com/login');
-      expect(currentUrl).toContain('/prizes');
-      
-      console.log('✅ Prizes page loaded successfully');
-    });
-
-    test('should display prize pool information', async ({ page }) => {
-      await page.goto('/prizes', { waitUntil: 'domcontentloaded' });
-      
-      // Check for prize pool header (Playwright auto-waits for visibility)
-      await expect(page.getByText(/prize pool/i).first()).toBeVisible({ timeout: 10000 });
-    });
-
-    test('should display all three prize positions', async ({ page }) => {
-      await page.goto('/prizes', { waitUntil: 'domcontentloaded' });
-      
-      // Check for 1st, 2nd, 3rd place (Playwright auto-waits for visibility)
-      await expect(page.getByText(/1st place/i).first()).toBeVisible({ timeout: 10000 });
-      await expect(page.getByText(/2nd place/i).first()).toBeVisible();
-      await expect(page.getByText(/3rd place/i).first()).toBeVisible();
-      
-      // Check for champion/runner-up labels
-      await expect(page.getByText(/champion/i).first()).toBeVisible();
-      await expect(page.getByText(/runner-up/i).first()).toBeVisible();
-    });
-  });
-
-  // ==========================================
-  // PAYMENTS PAGE TESTS
-  // ==========================================
-  test.describe('Payments Page', () => {
-    test('should load the payments page', async ({ page, browserName }) => {
-      const timeout = browserName === 'firefox' ? 60000 : 30000;
-      await page.goto('/payments', { waitUntil: 'domcontentloaded', timeout });
-      
-      const currentUrl = page.url();
-      expect(currentUrl).not.toContain('vercel.com/login');
-      expect(currentUrl).toContain('/payments');
-      
-      console.log('✅ Payments page loaded successfully');
-    });
-
-    test('should display entry fee', async ({ page }) => {
-      await page.goto('/payments', { waitUntil: 'domcontentloaded' });
-      
-      // Check for $5 entry fee
-      await expect(page.getByText(/\$5 per entry/i)).toBeVisible({ timeout: 10000 });
-    });
-
-    test('should display payment methods', async ({ page }) => {
-      await page.goto('/payments', { waitUntil: 'domcontentloaded' });
-      
-      // Check for electronic payments section (use first() as text appears in heading and description)
-      await expect(page.getByText(/electronic payments/i).first()).toBeVisible({ timeout: 10000 });
-      
-      // Check for cash option
-      await expect(page.getByText(/cash/i).first()).toBeVisible();
-    });
-
-    test('should display payment instructions', async ({ page }) => {
-      await page.goto('/payments', { waitUntil: 'domcontentloaded' });
-      
-      // Check for group payment instructions
-      await expect(page.getByText(/group payments/i)).toBeVisible({ timeout: 10000 });
-      
-      // Check for entry names instruction
-      await expect(page.getByText(/entry names/i)).toBeVisible();
     });
   });
 
