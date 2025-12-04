@@ -1,11 +1,17 @@
-import { getSiteConfig } from '@/config/site';
+import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
+import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 import { Star, Trophy, Crown, Calendar, Users, Medal, Shield } from 'lucide-react';
 import { getHallOfFameData } from '@/lib/googleSheets';
 import TeamLogo from './TeamLogo';
 import { PageLogger } from '@/components/PageLogger';
 
+// ISR: Revalidate once per day (86400 seconds = 24 hours)
+// Hall of Fame data only changes once per year after tournament ends
+export const revalidate = 86400;
+
 export default async function HallOfFamePage() {
-  const siteConfig = await getSiteConfig();
+  // Fetch site config server-side
+  const siteConfig = await getSiteConfigFromGoogleSheets() || FALLBACK_CONFIG;
   const hallOfFameData = await getHallOfFameData();
   
   // Calculate comprehensive podium finishers with winnings
