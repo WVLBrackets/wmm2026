@@ -11,7 +11,9 @@
     "test:staging": "TEST_ENV=staging playwright test",
     "test:prod": "TEST_ENV=production playwright test",
     "test:regression": "playwright test",
-    "test:smoke": "playwright test tests/e2e/authentication.spec.ts tests/e2e/bracket-creation.spec.ts",
+    "test:smoke": "playwright test tests/e2e/smoke-test.spec.ts",
+    "test:smoke:staging": "TEST_ENV=staging playwright test tests/e2e/smoke-test.spec.ts",
+    "test:smoke:prod": "TEST_ENV=production playwright test tests/e2e/smoke-test.spec.ts",
     "test:health": "playwright test tests/simple-test.spec.ts tests/e2e/authentication.spec.ts -g \"should sign in with valid credentials\"",
     "test:simple": "playwright test tests/simple-test.spec.ts",
     "test:simple:staging": "TEST_ENV=staging playwright test tests/simple-test.spec.ts",
@@ -54,8 +56,8 @@
     "pg": "^8.16.3",
     "prisma": "^6.16.3",
     "puppeteer-core": "^24.29.0",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
+    "react": "^19.1.2",
+    "react-dom": "^19.1.2",
     "resend": "^6.5.2"
   },
   "devDependencies": {
