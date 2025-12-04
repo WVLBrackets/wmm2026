@@ -102,6 +102,7 @@ function BracketContent() {
       // Load the bracket to edit with admin mode flag
       loadBracketForEdit(editId, true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   // Set bracket mode when view changes
@@ -237,6 +238,7 @@ function BracketContent() {
       // No saved state or no edit parameter - mark as processed
       hasRestoredState.current = true;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading, bracket, tournamentData, searchParams]); // Run when loading completes and bracket/tournament data is available
 
 

@@ -119,7 +119,7 @@ export default function AdminPage() {
       } else {
         setRevalidateMessage(`❌ Failed to rebuild ${pageName}: ${result.error}`);
       }
-    } catch (err) {
+    } catch {
       setRevalidateMessage(`❌ Failed to rebuild ${pageName}`);
     } finally {
       setRevalidating(null);
