@@ -157,9 +157,9 @@ test.describe('Smoke Test', () => {
     }
     console.log(`  ✓ Entry name: ${entryName}`);
     
-    // Wait for team elements to be visible (bracket wizard fully loaded)
-    const teamSelector = '[class*="cursor-pointer"]:not([class*="opacity-50"])';
-    await page.waitForSelector(teamSelector, { state: 'visible', timeout: 10000 });
+    // Wait for team elements with seed numbers to be visible (bracket data loaded)
+    // This ensures the tournament data has loaded, not just the wizard shell
+    await page.getByText(/#\d+/).first().waitFor({ state: 'visible', timeout: 15000 });
     
     // Make picks on first page only (partial)
     const page1Picks = await makePicksOnCurrentPage(page);
