@@ -26,10 +26,10 @@ on:
         default: 'all'
         type: choice
         options:
-          - all
           - chrome
           - firefox
           - webkit
+          - all
       send_emails:
         description: 'Send emails during tests'
         required: true
@@ -110,4 +110,14 @@ jobs:
           name: group-1-connect-traces
           path: test-results/
           retention-days: 7
+      
+      - name: Test Summary
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "## ✅ Group 1 Passed!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ Group 1 Failed" >> $GITHUB_STEP_SUMMARY
+            echo "Check the test artifacts for details." >> $GITHUB_STEP_SUMMARY
+          fi
 
