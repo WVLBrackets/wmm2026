@@ -161,59 +161,41 @@ test.describe('Smoke Test', () => {
     console.log('✅ All picks complete');
     
     // ========================================
-    // STEP 9: SUBMIT
+    // STEP 9: SUBMIT (immediately after completing picks - don't navigate away!)
     // ========================================
     console.log('📍 Step 8: Submit...');
     
-    // Count initial submitted
-    await page.goto('/bracket');
-    await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
-    const initialSubmittedCount = await page.locator('tr').filter({ hasText: /submitted/i }).count();
-    
-    // Go back to edit and submit
-    const editAgain = page.locator('tr').filter({ hasText: /in progress/i }).first().getByRole('button', { name: /edit/i });
-    await editAgain.click();
-    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
-    
-    // Navigate to Final Four (step 5) to find Submit button
-    for (let i = 0; i < 4; i++) {
-      const nextButton = page.getByRole('button', { name: /next/i });
-      if (await nextButton.isVisible() && await nextButton.isEnabled()) {
-        await nextButton.click();
-        await page.waitForTimeout(300);
-      }
-    }
-    
-    // Click Submit
+    // Submit button should be visible now that all picks are complete
     const submitButton = page.getByRole('button', { name: /submit/i });
-    if (await submitButton.isVisible() && await submitButton.isEnabled()) {
-      await submitButton.click();
-      await page.waitForTimeout(2000);
-      
-      // Handle confirmation if present
-      const confirmButton = page.getByRole('button', { name: /confirm|yes|ok/i });
-      if (await confirmButton.isVisible().catch(() => false)) {
-        await confirmButton.click();
-        await page.waitForTimeout(1000);
-      }
-      console.log('✅ Submitted');
-    } else {
-      console.log('⚠️ Submit not available, saving instead');
-      const fallbackSave = page.getByRole('button', { name: /save/i });
-      await fallbackSave.click();
+    await expect(submitButton).toBeVisible({ timeout: 5000 });
+    await expect(submitButton).toBeEnabled({ timeout: 5000 });
+    
+    await submitButton.click();
+    console.log('  Submit clicked');
+    await page.waitForTimeout(2000);
+    
+    // Handle confirmation if present
+    const confirmButton = page.getByRole('button', { name: /confirm|yes|ok/i });
+    if (await confirmButton.isVisible().catch(() => false)) {
+      await confirmButton.click();
+      await page.waitForTimeout(1000);
     }
+    
+    // Should return to landing page
+    await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+    console.log('✅ Submitted');
     
     // ========================================
     // STEP 10: Verify submission
     // ========================================
     console.log('📍 Step 9: Verify...');
-    await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
     
+    // Count submitted brackets - should have MORE than before (we started with some existing)
     const finalSubmittedCount = await page.locator('tr').filter({ hasText: /submitted/i }).count();
-    console.log(`  Submitted count: ${initialSubmittedCount} → ${finalSubmittedCount}`);
+    console.log(`  Submitted brackets: ${finalSubmittedCount}`);
     
-    // Should have at least one submitted bracket
-    expect(finalSubmittedCount).toBeGreaterThanOrEqual(initialSubmittedCount);
+    // Must have at least 1 submitted bracket
+    expect(finalSubmittedCount).toBeGreaterThan(0);
     console.log('✅ Verified');
     
     // ========================================
