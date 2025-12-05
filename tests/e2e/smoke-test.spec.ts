@@ -127,18 +127,11 @@ test.describe('Smoke Test', () => {
     
     // ========================================
     // STEP 8: Complete remaining picks (pages 2, 3, 4, 5 - page 1 already done)
+    // App should auto-open on page 2 since page 1 is complete
     // ========================================
     console.log('📍 Step 7: Complete remaining picks...');
     
-    // Navigate past page 1 (already complete) to page 2
-    const nextToPage2 = page.getByRole('button', { name: /next/i });
-    if (await nextToPage2.isEnabled()) {
-      await nextToPage2.click();
-      await page.waitForTimeout(500);
-      console.log('  Skipped to page 2');
-    }
-    
-    // Complete pages 2, 3, 4 (regions 2-4)
+    // Complete pages 2, 3, 4 (regions 2-4) - app should start on page 2
     for (let step = 2; step <= 4; step++) {
       // Make picks on current region - complete all rounds
       for (let round = 0; round < 4; round++) {
