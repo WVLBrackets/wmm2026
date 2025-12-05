@@ -147,6 +147,10 @@ test.describe('Smoke Test', () => {
     }
     console.log(`  ✓ Entry name: ${entryName}`);
     
+    // Wait for team elements to be visible (bracket wizard fully loaded)
+    const teamSelector = '[class*="cursor-pointer"]:not([class*="opacity-50"])';
+    await page.waitForSelector(teamSelector, { state: 'visible', timeout: 10000 });
+    
     // Make picks on first page only (partial)
     const page1Picks = await makePicksOnCurrentPage(page);
     console.log(`  ✓ Page 1: Made ${page1Picks} picks`);
