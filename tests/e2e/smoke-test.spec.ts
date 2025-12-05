@@ -85,12 +85,19 @@ test.describe('Smoke Test', () => {
     console.log('✅ Bracket page loaded');
     
     // ========================================
-    // STEP 5: Create new bracket (empty - just open and save)
+    // STEP 5: Create new bracket, complete PAGE 1 only
     // ========================================
-    console.log('📍 Step 4: Create bracket...');
+    console.log('📍 Step 4: Create bracket (page 1 only)...');
     await page.getByRole('button', { name: /new bracket/i }).first().click();
     await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
-    console.log('  Bracket wizard opened');
+    
+    // Complete all rounds on page 1 (region 1)
+    for (let round = 0; round < 4; round++) {
+      const picks = await completeRegionPicks(page);
+      if (picks === 0) break;
+      await page.waitForTimeout(500);
+    }
+    console.log('  Page 1 complete');
     
     // ========================================
     // STEP 6: SAVE as draft
@@ -119,12 +126,20 @@ test.describe('Smoke Test', () => {
     console.log('✅ Editing bracket');
     
     // ========================================
-    // STEP 8: Complete ALL picks (all 4 regions + Final Four)
+    // STEP 8: Complete remaining picks (pages 2, 3, 4, 5 - page 1 already done)
     // ========================================
-    console.log('📍 Step 7: Complete all picks...');
+    console.log('📍 Step 7: Complete remaining picks...');
     
-    // Complete all 4 regions (steps 1-4)
-    for (let step = 1; step <= 4; step++) {
+    // Navigate past page 1 (already complete) to page 2
+    const nextToPage2 = page.getByRole('button', { name: /next/i });
+    if (await nextToPage2.isEnabled()) {
+      await nextToPage2.click();
+      await page.waitForTimeout(500);
+      console.log('  Skipped to page 2');
+    }
+    
+    // Complete pages 2, 3, 4 (regions 2-4)
+    for (let step = 2; step <= 4; step++) {
       // Make picks on current region - complete all rounds
       for (let round = 0; round < 4; round++) {
         const picks = await completeRegionPicks(page);
@@ -138,16 +153,16 @@ test.describe('Smoke Test', () => {
         await nextButton.click();
         await page.waitForTimeout(500);
       }
-      console.log(`  Region ${step} complete`);
+      console.log(`  Page ${step} complete`);
     }
     
-    // Complete Final Four (step 5)
+    // Complete Final Four (page 5)
     for (let round = 0; round < 3; round++) {
       const picks = await completeRegionPicks(page);
       if (picks === 0) break;
       await page.waitForTimeout(500);
     }
-    console.log('  Final Four complete');
+    console.log('  Page 5 (Final Four) complete');
     
     // Fill tiebreaker
     const tiebreakerInput = page.locator('input[type="number"]');
