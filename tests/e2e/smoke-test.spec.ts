@@ -91,6 +91,15 @@ test.describe('Smoke Test', () => {
     await page.getByRole('button', { name: /new bracket/i }).first().click();
     await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
     
+    // Set UNIQUE entry name (required for submission - must not match existing entries)
+    const uniqueEntryName = `Smoke-${Date.now()}`;
+    const entryNameInput = page.locator('input[type="text"]').first();
+    if (await entryNameInput.isVisible()) {
+      await entryNameInput.clear();
+      await entryNameInput.fill(uniqueEntryName);
+      console.log(`  Entry name: ${uniqueEntryName}`);
+    }
+    
     // Complete all 4 regions (steps 1-4)
     let totalPicks = 0;
     for (let step = 1; step <= 4; step++) {
