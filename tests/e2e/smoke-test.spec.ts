@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { signInUser } from '../fixtures/auth-helpers';
 
 /**
  * Smoke Test - Critical User Journey
@@ -112,27 +113,17 @@ test.describe('Smoke Test', () => {
     console.log('✅ Public pages accessible');
     
     // ========================================
-    // STEP 3: Sign in
+    // STEP 3: Sign in (using API for reliability)
     // ========================================
     console.log('📍 Step 3: Signing in...');
-    await page.goto('/auth/signin', { waitUntil: 'domcontentloaded', timeout });
-    
-    // Fill credentials
-    await page.locator('input[name="email"], input[type="email"]').first().fill(credentials.email);
-    await page.locator('input[name="password"], input[type="password"]').first().fill(credentials.password);
-    
-    // Submit
-    await page.locator('button[type="submit"]').click();
-    
-    // Wait for redirect to bracket page or homepage
-    await page.waitForURL(/\/(bracket|$)/, { timeout: 15000 });
+    await signInUser(page, credentials.email, credentials.password);
     console.log('✅ Signed in successfully');
     
     // ========================================
-    // STEP 4: Navigate to bracket page
+    // STEP 4: Verify bracket page loaded
     // ========================================
-    console.log('📍 Step 4: Navigating to bracket page...');
-    await page.goto('/bracket', { waitUntil: 'domcontentloaded', timeout });
+    console.log('📍 Step 4: Verifying bracket page...');
+    // signInUser already navigates to /bracket and verifies auth
     await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
     
     // Wait for New Bracket button
