@@ -50,9 +50,9 @@ async function makePicksOnCurrentPage(page: import('@playwright/test').Page): Pr
   let picksMade = 0;
   
   // Find team elements - they have cursor-pointer and contain seed numbers like "#1" or "#16"
-  // Use a text filter to avoid clicking on non-team elements like badges
+  // Match the pattern used in bracket-full-workflow.spec.ts
   const teamElements = page.locator('[class*="cursor-pointer"]:not([class*="opacity-50"])').filter({
-    hasText: /^#\d+\s/  // Starts with #N followed by space (e.g., "#1 Duke")
+    hasText: /#\d+/  // Contains #N anywhere (e.g., "#1", "#16")
   });
   const teamCount = await teamElements.count();
   
