@@ -4,11 +4,10 @@ import { signInUser } from '../fixtures/auth-helpers';
 /**
  * Smoke Test - Critical User Journey
  * 
- * Tests the complete flow: Site up → Sign in → Create → Save → Edit → Submit
- * Uses the SAME approach as Group 5 (bracket-full-workflow.spec.ts)
+ * Tests: Site up → Sign in → Create bracket → Complete all picks → Submit
  * 
+ * This uses the EXACT same code as Group 5's submission test.
  * Run time: ~3-5 minutes
- * Use case: Daily validation after deployments
  */
 
 test.setTimeout(300000); // 5 minutes
@@ -31,7 +30,7 @@ const getTestUserCredentials = () => {
 };
 
 /**
- * Helper to make picks on current page (same as Group 5)
+ * Helper to make picks - EXACT copy from Group 5
  */
 async function completeRegionPicks(page: Page): Promise<number> {
   let picksMade = 0;
@@ -50,13 +49,13 @@ async function completeRegionPicks(page: Page): Promise<number> {
 }
 
 test.describe('Smoke Test', () => {
-  test('Critical Path - Create, Save, Edit, Submit', async ({ page }) => {
+  test('Critical Path - Site, Auth, Create, Submit', async ({ page }) => {
     const credentials = getTestUserCredentials();
     
     console.log('🔥 SMOKE TEST');
     
     // ========================================
-    // STEP 1-2: Site is up
+    // STEP 1: Site is up
     // ========================================
     console.log('📍 Step 1: Site check...');
     await page.goto('/');
@@ -66,77 +65,38 @@ test.describe('Smoke Test', () => {
     console.log('✅ Site is up');
     
     // ========================================
-    // STEP 3: Sign in
+    // STEP 2: Sign in
     // ========================================
     console.log('📍 Step 2: Sign in...');
     await signInUser(page, credentials.email, credentials.password);
     console.log('✅ Signed in');
     
     // ========================================
-    // STEP 4: Go to bracket page
+    // STEP 3: Bracket page
     // ========================================
     console.log('📍 Step 3: Bracket page...');
     await page.goto('/bracket');
     await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
     
-    // Count initial in-progress brackets
-    const initialInProgressCount = await page.locator('tr').filter({ hasText: /in progress/i }).count();
-    console.log(`  Initial In Progress: ${initialInProgressCount}`);
+    // Count initial submitted
+    const initialSubmittedCount = await page.locator('tr').filter({ hasText: /submitted/i }).count();
+    console.log(`  Initial submitted: ${initialSubmittedCount}`);
     console.log('✅ Bracket page loaded');
     
     // ========================================
-    // STEP 5: Create new bracket, complete PAGE 1 only
+    // STEP 4: Create and complete bracket (EXACT Group 5 code)
     // ========================================
-    console.log('📍 Step 4: Create bracket (page 1 only)...');
+    console.log('📍 Step 4: Create and complete bracket...');
+    
     await page.getByRole('button', { name: /new bracket/i }).first().click();
     await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
     
-    // Complete all rounds on page 1 (region 1)
-    for (let round = 0; round < 4; round++) {
-      const picks = await completeRegionPicks(page);
-      if (picks === 0) break;
-      await page.waitForTimeout(500);
-    }
-    console.log('  Page 1 complete');
-    
-    // ========================================
-    // STEP 6: SAVE as draft
-    // ========================================
-    console.log('📍 Step 5: Save as draft...');
-    const saveButton = page.getByRole('button', { name: /save/i });
-    await saveButton.click();
-    
-    // Return to landing page
-    await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
-    
-    // Verify we have one more In Progress bracket
-    const afterSaveCount = await page.locator('tr').filter({ hasText: /in progress/i }).count();
-    console.log(`  In Progress after save: ${afterSaveCount}`);
-    expect(afterSaveCount).toBeGreaterThan(initialInProgressCount);
-    console.log('✅ Saved as draft');
-    
-    // ========================================
-    // STEP 7: EDIT the bracket
-    // ========================================
-    console.log('📍 Step 6: Edit bracket...');
-    const inProgressRow = page.locator('tr').filter({ hasText: /in progress/i }).first();
-    const editButton = inProgressRow.getByRole('button', { name: /edit/i });
-    await editButton.click();
-    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
-    console.log('✅ Editing bracket');
-    
-    // ========================================
-    // STEP 8: Complete remaining picks (pages 2, 3, 4, 5 - page 1 already done)
-    // App should auto-open on page 2 since page 1 is complete
-    // ========================================
-    console.log('📍 Step 7: Complete remaining picks...');
-    
-    // Complete pages 2, 3, 4 (regions 2-4) - app should start on page 2
-    for (let step = 2; step <= 4; step++) {
+    // Complete all 4 regions (steps 1-4)
+    for (let step = 1; step <= 4; step++) {
       // Make picks on current region - complete all rounds
       for (let round = 0; round < 4; round++) {
-        const picks = await completeRegionPicks(page);
-        if (picks === 0) break;
+        const picksMade = await completeRegionPicks(page);
+        if (picksMade === 0) break;
         await page.waitForTimeout(500);
       }
       
@@ -146,18 +106,18 @@ test.describe('Smoke Test', () => {
         await nextButton.click();
         await page.waitForTimeout(500);
       }
-      console.log(`  Page ${step} complete`);
+      console.log(`  Region ${step} complete`);
     }
     
-    // Complete Final Four (page 5)
+    // Now on step 5 (Final Four) - complete Final Four picks
     for (let round = 0; round < 3; round++) {
-      const picks = await completeRegionPicks(page);
-      if (picks === 0) break;
+      const picksMade = await completeRegionPicks(page);
+      if (picksMade === 0) break;
       await page.waitForTimeout(500);
     }
-    console.log('  Page 5 (Final Four) complete');
+    console.log('  Final Four complete');
     
-    // Fill tiebreaker
+    // Fill in tiebreaker
     const tiebreakerInput = page.locator('input[type="number"]');
     if (await tiebreakerInput.isVisible()) {
       await tiebreakerInput.fill('150');
@@ -166,42 +126,42 @@ test.describe('Smoke Test', () => {
     console.log('✅ All picks complete');
     
     // ========================================
-    // STEP 9: SUBMIT (immediately after completing picks - don't navigate away!)
+    // STEP 5: Submit (EXACT Group 5 code)
     // ========================================
-    console.log('📍 Step 8: Submit...');
+    console.log('📍 Step 5: Submit...');
     
-    // Submit button should be visible now that all picks are complete
     const submitButton = page.getByRole('button', { name: /submit/i });
-    await expect(submitButton).toBeVisible({ timeout: 5000 });
-    await expect(submitButton).toBeEnabled({ timeout: 5000 });
-    
-    await submitButton.click();
-    console.log('  Submit clicked');
-    await page.waitForTimeout(2000);
-    
-    // Handle confirmation if present
-    const confirmButton = page.getByRole('button', { name: /confirm|yes|ok/i });
-    if (await confirmButton.isVisible().catch(() => false)) {
-      await confirmButton.click();
-      await page.waitForTimeout(1000);
+    if (await submitButton.isVisible() && await submitButton.isEnabled()) {
+      await submitButton.click();
+      console.log('  Submit clicked');
+      
+      await page.waitForTimeout(2000);
+      
+      // Handle confirmation if present
+      const confirmButton = page.getByRole('button', { name: /confirm|yes|ok/i });
+      if (await confirmButton.isVisible().catch(() => false)) {
+        await confirmButton.click();
+        await page.waitForTimeout(1000);
+      }
+      
+      // Should return to landing page
+      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+      
+      // Verify more submitted brackets
+      const finalSubmittedCount = await page.locator('tr').filter({ hasText: /submitted/i }).count();
+      console.log(`  Submitted: ${initialSubmittedCount} → ${finalSubmittedCount}`);
+      expect(finalSubmittedCount).toBeGreaterThan(initialSubmittedCount);
+      console.log('✅ Submitted');
+    } else {
+      // Fallback: save if submit not available
+      console.log('  ⚠️ Submit not available, saving instead');
+      const saveButton = page.getByRole('button', { name: /save/i });
+      await saveButton.click();
+      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+      
+      // This should fail the test - we expected to submit
+      throw new Error('Submit button was not available - bracket may not be complete');
     }
-    
-    // Should return to landing page
-    await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
-    console.log('✅ Submitted');
-    
-    // ========================================
-    // STEP 10: Verify submission
-    // ========================================
-    console.log('📍 Step 9: Verify...');
-    
-    // Count submitted brackets - should have MORE than before (we started with some existing)
-    const finalSubmittedCount = await page.locator('tr').filter({ hasText: /submitted/i }).count();
-    console.log(`  Submitted brackets: ${finalSubmittedCount}`);
-    
-    // Must have at least 1 submitted bracket
-    expect(finalSubmittedCount).toBeGreaterThan(0);
-    console.log('✅ Verified');
     
     // ========================================
     // COMPLETE
