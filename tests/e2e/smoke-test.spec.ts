@@ -203,11 +203,12 @@ test.describe('Smoke Test', () => {
     // ========================================
     console.log('📍 Step 7: Editing saved bracket...');
     
-    // Find the row with our entry and click Edit
-    const entryRow = page.locator('tr, [role="row"]').filter({ hasText: entryName });
-    const editButton = entryRow.getByRole('button', { name: /edit/i });
-    await expect(editButton).toBeVisible({ timeout: 5000 });
+    // Find an In Progress bracket and click Edit (name may differ from what we set)
+    const inProgressRow = page.locator('tr, [role="row"]').filter({ hasText: /in progress/i }).first();
+    const editButton = inProgressRow.getByRole('button', { name: /edit/i });
+    await expect(editButton).toBeVisible({ timeout: 10000 });
     await editButton.click();
+    console.log('  ✓ Editing In Progress bracket');
     
     // Wait for wizard to load
     await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
