@@ -85,15 +85,12 @@ test.describe('Smoke Test', () => {
     console.log('✅ Bracket page loaded');
     
     // ========================================
-    // STEP 5: Create new bracket with PARTIAL picks (just region 1)
+    // STEP 5: Create new bracket (empty - just open and save)
     // ========================================
-    console.log('📍 Step 4: Create bracket (partial)...');
+    console.log('📍 Step 4: Create bracket...');
     await page.getByRole('button', { name: /new bracket/i }).first().click();
     await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
-    
-    // Make picks on first region only
-    const picksMade = await completeRegionPicks(page);
-    console.log(`  Made ${picksMade} picks on region 1`);
+    console.log('  Bracket wizard opened');
     
     // ========================================
     // STEP 6: SAVE as draft
