@@ -49,9 +49,12 @@ const getTestUserCredentials = () => {
 async function makePicksOnCurrentPage(page: import('@playwright/test').Page): Promise<number> {
   let picksMade = 0;
   
-  // Teams are elements with cursor-pointer class, not disabled, showing seed numbers like #1, #16
-  const teamElements = page.locator('[class*="cursor-pointer"]:not([class*="opacity-50"])').filter({ hasText: /#\d+/ });
+  // Find clickable team elements - look for cursor-pointer that aren't disabled
+  // The bracket shows teams with seed numbers, but we match broadly and click alternating
+  const teamElements = page.locator('[class*="cursor-pointer"]:not([class*="opacity-50"]):not([class*="cursor-not-allowed"])');
   const teamCount = await teamElements.count();
+  
+  console.log(`    Found ${teamCount} clickable elements`);
   
   // Click on alternating teams (every other one) to pick winners
   // Games come in pairs - click first team of each pair
