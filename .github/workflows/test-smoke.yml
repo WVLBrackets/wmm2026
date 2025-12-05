@@ -88,22 +88,12 @@ jobs:
           TEST_USER_PASSWORD_STAGING: ${{ secrets.TEST_USER_PASSWORD_STAGING }}
           TEST_USER_PASSWORD_PRODUCTION: ${{ secrets.TEST_USER_PASSWORD_PRODUCTION }}
           TEST_ENV: ${{ inputs.environment }}
+          SUPPRESS_TEST_EMAILS: 'true'
         run: |
-          PROJECTS_JSON='${{ steps.projects.outputs.projects }}'
-          
-          # Build project arguments from JSON array
-          PROJECT_ARGS=$(node -e "
-            const projects = JSON.parse(process.argv[1]);
-            const args = projects.map(p => '--project=\"' + p + '\"').join(' ');
-            console.log(args);
-          " "$PROJECTS_JSON")
-          
           echo "🔥 Running Smoke Test"
           echo "Environment: ${{ inputs.environment }}"
-          echo "Projects: $PROJECTS_JSON"
           echo ""
-          
-          eval "npx playwright test tests/e2e/smoke-test.spec.ts $PROJECT_ARGS --reporter=list"
+          node scripts/run-tests-with-projects.js smoke ${{ inputs.mode }} ${{ inputs.browser }}
       
       - name: Upload test results
         if: always()
