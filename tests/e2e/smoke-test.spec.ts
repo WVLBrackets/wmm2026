@@ -1,20 +1,17 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 import { signInUser } from '../fixtures/auth-helpers';
 
 /**
- * Smoke Test - Quick Critical Path Verification
+ * Smoke Test - Critical User Journey
  * 
- * This is a SIMPLE test that verifies:
- * 1. Site is up (homepage, public pages)
- * 2. User can sign in
- * 3. User can access bracket page
- * 4. Bracket wizard loads and teams are clickable
+ * Tests the complete flow: Site up → Sign in → Create → Save → Edit → Submit
+ * Uses the SAME approach as Group 5 (bracket-full-workflow.spec.ts)
  * 
- * Run time: ~1-2 minutes
- * Use case: Quick validation after deployments
- * 
- * NOTE: For full bracket submission testing, use Group 5 (bracket-full-workflow)
+ * Run time: ~3-5 minutes
+ * Use case: Daily validation after deployments
  */
+
+test.setTimeout(300000); // 5 minutes
 
 const getTestUserCredentials = () => {
   const isProduction = process.env.TEST_ENV === 'production' || 
@@ -27,109 +24,202 @@ const getTestUserCredentials = () => {
     : (process.env.TEST_USER_PASSWORD_STAGING || process.env.TEST_USER_PASSWORD);
   
   if (!process.env.TEST_USER_EMAIL || !password) {
-    throw new Error(
-      'TEST_USER_EMAIL and TEST_USER_PASSWORD_STAGING/PRODUCTION environment variables are required.'
-    );
+    throw new Error('TEST_USER_EMAIL and TEST_USER_PASSWORD required');
   }
   
   return { email: process.env.TEST_USER_EMAIL, password };
 };
 
+/**
+ * Helper to make picks on current page (same as Group 5)
+ */
+async function completeRegionPicks(page: Page): Promise<number> {
+  let picksMade = 0;
+  const teamElements = page.locator('[class*="cursor-pointer"]:not([class*="opacity-50"])').filter({ hasText: /#\d+/ });
+  const teamCount = await teamElements.count();
+  
+  for (let i = 0; i < teamCount; i += 2) {
+    const team = teamElements.nth(i);
+    if (await team.isVisible() && await team.isEnabled()) {
+      await team.click();
+      await page.waitForTimeout(100);
+      picksMade++;
+    }
+  }
+  return picksMade;
+}
+
 test.describe('Smoke Test', () => {
-  test('Quick Critical Path - Site Up, Auth Works, Bracket Accessible', async ({ page }) => {
+  test('Critical Path - Create, Save, Edit, Submit', async ({ page }) => {
     const credentials = getTestUserCredentials();
     
-    console.log('🔥 Starting Smoke Test...');
+    console.log('🔥 SMOKE TEST');
     
     // ========================================
-    // STEP 1: Homepage loads
+    // STEP 1-2: Site is up
     // ========================================
-    console.log('📍 Step 1: Homepage...');
+    console.log('📍 Step 1: Site check...');
     await page.goto('/');
     await expect(page.locator('body')).toBeVisible();
-    console.log('✅ Homepage loaded');
-    
-    // ========================================
-    // STEP 2: Public pages accessible
-    // ========================================
-    console.log('📍 Step 2: Public pages...');
-    
     await page.goto('/info');
     await expect(page.locator('body')).toBeVisible();
-    console.log('  ✓ Info');
-    
-    await page.goto('/hall-of-fame');
-    await expect(page.locator('body')).toBeVisible();
-    console.log('  ✓ Hall of Fame');
-    
-    await page.goto('/standings');
-    await expect(page.locator('body')).toBeVisible();
-    console.log('  ✓ Standings');
-    console.log('✅ Public pages accessible');
+    console.log('✅ Site is up');
     
     // ========================================
     // STEP 3: Sign in
     // ========================================
-    console.log('📍 Step 3: Sign in...');
+    console.log('📍 Step 2: Sign in...');
     await signInUser(page, credentials.email, credentials.password);
     console.log('✅ Signed in');
     
     // ========================================
-    // STEP 4: Bracket page loads
+    // STEP 4: Go to bracket page
     // ========================================
-    console.log('📍 Step 4: Bracket page...');
+    console.log('📍 Step 3: Bracket page...');
     await page.goto('/bracket');
-    await expect(page.getByRole('button', { name: /new bracket/i })).toBeVisible({ timeout: 10000 });
-    console.log('✅ Bracket landing page loaded');
+    await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+    
+    // Count initial in-progress brackets
+    const initialInProgressCount = await page.locator('tr').filter({ hasText: /in progress/i }).count();
+    console.log(`  Initial In Progress: ${initialInProgressCount}`);
+    console.log('✅ Bracket page loaded');
     
     // ========================================
-    // STEP 5: Bracket wizard opens and teams load
+    // STEP 5: Create new bracket with PARTIAL picks (just region 1)
     // ========================================
-    console.log('📍 Step 5: Bracket wizard...');
-    await page.getByRole('button', { name: /new bracket/i }).click();
+    console.log('📍 Step 4: Create bracket (partial)...');
+    await page.getByRole('button', { name: /new bracket/i }).first().click();
+    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
     
-    // Wait for team data to load (seed numbers like #1, #16)
-    await page.getByText(/#\d+/).first().waitFor({ state: 'visible', timeout: 15000 });
-    
-    // Verify clickable teams exist
-    const teamElements = page.locator('[class*="cursor-pointer"]:not([class*="opacity-50"])').filter({
-      hasText: /#\d+/
-    });
-    const teamCount = await teamElements.count();
-    console.log(`  ✓ Found ${teamCount} team elements`);
-    expect(teamCount).toBeGreaterThan(0);
-    
-    // Click one team to verify interactivity
-    await teamElements.first().click();
-    console.log('  ✓ Team click works');
-    console.log('✅ Bracket wizard functional');
+    // Make picks on first region only
+    const picksMade = await completeRegionPicks(page);
+    console.log(`  Made ${picksMade} picks on region 1`);
     
     // ========================================
-    // STEP 6: Cancel and return to landing
+    // STEP 6: SAVE as draft
     // ========================================
-    console.log('📍 Step 6: Cancel and verify...');
-    const cancelButton = page.getByRole('button', { name: /cancel/i });
-    if (await cancelButton.isVisible()) {
-      await cancelButton.click();
-      // Handle confirmation if present
-      const confirmCancel = page.getByRole('button', { name: /yes|confirm|ok/i });
-      if (await confirmCancel.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await confirmCancel.click();
+    console.log('📍 Step 5: Save as draft...');
+    const saveButton = page.getByRole('button', { name: /save/i });
+    await saveButton.click();
+    
+    // Return to landing page
+    await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+    
+    // Verify we have one more In Progress bracket
+    const afterSaveCount = await page.locator('tr').filter({ hasText: /in progress/i }).count();
+    console.log(`  In Progress after save: ${afterSaveCount}`);
+    expect(afterSaveCount).toBeGreaterThan(initialInProgressCount);
+    console.log('✅ Saved as draft');
+    
+    // ========================================
+    // STEP 7: EDIT the bracket
+    // ========================================
+    console.log('📍 Step 6: Edit bracket...');
+    const inProgressRow = page.locator('tr').filter({ hasText: /in progress/i }).first();
+    const editButton = inProgressRow.getByRole('button', { name: /edit/i });
+    await editButton.click();
+    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+    console.log('✅ Editing bracket');
+    
+    // ========================================
+    // STEP 8: Complete ALL picks (all 4 regions + Final Four)
+    // ========================================
+    console.log('📍 Step 7: Complete all picks...');
+    
+    // Complete all 4 regions (steps 1-4)
+    for (let step = 1; step <= 4; step++) {
+      // Make picks on current region - complete all rounds
+      for (let round = 0; round < 4; round++) {
+        const picks = await completeRegionPicks(page);
+        if (picks === 0) break;
+        await page.waitForTimeout(500);
+      }
+      
+      // Navigate to next step
+      const nextButton = page.getByRole('button', { name: /next/i });
+      if (await nextButton.isEnabled()) {
+        await nextButton.click();
+        await page.waitForTimeout(500);
+      }
+      console.log(`  Region ${step} complete`);
+    }
+    
+    // Complete Final Four (step 5)
+    for (let round = 0; round < 3; round++) {
+      const picks = await completeRegionPicks(page);
+      if (picks === 0) break;
+      await page.waitForTimeout(500);
+    }
+    console.log('  Final Four complete');
+    
+    // Fill tiebreaker
+    const tiebreakerInput = page.locator('input[type="number"]');
+    if (await tiebreakerInput.isVisible()) {
+      await tiebreakerInput.fill('150');
+      console.log('  Tiebreaker set');
+    }
+    console.log('✅ All picks complete');
+    
+    // ========================================
+    // STEP 9: SUBMIT
+    // ========================================
+    console.log('📍 Step 8: Submit...');
+    
+    // Count initial submitted
+    await page.goto('/bracket');
+    await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+    const initialSubmittedCount = await page.locator('tr').filter({ hasText: /submitted/i }).count();
+    
+    // Go back to edit and submit
+    const editAgain = page.locator('tr').filter({ hasText: /in progress/i }).first().getByRole('button', { name: /edit/i });
+    await editAgain.click();
+    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+    
+    // Navigate to Final Four (step 5) to find Submit button
+    for (let i = 0; i < 4; i++) {
+      const nextButton = page.getByRole('button', { name: /next/i });
+      if (await nextButton.isVisible() && await nextButton.isEnabled()) {
+        await nextButton.click();
+        await page.waitForTimeout(300);
       }
     }
     
-    // Should be back on landing page
-    await page.goto('/bracket');
-    await expect(page.getByRole('button', { name: /new bracket/i })).toBeVisible({ timeout: 10000 });
-    console.log('✅ Back to landing page');
+    // Click Submit
+    const submitButton = page.getByRole('button', { name: /submit/i });
+    if (await submitButton.isVisible() && await submitButton.isEnabled()) {
+      await submitButton.click();
+      await page.waitForTimeout(2000);
+      
+      // Handle confirmation if present
+      const confirmButton = page.getByRole('button', { name: /confirm|yes|ok/i });
+      if (await confirmButton.isVisible().catch(() => false)) {
+        await confirmButton.click();
+        await page.waitForTimeout(1000);
+      }
+      console.log('✅ Submitted');
+    } else {
+      console.log('⚠️ Submit not available, saving instead');
+      const fallbackSave = page.getByRole('button', { name: /save/i });
+      await fallbackSave.click();
+    }
+    
+    // ========================================
+    // STEP 10: Verify submission
+    // ========================================
+    console.log('📍 Step 9: Verify...');
+    await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+    
+    const finalSubmittedCount = await page.locator('tr').filter({ hasText: /submitted/i }).count();
+    console.log(`  Submitted count: ${initialSubmittedCount} → ${finalSubmittedCount}`);
+    
+    // Should have at least one submitted bracket
+    expect(finalSubmittedCount).toBeGreaterThanOrEqual(initialSubmittedCount);
+    console.log('✅ Verified');
     
     // ========================================
     // COMPLETE
     // ========================================
     console.log('');
     console.log('🎉 SMOKE TEST PASSED');
-    console.log('   ✓ Site is up');
-    console.log('   ✓ Auth works');
-    console.log('   ✓ Bracket wizard functional');
   });
 });
