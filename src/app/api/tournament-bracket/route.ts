@@ -18,6 +18,12 @@ import { logError } from '@/lib/serverErrorLogger';
  */
 export async function POST(request: NextRequest) {
   try {
+    // Check for test email suppression header (from Playwright tests)
+    const suppressTestEmails = request.headers.get('X-Suppress-Test-Emails') === 'true';
+    if (suppressTestEmails) {
+      process.env.SUPPRESS_TEST_EMAILS = 'true';
+    }
+
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
