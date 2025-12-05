@@ -92,13 +92,19 @@ test.describe('Smoke Test', () => {
     await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
     
     // Complete all 4 regions (steps 1-4)
+    let totalPicks = 0;
     for (let step = 1; step <= 4; step++) {
+      let regionPicks = 0;
       // Make picks on current region - complete all rounds
       for (let round = 0; round < 4; round++) {
         const picksMade = await completeRegionPicks(page);
+        regionPicks += picksMade;
+        console.log(`    Region ${step}, Round ${round + 1}: ${picksMade} picks`);
         if (picksMade === 0) break;
         await page.waitForTimeout(500);
       }
+      totalPicks += regionPicks;
+      console.log(`  Region ${step}: ${regionPicks} total picks`);
       
       // Navigate to next step
       const nextButton = page.getByRole('button', { name: /next/i });
@@ -106,16 +112,20 @@ test.describe('Smoke Test', () => {
         await nextButton.click();
         await page.waitForTimeout(500);
       }
-      console.log(`  Region ${step} complete`);
     }
     
     // Now on step 5 (Final Four) - complete Final Four picks
+    let finalFourPicks = 0;
     for (let round = 0; round < 3; round++) {
       const picksMade = await completeRegionPicks(page);
+      finalFourPicks += picksMade;
+      console.log(`    Final Four Round ${round + 1}: ${picksMade} picks`);
       if (picksMade === 0) break;
       await page.waitForTimeout(500);
     }
-    console.log('  Final Four complete');
+    totalPicks += finalFourPicks;
+    console.log(`  Final Four: ${finalFourPicks} total picks`);
+    console.log(`  TOTAL PICKS: ${totalPicks}`);
     
     // Fill in tiebreaker
     const tiebreakerInput = page.locator('input[type="number"]');
