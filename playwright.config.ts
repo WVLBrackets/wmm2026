@@ -66,9 +66,12 @@ export default defineConfig({
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
     
-    /* Set header to suppress test emails when SUPPRESS_TEST_EMAILS is enabled */
+    /* Set headers to suppress test emails when SUPPRESS_TEST_EMAILS is enabled */
     extraHTTPHeaders: process.env.SUPPRESS_TEST_EMAILS === 'true' 
-      ? { 'X-Suppress-Test-Emails': 'true' }
+      ? { 
+          'X-Suppress-Test-Emails': 'true',
+          'X-Test-User-Email': process.env.TEST_USER_EMAIL || '',
+        }
       : {},
     
     /* Handle Vercel authentication if needed */

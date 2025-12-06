@@ -14,6 +14,12 @@ export function isTestUserEmail(email: string, siteConfig: SiteConfigData | null
 
   const normalizedEmail = email.toLowerCase().trim();
 
+  // Check against TEST_USER_EMAIL environment variable (set by Playwright tests via header)
+  const testUserEmailEnv = process.env.TEST_USER_EMAIL;
+  if (testUserEmailEnv && normalizedEmail === testUserEmailEnv.toLowerCase().trim()) {
+    return true;
+  }
+
   // Check against test email config values
   if (siteConfig) {
     const testEmails = [
@@ -70,6 +76,12 @@ export function getTestUserReason(email: string, siteConfig: SiteConfigData | nu
   }
 
   const normalizedEmail = email.toLowerCase().trim();
+
+  // Check against TEST_USER_EMAIL environment variable (set by Playwright tests via header)
+  const testUserEmailEnv = process.env.TEST_USER_EMAIL;
+  if (testUserEmailEnv && normalizedEmail === testUserEmailEnv.toLowerCase().trim()) {
+    return 'matches TEST_USER_EMAIL from Playwright test header';
+  }
 
   // Check against test email config values
   if (siteConfig) {
