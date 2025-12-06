@@ -92,7 +92,7 @@ test.describe('Smoke Test', () => {
     await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
     
     // Set UNIQUE entry name (required for submission - must not match existing entries)
-    const uniqueEntryName = `Smoke-${Date.now()}`;
+    const uniqueEntryName = `Smoke-Test-${Date.now()}`;
     const entryNameInput = page.locator('input[type="text"]').first();
     if (await entryNameInput.isVisible()) {
       await entryNameInput.clear();
