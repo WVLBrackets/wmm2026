@@ -457,7 +457,7 @@ export default function TournamentBuilderPage() {
                   handleLoadTournament(e.target.value);
                 }
               }}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-blue-900"
             >
               <option value="">-- Select a tournament file to load --</option>
               {availableTournaments.map(filename => (
@@ -481,7 +481,7 @@ export default function TournamentBuilderPage() {
                 value={year}
                 onChange={(e) => setYear(e.target.value)}
                 placeholder="2025"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-blue-900"
                 pattern="\d{4}"
               />
             </div>
@@ -493,7 +493,7 @@ export default function TournamentBuilderPage() {
                 type="text"
                 value={tournamentName}
                 onChange={(e) => setTournamentName(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-blue-900"
               />
             </div>
             <div>
@@ -504,7 +504,7 @@ export default function TournamentBuilderPage() {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-blue-900"
               />
             </div>
             <div>
@@ -516,7 +516,7 @@ export default function TournamentBuilderPage() {
                 value={finalFourLocation}
                 onChange={(e) => setFinalFourLocation(e.target.value)}
                 placeholder="TBD"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-blue-900"
               />
             </div>
           </div>
@@ -548,7 +548,7 @@ export default function TournamentBuilderPage() {
                     value={region.name}
                     onChange={(e) => updateRegionName(regionIndex, e.target.value)}
                     placeholder="East, West, etc."
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-blue-900"
                   />
                 </div>
 
@@ -578,7 +578,7 @@ export default function TournamentBuilderPage() {
                                 clearTeam(regionIndex, team1Index);
                               }
                             }}
-                            className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
+                            className="w-full border border-gray-300 rounded px-2 py-1 text-xs text-blue-900"
                           >
                             <option value="">Select...</option>
                             {teamList.map(([key, teamData]) => (
@@ -589,8 +589,8 @@ export default function TournamentBuilderPage() {
                           </select>
                           {team1.name && (
                             <div className="mt-1 flex items-center space-x-1.5">
-                              <span className="text-xs font-semibold text-gray-600">{team1.seed}</span>
-                              <span className="text-xs text-gray-600 truncate flex-1">{team1.name}</span>
+                              <span className="text-xs font-semibold text-blue-900">{team1.seed}</span>
+                              <span className="text-xs text-blue-900 truncate flex-1">{team1.name}</span>
                               {team1.logo && (
                                 <Image src={team1.logo} alt={team1.name} width={16} height={16} className="w-4 h-4 object-contain flex-shrink-0" unoptimized />
                               )}
@@ -614,7 +614,7 @@ export default function TournamentBuilderPage() {
                                 clearTeam(regionIndex, team2Index);
                               }
                             }}
-                            className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
+                            className="w-full border border-gray-300 rounded px-2 py-1 text-xs text-blue-900"
                           >
                             <option value="">Select...</option>
                             {teamList.map(([key, teamData]) => (
@@ -625,8 +625,8 @@ export default function TournamentBuilderPage() {
                           </select>
                           {team2.name && (
                             <div className="mt-1 flex items-center space-x-1.5">
-                              <span className="text-xs font-semibold text-gray-600">{team2.seed}</span>
-                              <span className="text-xs text-gray-600 truncate flex-1">{team2.name}</span>
+                              <span className="text-xs font-semibold text-blue-900">{team2.seed}</span>
+                              <span className="text-xs text-blue-900 truncate flex-1">{team2.name}</span>
                               {team2.logo && (
                                 <Image src={team2.logo} alt={team2.name} width={16} height={16} className="w-4 h-4 object-contain flex-shrink-0" unoptimized />
                               )}
