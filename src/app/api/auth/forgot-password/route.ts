@@ -2,8 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createPasswordResetToken, getUserByEmail } from '@/lib/secureDatabase';
 import { sendPasswordResetEmail } from '@/lib/emailService';
 import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
+import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rateLimit';
 
 export async function POST(request: NextRequest) {
+  // SECURITY: Rate limiting to prevent email flooding
+  const rateLimitResponse = rateLimitMiddleware(request, 'auth:forgot-password', RATE_LIMITS.AUTH_FORGOT_PASSWORD);
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   try {
     const { email } = await request.json();
 
@@ -66,9 +73,10 @@ export async function POST(request: NextRequest) {
     const siteConfig = await getSiteConfigFromGoogleSheets();
     
     // Check for email suppression header from test environment
-    const suppressTestEmails = request.headers.get('X-Suppress-Test-Emails') === 'true';
+    // SECURITY: Only honor suppression headers in non-production environments
+    const isProduction = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
+    const suppressTestEmails = !isProduction && request.headers.get('X-Suppress-Test-Emails') === 'true';
     if (suppressTestEmails) {
-      // Set environment variable for email service to check
       process.env.SUPPRESS_TEST_EMAILS = 'true';
     }
     

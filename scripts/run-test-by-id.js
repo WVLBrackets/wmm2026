@@ -10,7 +10,10 @@
  *   node scripts/run-test-by-id.js connect
  */
 
-const { execSync } = require('child_process');
+const { spawnSync } = require('child_process');
+
+// SECURITY: Allowlist for valid environments
+const VALID_ENVS = ['staging', 'production', 'development'];
 
 // Test mapping: number/abbreviation -> Playwright test name pattern
 const testMapping = {
@@ -138,6 +141,12 @@ const groupMapping = {
 const testId = process.argv[2];
 const env = process.env.TEST_ENV || 'staging';
 
+// SECURITY: Validate environment
+if (!VALID_ENVS.includes(env)) {
+  console.error(`Invalid TEST_ENV: ${env}. Must be one of: ${VALID_ENVS.join(', ')}`);
+  process.exit(1);
+}
+
 // Get additional Playwright arguments (everything after testId)
 // Handle '--' separator that GitHub Actions might pass
 const rawArgs = process.argv.slice(3);
@@ -151,45 +160,38 @@ if (separatorIndex === -1) {
 // Get arguments after the separator (or all args if no separator)
 const argsAfterSeparator = rawArgs.slice(separatorIndex + 1);
 
-// Process arguments to handle --project flags properly
-// Support both --project=name and --project name formats
-let playwrightArgs = '';
+// SECURITY: Process and validate arguments (only allow known Playwright flags)
+// Using arrays instead of string concatenation to prevent injection
+const ALLOWED_FLAGS = ['--project', '--headed', '--debug', '--ui', '--workers', '--retries', '--timeout', '--reporter'];
+let playwrightArgsArray = [];
 if (argsAfterSeparator.length > 0) {
-  const processedArgs = [];
   for (let i = 0; i < argsAfterSeparator.length; i++) {
     const arg = argsAfterSeparator[i];
     if (arg === '--project') {
       // Handle --project name format (separate arguments)
       if (i + 1 < argsAfterSeparator.length) {
         const projectName = argsAfterSeparator[i + 1];
-        // Quote project name if it contains spaces or special characters
-        if (projectName.includes(' ') || projectName.includes('(') || projectName.includes(')')) {
-          processedArgs.push(`--project="${projectName}"`);
-        } else {
-          processedArgs.push(`--project=${projectName}`);
-        }
+        playwrightArgsArray.push('--project', projectName);
         i++; // Skip the next argument as we've consumed it
       }
     } else if (arg.startsWith('--project=')) {
-      // Handle --project=name format
-      const projectName = arg.substring('--project='.length);
-      // Quote project name if it contains spaces or special characters and isn't already quoted
-      if ((projectName.includes(' ') || projectName.includes('(') || projectName.includes(')')) && !projectName.startsWith('"')) {
-        processedArgs.push(`--project="${projectName}"`);
+      // Handle --project=name format - split into two args for safety
+      const projectName = arg.substring('--project='.length).replace(/^"|"$/g, '');
+      playwrightArgsArray.push('--project', projectName);
+    } else if (ALLOWED_FLAGS.some(flag => arg === flag || arg.startsWith(flag + '='))) {
+      // Other allowed flags
+      if (arg.includes('=')) {
+        const [flag, value] = arg.split('=', 2);
+        playwrightArgsArray.push(flag, value);
+      } else if (i + 1 < argsAfterSeparator.length && !argsAfterSeparator[i + 1].startsWith('--')) {
+        playwrightArgsArray.push(arg, argsAfterSeparator[i + 1]);
+        i++;
       } else {
-        processedArgs.push(arg);
+        playwrightArgsArray.push(arg);
       }
-    } else {
-      // Other arguments pass through as-is
-      processedArgs.push(arg);
     }
+    // SECURITY: Silently ignore unrecognized flags to prevent injection
   }
-  playwrightArgs = processedArgs.join(' ');
-}
-
-// Ensure --project has the -- prefix if it's missing (common issue)
-if (playwrightArgs && playwrightArgs.includes('project=') && !playwrightArgs.includes('--project')) {
-  playwrightArgs = playwrightArgs.replace(/project=/g, '--project=');
 }
 
 if (!testId) {
@@ -205,6 +207,18 @@ if (!testId) {
   process.exit(1);
 }
 
+// SECURITY: Validate testId against known mappings (prevents injection)
+const allValidTestIds = [...Object.keys(groupMapping), ...Object.keys(testMapping)];
+if (!allValidTestIds.includes(testId)) {
+  console.error(`Error: Test ID "${testId}" not found.`);
+  console.error('Valid test IDs:');
+  console.error('  Groups: 1, 2, 3, 4, 5, 7, 8, connect, account, auth, bracket, workflow, pwdlogout, api');
+  console.error('  Special: smoke (quick critical path verification)');
+  console.error('  Note: Group 6 is reserved for future UI-based use case groups');
+  console.error('  Individual tests: See tests/TEST_MAPPING.md for full list');
+  process.exit(1);
+}
+
 // Check if it's a group
 if (groupMapping[testId]) {
   const filePattern = groupMapping[testId];
@@ -217,51 +231,56 @@ if (groupMapping[testId]) {
                     testId === '8' ? 'api' : testId === 'api' ? '8' :
                     testId === 'smoke' ? 'Smoke Test' : testId;
   
-  // Build command - ensure playwrightArgs are properly separated
-  let command = `npx cross-env TEST_ENV=${env} npx playwright test ${filePattern}`;
-  if (playwrightArgs && playwrightArgs.trim()) {
-    command += ` ${playwrightArgs.trim()}`;
-  }
-  command = command.trim();
+  // SECURITY: Build args array (no string interpolation)
+  const files = filePattern.split(' ');
+  const playwrightCmdArgs = ['playwright', 'test', ...files, ...playwrightArgsArray];
+  
   console.log(`\n📋 Running Group ${testId} (${groupName})`);
   console.log(`   Files: ${filePattern}`);
   console.log(`   Environment: ${env}`);
-  if (playwrightArgs) {
-    console.log(`   Additional args: ${playwrightArgs}`);
+  if (playwrightArgsArray.length > 0) {
+    console.log(`   Additional args: ${playwrightArgsArray.join(' ')}`);
   }
   console.log('');
-  try {
-    execSync(command, { stdio: 'inherit' });
-    process.exit(0);
-  } catch (error) {
-    // Playwright exits with code 1 when tests fail, which is expected
-    // Don't throw - just exit with the same code so CI/CD can detect failures
-    const exitCode = error.status || 1;
-    console.log(`\n⚠️  Tests completed with ${exitCode === 0 ? 'success' : 'some failures'}`);
-    process.exit(exitCode);
+  
+  // SECURITY: Use spawnSync with arrays (no shell, prevents injection)
+  const result = spawnSync('npx', playwrightCmdArgs, {
+    stdio: 'inherit',
+    env: { ...process.env, TEST_ENV: env }
+  });
+  
+  const exitCode = result.status || 0;
+  if (exitCode !== 0) {
+    console.log(`\n⚠️  Tests completed with some failures`);
   }
+  process.exit(exitCode);
 }
 
 // Check if it's an individual test
 if (testMapping[testId]) {
   const testName = testMapping[testId];
-  const command = `npx cross-env TEST_ENV=${env} npx playwright test -g "${testName}" ${playwrightArgs}`.trim();
+  
+  // SECURITY: Build args array (no string interpolation)
+  const playwrightCmdArgs = ['playwright', 'test', '-g', testName, ...playwrightArgsArray];
+  
   console.log(`\n📋 Running Test ${testId}`);
   console.log(`   Test: ${testName}`);
   console.log(`   Environment: ${env}`);
-  if (playwrightArgs) {
-    console.log(`   Additional args: ${playwrightArgs}`);
+  if (playwrightArgsArray.length > 0) {
+    console.log(`   Additional args: ${playwrightArgsArray.join(' ')}`);
   }
   console.log('');
-  execSync(command, { stdio: 'inherit' });
-  process.exit(0);
+  
+  // SECURITY: Use spawnSync with arrays (no shell, prevents injection)
+  const result = spawnSync('npx', playwrightCmdArgs, {
+    stdio: 'inherit',
+    env: { ...process.env, TEST_ENV: env }
+  });
+  
+  process.exit(result.status || 0);
 }
 
-console.error(`Error: Test ID "${testId}" not found.`);
-console.error('Valid test IDs:');
-console.error('  Groups: 1, 2, 3, 4, 5, 7, 8, connect, account, auth, bracket, workflow, pwdlogout, api');
-console.error('  Special: smoke (quick critical path verification)');
-console.error('  Note: Group 6 is reserved for future UI-based use case groups');
-console.error('  Individual tests: See tests/TEST_MAPPING.md for full list');
+// This should never be reached due to earlier validation
+console.error(`Unexpected error: Test ID "${testId}" passed validation but not found in mappings.`);
 process.exit(1);
 

@@ -13,6 +13,7 @@ import { useBracketMode } from '@/contexts/BracketModeContext';
 import { Trophy } from 'lucide-react';
 import { LoggedButton } from '@/components/LoggedButton';
 import { useUsageLogger } from '@/hooks/useUsageLogger';
+import { useCSRF } from '@/hooks/useCSRF';
 
 function BracketContent() {
   const { data: session, status } = useSession();
@@ -20,6 +21,7 @@ function BracketContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setInBracketMode } = useBracketMode();
+  const { fetchWithCSRF } = useCSRF();
   
   // View states
   const [currentView, setCurrentView] = useState<'landing' | 'bracket'>('landing');
@@ -489,20 +491,21 @@ function BracketContent() {
           ? `/api/admin/brackets/${bracket.id}`
           : `/api/tournament-bracket/${bracket.id}`;
         
-        response = await fetch(endpoint, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(submission),
-        });
+        // Admin endpoints don't require CSRF, user endpoints do
+        response = isAdminMode 
+          ? await fetch(endpoint, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(submission),
+            })
+          : await fetchWithCSRF(endpoint, {
+              method: 'PUT',
+              body: JSON.stringify(submission),
+            });
       } else {
         // Create new submitted bracket (not applicable in admin mode)
-        response = await fetch('/api/tournament-bracket', {
+        response = await fetchWithCSRF('/api/tournament-bracket', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
           body: JSON.stringify(submission),
         });
       }
@@ -681,11 +684,8 @@ function BracketContent() {
         status: 'in_progress'
       };
 
-      const response = await fetch('/api/tournament-bracket', {
+      const response = await fetchWithCSRF('/api/tournament-bracket', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(copiedBracket),
       });
 
@@ -732,20 +732,21 @@ function BracketContent() {
           ? `/api/admin/brackets/${bracket.id}`
           : `/api/tournament-bracket/${bracket.id}`;
         
-        response = await fetch(endpoint, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(saveData),
-        });
+        // Admin endpoints don't require CSRF, user endpoints do
+        response = isAdminMode
+          ? await fetch(endpoint, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(saveData),
+            })
+          : await fetchWithCSRF(endpoint, {
+              method: 'PUT',
+              body: JSON.stringify(saveData),
+            });
       } else {
         // Create new bracket (not applicable in admin mode)
-        response = await fetch('/api/tournament-bracket', {
+        response = await fetchWithCSRF('/api/tournament-bracket', {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
           body: JSON.stringify(saveData),
         });
       }
@@ -815,9 +816,8 @@ function BracketContent() {
     try {
       if (isInProgress) {
         // Soft delete: Update status to 'deleted'
-        const response = await fetch(`/api/tournament-bracket/${bracketId}`, {
+        const response = await fetchWithCSRF(`/api/tournament-bracket/${bracketId}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'deleted' }),
         });
         const data = await response.json();
@@ -829,7 +829,7 @@ function BracketContent() {
         }
       } else {
         // Hard delete: Actually remove the bracket
-        const response = await fetch(`/api/tournament-bracket/${bracketId}`, {
+        const response = await fetchWithCSRF(`/api/tournament-bracket/${bracketId}`, {
           method: 'DELETE',
         });
         const data = await response.json();

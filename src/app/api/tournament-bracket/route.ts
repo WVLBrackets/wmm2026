@@ -12,17 +12,25 @@ import { sendSubmissionConfirmationEmail, processEmailAsync } from '@/lib/bracke
 import { validateBracketSubmission, checkSubmissionAllowed } from '@/lib/bracketSubmissionValidator';
 import { loadTournamentData } from '@/lib/tournamentLoader';
 import { logError } from '@/lib/serverErrorLogger';
+import { csrfProtection } from '@/lib/csrf';
 
 /**
  * POST /api/tournament-bracket - Create a new tournament bracket (submit)
  */
 export async function POST(request: NextRequest) {
+  // SECURITY: CSRF protection for state-changing operation
+  const csrfError = csrfProtection(request);
+  if (csrfError) {
+    return csrfError;
+  }
+
   try {
     // Check for test email suppression headers (from Playwright tests)
-    const suppressTestEmails = request.headers.get('X-Suppress-Test-Emails') === 'true';
+    // SECURITY: Only honor suppression headers in non-production environments
+    const isProduction = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
+    const suppressTestEmails = !isProduction && request.headers.get('X-Suppress-Test-Emails') === 'true';
     if (suppressTestEmails) {
       process.env.SUPPRESS_TEST_EMAILS = 'true';
-      // Also capture the test user email for suppression matching
       const testUserEmail = request.headers.get('X-Test-User-Email');
       if (testUserEmail) {
         process.env.TEST_USER_EMAIL = testUserEmail;
@@ -252,6 +260,12 @@ export async function POST(request: NextRequest) {
  * PUT /api/tournament-bracket - Save in-progress bracket
  */
 export async function PUT(request: NextRequest) {
+  // SECURITY: CSRF protection for state-changing operation
+  const csrfError = csrfProtection(request);
+  if (csrfError) {
+    return csrfError;
+  }
+
   try {
     const session = await getServerSession(authOptions);
     

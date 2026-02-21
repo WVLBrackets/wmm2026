@@ -1,6 +1,7 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { verifyPassword } from './secureDatabase';
+import { checkRateLimit, RATE_LIMITS } from './rateLimit';
 
 // Validate NEXTAUTH_SECRET at runtime when authOptions is actually used
 // This prevents build-time errors while still ensuring the secret is required
@@ -45,6 +46,13 @@ export const authOptions: NextAuthOptions = {
 
           const email = credentials.email as string;
           const password = credentials.password as string;
+
+          // SECURITY: Rate limiting for login attempts (by email to prevent account lockout attacks)
+          const rateLimitResult = checkRateLimit(email.toLowerCase(), 'auth:login', RATE_LIMITS.AUTH_LOGIN);
+          if (rateLimitResult.limited) {
+            console.warn(`[Auth] Rate limited login attempt for email: ${email}`);
+            throw new Error('TOO_MANY_ATTEMPTS');
+          }
 
           // Special case: Check if this is an auto-signin token
           if (password.startsWith('AUTO_SIGNIN_TOKEN:')) {

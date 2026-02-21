@@ -6,6 +6,7 @@
  */
 
 import { Page, APIRequestContext, expect } from '@playwright/test';
+import { getBaseURL, getAppCSRFToken } from './test-helpers';
 
 /**
  * Sign in a user via API (more reliable than UI)
@@ -289,29 +290,6 @@ export async function signInUserViaUI(
  * @param password - User password
  * @returns User creation response
  */
-/**
- * Get the base URL for API requests
- * Matches the pattern used in other test files
- */
-function getBaseURL(): string {
-  if (process.env.PLAYWRIGHT_TEST_BASE_URL) {
-    return process.env.PLAYWRIGHT_TEST_BASE_URL;
-  }
-  if (process.env.TEST_ENV === 'production' || process.env.TEST_ENV === 'prod') {
-    return process.env.PRODUCTION_URL || 'https://warrensmm.com';
-  }
-  return process.env.STAGING_URL || 'https://wmm2026-git-staging-ncaatourney-gmailcoms-projects.vercel.app';
-}
-
-/**
- * Create a test user via the registration API
- * 
- * @param request - Playwright API request context
- * @param name - User name
- * @param email - User email address
- * @param password - User password
- * @returns User creation response
- */
 export async function createTestUser(
   request: APIRequestContext,
   name: string,
@@ -439,5 +417,59 @@ export async function isUserSignedIn(page: Page): Promise<boolean> {
   // If we're redirected to sign-in, user is not signed in
   const currentUrl = page.url();
   return !currentUrl.includes('/auth/signin');
+}
+
+/**
+ * Make an authenticated bracket API request with CSRF protection.
+ * 
+ * Use this for tests that need to create/update/delete brackets via API.
+ * The request context should already have session cookies from signInUser().
+ * 
+ * @param request - Playwright API request context (with session cookies)
+ * @param method - HTTP method (POST, PUT, DELETE)
+ * @param endpoint - API endpoint (e.g., '/api/tournament-bracket' or '/api/tournament-bracket/123')
+ * @param data - Request body data (for POST/PUT)
+ * @returns Fetch response
+ */
+export async function makeBracketAPIRequest(
+  request: APIRequestContext,
+  method: 'POST' | 'PUT' | 'DELETE',
+  endpoint: string,
+  data?: Record<string, unknown>
+): Promise<{ response: ReturnType<APIRequestContext['post']> extends Promise<infer R> ? R : never; ok: boolean; status: number; json: () => Promise<unknown> }> {
+  const baseURL = getBaseURL();
+  const url = `${baseURL}${endpoint}`;
+  
+  // Get CSRF token for the request
+  const csrfToken = await getAppCSRFToken(request);
+  
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  
+  if (csrfToken) {
+    headers['x-csrf-token'] = csrfToken;
+  }
+  
+  let response;
+  
+  switch (method) {
+    case 'POST':
+      response = await request.post(url, { headers, data });
+      break;
+    case 'PUT':
+      response = await request.put(url, { headers, data });
+      break;
+    case 'DELETE':
+      response = await request.delete(url, { headers });
+      break;
+  }
+  
+  return {
+    response,
+    ok: response.ok(),
+    status: response.status(),
+    json: () => response.json(),
+  };
 }
 

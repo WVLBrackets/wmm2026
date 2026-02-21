@@ -10,6 +10,7 @@ import {
 import { sendSubmissionConfirmationEmail, processEmailAsync } from '@/lib/bracketEmailService';
 import { getSiteConfigFromGoogleSheetsFresh } from '@/lib/siteConfig';
 import { checkSubmissionAllowed } from '@/lib/bracketSubmissionValidator';
+import { csrfProtection } from '@/lib/csrf';
 
 /**
  * GET /api/tournament-bracket/[id] - Get a specific bracket
@@ -81,13 +82,20 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // SECURITY: CSRF protection for state-changing operation
+  const csrfError = csrfProtection(request);
+  if (csrfError) {
+    return csrfError;
+  }
+
   const { id } = await params;
   try {
     // Check for test email suppression headers (from Playwright tests)
-    const suppressTestEmails = request.headers.get('X-Suppress-Test-Emails') === 'true';
+    // SECURITY: Only honor suppression headers in non-production environments
+    const isProduction = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
+    const suppressTestEmails = !isProduction && request.headers.get('X-Suppress-Test-Emails') === 'true';
     if (suppressTestEmails) {
       process.env.SUPPRESS_TEST_EMAILS = 'true';
-      // Also capture the test user email for suppression matching
       const testUserEmail = request.headers.get('X-Test-User-Email');
       if (testUserEmail) {
         process.env.TEST_USER_EMAIL = testUserEmail;
@@ -277,6 +285,12 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // SECURITY: CSRF protection for state-changing operation
+  const csrfError = csrfProtection(request);
+  if (csrfError) {
+    return csrfError;
+  }
+
   const { id } = await params;
   try {
     const session = await getServerSession(authOptions);

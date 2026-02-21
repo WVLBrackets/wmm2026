@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { confirmUserEmail } from '@/lib/secureDatabase';
+import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rateLimit';
 
 export async function POST(request: NextRequest) {
+  // SECURITY: Rate limiting to prevent token brute forcing
+  const rateLimitResponse = rateLimitMiddleware(request, 'auth:confirm', RATE_LIMITS.AUTH_CONFIRM);
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   try {
     const { token } = await request.json();
     

@@ -19,20 +19,37 @@ export interface EmailTemplateVariables {
 export type EmailTemplateType = 'pdf' | 'submit';
 
 /**
+ * Escape HTML special characters to prevent XSS attacks in email content
+ * @param text - The text to escape
+ * @returns HTML-safe string
+ */
+function escapeHtmlForEmail(text: string): string {
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+  };
+  return text.replace(/[&<>"']/g, (m) => map[m]);
+}
+
+/**
  * Replace template variables in a string
  * Supports both {variable} and {{variable}} syntax
+ * SECURITY: All user-provided values are HTML-escaped to prevent XSS
  */
 function replaceVariables(text: string, variables: EmailTemplateVariables): string {
   let result = text;
   
-  // Replace {variable} syntax
-  result = result.replace(/\{name\}/g, variables.name || 'there');
-  result = result.replace(/\{entryName\}/g, variables.entryName || 'your bracket');
-  result = result.replace(/\{tournamentYear\}/g, variables.tournamentYear || '');
-  result = result.replace(/\{siteName\}/g, variables.siteName || 'Warren\'s March Madness');
-  result = result.replace(/\{bracketId\}/g, variables.bracketId || '');
-  result = result.replace(/\{submissionCount\}/g, variables.submissionCount?.toString() || '0');
-  result = result.replace(/\{totalCost\}/g, variables.totalCost?.toString() || '0');
+  // Replace {variable} syntax with HTML-escaped values
+  result = result.replace(/\{name\}/g, escapeHtmlForEmail(variables.name || 'there'));
+  result = result.replace(/\{entryName\}/g, escapeHtmlForEmail(variables.entryName || 'your bracket'));
+  result = result.replace(/\{tournamentYear\}/g, escapeHtmlForEmail(variables.tournamentYear || ''));
+  result = result.replace(/\{siteName\}/g, escapeHtmlForEmail(variables.siteName || 'Warren\'s March Madness'));
+  result = result.replace(/\{bracketId\}/g, escapeHtmlForEmail(variables.bracketId || ''));
+  result = result.replace(/\{submissionCount\}/g, escapeHtmlForEmail(variables.submissionCount?.toString() || '0'));
+  result = result.replace(/\{totalCost\}/g, escapeHtmlForEmail(variables.totalCost?.toString() || '0'));
   
   return result;
 }

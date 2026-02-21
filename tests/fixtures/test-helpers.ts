@@ -1,11 +1,159 @@
 /**
  * Test helper functions for Playwright tests
  * 
+ * This module provides centralized configuration and helper functions used across
+ * all test files. Import from here instead of duplicating these functions.
+ * 
  * NOTE: We do not use API endpoints for test operations to avoid security risks.
  * Test data cleanup is handled via the local script: npm run cleanup:test-data
  */
 
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator, expect, APIRequestContext } from '@playwright/test';
+
+// =============================================================================
+// ENVIRONMENT CONFIGURATION
+// =============================================================================
+
+/**
+ * Get the base URL for API requests and navigation.
+ * Centralized to avoid duplication across test files.
+ * 
+ * Priority:
+ * 1. PLAYWRIGHT_TEST_BASE_URL (explicit override)
+ * 2. Production URL if TEST_ENV is production/prod
+ * 3. Staging URL (default - safest for testing)
+ */
+export function getBaseURL(): string {
+  if (process.env.PLAYWRIGHT_TEST_BASE_URL) {
+    return process.env.PLAYWRIGHT_TEST_BASE_URL;
+  }
+  
+  if (process.env.TEST_ENV === 'production' || process.env.TEST_ENV === 'prod') {
+    return process.env.PRODUCTION_URL || 'https://warrensmm.com';
+  }
+  
+  return process.env.STAGING_URL || 'https://wmm2026-git-staging-ncaatourney-gmailcoms-projects.vercel.app';
+}
+
+/**
+ * Determine if we're testing against production environment
+ */
+export function isProductionEnvironment(): boolean {
+  return process.env.TEST_ENV === 'production' || 
+         process.env.TEST_ENV === 'prod' ||
+         (process.env.PLAYWRIGHT_TEST_BASE_URL?.includes('warrensmm.com') ?? false);
+}
+
+/**
+ * Get test user credentials from environment variables.
+ * Centralized to ensure consistent credential handling across all tests.
+ * 
+ * @throws Error if required environment variables are missing
+ */
+export function getTestUserCredentials(): { email: string; password: string; name: string } {
+  const isProduction = isProductionEnvironment();
+  
+  const password = isProduction 
+    ? (process.env.TEST_USER_PASSWORD_PRODUCTION || process.env.TEST_USER_PASSWORD)
+    : (process.env.TEST_USER_PASSWORD_STAGING || process.env.TEST_USER_PASSWORD);
+  
+  if (!process.env.TEST_USER_EMAIL) {
+    throw new Error(
+      'TEST_USER_EMAIL environment variable is required. ' +
+      'See tests/AUTHENTICATION_TEST_SETUP.md for setup instructions.'
+    );
+  }
+  
+  if (!password) {
+    const envVar = isProduction ? 'TEST_USER_PASSWORD_PRODUCTION' : 'TEST_USER_PASSWORD_STAGING';
+    throw new Error(
+      `${envVar} or TEST_USER_PASSWORD environment variable is required. ` +
+      'See tests/AUTHENTICATION_TEST_SETUP.md for setup instructions.'
+    );
+  }
+  
+  return {
+    email: process.env.TEST_USER_EMAIL,
+    password: password,
+    name: process.env.TEST_USER_NAME || 'Test User',
+  };
+}
+
+// =============================================================================
+// RELIABLE WAIT UTILITIES (Replacing waitForTimeout anti-pattern)
+// =============================================================================
+
+/**
+ * Wait for network to be idle with a fallback timeout.
+ * Prefer this over waitForTimeout for page loads.
+ */
+export async function waitForNetworkSettled(page: Page, timeout = 10000): Promise<void> {
+  try {
+    await page.waitForLoadState('networkidle', { timeout });
+  } catch {
+    await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => {});
+  }
+}
+
+/**
+ * Wait for an element to be stable (no layout shifts).
+ * Use after interactions that trigger animations or layout changes.
+ */
+export async function waitForElementStable(locator: Locator, timeout = 5000): Promise<void> {
+  await expect(locator).toBeVisible({ timeout });
+  const box1 = await locator.boundingBox();
+  await locator.page().waitForTimeout(100);
+  const box2 = await locator.boundingBox();
+  
+  if (box1 && box2 && (box1.x !== box2.x || box1.y !== box2.y)) {
+    await locator.page().waitForTimeout(200);
+  }
+}
+
+/**
+ * Wait for navigation to complete, handling redirects gracefully.
+ * Use instead of waitForTimeout after navigation actions.
+ */
+export async function waitForNavigationComplete(page: Page, expectedUrlPattern?: RegExp): Promise<void> {
+  try {
+    await page.waitForLoadState('domcontentloaded', { timeout: 30000 });
+    if (expectedUrlPattern) {
+      await expect(page).toHaveURL(expectedUrlPattern, { timeout: 10000 });
+    }
+  } catch {
+    await page.waitForLoadState('load', { timeout: 10000 }).catch(() => {});
+  }
+}
+
+/**
+ * Retry an action with exponential backoff.
+ * Use for operations that may be flaky due to timing.
+ */
+export async function retryWithBackoff<T>(
+  action: () => Promise<T>,
+  maxRetries = 3,
+  initialDelayMs = 500
+): Promise<T> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await action();
+    } catch (error) {
+      lastError = error as Error;
+      if (attempt < maxRetries - 1) {
+        const delay = initialDelayMs * Math.pow(2, attempt);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  throw lastError;
+}
+
+// =============================================================================
+// FORM INTERACTION HELPERS
+// =============================================================================
 
 /**
  * Fills an input field reliably in WebKit, which has issues with React controlled inputs.
@@ -147,5 +295,183 @@ export async function previewTestData(baseURL: string): Promise<{ count: number;
   // Intentionally not implemented - use local script instead
   console.warn('previewTestData API endpoint removed for security. Use: npm run cleanup:test-data');
   return { count: 0, users: [] };
+}
+
+// =============================================================================
+// TEST DATA TRACKING (for cleanup reporting)
+// =============================================================================
+
+/**
+ * Interface for tracking test-created data
+ */
+interface TestDataRecord {
+  type: 'user' | 'bracket';
+  identifier: string;
+  createdAt: Date;
+  testFile?: string;
+}
+
+/**
+ * In-memory storage for test data tracking.
+ * This is used to track what test data was created during a test run.
+ */
+const testDataRegistry: TestDataRecord[] = [];
+
+/**
+ * Track test data creation for cleanup reporting.
+ * Call this after creating test users or brackets.
+ * 
+ * @param type - The type of data created
+ * @param identifier - Email for users, ID for brackets
+ * @param testFile - Optional test file name for context
+ */
+export function trackTestData(type: 'user' | 'bracket', identifier: string, testFile?: string): void {
+  testDataRegistry.push({
+    type,
+    identifier,
+    createdAt: new Date(),
+    testFile,
+  });
+}
+
+/**
+ * Get all tracked test data for cleanup reporting.
+ */
+export function getTrackedTestData(): TestDataRecord[] {
+  return [...testDataRegistry];
+}
+
+/**
+ * Clear the test data registry.
+ * Call this at the start of a test suite if you want isolated tracking.
+ */
+export function clearTestDataRegistry(): void {
+  testDataRegistry.length = 0;
+}
+
+/**
+ * Generate a cleanup report for test data.
+ * Use this in afterAll hooks to report what needs cleaning up.
+ */
+export function generateCleanupReport(): string {
+  if (testDataRegistry.length === 0) {
+    return 'No test data to clean up.';
+  }
+  
+  const users = testDataRegistry.filter(r => r.type === 'user');
+  const brackets = testDataRegistry.filter(r => r.type === 'bracket');
+  
+  let report = '=== Test Data Cleanup Report ===\n\n';
+  
+  if (users.length > 0) {
+    report += `Users created (${users.length}):\n`;
+    users.forEach(u => {
+      report += `  - ${u.identifier} (${u.createdAt.toISOString()})\n`;
+    });
+    report += '\n';
+  }
+  
+  if (brackets.length > 0) {
+    report += `Brackets created (${brackets.length}):\n`;
+    brackets.forEach(b => {
+      report += `  - ${b.identifier} (${b.createdAt.toISOString()})\n`;
+    });
+    report += '\n';
+  }
+  
+  report += 'To clean up test data, run: npm run cleanup:test-data\n';
+  
+  return report;
+}
+
+// =============================================================================
+// TEST ISOLATION UTILITIES
+// =============================================================================
+
+/**
+ * Generate a unique test run ID for this test session.
+ * Use this to tag test data for easier cleanup.
+ */
+export function getTestRunId(): string {
+  if (!process.env.TEST_RUN_ID) {
+    process.env.TEST_RUN_ID = `test-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+  }
+  return process.env.TEST_RUN_ID;
+}
+
+/**
+ * Check if running in CI environment
+ */
+export function isCI(): boolean {
+  return process.env.CI === 'true' || !!process.env.GITHUB_ACTIONS;
+}
+
+/**
+ * Get a unique prefix for test data created in this run.
+ * Includes timestamp and random component for uniqueness.
+ */
+export function getTestDataPrefix(): string {
+  const runId = getTestRunId();
+  return `test-${runId.substring(5, 13)}`;
+}
+
+// =============================================================================
+// CSRF TOKEN HELPERS
+// =============================================================================
+
+/**
+ * Fetch a CSRF token from the application for API testing.
+ * This is separate from NextAuth's CSRF token and is used for
+ * state-changing API calls to bracket endpoints.
+ * 
+ * @param request - Playwright API request context
+ * @returns CSRF token string or null if unavailable
+ */
+export async function getAppCSRFToken(request: APIRequestContext): Promise<string | null> {
+  const baseURL = getBaseURL();
+  
+  try {
+    const response = await request.get(`${baseURL}/api/csrf-token`);
+    
+    if (!response.ok()) {
+      console.warn('Failed to fetch CSRF token:', response.status());
+      return null;
+    }
+    
+    const contentType = response.headers()['content-type'] || '';
+    if (!contentType.includes('application/json')) {
+      console.warn('CSRF endpoint returned non-JSON response');
+      return null;
+    }
+    
+    const data = await response.json();
+    return data.csrfToken || null;
+  } catch (error) {
+    console.error('Error fetching CSRF token:', error);
+    return null;
+  }
+}
+
+/**
+ * Get headers for making authenticated state-changing API calls.
+ * Includes both Content-Type and CSRF token.
+ * 
+ * @param request - Playwright API request context
+ * @returns Headers object with Content-Type and CSRF token
+ */
+export async function getAuthenticatedAPIHeaders(
+  request: APIRequestContext
+): Promise<Record<string, string>> {
+  const csrfToken = await getAppCSRFToken(request);
+  
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  
+  if (csrfToken) {
+    headers['x-csrf-token'] = csrfToken;
+  }
+  
+  return headers;
 }
 

@@ -11,11 +11,17 @@
  *   node scripts/run-tests-with-projects.js 2 both all
  */
 
-const { execSync, execFileSync } = require('child_process');
+const { execFileSync, spawnSync } = require('child_process');
 
 const testId = process.argv[2];
 const mode = process.argv[3];
 const browser = process.argv[4];
+
+// SECURITY: Allowlists for input validation to prevent command injection
+const VALID_TEST_IDS = ['1', '2', '3', '4', '5', '7', '8', 'smoke', 'api', 'e2e', 'all'];
+const VALID_MODES = ['desktop', 'mobile', 'both'];
+const VALID_BROWSERS = ['chrome', 'firefox', 'webkit', 'all'];
+const VALID_ENVS = ['staging', 'production', 'development'];
 
 if (!testId || !mode || !browser) {
   console.error('Usage: node scripts/run-tests-with-projects.js <test-id> <mode> <browser>');
@@ -25,10 +31,32 @@ if (!testId || !mode || !browser) {
   process.exit(1);
 }
 
-// Get projects from helper script (returns JSON array to handle spaces in project names)
+// SECURITY: Validate all inputs against allowlists
+if (!VALID_TEST_IDS.includes(testId)) {
+  console.error(`Invalid test-id: ${testId}. Must be one of: ${VALID_TEST_IDS.join(', ')}`);
+  process.exit(1);
+}
+
+if (!VALID_MODES.includes(mode)) {
+  console.error(`Invalid mode: ${mode}. Must be one of: ${VALID_MODES.join(', ')}`);
+  process.exit(1);
+}
+
+if (!VALID_BROWSERS.includes(browser)) {
+  console.error(`Invalid browser: ${browser}. Must be one of: ${VALID_BROWSERS.join(', ')}`);
+  process.exit(1);
+}
+
+const env = process.env.TEST_ENV || 'staging';
+if (!VALID_ENVS.includes(env)) {
+  console.error(`Invalid TEST_ENV: ${env}. Must be one of: ${VALID_ENVS.join(', ')}`);
+  process.exit(1);
+}
+
+// Get projects from helper script using execFileSync (no shell, prevents injection)
 let projects;
 try {
-  const projectsOutput = execSync(`node scripts/get-playwright-projects.js ${mode} ${browser}`, { encoding: 'utf-8' });
+  const projectsOutput = execFileSync('node', ['scripts/get-playwright-projects.js', mode, browser], { encoding: 'utf-8' });
   projects = JSON.parse(projectsOutput.trim());
 } catch (error) {
   console.error(`Error determining projects: ${error.message}`);
@@ -40,31 +68,19 @@ if (projects.length === 0) {
   process.exit(1);
 }
 
-// Build --project flags with proper quoting for project names with spaces/parentheses
-// Use JSON.stringify to properly escape quotes and special characters
-const projectFlags = projects.map(p => {
-  // Use JSON.stringify to properly escape the project name
-  const quoted = JSON.stringify(p);
-  return `--project=${quoted}`;
-}).join(' ');
-
-// Run the test with the project flags
-const env = process.env.TEST_ENV || 'staging';
+// Build --project flags array (no string interpolation)
+const projectArgs = projects.flatMap(p => ['--project', p]);
 
 console.log(`\n📋 Running tests with projects: ${projects.join(', ')}`);
 console.log(`   Mode: ${mode}, Browser: ${browser}`);
 console.log('');
 
-// Use run-test-by-id.js which will handle the project flags
-// Pass the project flags as a string with properly quoted project names
-try {
-  execSync(
-    `npx cross-env TEST_ENV=${env} node scripts/run-test-by-id.js ${testId} -- ${projectFlags}`,
-    { stdio: 'inherit', shell: true }
-  );
-  process.exit(0);
-} catch (error) {
-  const exitCode = error.status || 1;
-  process.exit(exitCode);
-}
+// Run the test using spawnSync with argument arrays (no shell, prevents injection)
+// Set TEST_ENV via environment instead of command string
+const result = spawnSync('node', ['scripts/run-test-by-id.js', testId, '--', ...projectArgs], {
+  stdio: 'inherit',
+  env: { ...process.env, TEST_ENV: env }
+});
+
+process.exit(result.status || 0);
 
