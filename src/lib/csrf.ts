@@ -12,7 +12,6 @@
 
 import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 
 // CSRF token cookie name
 export const CSRF_COOKIE_NAME = 'csrf_token';
@@ -104,9 +103,12 @@ export function verifyCSRFToken(token: string): boolean {
 
 /**
  * Get or create CSRF token from cookies
- * For use in Server Components
+ * For use in Server Components only
+ * Note: Uses dynamic import to avoid issues when this module is
+ * imported in contexts where next/headers isn't available
  */
 export async function getCSRFToken(): Promise<string> {
+  const { cookies } = await import('next/headers');
   const cookieStore = await cookies();
   const existingToken = cookieStore.get(CSRF_COOKIE_NAME)?.value;
   
