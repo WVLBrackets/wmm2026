@@ -424,6 +424,7 @@ export default function FinalFourChampionship({
                 }`}
                 style={{ width: 'max-content', minWidth: '200px' }}
                 placeholder="Enter your bracket name"
+                data-testid="entry-name-input"
               />
             </div>
 
@@ -473,6 +474,7 @@ export default function FinalFourChampionship({
                 }`}
                 placeholder="###"
                 title="Total combined points scored in the championship game"
+                data-testid="tiebreaker-input"
               />
             </div>
           </div>

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/lib/adminAuth';
-import { getAllTeamReferenceData } from '@/lib/secureDatabase';
+import { getAllTeamReferenceData } from '@/lib/repositories/teamDataRepository';
 import * as https from 'https';
 import * as http from 'http';
 import { URL } from 'url';

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllTeamReferenceData, initializeTeamDataTable } from '@/lib/secureDatabase';
+import { getAllTeamReferenceData } from '@/lib/repositories/teamDataRepository';
+import { initializeTeamDataTable } from '@/lib/database/migrations';
 import { TeamRefData } from '@/lib/teamRefData';
 
 // Cache team data in memory to avoid repeated database queries

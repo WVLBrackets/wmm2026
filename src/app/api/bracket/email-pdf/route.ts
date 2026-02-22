@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { getBracketById, Bracket, getUserByEmail } from '@/lib/secureDatabase';
+import { getBracketById } from '@/lib/repositories/bracketRepository';
+import { getUserByEmail } from '@/lib/repositories/userRepository';
+import type { Bracket } from '@/lib/types/database';
 import { getSiteConfigFromGoogleSheets, SiteConfigData } from '@/lib/siteConfig';
 import { sendOnDemandPdfEmail, processEmailAsync } from '@/lib/bracketEmailService';
 import { TournamentData, TournamentBracket, TournamentTeam } from '@/types/tournament';

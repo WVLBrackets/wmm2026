@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllTeamReferenceData } from '@/lib/secureDatabase';
+import { getAllTeamReferenceData } from '@/lib/repositories/teamDataRepository';
 
 /**
  * GET /api/team-mascot/[id]

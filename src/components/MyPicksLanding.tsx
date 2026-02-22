@@ -395,6 +395,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                       onClick={onCreateNew}
                       disabled={isBracketCreationDisabled()}
                       title={isBracketCreationDisabled() ? getBracketCreationDisabledReason() || '' : 'Create a new bracket'}
+                      data-testid="new-bracket-button"
                       className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
                         isBracketCreationDisabled()
                           ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -409,6 +410,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                       onClick={() => signOut({ callbackUrl: '/auth/signin' })}
                       logLocation="Logout"
                       className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
+                      data-testid="logout-button"
                     >
                       <LogOut className="h-4 w-4" />
                       <span>Logout</span>
@@ -443,6 +445,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                         disabled={isBracketCreationDisabled()}
                         title={isBracketCreationDisabled() ? getBracketCreationDisabledReason() || '' : 'Create a new bracket'}
                         aria-label="New Bracket"
+                        data-testid="new-bracket-button"
                         className={`px-2 py-2 rounded-lg flex items-center space-x-2 ${
                           isBracketCreationDisabled()
                             ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -456,6 +459,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                         onClick={() => signOut({ callbackUrl: '/auth/signin' })}
                         logLocation="Logout"
                         className="bg-blue-600 text-white px-2 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
+                        data-testid="logout-button"
                       >
                         <LogOut className="h-4 w-4" />
                       </LoggedButton>
@@ -687,7 +691,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                               {pendingDeleteBracketId === bracket.id ? (
                                 <>
                                   {/* Confirmation UI - embedded in the table */}
-                                  <div className="flex items-center space-x-2 bg-red-50 border border-red-200 rounded px-2 py-1">
+                                  <div className="flex items-center space-x-2 bg-red-50 border border-red-200 rounded px-2 py-1" data-testid="delete-confirmation-dialog">
                                     <span className="text-xs text-red-700 font-medium whitespace-nowrap">Delete?</span>
                                     <button
                                       onClick={() => onConfirmDelete && onConfirmDelete(bracket.id)}
@@ -724,6 +728,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                                       bracketId={number ? String(number).padStart(6, '0') : null}
                                       className="bg-green-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-green-700 cursor-pointer transition-colors"
                                       title="Copy"
+                                      data-testid="copy-bracket-button"
                                     >
                                       <Copy className="h-4 w-4" />
                                     </LoggedButton>
@@ -739,6 +744,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                                         : 'bg-red-600 text-white hover:bg-red-700 cursor-pointer'
                                     }`}
                                     title={deletingBracketId === bracket.id ? 'Deleting...' : 'Delete'}
+                                    data-testid="delete-bracket-button"
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </LoggedButton>
@@ -764,6 +770,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                                   bracketId={number ? String(number).padStart(6, '0') : null}
                                   className="bg-green-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-green-700 cursor-pointer transition-colors"
                                   title="Copy"
+                                  data-testid="copy-bracket-button"
                                 >
                                   <Copy className="h-4 w-4" />
                                 </LoggedButton>
@@ -783,6 +790,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                                 bracketId={number ? String(number).padStart(6, '0') : null}
                                 className="bg-indigo-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-indigo-700 cursor-pointer transition-colors"
                                 title="Email PDF"
+                                data-testid="email-bracket-button"
                               >
                                 <Mail className="h-4 w-4" />
                               </LoggedButton>

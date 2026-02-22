@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/lib/adminAuth';
-import { getAllTeamReferenceData } from '@/lib/secureDatabase';
+import { getAllTeamReferenceData } from '@/lib/repositories/teamDataRepository';
 
 /**
  * GET /api/admin/team-data/export - Export team reference data as JSON file

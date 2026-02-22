@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resetPassword } from '@/lib/secureDatabase';
+import { resetPassword } from '@/lib/services/tokenService';
 import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rateLimit';
 
 export async function POST(request: NextRequest) {

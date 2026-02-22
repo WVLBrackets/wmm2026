@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
-import { getAllBrackets } from '@/lib/secureDatabase';
-import { getAllTeamReferenceData } from '@/lib/secureDatabase';
+import { getAllBrackets } from '@/lib/repositories/bracketRepository';
+import { getAllTeamReferenceData } from '@/lib/repositories/teamDataRepository';
 
 /**
  * GET /api/admin/brackets/export - Export all brackets to CSV (admin only)

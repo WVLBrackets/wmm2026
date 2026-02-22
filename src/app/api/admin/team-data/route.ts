@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/lib/adminAuth';
-import { getAllTeamReferenceData, updateTeamReferenceData, deleteTeamReferenceData, initializeTeamDataTable, updateTeamActiveStatus } from '@/lib/secureDatabase';
+import { getAllTeamReferenceData, updateTeamReferenceData, deleteTeamReferenceData, updateTeamActiveStatus } from '@/lib/repositories/teamDataRepository';
+import { initializeTeamDataTable } from '@/lib/database/migrations';
 
 /**
  * GET /api/admin/team-data - Get all team reference data

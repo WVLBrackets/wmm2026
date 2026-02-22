@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/lib/adminAuth';
-import { initializeDatabase } from '@/lib/secureDatabase';
+import { initializeDatabase } from '@/lib/database/migrations';
 
 export async function GET() {
   try {

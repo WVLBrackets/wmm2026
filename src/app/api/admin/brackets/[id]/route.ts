@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/lib/adminAuth';
-import { getBracketById, updateBracket, deleteBracket } from '@/lib/secureDatabase';
+import { getBracketById, updateBracket, deleteBracket } from '@/lib/repositories/bracketRepository';
 
 export async function GET(
   request: NextRequest,

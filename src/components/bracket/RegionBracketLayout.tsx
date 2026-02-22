@@ -337,6 +337,7 @@ export default function RegionBracketLayout({
                   }`}
                   style={{ width: 'max-content', minWidth: '200px' }}
                   placeholder="Enter your bracket name"
+                  data-testid="entry-name-input"
                 />
               </div>
 

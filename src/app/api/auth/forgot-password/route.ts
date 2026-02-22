@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createPasswordResetToken, getUserByEmail } from '@/lib/secureDatabase';
+import { createPasswordResetToken } from '@/lib/services/tokenService';
+import { getUserByEmail } from '@/lib/repositories/userRepository';
 import { sendPasswordResetEmail } from '@/lib/emailService';
 import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
 import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rateLimit';

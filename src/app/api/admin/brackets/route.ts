@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
-import { getAllBrackets } from '@/lib/secureDatabase';
+import { getAllBrackets } from '@/lib/repositories/bracketRepository';
 
 /**
  * GET /api/admin/brackets - Get all brackets (admin only)

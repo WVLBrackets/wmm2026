@@ -2,7 +2,7 @@
 
 **Project:** WMM2026 (Tournament Bracket Application)  
 **Created:** February 21, 2026  
-**Last Updated:** February 21, 2026 (Admin Export CSV specification)  
+**Last Updated:** February 21, 2026 (API migration complete, test IDs added)  
 **Purpose:** Living document defining engineering standards for this project
 
 ---
@@ -1538,6 +1538,8 @@ Cache appropriate responses:
 | 2026-02-21 | **Rate Limiting Update:** Documented environment-aware limits (10x relaxed for staging/preview) | Security Auditor |
 | 2026-02-21 | **Added 2.0 Environment-Aware Security Controls:** Foundational pattern for balancing security with testability | Security Auditor |
 | 2026-02-21 | **Admin Export Feature:** Updated `/api/admin/brackets/export` with new 74-column CSV format, status-based sorting | Architect |
+| 2026-02-21 | **API Migration Complete:** All 17 API routes now use modular imports (repositories, services, migrations) | Architect |
+| 2026-02-21 | **Test ID Coverage:** Added data-testid attributes for stable Playwright locators (logout, new-bracket, entry-name, tiebreaker, copy/email/delete buttons, delete dialog) | Architect |
 
 ---
 

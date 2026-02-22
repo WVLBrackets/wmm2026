@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { 
-  createBracket, 
-  getBracketsByUserId, 
-  updateBracket, 
-  getUserByEmail,
-} from '@/lib/secureDatabase';
+import { createBracket, getBracketsByUserId, updateBracket } from '@/lib/repositories/bracketRepository';
+import { getUserByEmail } from '@/lib/repositories/userRepository';
 import { getSiteConfigFromGoogleSheets, getSiteConfigFromGoogleSheetsFresh } from '@/lib/siteConfig';
 import { sendSubmissionConfirmationEmail, processEmailAsync } from '@/lib/bracketEmailService';
 import { validateBracketSubmission, checkSubmissionAllowed } from '@/lib/bracketSubmissionValidator';

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserByEmail } from '@/lib/secureDatabase';
+import { getUserByEmail } from '@/lib/repositories/userRepository';
 
 export async function POST(request: NextRequest) {
   try {
