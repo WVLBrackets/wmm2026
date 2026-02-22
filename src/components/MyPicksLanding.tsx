@@ -442,6 +442,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                         onClick={onCreateNew}
                         disabled={isBracketCreationDisabled()}
                         title={isBracketCreationDisabled() ? getBracketCreationDisabledReason() || '' : 'Create a new bracket'}
+                        aria-label="New Bracket"
                         className={`px-2 py-2 rounded-lg flex items-center space-x-2 ${
                           isBracketCreationDisabled()
                             ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
