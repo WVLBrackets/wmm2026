@@ -2,7 +2,7 @@
 
 **Project:** WMM2026 (Tournament Bracket Application)  
 **Created:** February 21, 2026  
-**Last Updated:** February 21, 2026 (Security & Testing sections expanded)  
+**Last Updated:** February 21, 2026 (Added Tech Stack section)  
 **Purpose:** Living document defining engineering standards for this project
 
 ---
@@ -26,24 +26,161 @@
 
 ## Table of Contents
 
-1. [Architecture](#1-architecture)
-2. [Security](#2-security)
-3. [Database](#3-database)
-4. [API Design](#4-api-design)
-5. [Error Handling](#5-error-handling)
-6. [Testing](#6-testing)
-7. [Code Quality](#7-code-quality)
-8. [Email & Notifications](#8-email--notifications)
-9. [Configuration](#9-configuration)
-10. [Performance](#10-performance)
+1. [Tech Stack](#1-tech-stack)
+2. [Architecture](#2-architecture)
+3. [Security](#3-security)
+4. [Database](#4-database)
+5. [API Design](#5-api-design)
+6. [Error Handling](#6-error-handling)
+7. [Testing](#7-testing)
+8. [Code Quality](#8-code-quality)
+9. [Email & Notifications](#9-email--notifications)
+10. [Configuration](#10-configuration)
+11. [Performance](#11-performance)
 
 ---
 
-## 1. Architecture
+## 1. Tech Stack
 
-### 1.1 Framework & Technology Stack (A)
+> **Section Owner:** Application Architect  
+> **Last Reviewed:** February 21, 2026
 
-Use Next.js App Router with TypeScript for all application code.
+This section defines the approved technologies for this project. All technology choices should align with this stack unless explicitly approved.
+
+---
+
+### 1.1 Core Framework
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **Next.js** | 15.x | React framework with App Router, SSR/SSG |
+| **React** | 19.x | UI component library |
+| **TypeScript** | 5.x | Type-safe JavaScript |
+| **Node.js** | 20.x+ | Runtime environment |
+
+---
+
+### 1.2 Frontend & Styling
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **Tailwind CSS** | 4.x | Utility-first CSS framework |
+| **Lucide React** | latest | Icon library |
+| **React Hook Form** | - | Form state management (if used) |
+
+---
+
+### 1.3 Authentication & Security
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **NextAuth.js** | 4.x | Authentication framework |
+| **bcryptjs** | latest | Password hashing |
+| **crypto** (Node.js) | built-in | Token generation, CSRF |
+
+**Authentication Strategy:** JWT with Credentials provider (email/password)
+
+---
+
+### 1.4 Database
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **Vercel Postgres** | latest | Managed PostgreSQL (powered by Neon) |
+| **@vercel/postgres** | latest | Database client |
+
+**ORM Strategy:** Raw SQL queries via tagged template literals (no ORM)
+
+```typescript
+import { sql } from '@/lib/databaseAdapter';
+const result = await sql`SELECT * FROM users WHERE id = ${userId}`;
+```
+
+---
+
+### 1.5 PDF Generation
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **jsPDF** | 4.x | Client-side PDF generation |
+| **Puppeteer Core** | 24.x | Server-side PDF rendering |
+
+**Use Cases:**
+- **jsPDF:** Quick client-side bracket exports, simple documents
+- **Puppeteer Core:** High-fidelity PDF rendering from HTML, complex layouts
+
+---
+
+### 1.6 Email & Notifications
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **Nodemailer** | latest | SMTP email delivery |
+| **HTML Templates** | - | Email templates in `src/emails/` |
+
+---
+
+### 1.7 External Integrations
+
+| Technology | Purpose |
+|------------|---------|
+| **Google Sheets API** | Site configuration, dynamic content |
+
+---
+
+### 1.8 Testing
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **Playwright** | latest | E2E and API testing |
+
+**Test Types:** API tests, E2E browser tests, cross-browser (Chromium, Firefox, WebKit, Mobile)
+
+---
+
+### 1.9 Deployment & Infrastructure
+
+| Technology | Purpose |
+|------------|---------|
+| **Vercel** | Hosting, serverless functions, preview deployments |
+| **GitHub** | Source control, CI/CD integration |
+
+**Environments:**
+- `production` - Live site
+- `preview` - Branch deployments (staging)
+- `development` - Local development
+
+---
+
+### 1.10 Development Tools
+
+| Tool | Purpose |
+|------|---------|
+| **ESLint** | Code linting |
+| **Prettier** | Code formatting (if configured) |
+| **Turbopack** | Fast development builds |
+
+---
+
+### Technology Selection Guidelines
+
+When evaluating new technologies:
+
+1. **Prefer established solutions** - Choose well-maintained, widely-adopted libraries
+2. **Minimize dependencies** - Only add what's truly needed
+3. **Consider bundle size** - Frontend dependencies affect load time
+4. **Check Vercel compatibility** - Must work in serverless environment
+5. **Evaluate maintenance burden** - Who will maintain it long-term?
+
+**Approval Process:** New technologies require Architect review before adoption.
+
+---
+
+## 2. Architecture
+
+### 2.1 Framework & Technology Stack (A)
+
+Use Next.js App Router with TypeScript for all application code. See [Section 1: Tech Stack](#1-tech-stack) for complete details.
 
 - All pages use the `/app` directory structure
 - API routes live under `/app/api/`
@@ -52,7 +189,7 @@ Use Next.js App Router with TypeScript for all application code.
 
 ---
 
-### 1.2 Directory Structure (A)
+### 2.2 Directory Structure (A)
 
 ```
 src/
@@ -74,7 +211,7 @@ src/
 
 ---
 
-### 1.3 Component Organization (B)
+### 2.3 Component Organization (B)
 
 Group related components into subdirectories by feature:
 
@@ -89,7 +226,7 @@ components/
 
 ---
 
-### 1.4 Single Responsibility for Library Modules (A) ✅
+### 2.4 Single Responsibility for Library Modules (A) ✅
 
 Each library module should have a single, focused responsibility.
 
@@ -111,16 +248,63 @@ Each library module should have a single, focused responsibility.
 
 ---
 
-## 2. Security
+## 3. Security
 
 > **Section Owner:** Security Auditor  
-> **Last Reviewed:** February 21, 2026
+> **Last Reviewed:** February 21, 2026  
+> **Compliance Status:** All standards (A) - Fully compliant
 
 This section defines all security standards for the application. The Security Auditor is responsible for maintaining these standards and ensuring compliance across the codebase.
 
 ---
 
-### 2.1 Password Hashing (A)
+### 2.0 Environment-Aware Security Controls (A) ⭐
+
+**FOUNDATIONAL PATTERN:** Security controls must balance protection with testability across environments.
+
+```typescript
+function getSecurityConfig() {
+  const isProduction = process.env.VERCEL_ENV === 'production' 
+                    || process.env.NODE_ENV === 'production';
+  
+  return {
+    rateLimitMultiplier: isProduction ? 1 : 10,  // 10x relaxed for testing
+    strictValidation: isProduction,
+    verboseErrors: !isProduction,
+  };
+}
+```
+
+**Principle:** 
+- **Production:** Maximum security, strict limits, minimal error details
+- **Staging/Preview:** Relaxed limits to enable QA testing, more verbose errors for debugging
+- **Development:** Most permissive, full error details
+
+**Apply This Pattern To:**
+
+| Control | Production | Staging/Preview | Rationale |
+|---------|------------|-----------------|-----------|
+| Rate Limits | Strict (e.g., 5/15min) | Relaxed (e.g., 50/15min) | QA runs many test iterations |
+| Error Messages | Generic only | Include error codes | Debugging without exposing internals |
+| Session Timeouts | Short | Extended | Longer test sessions |
+| CAPTCHA/Challenges | Enabled | Disabled or test mode | Automation compatibility |
+
+**Anti-Patterns to Avoid:**
+- ❌ Disabling security entirely in non-production
+- ❌ Using different code paths (leads to untested production code)
+- ❌ Hardcoding environment checks throughout codebase
+
+**Best Practice:**
+- ✅ Use configuration multipliers (same code, different thresholds)
+- ✅ Centralize environment detection
+- ✅ Document the production values as the "source of truth"
+- ✅ Ensure staging tests still exercise security code paths
+
+**Location:** `src/lib/rateLimit.ts`, all security middleware
+
+---
+
+### 3.1 Password Hashing (A)
 
 Hash passwords using bcrypt with cost factor 12:
 
@@ -134,7 +318,7 @@ const hashedPassword = await bcrypt.hash(password, 12);
 
 ---
 
-### 2.2 Email Confirmation Required (A)
+### 3.2 Email Confirmation Required (A)
 
 All new accounts require email confirmation before authentication:
 
@@ -147,7 +331,7 @@ All new accounts require email confirmation before authentication:
 
 ---
 
-### 2.3 Admin Authorization (A)
+### 3.3 Admin Authorization (A)
 
 Admin routes must verify admin status before processing:
 
@@ -162,7 +346,7 @@ if (!isAdminUser) {
 
 ---
 
-### 2.4 Rate Limiting (A)
+### 3.4 Rate Limiting (A)
 
 Apply rate limiting to prevent abuse on sensitive endpoints:
 
@@ -175,16 +359,39 @@ if (rateLimitResponse) return rateLimitResponse;
 
 **Location:** `src/lib/rateLimit.ts`
 
+**Predefined Configurations (Production):**
+
+| Endpoint | Window | Max Requests | Rationale |
+|----------|--------|--------------|-----------|
+| `AUTH_LOGIN` | 15 min | 5 | Prevent brute force attacks |
+| `AUTH_REGISTER` | 1 hour | 3 | Prevent account spam |
+| `AUTH_FORGOT_PASSWORD` | 1 hour | 3 | Prevent email flooding |
+| `AUTH_RESET_PASSWORD` | 15 min | 5 | Prevent token brute forcing |
+| `AUTH_CONFIRM` | 15 min | 10 | Prevent confirmation abuse |
+
+**Environment-Aware Limits:**
+- **Production:** Strict limits (as shown above)
+- **Staging/Preview:** 10x more permissive to facilitate testing
+  - Login: 50 attempts per 15 min
+  - Password Reset: 30 attempts per hour
+
+**Implementation Notes:**
+- Uses in-memory storage (resets on deployment)
+- Client identified via `X-Forwarded-For` header (Vercel proxy)
+- Returns 429 with `Retry-After` header when limited
+- Rate limit headers included in all responses
+- Clear error messages displayed to users (e.g., "Too many login attempts. Please try again in X minutes.")
+
 **Current Coverage:**
 - ✅ Registration endpoint (`/api/auth/register`)
 - ✅ Password reset (`/api/auth/forgot-password`, `/api/auth/reset-password`)
 - ✅ Email confirmation (`/api/auth/confirm`)
-- ✅ Login attempts (via NextAuth)
-- ❌ Bracket submission (consider adding)
+- ✅ Login attempts (via NextAuth authorize function)
+- ❌ Bracket submission (consider for future)
 
 ---
 
-### 2.5 CSRF Protection (A)
+### 3.5 CSRF Protection (A)
 
 Protect state-changing endpoints using Double Submit Cookie pattern:
 
@@ -211,7 +418,7 @@ if (csrfError) return csrfError;
 
 ---
 
-### 2.6 XSS Prevention (A)
+### 3.6 XSS Prevention (A)
 
 Escape user-generated content before rendering in HTML contexts:
 
@@ -230,7 +437,7 @@ const safeName = escapeHtml(userProvidedName);
 
 ---
 
-### 2.7 Command Injection Prevention (A)
+### 3.7 Command Injection Prevention (A)
 
 Never pass user input directly to shell commands:
 
@@ -249,7 +456,7 @@ exec(`npm run test -- --project=${userInput}`);  // NEVER DO THIS
 
 ---
 
-### 2.8 Input Validation (A)
+### 3.8 Input Validation (A)
 
 Use validation utilities from `lib/validation/validators.ts`:
 
@@ -276,7 +483,7 @@ if (!result.valid) {
 
 ---
 
-### 2.9 Test Environment Headers (A)
+### 3.9 Test Environment Headers (A)
 
 Honor test suppression headers only in non-production:
 
@@ -289,7 +496,7 @@ const suppressTestEmails = !isProduction && request.headers.get('X-Suppress-Test
 
 ---
 
-### 2.10 No Secrets in Code (A)
+### 3.10 No Secrets in Code (A)
 
 Never hardcode secrets; always use environment variables:
 
@@ -306,9 +513,37 @@ const adminEmail = process.env.ADMIN_EMAIL;
 
 ---
 
-### 2.11 SQL Injection Prevention (A)
+### 3.11 SQL Injection Prevention (A)
 
 Always use parameterized queries. See [3.1 Parameterized Queries](#31-parameterized-queries-a).
+
+---
+
+### 2.12 Information Disclosure Prevention (A)
+
+Never expose internal details in error responses:
+
+```typescript
+// ✅ Safe - Generic user-facing message
+return NextResponse.json(
+  { error: 'Registration failed. Please try again later.' },
+  { status: 500 }
+);
+
+// ❌ Dangerous - Exposes internal details
+return NextResponse.json(
+  { error: error.message, stack: error.stack, details: dbError },
+  { status: 500 }
+);
+```
+
+**Critical Rules:**
+- Never include stack traces in API responses
+- Never expose database error details
+- Never reveal system paths or configuration
+- Log detailed errors server-side, return generic messages to clients
+
+**Location:** All API routes in `src/app/api/`
 
 ---
 
@@ -327,9 +562,9 @@ When implementing new features, verify:
 
 ---
 
-## 3. Database
+## 4. Database
 
-### 3.1 Parameterized Queries (A)
+### 4.1 Parameterized Queries (A)
 
 Use template literals with `@vercel/postgres` to prevent SQL injection:
 
@@ -343,7 +578,7 @@ const result = await sql`
 
 ---
 
-### 3.2 Environment Isolation (A)
+### 4.2 Environment Isolation (A)
 
 All database operations must be scoped to the current environment:
 
@@ -359,7 +594,7 @@ WHERE environment = ${environment}
 
 ---
 
-### 3.3 Foreign Key Constraints (A)
+### 4.3 Foreign Key Constraints (A)
 
 Enforce referential integrity:
 
@@ -369,7 +604,7 @@ FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 
 ---
 
-### 3.4 Database Indexes (A)
+### 4.4 Database Indexes (A)
 
 Create indexes for frequently queried columns:
 
@@ -380,7 +615,7 @@ CREATE INDEX IF NOT EXISTS idx_brackets_user_id_env ON brackets(user_id, environ
 
 ---
 
-### 3.5 Migration Management (A) ✅
+### 4.5 Migration Management (A) ✅
 
 All schema operations are centralized in `lib/database/migrations.ts`:
 
@@ -401,7 +636,7 @@ await initializeDatabase();
 
 ---
 
-### 3.6 Repository Pattern (A) ✅
+### 4.6 Repository Pattern (A) ✅
 
 Database operations are abstracted behind repository modules:
 
@@ -424,9 +659,9 @@ import { getAllTeamReferenceData } from '@/lib/repositories/teamDataRepository';
 
 ---
 
-## 4. API Design
+## 5. API Design
 
-### 4.1 RESTful Conventions (A)
+### 5.1 RESTful Conventions (A)
 
 | Method | Purpose |
 |--------|---------|
@@ -438,7 +673,7 @@ import { getAllTeamReferenceData } from '@/lib/repositories/teamDataRepository';
 
 ---
 
-### 4.2 Response Format (A) ✅
+### 5.2 Response Format (A) ✅
 
 Use standardized response helpers from `lib/api/responses.ts`:
 
@@ -463,7 +698,7 @@ return ApiErrors.validationError('Email is required');
 
 ---
 
-### 4.3 HTTP Status Codes (A)
+### 5.3 HTTP Status Codes (A)
 
 | Code | Usage |
 |------|-------|
@@ -479,7 +714,7 @@ return ApiErrors.validationError('Email is required');
 
 ---
 
-### 4.4 Session Authentication (A)
+### 5.4 Session Authentication (A)
 
 Use NextAuth.js with JWT strategy:
 
@@ -489,9 +724,9 @@ Use NextAuth.js with JWT strategy:
 
 ---
 
-## 5. Error Handling
+## 6. Error Handling
 
-### 5.1 Try-Catch in API Routes (A)
+### 6.1 Try-Catch in API Routes (A)
 
 All API route handlers must be wrapped in try-catch:
 
@@ -511,7 +746,7 @@ export async function POST(request: NextRequest) {
 
 ---
 
-### 5.2 Error Logging (B)
+### 6.2 Error Logging (B)
 
 **Infrastructure:** `error_logs` table and `logError()` utility exist.
 
@@ -529,7 +764,7 @@ await logError(error, 'API Route Context', {
 
 ---
 
-### 5.3 Non-Breaking Error Logging (A)
+### 6.3 Non-Breaking Error Logging (A)
 
 Error logging must never cause application failure:
 
@@ -544,7 +779,7 @@ try {
 
 ---
 
-### 5.4 User-Friendly Messages (B)
+### 6.4 User-Friendly Messages (B)
 
 Return user-friendly messages, never expose internal details:
 
@@ -558,7 +793,7 @@ Return user-friendly messages, never expose internal details:
 
 ---
 
-### 5.5 Early Returns for Guards (A)
+### 6.5 Early Returns for Guards (A)
 
 Use early returns for validation and error conditions:
 
@@ -576,55 +811,76 @@ if (!body.email || !body.password) {
 
 ---
 
-## 6. Testing
+## 7. Testing
 
 > **Section Owner:** QA Engineer  
-> **Last Reviewed:** February 21, 2026
+> **Last Reviewed:** February 21, 2026  
+> **Compliance Status:** 10 standards (A), 2 standards (B)
 
 This section defines all testing standards for the application. The QA Engineer is responsible for maintaining these standards, test coverage, and test quality.
 
 ---
 
-### 6.1 Testing Framework (A)
+### 7.1 Testing Framework (A)
 
 Use Playwright for all automated testing:
 
 ```
 tests/
-├── api/           # API endpoint tests (no browser)
-├── e2e/           # End-to-end UI tests (browser-based)
-└── fixtures/      # Shared test utilities and helpers
+├── api/              # API endpoint tests (no browser)
+│   ├── admin.spec.ts         # Admin API security tests
+│   ├── auth.spec.ts          # Authentication API tests
+│   ├── bracket.spec.ts       # Bracket API tests
+│   ├── password-reset.spec.ts # Password reset flow tests
+│   ├── public-endpoints.spec.ts # Public API tests
+│   └── security.spec.ts      # Security penetration tests
+├── e2e/              # End-to-end UI tests (browser-based)
+│   ├── smoke-test.spec.ts    # Critical path smoke test
+│   ├── authentication.spec.ts
+│   ├── account-creation.spec.ts
+│   ├── account-validation.spec.ts
+│   ├── bracket-interaction.spec.ts
+│   ├── bracket-full-workflow.spec.ts
+│   ├── admin-security.spec.ts
+│   └── ... (12 spec files total)
+└── fixtures/         # Shared test utilities and helpers
+    ├── test-helpers.ts       # Environment, wait utilities, data tracking
+    ├── auth-helpers.ts       # Sign in/out, session management
+    └── test-data.ts          # Test data generation
 ```
 
 **Configuration:** `playwright.config.ts`
 
 ---
 
-### 6.2 Test Types (A)
+### 7.2 Test Types (A)
 
-| Type | Directory | Purpose | Runs Browser |
-|------|-----------|---------|--------------|
-| **API Tests** | `tests/api/` | Test API endpoints directly | No |
-| **E2E Tests** | `tests/e2e/` | Test user flows through UI | Yes |
-| **Smoke Tests** | Tagged `@smoke` | Quick health check | Both |
-| **Regression Tests** | Full suite | Complete coverage | Both |
+| Type | Directory | Purpose | Runs Browser | Test Count |
+|------|-----------|---------|--------------|------------|
+| **API Tests** | `tests/api/` | Test API endpoints directly | No | ~126 |
+| **E2E Tests** | `tests/e2e/` | Test user flows through UI | Yes | ~140 |
+| **Smoke Tests** | `smoke-test.spec.ts` | Critical path verification | Yes | 1 |
+| **Security Tests** | `tests/api/security.spec.ts` | Penetration testing | No | ~50 |
 
 **Running Tests:**
 ```bash
-# All tests
+# All tests (all browsers)
 npm run test
 
 # Specific type
-npm run test:api
-npm run test:e2e
+npm run test:api           # API tests only
+npm run test:e2e           # E2E tests only
 
-# Smoke tests only (quick verification)
-npx playwright test --grep @smoke
+# Single browser (faster feedback)
+npx playwright test --project=chromium
+
+# Smoke test only (quick verification)
+npx playwright test tests/e2e/smoke-test.spec.ts --project=chromium
 ```
 
 ---
 
-### 6.3 Test Organization (A)
+### 7.3 Test Organization (A)
 
 Group tests using `test.describe` blocks with clear naming:
 
@@ -650,46 +906,79 @@ test.describe('Feature Name', () => {
 
 ---
 
-### 6.4 Environment Isolation (A)
+### 7.4 Environment Isolation (A)
 
-Tests run against staging by default:
+Tests run against staging by default with Vercel deployment protection bypass:
 
 ```typescript
 export function getBaseURL(): string {
+  if (process.env.PLAYWRIGHT_TEST_BASE_URL) {
+    return process.env.PLAYWRIGHT_TEST_BASE_URL;  // Explicit override
+  }
   if (process.env.TEST_ENV === 'production') {
     return process.env.PRODUCTION_URL;
   }
-  return process.env.STAGING_URL;  // Default
+  return process.env.STAGING_URL;  // Default to staging
 }
 ```
+
+**Vercel Deployment Protection:**
+
+Staging environments use Vercel's deployment protection. Tests bypass this via the `x-vercel-protection-bypass` header configured in `playwright.config.ts`:
+
+```typescript
+extraHTTPHeaders: {
+  ...(process.env.VERCEL_AUTOMATION_BYPASS_SECRET 
+    ? { 'x-vercel-protection-bypass': process.env.VERCEL_AUTOMATION_BYPASS_SECRET }
+    : {}),
+}
+```
+
+**Required Environment Variables:**
+- `VERCEL_AUTOMATION_BYPASS_SECRET` - Bypass token from Vercel dashboard
+- `TEST_USER_EMAIL` - Test user email address
+- `TEST_USER_PASSWORD_STAGING` - Test user password for staging
+- `TEST_USER_PASSWORD_PRODUCTION` - Test user password for production (if testing prod)
 
 **Critical Rules:**
 - Never run destructive tests against production
 - Production tests must be read-only or use dedicated test accounts
-- Test data uses `environment` column for isolation
+- Test data uses `environment` column for database isolation
 
 ---
 
-### 6.5 Centralized Test Helpers (A)
+### 7.5 Centralized Test Helpers (A)
 
 Shared utilities in fixture files:
 
-| File | Purpose |
-|------|---------|
-| `test-helpers.ts` | Environment config, wait utilities, retry logic |
-| `auth-helpers.ts` | Sign in/out, user creation, CSRF helpers |
-| `test-data.ts` | Test data generation (users, brackets) |
+| File | Purpose | Key Exports |
+|------|---------|-------------|
+| `test-helpers.ts` | Environment config, wait utilities, data tracking | `getBaseURL()`, `getTestUserCredentials()`, `waitForNetworkSettled()`, `retryWithBackoff()`, `trackTestData()` |
+| `auth-helpers.ts` | Sign in/out, user creation, CSRF helpers | `signInUser()`, `signOutUser()`, `createTestUser()`, `makeBracketAPIRequest()` |
+| `test-data.ts` | Test data generation | `generateUniqueEmail()`, `generateTestUser()`, `generateBracketName()` |
 
 **Usage:**
 ```typescript
-import { getBaseURL, retryWithBackoff } from '../fixtures/test-helpers';
-import { signInUser, createAndSignInUser } from '../fixtures/auth-helpers';
-import { generateTestUser } from '../fixtures/test-data';
+import { getBaseURL, getTestUserCredentials, waitForNetworkSettled } from '../fixtures/test-helpers';
+import { signInUser, makeBracketAPIRequest } from '../fixtures/auth-helpers';
+import { generateUniqueEmail, generateTestUser } from '../fixtures/test-data';
+```
+
+**Wait Utilities (prefer over waitForTimeout):**
+```typescript
+// Wait for network to settle
+await waitForNetworkSettled(page);
+
+// Wait for navigation with expected URL
+await waitForNavigationComplete(page, /\/bracket/);
+
+// Retry flaky operations
+const result = await retryWithBackoff(() => fetchData(), 3, 500);
 ```
 
 ---
 
-### 6.6 Stable Locators (B)
+### 7.6 Stable Locators (B)
 
 **Priority order for locators:**
 
@@ -722,7 +1011,7 @@ import { generateTestUser } from '../fixtures/test-data';
 
 ---
 
-### 6.7 Auto-Wait Over Timeouts (B)
+### 7.7 Auto-Wait Over Timeouts (B)
 
 **Preferred - Web-first assertions:**
 ```typescript
@@ -731,10 +1020,11 @@ await expect(page).toHaveURL(/\/dashboard/);
 await expect(element).toHaveText('Success');
 ```
 
-**Acceptable - Explicit waits:**
+**Acceptable - Centralized wait utilities:**
 ```typescript
-await page.waitForURL(/\/dashboard/);
-await page.waitForResponse(resp => resp.url().includes('/api/'));
+await waitForNetworkSettled(page);
+await waitForNavigationComplete(page, /\/dashboard/);
+await waitForElementStable(element);
 ```
 
 **Avoid - Fixed timeouts:**
@@ -746,12 +1036,19 @@ await page.waitForTimeout(2000);  // Only when absolutely necessary
 
 ---
 
-### 6.8 Test Data Management (A)
+### 7.8 Test Data Management (A)
 
 **Creation:**
 - Use helper functions for consistent test data
-- Include timestamps in test names for uniqueness
-- Pattern: `Test-{feature}-{timestamp}@test.example.com`
+- Include timestamps for uniqueness
+- Pattern: `{prefix}-{timestamp}-{random}@example.com`
+
+```typescript
+import { generateUniqueEmail, generateTestUser } from '../fixtures/test-data';
+
+const email = generateUniqueEmail('api-test');  // api-test-1740123456789-abc123@example.com
+const user = generateTestUser({ name: 'Custom Name' });
+```
 
 **Cleanup:**
 ```bash
@@ -762,40 +1059,51 @@ npm run cleanup:test-data
 
 **Tracking:**
 ```typescript
-import { trackTestData } from '../fixtures/test-helpers';
+import { trackTestData, generateCleanupReport } from '../fixtures/test-helpers';
 
 const user = await createTestUser();
-trackTestData('user', user.id);  // For cleanup
+trackTestData('user', user.email);  // Track for cleanup
+
+// In afterAll hook:
+console.log(generateCleanupReport());
 ```
 
 ---
 
-### 6.9 Cross-Browser Testing (A)
+### 7.9 Cross-Browser Testing (A)
 
 Test across all supported browsers:
 
-| Browser | Viewport | Notes |
-|---------|----------|-------|
-| Chromium | Desktop | Primary browser |
-| Firefox | Desktop | Secondary |
-| WebKit | Desktop | Safari engine |
-| Mobile Chrome | Pixel 5 | Android |
-| Mobile Safari | iPhone 13 | iOS |
+| Browser | Viewport | Device | Notes |
+|---------|----------|--------|-------|
+| Chromium | Desktop | Desktop Chrome | Primary browser |
+| Firefox | Desktop | Desktop Firefox | Secondary |
+| WebKit | Desktop | Desktop Safari | Safari engine, requires extended timeouts |
+| Mobile Chrome | 393x851 | Pixel 5 | Android emulation |
+| Mobile Safari | 390x844 | iPhone 13 | iOS emulation |
+| Mobile Safari (Pro) | 390x844 | iPhone 13 Pro | Larger iOS device |
 
 **Configuration:** See `playwright.config.ts` projects array.
 
+**WebKit-Specific Handling:**
+- Extended timeouts (60s navigation, 30s actions)
+- Manual cookie handling for session persistence
+- `fillInputReliably()` helper for React controlled inputs
+
 ---
 
-### 6.10 API Testing Standards (A)
+### 7.10 API Testing Standards (A)
 
-API tests should not use browser context:
+API tests verify endpoint behavior without browser context:
 
 ```typescript
 import { test, expect } from '@playwright/test';
+import { getBaseURL } from '../fixtures/test-helpers';
 
 test.describe('API: /api/endpoint', () => {
   test('should return 200 for valid request', async ({ request }) => {
-    const response = await request.post('/api/endpoint', {
+    const baseURL = getBaseURL();
+    const response = await request.post(`${baseURL}/api/endpoint`, {
       data: { /* payload */ },
       headers: { 'Content-Type': 'application/json' }
     });
@@ -807,6 +1115,20 @@ test.describe('API: /api/endpoint', () => {
 });
 ```
 
+**Resilient Assertions for Environment Variations:**
+```typescript
+// Handle staging auth protection (may return redirect or 401)
+expect(response.status()).not.toBe(200);  // Should not succeed
+expect(response.status()).not.toBe(500);  // Should not crash
+
+// Check content type before parsing JSON
+const contentType = response.headers()['content-type'] || '';
+if (contentType.includes('application/json')) {
+  const data = await response.json();
+  expect(data.error).toBeDefined();
+}
+```
+
 **Checklist for API tests:**
 - [ ] Test success cases (200, 201)
 - [ ] Test validation errors (400, 422)
@@ -814,17 +1136,22 @@ test.describe('API: /api/endpoint', () => {
 - [ ] Test authorization (403)
 - [ ] Test not found (404)
 - [ ] Test rate limiting (429) where applicable
+- [ ] Handle environment-specific responses (redirects, auth protection)
 
 ---
 
-### 6.11 E2E Testing Standards (A)
+### 7.11 E2E Testing Standards (A)
 
-E2E tests should simulate real user behavior:
+E2E tests simulate real user behavior:
 
 ```typescript
+import { signInUser } from '../fixtures/auth-helpers';
+import { getTestUserCredentials } from '../fixtures/test-helpers';
+
 test('user can submit bracket', async ({ page }) => {
-  // Arrange - Set up test state
-  await signInUser(page, testUser);
+  // Arrange - Sign in using centralized helper
+  const credentials = getTestUserCredentials();
+  await signInUser(page, credentials.email, credentials.password);
   
   // Act - Perform user actions
   await page.goto('/bracket');
@@ -842,10 +1169,11 @@ test('user can submit bracket', async ({ page }) => {
 - [ ] Test accessibility (keyboard navigation, screen readers)
 - [ ] Test mobile viewports
 - [ ] Test session persistence
+- [ ] Use centralized auth helpers (not inline credentials)
 
 ---
 
-### 6.12 Test Assertions (A)
+### 7.12 Test Assertions (A)
 
 Use Playwright's built-in assertions:
 
@@ -871,24 +1199,88 @@ await expect(page).toHaveURL(/\/dashboard/);
 
 ---
 
+### 6.13 Security Testing Standards (A) ✅ NEW
+
+Security tests verify resistance to common attacks:
+
+**Test Categories:**
+| Category | Purpose | Example Payloads |
+|----------|---------|------------------|
+| SQL Injection | Verify parameterized queries | `'; DROP TABLE users; --` |
+| XSS Prevention | Verify output escaping | `<script>alert('xss')</script>` |
+| CSRF Protection | Verify token requirements | Missing/invalid CSRF tokens |
+| Auth Bypass | Verify route protection | Access without session |
+| Rate Limiting | Verify abuse prevention | Rapid repeated requests |
+| Path Traversal | Verify input sanitization | `../../../etc/passwd` |
+
+**Security Test Pattern:**
+```typescript
+test('should reject SQL injection in email field', async ({ request }) => {
+  const baseURL = getBaseURL();
+  const sqlPayload = "'; DROP TABLE users; --";
+  
+  const response = await request.post(`${baseURL}/api/auth/register`, {
+    data: { email: sqlPayload, password: 'test123', name: 'Test' },
+  });
+  
+  // Should reject with error, not succeed or crash
+  expect(response.status()).not.toBe(200);
+  expect(response.status()).not.toBe(500);
+});
+```
+
+**Location:** `tests/api/security.spec.ts`
+
+---
+
+### 6.14 CI/CD Integration (A) ✅ NEW
+
+Tests run automatically via GitHub Actions:
+
+**Workflows:**
+| Workflow | Trigger | Scope |
+|----------|---------|-------|
+| `test-smoke.yml` | Push to staging | Smoke tests only |
+| `test-full-regression.yml` | Manual / PR merge | All tests, all browsers |
+| `test-pr.yml` | Pull request | Smoke + API + Security |
+
+**Parallel Execution:**
+```yaml
+env:
+  PLAYWRIGHT_WORKERS: '4'  # Parallel test execution
+```
+
+**Browser Caching:**
+```yaml
+- name: Cache Playwright browsers
+  uses: actions/cache@v4
+  with:
+    path: ~/.cache/ms-playwright
+    key: playwright-browsers-${{ hashFiles('package-lock.json') }}
+```
+
+---
+
 ### Testing Checklist for New Features
 
 When adding tests for new features, verify:
 
 - [ ] API tests for all new endpoints
 - [ ] E2E tests for user-facing flows
-- [ ] Error case coverage
+- [ ] Error case coverage (validation, not found, unauthorized)
 - [ ] Authentication/authorization tests
 - [ ] Mobile viewport testing
-- [ ] Cross-browser compatibility
-- [ ] Test data cleanup handled
-- [ ] No hardcoded waits (use auto-wait)
+- [ ] Cross-browser compatibility (especially WebKit)
+- [ ] Test data cleanup handled (use tracking utilities)
+- [ ] No hardcoded waits (use centralized wait utilities)
+- [ ] Security considerations (injection, XSS, CSRF)
+- [ ] Environment-agnostic assertions (handle staging auth protection)
 
 ---
 
-## 7. Code Quality
+## 8. Code Quality
 
-### 7.1 TypeScript Interfaces (A)
+### 8.1 TypeScript Interfaces (A)
 
 Define interfaces for all data structures:
 
@@ -905,7 +1297,7 @@ export interface User {
 
 ---
 
-### 7.2 JSDoc Comments (B)
+### 8.2 JSDoc Comments (B)
 
 Document exported functions with JSDoc:
 
@@ -925,7 +1317,7 @@ export async function createUser(email: string, name: string, password: string):
 
 ---
 
-### 7.3 Constants Over Magic Strings (A) ✅
+### 8.3 Constants Over Magic Strings (A) ✅
 
 Use constants from `lib/constants.ts`:
 
@@ -949,7 +1341,7 @@ if (environment === Environment.PRODUCTION) { }
 
 ---
 
-### 7.4 Async/Await (A)
+### 8.4 Async/Await (A)
 
 Use async/await for all asynchronous code:
 
@@ -960,7 +1352,7 @@ const data = await response.json();
 
 ---
 
-### 7.5 Explicit Return Types (B)
+### 8.5 Explicit Return Types (B)
 
 Functions should have explicit return types:
 
@@ -974,9 +1366,9 @@ async function getUser(id: string) { }  // Implicit return type
 
 ---
 
-## 8. Email & Notifications
+## 9. Email & Notifications
 
-### 8.1 Centralized Email Service (A)
+### 9.1 Centralized Email Service (A)
 
 All email operations go through dedicated service modules:
 
@@ -987,7 +1379,7 @@ import { sendSubmissionConfirmationEmail } from '@/lib/bracketEmailService';
 
 ---
 
-### 8.2 Email Templates (A)
+### 9.2 Email Templates (A)
 
 Store templates as HTML files in `src/emails/`:
 
@@ -998,7 +1390,7 @@ Store templates as HTML files in `src/emails/`:
 
 ---
 
-### 8.3 Async Email Processing (A)
+### 9.3 Async Email Processing (A)
 
 Send emails asynchronously to avoid blocking responses:
 
@@ -1009,7 +1401,7 @@ processEmailAsync(emailPromise);  // Uses Vercel's waitUntil
 
 ---
 
-### 8.4 Email Logging (A)
+### 9.4 Email Logging (A)
 
 Log all email events to `email_logs` table:
 
@@ -1020,9 +1412,9 @@ Log all email events to `email_logs` table:
 
 ---
 
-## 9. Configuration
+## 10. Configuration
 
-### 9.1 Environment Variables (A)
+### 10.1 Environment Variables (A)
 
 All configuration via environment variables:
 
@@ -1034,7 +1426,7 @@ process.env.ADMIN_EMAIL
 
 ---
 
-### 9.2 Fallback Configuration (A)
+### 10.2 Fallback Configuration (A)
 
 Provide fallbacks when external config fails:
 
@@ -1047,7 +1439,7 @@ const value = config?.entryCost ?? FALLBACK_CONFIG.entryCost;
 
 ---
 
-### 9.3 Build vs Runtime Config (B)
+### 10.3 Build vs Runtime Config (B)
 
 Handle build-time vs runtime differently:
 
@@ -1063,15 +1455,15 @@ if (!secret) throw new Error('NEXTAUTH_SECRET required');
 
 ---
 
-## 10. Performance
+## 11. Performance
 
-### 10.1 Database Indexes (A)
+### 11.1 Database Indexes (A)
 
-Index all frequently queried columns. See [3.4 Database Indexes](#34-database-indexes-a).
+Index all frequently queried columns. See [4.4 Database Indexes](#44-database-indexes-a).
 
 ---
 
-### 10.2 Lazy Loading (B)
+### 11.2 Lazy Loading (B)
 
 Use dynamic imports for heavy modules:
 
@@ -1083,7 +1475,7 @@ const { sql } = await import('@/lib/databaseAdapter');
 
 ---
 
-### 10.3 Response Caching (B)
+### 11.3 Response Caching (B)
 
 Cache appropriate responses:
 
@@ -1101,7 +1493,7 @@ Cache appropriate responses:
 
 | Rating | Count | Status |
 |--------|-------|--------|
-| **(A)** | 42 | Maintain |
+| **(A)** | 45 | Maintain |
 | **(B)** | 3 | Improve |
 | **(C)** | 0 | ✅ All refactored |
 
@@ -1114,6 +1506,9 @@ Cache appropriate responses:
 5. ~~**[B] Rate limiting**~~ - Implemented on all auth endpoints
 6. ~~**[B] CSRF protection**~~ - Implemented for bracket operations
 7. ~~**[B] XSS prevention**~~ - Added escaping in email templates
+8. ~~**[B] Test helpers centralization**~~ - Consolidated into `tests/fixtures/` with documented utilities
+9. ~~**[B] Security testing**~~ - Added comprehensive penetration test suite (`security.spec.ts`)
+10. ~~**[B] CI/CD testing integration**~~ - GitHub Actions workflows with caching and parallelization
 
 ### Remaining Improvements
 
@@ -1135,8 +1530,13 @@ Cache appropriate responses:
 | 2026-02-21 | Created `lib/constants.ts` for application constants | Architect |
 | 2026-02-21 | Created `lib/types/database.ts` for shared type definitions | Architect |
 | 2026-02-21 | **Security:** Added CSRF protection, rate limiting, XSS prevention | Security Auditor |
-| 2026-02-21 | **Expanded Section 2 (Security):** Added section ownership, CSRF, XSS, command injection standards | Architect |
-| 2026-02-21 | **Expanded Section 6 (Testing):** Added section ownership, test types, API/E2E standards, checklists | Architect |
+| 2026-02-21 | **Expanded Security Section:** Added section ownership, CSRF, XSS, command injection standards | Architect |
+| 2026-02-21 | **Expanded Testing Section:** Added section ownership, test types, API/E2E standards, checklists | Architect |
+| 2026-02-21 | **Security Review:** Added rate limit configurations table, added Information Disclosure Prevention | Security Auditor |
+| 2026-02-21 | **Testing Review:** Complete rewrite with accurate file structure, Security Testing Standards, CI/CD Integration | QA Engineer |
+| 2026-02-21 | **Added Section 1 (Tech Stack):** New dedicated section for approved technologies, PDF generation tools, selection guidelines | Architect |
+| 2026-02-21 | **Rate Limiting Update:** Documented environment-aware limits (10x relaxed for staging/preview) | Security Auditor |
+| 2026-02-21 | **Added 2.0 Environment-Aware Security Controls:** Foundational pattern for balancing security with testability | Security Auditor |
 
 ---
 
