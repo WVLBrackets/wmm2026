@@ -35,15 +35,47 @@ if (typeof setInterval !== 'undefined') {
 }
 
 /**
+ * Check if we're in a production environment
+ */
+function isProduction(): boolean {
+  return process.env.VERCEL_ENV === 'production' || 
+         (process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV);
+}
+
+/**
  * Predefined rate limit configurations for different endpoint types
+ * 
+ * NOTE: Limits are relaxed in non-production environments to facilitate testing.
+ * Production uses stricter limits to prevent abuse.
  */
 export const RATE_LIMITS = {
   // Auth endpoints - stricter limits to prevent brute force
-  AUTH_LOGIN: { windowMs: 15 * 60 * 1000, maxRequests: 5 },      // 5 attempts per 15 min
-  AUTH_REGISTER: { windowMs: 60 * 60 * 1000, maxRequests: 3 },   // 3 registrations per hour
-  AUTH_FORGOT_PASSWORD: { windowMs: 60 * 60 * 1000, maxRequests: 3 }, // 3 reset requests per hour
-  AUTH_RESET_PASSWORD: { windowMs: 15 * 60 * 1000, maxRequests: 5 },  // 5 reset attempts per 15 min
-  AUTH_CONFIRM: { windowMs: 15 * 60 * 1000, maxRequests: 10 },   // 10 confirmation attempts per 15 min
+  // Production: strict | Staging/Dev: relaxed for testing
+  get AUTH_LOGIN() { 
+    return isProduction() 
+      ? { windowMs: 15 * 60 * 1000, maxRequests: 5 }      // 5 attempts per 15 min
+      : { windowMs: 15 * 60 * 1000, maxRequests: 50 };    // 50 attempts per 15 min (testing)
+  },
+  get AUTH_REGISTER() { 
+    return isProduction()
+      ? { windowMs: 60 * 60 * 1000, maxRequests: 3 }      // 3 registrations per hour
+      : { windowMs: 60 * 60 * 1000, maxRequests: 30 };    // 30 registrations per hour (testing)
+  },
+  get AUTH_FORGOT_PASSWORD() { 
+    return isProduction()
+      ? { windowMs: 60 * 60 * 1000, maxRequests: 3 }      // 3 reset requests per hour
+      : { windowMs: 60 * 60 * 1000, maxRequests: 30 };    // 30 reset requests per hour (testing)
+  },
+  get AUTH_RESET_PASSWORD() { 
+    return isProduction()
+      ? { windowMs: 15 * 60 * 1000, maxRequests: 5 }      // 5 reset attempts per 15 min
+      : { windowMs: 15 * 60 * 1000, maxRequests: 50 };    // 50 reset attempts per 15 min (testing)
+  },
+  get AUTH_CONFIRM() { 
+    return isProduction()
+      ? { windowMs: 15 * 60 * 1000, maxRequests: 10 }     // 10 confirmation attempts per 15 min
+      : { windowMs: 15 * 60 * 1000, maxRequests: 100 };   // 100 confirmation attempts per 15 min (testing)
+  },
   
   // General API endpoints - more lenient
   API_GENERAL: { windowMs: 60 * 1000, maxRequests: 60 },         // 60 requests per minute
@@ -51,7 +83,7 @@ export const RATE_LIMITS = {
   
   // Admin endpoints
   ADMIN: { windowMs: 60 * 1000, maxRequests: 100 },              // 100 requests per minute for admins
-} as const;
+};
 
 /**
  * Get client identifier from request

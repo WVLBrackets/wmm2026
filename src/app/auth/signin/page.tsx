@@ -74,9 +74,15 @@ export default function SignInPage() {
         }
       }
     } catch (error) {
-      // Check if it's an email not confirmed error
-      if (error instanceof Error && error.message === 'EMAIL_NOT_CONFIRMED') {
-        setError(siteConfig?.emailFailNotConfirmed || FALLBACK_CONFIG.emailFailNotConfirmed || 'Please confirm your email address before signing in.');
+      if (error instanceof Error) {
+        // Check for specific error types
+        if (error.message === 'EMAIL_NOT_CONFIRMED') {
+          setError(siteConfig?.emailFailNotConfirmed || FALLBACK_CONFIG.emailFailNotConfirmed || 'Please confirm your email address before signing in.');
+        } else if (error.message.startsWith('Too many login attempts')) {
+          setError(error.message);
+        } else {
+          setError('An error occurred. Please try again.');
+        }
       } else {
         setError('An error occurred. Please try again.');
       }

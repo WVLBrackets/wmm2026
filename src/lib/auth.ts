@@ -50,8 +50,12 @@ export const authOptions: NextAuthOptions = {
           // SECURITY: Rate limiting for login attempts (by email to prevent account lockout attacks)
           const rateLimitResult = checkRateLimit(email.toLowerCase(), 'auth:login', RATE_LIMITS.AUTH_LOGIN);
           if (rateLimitResult.limited) {
-            console.warn(`[Auth] Rate limited login attempt for email: ${email}`);
-            throw new Error('TOO_MANY_ATTEMPTS');
+            const retryInMinutes = Math.ceil(rateLimitResult.resetIn / 60000);
+            console.warn(`[Auth] Rate limited login attempt for email: ${email}, retry in ${retryInMinutes} min`);
+            const error = new Error(`Too many login attempts. Please try again in ${retryInMinutes} minutes.`);
+            // @ts-expect-error - Adding custom property to error
+            error.code = 'RATE_LIMITED';
+            throw error;
           }
 
           // Special case: Check if this is an auto-signin token
@@ -155,9 +159,13 @@ export const authOptions: NextAuthOptions = {
           };
         } catch (error) {
           console.error('Auth: Error during authorization:', error);
-          // Re-throw EMAIL_NOT_CONFIRMED errors so they can be caught
-          if (error instanceof Error && (error.message === 'EMAIL_NOT_CONFIRMED' || (error as { code?: string }).code === 'EMAIL_NOT_CONFIRMED')) {
-            throw error;
+          // Re-throw specific errors so they can be caught by the signin page
+          if (error instanceof Error) {
+            const errorCode = (error as { code?: string }).code;
+            if (errorCode === 'EMAIL_NOT_CONFIRMED' || errorCode === 'RATE_LIMITED' ||
+                error.message === 'EMAIL_NOT_CONFIRMED' || error.message.startsWith('Too many login attempts')) {
+              throw error;
+            }
           }
           return null;
         }
