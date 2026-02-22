@@ -2,7 +2,7 @@
 
 **Project:** WMM2026 (Tournament Bracket Application)  
 **Created:** February 21, 2026  
-**Last Updated:** February 21, 2026 (Refactoring Phase 1 Complete)  
+**Last Updated:** February 21, 2026 (Security & Testing sections expanded)  
 **Purpose:** Living document defining engineering standards for this project
 
 ---
@@ -113,6 +113,13 @@ Each library module should have a single, focused responsibility.
 
 ## 2. Security
 
+> **Section Owner:** Security Auditor  
+> **Last Reviewed:** February 21, 2026
+
+This section defines all security standards for the application. The Security Auditor is responsible for maintaining these standards and ensuring compliance across the codebase.
+
+---
+
 ### 2.1 Password Hashing (A)
 
 Hash passwords using bcrypt with cost factor 12:
@@ -122,6 +129,8 @@ const hashedPassword = await bcrypt.hash(password, 12);
 ```
 
 **Rationale:** Cost factor 12 provides strong protection while maintaining acceptable performance.
+
+**Location:** `src/lib/repositories/userRepository.ts`
 
 ---
 
@@ -133,6 +142,8 @@ All new accounts require email confirmation before authentication:
 2. Send confirmation email with tokenized link
 3. Token expires after 24 hours
 4. Validate token before allowing sign-in
+
+**Location:** `src/lib/services/tokenService.ts`
 
 ---
 
@@ -151,24 +162,94 @@ if (!isAdminUser) {
 
 ---
 
-### 2.4 Rate Limiting (B)
+### 2.4 Rate Limiting (A)
 
 Apply rate limiting to prevent abuse on sensitive endpoints:
 
 ```typescript
+import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rateLimit';
+
 const rateLimitResponse = rateLimitMiddleware(request, 'auth:register', RATE_LIMITS.AUTH_REGISTER);
 if (rateLimitResponse) return rateLimitResponse;
 ```
 
+**Location:** `src/lib/rateLimit.ts`
+
 **Current Coverage:**
-- ✅ Registration endpoint
-- ❌ Password reset (needs implementation)
-- ❌ Bracket submission (needs implementation)
-- ❌ Login attempts (needs implementation)
+- ✅ Registration endpoint (`/api/auth/register`)
+- ✅ Password reset (`/api/auth/forgot-password`, `/api/auth/reset-password`)
+- ✅ Email confirmation (`/api/auth/confirm`)
+- ✅ Login attempts (via NextAuth)
+- ❌ Bracket submission (consider adding)
 
 ---
 
-### 2.5 Input Validation (A) ✅
+### 2.5 CSRF Protection (A)
+
+Protect state-changing endpoints using Double Submit Cookie pattern:
+
+```typescript
+import { csrfProtection, validateCSRFToken } from '@/lib/csrf';
+
+// In API route
+const csrfError = csrfProtection(request);
+if (csrfError) return csrfError;
+```
+
+**Location:** `src/lib/csrf.ts`, `src/hooks/useCSRF.ts`
+
+**Implementation:**
+- Server generates signed token with timestamp
+- Token stored in cookie AND must be sent in `x-csrf-token` header
+- Tokens expire after 24 hours
+- Exempt paths defined in `CSRF_EXEMPT_PATHS`
+
+**Current Coverage:**
+- ✅ Tournament bracket endpoints (`/api/tournament-bracket`)
+- ✅ Bracket update/delete (`/api/tournament-bracket/[id]`)
+- Exempt: Auth endpoints (use rate limiting instead)
+
+---
+
+### 2.6 XSS Prevention (A)
+
+Escape user-generated content before rendering in HTML contexts:
+
+```typescript
+import { escapeHtml } from '@/lib/emailTemplate';
+
+const safeName = escapeHtml(userProvidedName);
+```
+
+**Location:** `src/lib/emailTemplate.ts`
+
+**Critical Areas:**
+- Email templates (user names, entry names)
+- Admin dashboards displaying user data
+- Any HTML rendering of user input
+
+---
+
+### 2.7 Command Injection Prevention (A)
+
+Never pass user input directly to shell commands:
+
+```typescript
+// ✅ Safe: Validate against allowlist
+const validProjects = ['chromium', 'firefox', 'webkit'];
+if (!validProjects.includes(project)) {
+  throw new Error('Invalid project');
+}
+
+// ❌ Dangerous: Direct interpolation
+exec(`npm run test -- --project=${userInput}`);  // NEVER DO THIS
+```
+
+**Location:** `scripts/run-tests-with-projects.js`, `scripts/run-test-by-id.js`
+
+---
+
+### 2.8 Input Validation (A)
 
 Use validation utilities from `lib/validation/validators.ts`:
 
@@ -187,17 +268,15 @@ const result = validateRegistration({ email, name, password });
 if (!result.valid) {
   return ApiErrors.validationError(result.error!);
 }
-
-// Individual validators
-const emailResult = email('Email')(userEmail);
-const passwordResult = password(6)(userPassword);
 ```
+
+**Location:** `src/lib/validation/validators.ts`
 
 **Note:** Existing endpoints should be migrated to use these validators.
 
 ---
 
-### 2.6 Test Environment Headers (A)
+### 2.9 Test Environment Headers (A)
 
 Honor test suppression headers only in non-production:
 
@@ -210,7 +289,7 @@ const suppressTestEmails = !isProduction && request.headers.get('X-Suppress-Test
 
 ---
 
-### 2.7 No Secrets in Code (A)
+### 2.10 No Secrets in Code (A)
 
 Never hardcode secrets; always use environment variables:
 
@@ -218,6 +297,33 @@ Never hardcode secrets; always use environment variables:
 const secret = process.env.NEXTAUTH_SECRET;
 const adminEmail = process.env.ADMIN_EMAIL;
 ```
+
+**Required Environment Variables:**
+- `NEXTAUTH_SECRET` - JWT signing key
+- `DATABASE_URL` - Postgres connection string
+- `ADMIN_EMAIL` - Admin user email
+- `EMAIL_SERVER_*` - SMTP configuration
+
+---
+
+### 2.11 SQL Injection Prevention (A)
+
+Always use parameterized queries. See [3.1 Parameterized Queries](#31-parameterized-queries-a).
+
+---
+
+### Security Checklist for New Features
+
+When implementing new features, verify:
+
+- [ ] Authentication required for sensitive endpoints
+- [ ] Authorization checks for user-specific data
+- [ ] Rate limiting on public endpoints
+- [ ] CSRF protection on state-changing operations
+- [ ] Input validation before processing
+- [ ] XSS escaping for user content in HTML
+- [ ] No secrets hardcoded
+- [ ] Error messages don't leak internal details
 
 ---
 
@@ -472,38 +578,79 @@ if (!body.email || !body.password) {
 
 ## 6. Testing
 
+> **Section Owner:** QA Engineer  
+> **Last Reviewed:** February 21, 2026
+
+This section defines all testing standards for the application. The QA Engineer is responsible for maintaining these standards, test coverage, and test quality.
+
+---
+
 ### 6.1 Testing Framework (A)
 
 Use Playwright for all automated testing:
 
 ```
 tests/
-├── api/           # API endpoint tests
-├── e2e/           # End-to-end UI tests
-└── fixtures/      # Shared test utilities
+├── api/           # API endpoint tests (no browser)
+├── e2e/           # End-to-end UI tests (browser-based)
+└── fixtures/      # Shared test utilities and helpers
+```
+
+**Configuration:** `playwright.config.ts`
+
+---
+
+### 6.2 Test Types (A)
+
+| Type | Directory | Purpose | Runs Browser |
+|------|-----------|---------|--------------|
+| **API Tests** | `tests/api/` | Test API endpoints directly | No |
+| **E2E Tests** | `tests/e2e/` | Test user flows through UI | Yes |
+| **Smoke Tests** | Tagged `@smoke` | Quick health check | Both |
+| **Regression Tests** | Full suite | Complete coverage | Both |
+
+**Running Tests:**
+```bash
+# All tests
+npm run test
+
+# Specific type
+npm run test:api
+npm run test:e2e
+
+# Smoke tests only (quick verification)
+npx playwright test --grep @smoke
 ```
 
 ---
 
-### 6.2 Test Organization (A)
+### 6.3 Test Organization (A)
 
-Group tests using `test.describe` blocks:
+Group tests using `test.describe` blocks with clear naming:
 
 ```typescript
 test.describe('Feature Name', () => {
-  test.beforeEach(async ({ page }) => {
-    // Setup
-  });
+  test.describe('Scenario Group', () => {
+    test.beforeEach(async ({ page }) => {
+      // Setup for this group
+    });
 
-  test('should do something', async ({ page }) => {
-    // Test
+    test('should [expected behavior] when [condition]', async ({ page }) => {
+      // Arrange
+      // Act
+      // Assert
+    });
   });
 });
 ```
 
+**Naming Convention:**
+- Describe blocks: Feature or scenario name
+- Test names: `should [do something] when [condition]`
+
 ---
 
-### 6.3 Environment Isolation (A)
+### 6.4 Environment Isolation (A)
 
 Tests run against staging by default:
 
@@ -516,73 +663,226 @@ export function getBaseURL(): string {
 }
 ```
 
-**Critical:** Production tests should be read-only or use dedicated test accounts.
+**Critical Rules:**
+- Never run destructive tests against production
+- Production tests must be read-only or use dedicated test accounts
+- Test data uses `environment` column for isolation
 
 ---
 
-### 6.4 Centralized Test Helpers (A)
+### 6.5 Centralized Test Helpers (A)
 
 Shared utilities in fixture files:
 
 | File | Purpose |
 |------|---------|
-| `test-helpers.ts` | Environment config, wait utilities |
-| `auth-helpers.ts` | Authentication helpers |
-| `test-data.ts` | Test data generation |
+| `test-helpers.ts` | Environment config, wait utilities, retry logic |
+| `auth-helpers.ts` | Sign in/out, user creation, CSRF helpers |
+| `test-data.ts` | Test data generation (users, brackets) |
+
+**Usage:**
+```typescript
+import { getBaseURL, retryWithBackoff } from '../fixtures/test-helpers';
+import { signInUser, createAndSignInUser } from '../fixtures/auth-helpers';
+import { generateTestUser } from '../fixtures/test-data';
+```
 
 ---
 
-### 6.5 Stable Locators (B)
+### 6.6 Stable Locators (B)
 
 **Priority order for locators:**
 
-1. `data-testid` attributes (most stable)
-2. Role-based: `getByRole('button', { name: /submit/i })`
-3. Text-based: `getByText('Submit')`
-4. CSS selectors (avoid when possible)
+1. **`data-testid`** - Most stable, explicit test contracts
+   ```typescript
+   page.getByTestId('submit-button')
+   ```
 
-**Current State:** Mixed usage. Need to add more `data-testid` attributes.
+2. **Role-based** - Semantic and accessible
+   ```typescript
+   page.getByRole('button', { name: /submit/i })
+   ```
+
+3. **Label-based** - For form elements
+   ```typescript
+   page.getByLabel('Email')
+   ```
+
+4. **Text-based** - For visible content
+   ```typescript
+   page.getByText('Submit Entry')
+   ```
+
+5. **CSS selectors** - Avoid when possible, brittle
+   ```typescript
+   page.locator('.submit-btn')  // Last resort
+   ```
+
+**Action Required:** Components need more `data-testid` attributes.
 
 ---
 
-### 6.6 Auto-Wait Over Timeouts (B)
+### 6.7 Auto-Wait Over Timeouts (B)
 
-**Preferred:**
+**Preferred - Web-first assertions:**
 ```typescript
 await expect(element).toBeVisible({ timeout: 10000 });
-await page.waitForURL(/\/dashboard/);
+await expect(page).toHaveURL(/\/dashboard/);
+await expect(element).toHaveText('Success');
 ```
 
-**Avoid:**
+**Acceptable - Explicit waits:**
+```typescript
+await page.waitForURL(/\/dashboard/);
+await page.waitForResponse(resp => resp.url().includes('/api/'));
+```
+
+**Avoid - Fixed timeouts:**
 ```typescript
 await page.waitForTimeout(2000);  // Only when absolutely necessary
 ```
 
-**Note:** Some `waitForTimeout` usage remains for WebKit compatibility.
+**Note:** Some `waitForTimeout` remains for WebKit compatibility issues.
 
 ---
 
-### 6.7 No API-Based Cleanup (A)
+### 6.8 Test Data Management (A)
 
-Test data cleanup must use local scripts, never API endpoints:
+**Creation:**
+- Use helper functions for consistent test data
+- Include timestamps in test names for uniqueness
+- Pattern: `Test-{feature}-{timestamp}@test.example.com`
 
+**Cleanup:**
 ```bash
 npm run cleanup:test-data
 ```
 
-**Rationale:** API cleanup endpoints are a security risk.
+**Never** create API endpoints for test cleanup (security risk).
+
+**Tracking:**
+```typescript
+import { trackTestData } from '../fixtures/test-helpers';
+
+const user = await createTestUser();
+trackTestData('user', user.id);  // For cleanup
+```
 
 ---
 
-### 6.8 Cross-Browser Testing (A)
+### 6.9 Cross-Browser Testing (A)
 
 Test across all supported browsers:
 
-- Chromium (Desktop Chrome)
-- Firefox
-- WebKit (Safari engine)
-- Mobile Chrome (Pixel 5)
-- Mobile Safari (iPhone 13)
+| Browser | Viewport | Notes |
+|---------|----------|-------|
+| Chromium | Desktop | Primary browser |
+| Firefox | Desktop | Secondary |
+| WebKit | Desktop | Safari engine |
+| Mobile Chrome | Pixel 5 | Android |
+| Mobile Safari | iPhone 13 | iOS |
+
+**Configuration:** See `playwright.config.ts` projects array.
+
+---
+
+### 6.10 API Testing Standards (A)
+
+API tests should not use browser context:
+
+```typescript
+import { test, expect } from '@playwright/test';
+
+test.describe('API: /api/endpoint', () => {
+  test('should return 200 for valid request', async ({ request }) => {
+    const response = await request.post('/api/endpoint', {
+      data: { /* payload */ },
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(body.success).toBe(true);
+  });
+});
+```
+
+**Checklist for API tests:**
+- [ ] Test success cases (200, 201)
+- [ ] Test validation errors (400, 422)
+- [ ] Test authentication (401)
+- [ ] Test authorization (403)
+- [ ] Test not found (404)
+- [ ] Test rate limiting (429) where applicable
+
+---
+
+### 6.11 E2E Testing Standards (A)
+
+E2E tests should simulate real user behavior:
+
+```typescript
+test('user can submit bracket', async ({ page }) => {
+  // Arrange - Set up test state
+  await signInUser(page, testUser);
+  
+  // Act - Perform user actions
+  await page.goto('/bracket');
+  await page.getByLabel('Entry Name').fill('My Bracket');
+  await page.getByRole('button', { name: 'Submit' }).click();
+  
+  // Assert - Verify outcomes
+  await expect(page.getByText('Submission successful')).toBeVisible();
+});
+```
+
+**Checklist for E2E tests:**
+- [ ] Test happy path flows
+- [ ] Test error handling (invalid input, network errors)
+- [ ] Test accessibility (keyboard navigation, screen readers)
+- [ ] Test mobile viewports
+- [ ] Test session persistence
+
+---
+
+### 6.12 Test Assertions (A)
+
+Use Playwright's built-in assertions:
+
+```typescript
+// Visibility
+await expect(element).toBeVisible();
+await expect(element).toBeHidden();
+
+// Content
+await expect(element).toHaveText('Expected text');
+await expect(element).toContainText('partial');
+
+// State
+await expect(element).toBeEnabled();
+await expect(element).toBeChecked();
+
+// Count
+await expect(page.getByRole('listitem')).toHaveCount(5);
+
+// URL
+await expect(page).toHaveURL(/\/dashboard/);
+```
+
+---
+
+### Testing Checklist for New Features
+
+When adding tests for new features, verify:
+
+- [ ] API tests for all new endpoints
+- [ ] E2E tests for user-facing flows
+- [ ] Error case coverage
+- [ ] Authentication/authorization tests
+- [ ] Mobile viewport testing
+- [ ] Cross-browser compatibility
+- [ ] Test data cleanup handled
+- [ ] No hardcoded waits (use auto-wait)
 
 ---
 
@@ -801,8 +1101,8 @@ Cache appropriate responses:
 
 | Rating | Count | Status |
 |--------|-------|--------|
-| **(A)** | 32 | Maintain |
-| **(B)** | 6 | Improve |
+| **(A)** | 42 | Maintain |
+| **(B)** | 3 | Improve |
 | **(C)** | 0 | ✅ All refactored |
 
 ### Completed Improvements ✅
@@ -811,15 +1111,15 @@ Cache appropriate responses:
 2. ~~**[B] Standardize API responses**~~ - Created `lib/api/responses.ts`
 3. ~~**[B] Create validation utilities**~~ - Created `lib/validation/validators.ts`
 4. ~~**[B] Define constants**~~ - Created `lib/constants.ts`
+5. ~~**[B] Rate limiting**~~ - Implemented on all auth endpoints
+6. ~~**[B] CSRF protection**~~ - Implemented for bracket operations
+7. ~~**[B] XSS prevention**~~ - Added escaping in email templates
 
 ### Remaining Improvements
 
-1. **[B] Expand error logging** - Use `logError()` consistently across all routes
-2. **[B] Add test IDs** - Add more `data-testid` attributes to components
-3. **[B] Migrate existing endpoints** - Update to use new response/validation helpers
-4. **[B] Component organization** - Better structure for shared components
-5. **[B] JSDoc coverage** - Add documentation to API routes
-6. **[B] Explicit return types** - Add to all exported functions
+1. **[B] Stable locators** - Add more `data-testid` attributes to components
+2. **[B] Auto-wait cleanup** - Remove remaining `waitForTimeout` calls where possible
+3. **[B] Lazy loading** - Apply dynamic imports more systematically
 
 ---
 
@@ -834,6 +1134,9 @@ Cache appropriate responses:
 | 2026-02-21 | Created `lib/validation/validators.ts` for input validation | Architect |
 | 2026-02-21 | Created `lib/constants.ts` for application constants | Architect |
 | 2026-02-21 | Created `lib/types/database.ts` for shared type definitions | Architect |
+| 2026-02-21 | **Security:** Added CSRF protection, rate limiting, XSS prevention | Security Auditor |
+| 2026-02-21 | **Expanded Section 2 (Security):** Added section ownership, CSRF, XSS, command injection standards | Architect |
+| 2026-02-21 | **Expanded Section 6 (Testing):** Added section ownership, test types, API/E2E standards, checklists | Architect |
 
 ---
 
