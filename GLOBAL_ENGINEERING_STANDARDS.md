@@ -222,6 +222,8 @@ components/
 └── [shared]/      # Shared components at root
 ```
 
+**Testability:** All interactive UI components (buttons, inputs, dialogs) MUST include `data-testid` attributes for stable test automation. See **Section 7.7** for naming conventions and the established test ID table.
+
 **Status:** Partially applied. Feature directories exist but shared components lack clear organization.
 
 ---
@@ -1358,6 +1360,7 @@ When adding tests for new features, verify:
 - [ ] No hardcoded waits (use centralized wait utilities)
 - [ ] Security considerations (injection, XSS, CSRF)
 - [ ] Environment-agnostic assertions (handle staging auth protection)
+- [ ] **Use `data-testid` locators** for interactive elements (see Section 7.7)
 
 ---
 
@@ -1623,6 +1626,7 @@ Cache appropriate responses:
 | 2026-02-21 | **Admin Export Feature:** Updated `/api/admin/brackets/export` with new 74-column CSV format, status-based sorting | Architect |
 | 2026-02-21 | **API Migration Complete:** All 17 API routes now use modular imports (repositories, services, migrations) | Architect |
 | 2026-02-21 | **Test ID Coverage:** Added data-testid attributes for stable Playwright locators (logout, new-bracket, entry-name, tiebreaker, copy/email/delete buttons, delete dialog) | Architect |
+| 2026-02-22 | **Test Updates:** Migrated E2E tests to use data-testid locators (sign-out.spec.ts, bracket-full-workflow.spec.ts, bracket-interaction.spec.ts); Added data-testid to Testing Checklist | QA Engineer |
 
 ---
 
