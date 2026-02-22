@@ -2,7 +2,7 @@
 
 **Project:** WMM2026 (Tournament Bracket Application)  
 **Created:** February 21, 2026  
-**Last Updated:** February 21, 2026 (Added Tech Stack section)  
+**Last Updated:** February 21, 2026 (Admin Export CSV specification)  
 **Purpose:** Living document defining engineering standards for this project
 
 ---
@@ -1537,6 +1537,7 @@ Cache appropriate responses:
 | 2026-02-21 | **Added Section 1 (Tech Stack):** New dedicated section for approved technologies, PDF generation tools, selection guidelines | Architect |
 | 2026-02-21 | **Rate Limiting Update:** Documented environment-aware limits (10x relaxed for staging/preview) | Security Auditor |
 | 2026-02-21 | **Added 2.0 Environment-Aware Security Controls:** Foundational pattern for balancing security with testability | Security Auditor |
+| 2026-02-21 | **Admin Export Feature:** Updated `/api/admin/brackets/export` with new 74-column CSV format, status-based sorting | Architect |
 
 ---
 

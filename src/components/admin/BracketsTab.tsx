@@ -237,18 +237,12 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
   };
 
   const handleExportBrackets = async () => {
-    if (filteredBrackets.length === 0) {
-      alert('No brackets to export');
-      return;
-    }
-    
     try {
       setIsExporting(true);
       
+      // Export all brackets (status filter is intentionally not passed)
+      // Only user and year filters are applied
       const params = new URLSearchParams();
-      if (filterStatus && filterStatus !== 'all') {
-        params.append('status', filterStatus);
-      }
       if (filterUser && filterUser !== 'all') {
         params.append('userId', filterUser);
       }
@@ -515,13 +509,13 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
           </button>
           <button
             onClick={handleExportBrackets}
-            disabled={filteredBrackets.length === 0 || isExporting}
+            disabled={brackets.length === 0 || isExporting}
             className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-              filteredBrackets.length === 0 || isExporting
+              brackets.length === 0 || isExporting
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-green-600 text-white hover:bg-green-700'
             }`}
-            title={filteredBrackets.length === 0 ? 'No brackets to export' : `Export ${filteredBrackets.length} filtered bracket(s) to CSV`}
+            title={brackets.length === 0 ? 'No brackets to export' : 'Export all brackets to CSV (sorted by status: Submitted, In Progress, Deleted)'}
           >
             {isExporting ? (
               <>
@@ -531,7 +525,7 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
             ) : (
               <>
                 <Download className="w-4 h-4" />
-                Extract ({filteredBrackets.length})
+                Export All
               </>
             )}
           </button>
