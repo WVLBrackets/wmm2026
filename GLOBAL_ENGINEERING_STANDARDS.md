@@ -2,7 +2,7 @@
 
 **Project:** WMM2026 (Tournament Bracket Application)  
 **Created:** February 21, 2026  
-**Last Updated:** February 21, 2026 (API migration complete, test IDs added)  
+**Last Updated:** February 21, 2026 (Added data-testid naming conventions standard)  
 **Purpose:** Living document defining engineering standards for this project
 
 ---
@@ -978,7 +978,7 @@ const result = await retryWithBackoff(() => fetchData(), 3, 500);
 
 ---
 
-### 7.6 Stable Locators (B)
+### 7.6 Stable Locators (A) ✅
 
 **Priority order for locators:**
 
@@ -1007,11 +1007,94 @@ const result = await retryWithBackoff(() => fetchData(), 3, 500);
    page.locator('.submit-btn')  // Last resort
    ```
 
-**Action Required:** Components need more `data-testid` attributes.
+---
+
+### 7.7 Data-TestID Naming Conventions (A) ✅
+
+**Standard:** All interactive elements that tests need to locate MUST have `data-testid` attributes.
+
+#### Naming Pattern
+
+Use kebab-case with descriptive, action-oriented names:
+
+```
+{action/noun}-{element-type}
+```
+
+**Examples:**
+- `logout-button` - Action + element type
+- `entry-name-input` - Noun + element type  
+- `delete-confirmation-dialog` - Action + context + element type
+
+#### When to Add data-testid
+
+**MUST have data-testid:**
+- Buttons that trigger actions (submit, delete, copy, etc.)
+- Form inputs that tests need to fill
+- Dialogs/modals that tests need to interact with
+- Elements that vary between mobile/desktop views
+- Elements without stable text content (icon-only buttons)
+
+**MAY skip data-testid:**
+- Static display elements (headings, paragraphs)
+- Elements with stable, unique text that won't change
+- Elements already uniquely identifiable by role + name
+
+#### Established Test IDs
+
+| Test ID | Component | Purpose |
+|---------|-----------|---------|
+| `logout-button` | MyPicksLanding | Sign out button (desktop & mobile) |
+| `new-bracket-button` | MyPicksLanding | Create new bracket (desktop & mobile) |
+| `entry-name-input` | RegionBracketLayout, FinalFourChampionship | Bracket name field |
+| `tiebreaker-input` | FinalFourChampionship | Tiebreaker score field |
+| `copy-bracket-button` | MyPicksLanding | Copy bracket action |
+| `email-bracket-button` | MyPicksLanding | Email PDF action |
+| `delete-bracket-button` | MyPicksLanding | Delete bracket action |
+| `delete-confirmation-dialog` | MyPicksLanding | Delete confirmation UI |
+
+#### Implementation
+
+```tsx
+// Button with data-testid
+<button 
+  onClick={handleSubmit}
+  data-testid="submit-bracket-button"
+>
+  Submit
+</button>
+
+// Input with data-testid
+<input
+  type="text"
+  value={entryName}
+  onChange={(e) => setEntryName(e.target.value)}
+  data-testid="entry-name-input"
+/>
+
+// Dialog/container with data-testid
+<div 
+  className="modal"
+  data-testid="delete-confirmation-dialog"
+>
+  ...
+</div>
+```
+
+#### Test Usage
+
+```typescript
+// Preferred: getByTestId for stability
+await page.getByTestId('logout-button').click();
+await page.getByTestId('entry-name-input').fill('My Bracket');
+await expect(page.getByTestId('delete-confirmation-dialog')).toBeVisible();
+```
+
+**Adding New Test IDs:** When adding new interactive elements, include the `data-testid` attribute and add it to the table above.
 
 ---
 
-### 7.7 Auto-Wait Over Timeouts (B)
+### 7.8 Auto-Wait Over Timeouts (B)
 
 **Preferred - Web-first assertions:**
 ```typescript
@@ -1512,7 +1595,7 @@ Cache appropriate responses:
 
 ### Remaining Improvements
 
-1. **[B] Stable locators** - Add more `data-testid` attributes to components
+1. ~~**[B] Stable locators** - Add more `data-testid` attributes to components~~ ✅ **Completed** - See Section 7.7
 2. **[B] Auto-wait cleanup** - Remove remaining `waitForTimeout` calls where possible
 3. **[B] Lazy loading** - Apply dynamic imports more systematically
 
