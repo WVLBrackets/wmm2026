@@ -2,7 +2,7 @@
 
 **Project:** WMM2026 (Tournament Bracket Application)  
 **Created:** February 21, 2026  
-**Last Updated:** February 21, 2026 (Added data-testid naming conventions standard)  
+**Last Updated:** February 22, 2026 (Formalized responsive test ID standard: -desktop/-mobile suffixes)  
 **Purpose:** Living document defining engineering standards for this project
 
 ---
@@ -222,7 +222,7 @@ components/
 └── [shared]/      # Shared components at root
 ```
 
-**Testability:** All interactive UI components (buttons, inputs, dialogs) MUST include `data-testid` attributes for stable test automation. See **Section 7.7** for naming conventions and the established test ID table.
+**Testability:** All interactive UI components (buttons, inputs, dialogs) MUST include `data-testid` attributes for stable test automation. **For responsive components with desktop/mobile variants, use `-desktop` / `-mobile` suffixes** to ensure unique locators. See **Section 7.7** for naming conventions and the established test ID table.
 
 **Status:** Partially applied. Feature directories exist but shared components lack clear organization.
 
@@ -1102,13 +1102,22 @@ Use kebab-case with descriptive, action-oriented names:
 #### Test Usage
 
 ```typescript
-// Preferred: getByTestId for stability
-await page.getByTestId('logout-button').click();
+// Desktop tests - use explicit desktop variant
+await page.getByTestId('logout-button-desktop').click();
+await page.getByTestId('new-bracket-button-desktop').click();
+
+// Mobile tests - use explicit mobile variant
+await page.getByTestId('logout-button-mobile').click();
+await page.getByTestId('new-bracket-button-mobile').click();
+
+// Non-responsive elements - no variant suffix needed
 await page.getByTestId('entry-name-input').fill('My Bracket');
 await expect(page.getByTestId('delete-confirmation-dialog')).toBeVisible();
 ```
 
-**Adding New Test IDs:** When adding new interactive elements, include the `data-testid` attribute and add it to the table above.
+**IMPORTANT:** Always use the viewport-specific variant (`-desktop` or `-mobile`) for responsive elements. This prevents Playwright strict mode violations and makes test intent explicit.
+
+**Adding New Test IDs:** When adding new interactive elements, include the `data-testid` attribute and add it to the table above. For responsive elements that render differently on desktop vs mobile, create separate IDs with `-desktop` and `-mobile` suffixes.
 
 ---
 
@@ -1643,6 +1652,7 @@ Cache appropriate responses:
 | 2026-02-21 | **API Migration Complete:** All 17 API routes now use modular imports (repositories, services, migrations) | Architect |
 | 2026-02-21 | **Test ID Coverage:** Added data-testid attributes for stable Playwright locators (logout, new-bracket, entry-name, tiebreaker, copy/email/delete buttons, delete dialog) | Architect |
 | 2026-02-22 | **Test Updates:** Migrated E2E tests to use data-testid locators (sign-out.spec.ts, bracket-full-workflow.spec.ts, bracket-interaction.spec.ts); Added data-testid to Testing Checklist | QA Engineer |
+| 2026-02-22 | **Responsive Test ID Standard:** Formalized requirement for unique `-desktop` / `-mobile` suffixes on responsive elements; Updated test usage examples in Section 7.7 | QA Engineer |
 
 ---
 
