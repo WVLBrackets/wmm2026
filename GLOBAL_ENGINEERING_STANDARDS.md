@@ -1020,13 +1020,27 @@ const result = await retryWithBackoff(() => fetchData(), 3, 500);
 Use kebab-case with descriptive, action-oriented names:
 
 ```
-{action/noun}-{element-type}
+{action/noun}-{element-type}[-{variant}]
 ```
 
 **Examples:**
-- `logout-button` - Action + element type
+- `logout-button-desktop` - Action + element type + viewport variant
 - `entry-name-input` - Noun + element type  
 - `delete-confirmation-dialog` - Action + context + element type
+
+#### Responsive Variants
+
+**IMPORTANT:** When the same interactive element appears in both desktop and mobile layouts, use `-desktop` / `-mobile` suffixes to ensure uniqueness:
+
+```tsx
+{/* Desktop Layout */}
+<button data-testid="new-bracket-button-desktop">...</button>
+
+{/* Mobile Layout */}
+<button data-testid="new-bracket-button-mobile">...</button>
+```
+
+**Why:** Playwright's strict mode fails when a locator matches multiple elements. Unique IDs prevent ambiguity and make tests self-documenting.
 
 #### When to Add data-testid
 
@@ -1046,8 +1060,10 @@ Use kebab-case with descriptive, action-oriented names:
 
 | Test ID | Component | Purpose |
 |---------|-----------|---------|
-| `logout-button` | MyPicksLanding | Sign out button (desktop & mobile) |
-| `new-bracket-button` | MyPicksLanding | Create new bracket (desktop & mobile) |
+| `logout-button-desktop` | MyPicksLanding | Sign out button (desktop) |
+| `logout-button-mobile` | MyPicksLanding | Sign out button (mobile) |
+| `new-bracket-button-desktop` | MyPicksLanding | Create new bracket (desktop) |
+| `new-bracket-button-mobile` | MyPicksLanding | Create new bracket (mobile) |
 | `entry-name-input` | RegionBracketLayout, FinalFourChampionship | Bracket name field |
 | `tiebreaker-input` | FinalFourChampionship | Tiebreaker score field |
 | `copy-bracket-button` | MyPicksLanding | Copy bracket action |

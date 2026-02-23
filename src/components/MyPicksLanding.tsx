@@ -395,7 +395,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                       onClick={onCreateNew}
                       disabled={isBracketCreationDisabled()}
                       title={isBracketCreationDisabled() ? getBracketCreationDisabledReason() || '' : 'Create a new bracket'}
-                      data-testid="new-bracket-button"
+                      data-testid="new-bracket-button-desktop"
                       className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
                         isBracketCreationDisabled()
                           ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -410,7 +410,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                       onClick={() => signOut({ callbackUrl: '/auth/signin' })}
                       logLocation="Logout"
                       className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
-                      data-testid="logout-button"
+                      data-testid="logout-button-desktop"
                     >
                       <LogOut className="h-4 w-4" />
                       <span>Logout</span>
@@ -445,7 +445,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                         disabled={isBracketCreationDisabled()}
                         title={isBracketCreationDisabled() ? getBracketCreationDisabledReason() || '' : 'Create a new bracket'}
                         aria-label="New Bracket"
-                        data-testid="new-bracket-button"
+                        data-testid="new-bracket-button-mobile"
                         className={`px-2 py-2 rounded-lg flex items-center space-x-2 ${
                           isBracketCreationDisabled()
                             ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -459,7 +459,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                         onClick={() => signOut({ callbackUrl: '/auth/signin' })}
                         logLocation="Logout"
                         className="bg-blue-600 text-white px-2 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
-                        data-testid="logout-button"
+                        data-testid="logout-button-mobile"
                       >
                         <LogOut className="h-4 w-4" />
                       </LoggedButton>
