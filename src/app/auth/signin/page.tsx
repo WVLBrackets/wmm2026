@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { signIn, getSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -13,7 +13,15 @@ import { usageLogger } from '@/lib/usageLogger';
 
 type AuthTab = 'signin' | 'signup';
 
-export default function AuthPage() {
+export default function AuthPageWrapper() {
+  return (
+    <Suspense fallback={null}>
+      <AuthPage />
+    </Suspense>
+  );
+}
+
+function AuthPage() {
   const searchParams = useSearchParams();
   const initialMode = searchParams?.get('mode') === 'signup' ? 'signup' : 'signin';
 
