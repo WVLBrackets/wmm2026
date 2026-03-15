@@ -1,0 +1,446 @@
+{
+  "year": "2026",
+  "name": "Warren's March Madness",
+  "regions": [
+    {
+      "name": "East",
+      "position": "Top Left",
+      "teams": [
+        {
+          "id": "150",
+          "name": "Duke",
+          "seed": 1,
+          "logo": "/logos/teams/150.png"
+        },
+        {
+          "id": "2561",
+          "name": "Siena",
+          "seed": 16,
+          "logo": "/logos/teams/2561.png"
+        },
+        {
+          "id": "194",
+          "name": "Ohio State",
+          "seed": 8,
+          "logo": "/logos/teams/194.png"
+        },
+        {
+          "id": "2628",
+          "name": "TCU",
+          "seed": 9,
+          "logo": "/logos/teams/2628.png"
+        },
+        {
+          "id": "2599",
+          "name": "St. John's",
+          "seed": 5,
+          "logo": "/logos/teams/2599.png"
+        },
+        {
+          "id": "2460",
+          "name": "Northern Iowa",
+          "seed": 12,
+          "logo": "/logos/teams/2460.png"
+        },
+        {
+          "id": "2305",
+          "name": "Kansas",
+          "seed": 4,
+          "logo": "/logos/teams/2305.png"
+        },
+        {
+          "id": "2856",
+          "name": "California Baptist",
+          "seed": 13,
+          "logo": "/logos/teams/2856.png"
+        },
+        {
+          "id": "97",
+          "name": "Louisville",
+          "seed": 6,
+          "logo": "/logos/teams/97.png"
+        },
+        {
+          "id": "58",
+          "name": "South Florida",
+          "seed": 11,
+          "logo": "/logos/teams/58.png"
+        },
+        {
+          "id": "127",
+          "name": "Michigan State",
+          "seed": 3,
+          "logo": "/logos/teams/127.png"
+        },
+        {
+          "id": "2449",
+          "name": "North Dakota State",
+          "seed": 14,
+          "logo": "/logos/teams/2449.png"
+        },
+        {
+          "id": "26",
+          "name": "UCLA",
+          "seed": 7,
+          "logo": "/logos/teams/26.png"
+        },
+        {
+          "id": "2116",
+          "name": "UCF",
+          "seed": 10,
+          "logo": "/logos/teams/2116.png"
+        },
+        {
+          "id": "41",
+          "name": "Connecticut",
+          "seed": 2,
+          "logo": "/logos/teams/41.png"
+        },
+        {
+          "id": "231",
+          "name": "Furman",
+          "seed": 15,
+          "logo": "/logos/teams/231.png"
+        }
+      ]
+    },
+    {
+      "name": "South",
+      "position": "Bottom Left",
+      "teams": [
+        {
+          "id": "57",
+          "name": "Florida",
+          "seed": 1,
+          "logo": "/logos/teams/57.png"
+        },
+        {
+          "id": "5004",
+          "name": "FF4 PVAM/Lhgh",
+          "seed": 16,
+          "logo": "/logos/teams/5004.png"
+        },
+        {
+          "id": "228",
+          "name": "Clemson",
+          "seed": 8,
+          "logo": "/logos/teams/228.png"
+        },
+        {
+          "id": "2294",
+          "name": "Iowa",
+          "seed": 9,
+          "logo": "/logos/teams/2294.png"
+        },
+        {
+          "id": "238",
+          "name": "Vanderbilt",
+          "seed": 5,
+          "logo": "/logos/teams/238.png"
+        },
+        {
+          "id": "2377",
+          "name": "McNeese State",
+          "seed": 12,
+          "logo": "/logos/teams/2377.png"
+        },
+        {
+          "id": "158",
+          "name": "Nebraska",
+          "seed": 4,
+          "logo": "/logos/teams/158.png"
+        },
+        {
+          "id": "2653",
+          "name": "Troy",
+          "seed": 13,
+          "logo": "/logos/teams/2653.png"
+        },
+        {
+          "id": "153",
+          "name": "North Carolina",
+          "seed": 6,
+          "logo": "/logos/teams/153.png"
+        },
+        {
+          "id": "2670",
+          "name": "VCU",
+          "seed": 11,
+          "logo": "/logos/teams/2670.png"
+        },
+        {
+          "id": "356",
+          "name": "Illinois",
+          "seed": 3,
+          "logo": "/logos/teams/356.png"
+        },
+        {
+          "id": "219",
+          "name": "Pennsylvania",
+          "seed": 14,
+          "logo": "/logos/teams/219.png"
+        },
+        {
+          "id": "2608",
+          "name": "Saint Mary's",
+          "seed": 7,
+          "logo": "/logos/teams/2608.png"
+        },
+        {
+          "id": "245",
+          "name": "Texas A&M",
+          "seed": 10,
+          "logo": "/logos/teams/245.png"
+        },
+        {
+          "id": "248",
+          "name": "Houston",
+          "seed": 2,
+          "logo": "/logos/teams/248.png"
+        },
+        {
+          "id": "70",
+          "name": "Idaho",
+          "seed": 15,
+          "logo": "/logos/teams/70.png"
+        }
+      ]
+    },
+    {
+      "name": "West",
+      "position": "Top Right",
+      "teams": [
+        {
+          "id": "12",
+          "name": "Arizona",
+          "seed": 1,
+          "logo": "/logos/teams/12.png"
+        },
+        {
+          "id": "2341",
+          "name": "Long Island",
+          "seed": 16,
+          "logo": "/logos/teams/2341.png"
+        },
+        {
+          "id": "222",
+          "name": "Villanova",
+          "seed": 8,
+          "logo": "/logos/teams/222.png"
+        },
+        {
+          "id": "328",
+          "name": "Utah State",
+          "seed": 9,
+          "logo": "/logos/teams/328.png"
+        },
+        {
+          "id": "275",
+          "name": "Wisconsin",
+          "seed": 5,
+          "logo": "/logos/teams/275.png"
+        },
+        {
+          "id": "2272",
+          "name": "High Point",
+          "seed": 12,
+          "logo": "/logos/teams/2272.png"
+        },
+        {
+          "id": "8",
+          "name": "Arkansas",
+          "seed": 4,
+          "logo": "/logos/teams/8.png"
+        },
+        {
+          "id": "62",
+          "name": "Hawai'i",
+          "seed": 13,
+          "logo": "/logos/teams/62.png"
+        },
+        {
+          "id": "252",
+          "name": "BYU",
+          "seed": 6,
+          "logo": "/logos/teams/252.png"
+        },
+        {
+          "id": "5001",
+          "name": "FF1 Texas/NCSt",
+          "seed": 11,
+          "logo": "/logos/teams/5001.png"
+        },
+        {
+          "id": "2250",
+          "name": "Gonzaga",
+          "seed": 3,
+          "logo": "/logos/teams/2250.png"
+        },
+        {
+          "id": "338",
+          "name": "Kennesaw State",
+          "seed": 14,
+          "logo": "/logos/teams/338.png"
+        },
+        {
+          "id": "2390",
+          "name": "Miami",
+          "seed": 7,
+          "logo": "/logos/teams/2390.png"
+        },
+        {
+          "id": "142",
+          "name": "Missouri",
+          "seed": 10,
+          "logo": "/logos/teams/142.png"
+        },
+        {
+          "id": "2509",
+          "name": "Purdue",
+          "seed": 2,
+          "logo": "/logos/teams/2509.png"
+        },
+        {
+          "id": "2511",
+          "name": "Queens University",
+          "seed": 15,
+          "logo": "/logos/teams/2511.png"
+        }
+      ]
+    },
+    {
+      "name": "Midwest",
+      "position": "Bottom Right",
+      "teams": [
+        {
+          "id": "130",
+          "name": "Michigan",
+          "seed": 1,
+          "logo": "/logos/teams/130.png"
+        },
+        {
+          "id": "5002",
+          "name": "FF2 UMBC/Hwrd",
+          "seed": 16,
+          "logo": "/logos/teams/5002.png"
+        },
+        {
+          "id": "61",
+          "name": "Georgia",
+          "seed": 8,
+          "logo": "/logos/teams/61.png"
+        },
+        {
+          "id": "139",
+          "name": "Saint Louis",
+          "seed": 9,
+          "logo": "/logos/teams/139.png"
+        },
+        {
+          "id": "2641",
+          "name": "Texas Tech",
+          "seed": 5,
+          "logo": "/logos/teams/2641.png"
+        },
+        {
+          "id": "2006",
+          "name": "Akron",
+          "seed": 12,
+          "logo": "/logos/teams/2006.png"
+        },
+        {
+          "id": "333",
+          "name": "Alabama",
+          "seed": 4,
+          "logo": "/logos/teams/333.png"
+        },
+        {
+          "id": "2275",
+          "name": "Hofstra",
+          "seed": 13,
+          "logo": "/logos/teams/2275.png"
+        },
+        {
+          "id": "2633",
+          "name": "Tennessee",
+          "seed": 6,
+          "logo": "/logos/teams/2633.png"
+        },
+        {
+          "id": "5003",
+          "name": "FF3 MiaO/SMU",
+          "seed": 11,
+          "logo": "/logos/teams/5003.png"
+        },
+        {
+          "id": "258",
+          "name": "Virginia",
+          "seed": 3,
+          "logo": "/logos/teams/258.png"
+        },
+        {
+          "id": "2750",
+          "name": "Wright State",
+          "seed": 14,
+          "logo": "/logos/teams/2750.png"
+        },
+        {
+          "id": "96",
+          "name": "Kentucky",
+          "seed": 7,
+          "logo": "/logos/teams/96.png"
+        },
+        {
+          "id": "2541",
+          "name": "Santa Clara",
+          "seed": 10,
+          "logo": "/logos/teams/2541.png"
+        },
+        {
+          "id": "66",
+          "name": "Iowa State",
+          "seed": 2,
+          "logo": "/logos/teams/66.png"
+        },
+        {
+          "id": "2634",
+          "name": "Tennessee State",
+          "seed": 15,
+          "logo": "/logos/teams/2634.png"
+        }
+      ]
+    }
+  ],
+  "finalFour": {
+    "location": "Indianapolis"
+  },
+  "metadata": {
+    "startDate": "2026-03-19",
+    "scoring": [
+      {
+        "round": "Round of 64",
+        "points": 1
+      },
+      {
+        "round": "Round of 32",
+        "points": 2
+      },
+      {
+        "round": "Sweet 16",
+        "points": 4
+      },
+      {
+        "round": "Elite 8",
+        "points": 8
+      },
+      {
+        "round": "Final Four",
+        "points": 16
+      },
+      {
+        "round": "Championship",
+        "points": 32
+      }
+    ]
+  }
+}
