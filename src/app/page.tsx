@@ -60,6 +60,9 @@ export default async function Home() {
         {/* Desktop: 3-column row when CTAs exist, 2-column otherwise */}
         {hasCTAs ? (
           <div className="hidden lg:grid lg:grid-cols-3 gap-6 mb-8">
+            {/* CTA 1 */}
+            <CTACard item={firstCTA!} />
+
             {/* Home Page Logo */}
             <div className="bg-white rounded-lg shadow-lg p-3 border-b-4 border-orange-400 h-full">
               <div className="w-full h-full flex items-center justify-center">
@@ -73,9 +76,6 @@ export default async function Home() {
                 <CountdownClock />
               </div>
             </div>
-
-            {/* CTA 1 */}
-            <CTACard item={firstCTA!} />
           </div>
         ) : (
           <div className="hidden lg:grid lg:grid-cols-2 gap-6 mb-8">
@@ -102,6 +102,9 @@ export default async function Home() {
 
         {/* Mobile: Everything stacked vertically */}
         <div className="lg:hidden grid grid-cols-1 gap-4 mb-8">
+          {/* CTA 1 (if active) */}
+          {firstCTA && <CTACard item={firstCTA} />}
+
           {/* Home Page Logo */}
           <div className="bg-white rounded-lg shadow-lg p-3 border-b-4 border-orange-400">
             <div className="w-full h-full flex items-center justify-center min-h-[150px]">
@@ -116,8 +119,8 @@ export default async function Home() {
             </div>
           </div>
 
-          {/* Mobile CTAs — equal height cards */}
-          {ctaItems.map((item, index) => (
+          {/* Remaining CTAs (2-4) */}
+          {remainingCTAs.map((item, index) => (
             <CTACard key={index} item={item} />
           ))}
         </div>
