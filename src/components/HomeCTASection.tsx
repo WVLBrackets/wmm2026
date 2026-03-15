@@ -31,81 +31,81 @@ function resolveImageSrc(filename: string): string {
 }
 
 /**
- * Map the number of active CTAs to the appropriate Tailwind grid class on desktop.
+ * Wraps content in the appropriate link element based on destination type.
  */
-function getGridClass(count: number): string {
-  switch (count) {
-    case 1:
-      return 'grid-cols-1 max-w-lg mx-auto';
-    case 2:
-      return 'md:grid-cols-2';
-    case 3:
-      return 'md:grid-cols-3';
-    case 4:
-      return 'md:grid-cols-4';
-    default:
-      return '';
-  }
-}
-
-/**
- * Single CTA card — renders as text-only button, image+caption, or image-only
- * depending on the CTAItem configuration.
- */
-function CTACard({ item }: { item: CTAItem }) {
-  const hasImage = !!item.image;
-
-  const content = hasImage ? (
-    <div className="flex flex-col items-center overflow-hidden rounded-xl bg-white shadow-md hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5">
-      <Image
-        src={resolveImageSrc(item.image!)}
-        alt={item.isImageOnly ? 'Call to action' : item.title}
-        width={600}
-        height={300}
-        className="w-full h-auto object-cover"
-        unoptimized
-      />
-      {!item.isImageOnly && (
-        <p className="w-full text-center text-sm font-medium text-gray-700 py-2 px-3">
-          {item.title}
-        </p>
-      )}
-    </div>
-  ) : (
-    <div className="flex items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-lg px-6 py-5 shadow-md hover:shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 hover:-translate-y-0.5 text-center">
-      {item.title}
-    </div>
-  );
-
-  if (isExternalLink(item.destination)) {
+function CTALinkWrapper({ destination, children }: { destination: string; children: React.ReactNode }) {
+  if (isExternalLink(destination)) {
     return (
       <a
-        href={item.destination}
+        href={destination}
         target="_blank"
         rel="noopener noreferrer"
-        className="block cursor-pointer"
+        className="block cursor-pointer h-full"
         data-testid="cta-card"
       >
-        {content}
+        {children}
       </a>
     );
   }
 
   return (
     <Link
-      href={item.destination}
-      className="block cursor-pointer"
+      href={destination}
+      className="block cursor-pointer h-full"
       data-testid="cta-card"
     >
-      {content}
+      {children}
     </Link>
   );
 }
 
 /**
- * Dynamic CTA section for the Home page.
- * Renders 0-4 call-to-action cards in a responsive grid.
- * Returns null when no CTAs are active so no empty space is shown.
+ * Single CTA card — renders as text-only button, image+caption, or image-only.
+ * Uses the site's blue (#022749) and orange color palette.
+ */
+export function CTACard({ item }: { item: CTAItem }) {
+  const hasImage = !!item.image;
+
+  if (hasImage) {
+    return (
+      <CTALinkWrapper destination={item.destination}>
+        <div className="h-full flex flex-col overflow-hidden rounded-lg bg-white shadow-lg border-b-4 border-orange-400 hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5">
+          <div className="flex-1 flex items-center justify-center p-2">
+            <Image
+              src={resolveImageSrc(item.image!)}
+              alt={item.isImageOnly ? 'Call to action' : item.title}
+              width={600}
+              height={300}
+              className="w-full h-auto object-cover rounded"
+              unoptimized
+            />
+          </div>
+          {!item.isImageOnly && (
+            <p className="text-center text-sm font-semibold text-gray-800 py-2 px-3 bg-gray-50">
+              {item.title}
+            </p>
+          )}
+        </div>
+      </CTALinkWrapper>
+    );
+  }
+
+  return (
+    <CTALinkWrapper destination={item.destination}>
+      <div
+        className="h-full flex items-center justify-center rounded-lg shadow-lg text-white font-bold text-lg px-6 py-5 border-b-4 border-orange-400 hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5 text-center"
+        style={{ backgroundColor: '#022749' }}
+      >
+        {item.title}
+      </div>
+    </CTALinkWrapper>
+  );
+}
+
+/**
+ * Dynamic CTA section for rows of CTAs below the top banner row.
+ * Renders in a responsive 3-column desktop grid / 1-column mobile stack.
+ * Returns null when no items are provided.
  */
 export default function HomeCTASection({ items }: HomeCTASectionProps) {
   if (!items || items.length === 0) {
@@ -113,7 +113,7 @@ export default function HomeCTASection({ items }: HomeCTASectionProps) {
   }
 
   return (
-    <div className={`grid grid-cols-1 ${getGridClass(items.length)} gap-4 mb-8`}>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       {items.map((item, index) => (
         <CTACard key={index} item={item} />
       ))}
