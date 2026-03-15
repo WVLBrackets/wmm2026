@@ -506,7 +506,7 @@ export default function LogsTab() {
               type="datetime-local"
               value={logStartDate}
               onChange={(e) => setLogStartDate(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded text-sm"
+              className="px-3 py-2 border border-gray-300 rounded text-sm text-gray-900"
             />
           </div>
           <div className="flex items-center space-x-2">
@@ -515,7 +515,7 @@ export default function LogsTab() {
               type="datetime-local"
               value={logEndDate}
               onChange={(e) => setLogEndDate(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded text-sm"
+              className="px-3 py-2 border border-gray-300 rounded text-sm text-gray-900"
             />
           </div>
           <button
@@ -777,7 +777,7 @@ export default function LogsTab() {
               <select
                 value={logUsernameFilter}
                 onChange={(e) => setLogUsernameFilter(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
               >
                 <option value="">All Usernames</option>
                 {Array.from(new Set((allUsageLogs.length > 0 ? allUsageLogs : usageLogs).map(log => log.username).filter((u): u is string => Boolean(u)))).sort().map((username) => (
@@ -794,7 +794,7 @@ export default function LogsTab() {
               <select
                 value={logEventTypeFilter}
                 onChange={(e) => setLogEventTypeFilter(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
               >
                 <option value="">All Event Types</option>
                 {Array.from(new Set((allUsageLogs.length > 0 ? allUsageLogs : usageLogs).map(log => log.eventType))).sort().map((eventType) => (
@@ -811,7 +811,7 @@ export default function LogsTab() {
               <select
                 value={logLocationFilter}
                 onChange={(e) => setLogLocationFilter(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
               >
                 <option value="">All Locations</option>
                 {Array.from(new Set((allUsageLogs.length > 0 ? allUsageLogs : usageLogs).map(log => log.location))).sort().map((location) => (
@@ -1060,7 +1060,7 @@ export default function LogsTab() {
                   <select
                     value={emailLogEventTypeFilter}
                     onChange={(e) => setEmailLogEventTypeFilter(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
                   >
                     <option value="all">All Event Types</option>
                     <option value="Account Creation">Account Creation</option>
@@ -1078,7 +1078,7 @@ export default function LogsTab() {
                     value={emailLogEmailFilter}
                     onChange={(e) => setEmailLogEmailFilter(e.target.value)}
                     placeholder="Filter by email..."
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500"
                   />
                 </div>
                 <div>
@@ -1088,7 +1088,7 @@ export default function LogsTab() {
                   <select
                     value={emailLogAttachmentExpectedFilter}
                     onChange={(e) => setEmailLogAttachmentExpectedFilter(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
                   >
                     <option value="">All</option>
                     <option value="true">Yes</option>
@@ -1102,7 +1102,7 @@ export default function LogsTab() {
                   <select
                     value={emailLogAttachmentSuccessFilter}
                     onChange={(e) => setEmailLogAttachmentSuccessFilter(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
                   >
                     <option value="">All</option>
                     <option value="true">Yes</option>
@@ -1117,7 +1117,7 @@ export default function LogsTab() {
                   <select
                     value={emailLogEmailSuccessFilter}
                     onChange={(e) => setEmailLogEmailSuccessFilter(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
                   >
                     <option value="">All</option>
                     <option value="true">Yes</option>

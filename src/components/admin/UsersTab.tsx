@@ -356,7 +356,7 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
                 placeholder="Search by any field..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
@@ -437,7 +437,7 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
                           type="text"
                           value={editName}
                           onChange={(e) => setEditName(e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-gray-900 placeholder:text-gray-500"
                           placeholder="Name"
                         />
                       ) : (
@@ -472,7 +472,7 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
                           type="email"
                           value={editEmail}
                           onChange={(e) => setEditEmail(e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-gray-900 placeholder:text-gray-500"
                           placeholder="Email"
                         />
                       ) : (
@@ -547,7 +547,7 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
                               placeholder="New password (min 6 characters)"
                               value={newPassword}
                               onChange={(e) => setNewPassword(e.target.value)}
-                              className="px-2 py-1 border border-gray-300 rounded text-sm"
+                              className="px-2 py-1 border border-gray-300 rounded text-sm text-gray-900 placeholder:text-gray-500"
                               minLength={6}
                             />
                             <input
@@ -555,7 +555,7 @@ export default function UsersTab({ users, onReload }: UsersTabProps) {
                               placeholder="Confirm password"
                               value={confirmPassword}
                               onChange={(e) => setConfirmPassword(e.target.value)}
-                              className="px-2 py-1 border border-gray-300 rounded text-sm"
+                              className="px-2 py-1 border border-gray-300 rounded text-sm text-gray-900 placeholder:text-gray-500"
                               minLength={6}
                             />
                           </div>

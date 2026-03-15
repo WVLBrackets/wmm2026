@@ -381,7 +381,7 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
             <select
               value={filterYear}
               onChange={(e) => setFilterYear(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
             >
               <option value="all">All Years</option>
               {availableYears.map(year => (
@@ -399,7 +399,7 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
             >
               <option value="all">All Statuses</option>
               <option value="submitted">Submitted</option>
@@ -415,7 +415,7 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
             <select
               value={filterUser}
               onChange={(e) => setFilterUser(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
               style={{ width: '40ch' }}
             >
               <option value="all">All Users</option>
@@ -435,7 +435,7 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
               type="date"
               value={filterCreatedDate}
               onChange={(e) => setFilterCreatedDate(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
             />
           </div>
           
@@ -447,7 +447,7 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
               type="date"
               value={filterUpdatedDate}
               onChange={(e) => setFilterUpdatedDate(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
             />
           </div>
           
@@ -493,7 +493,7 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
                 placeholder="Search by Entry Name"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
@@ -593,7 +593,7 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
                       <select
                         value={editForm.userId || ''}
                         onChange={(e) => setEditForm({ ...editForm, userId: e.target.value })}
-                        className="border border-gray-300 rounded px-2 py-1 text-sm w-full"
+                        className="border border-gray-300 rounded px-2 py-1 text-sm w-full text-gray-900"
                       >
                         {users.map((user) => (
                           <option key={user.id} value={user.id}>
@@ -614,7 +614,7 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
                         type="text"
                         value={editForm.entryName || ''}
                         onChange={(e) => setEditForm({ ...editForm, entryName: e.target.value })}
-                        className="border border-gray-300 rounded px-2 py-1 text-sm w-full"
+                        className="border border-gray-300 rounded px-2 py-1 text-sm w-full text-gray-900"
                       />
                     ) : (
                       <div className="text-sm text-gray-900">{bracket.entryName}</div>
@@ -625,7 +625,7 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
                       <select
                         value={editForm.status || ''}
                         onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                        className="border border-gray-300 rounded px-2 py-1 text-sm"
+                        className="border border-gray-300 rounded px-2 py-1 text-sm text-gray-900"
                       >
                         <option value="in_progress">In Progress</option>
                         <option value="submitted">Submitted</option>

@@ -786,7 +786,7 @@ export default function TeamDataTab() {
                 type="text"
                 value={newTeamData.key}
                 onChange={(e) => setNewTeamData({ ...newTeamData, key: e.target.value })}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500"
                 placeholder="e.g., UConn"
               />
             </div>
@@ -798,7 +798,7 @@ export default function TeamDataTab() {
                 type="text"
                 value={newTeamData.id}
                 onChange={(e) => setNewTeamData({ ...newTeamData, id: e.target.value })}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500"
                 placeholder="e.g., 41"
               />
             </div>
@@ -810,7 +810,7 @@ export default function TeamDataTab() {
                 type="text"
                 value={newTeamData.name}
                 onChange={(e) => setNewTeamData({ ...newTeamData, name: e.target.value })}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500"
                 placeholder="e.g., Connecticut"
               />
             </div>
@@ -822,7 +822,7 @@ export default function TeamDataTab() {
                 type="text"
                 value={newTeamData.mascot || ''}
                 onChange={(e) => setNewTeamData({ ...newTeamData, mascot: e.target.value })}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500"
                 placeholder="e.g., Huskies"
               />
             </div>
@@ -883,7 +883,7 @@ export default function TeamDataTab() {
                 max="9999"
                 value={syncTeamId}
                 onChange={(e) => setSyncTeamId(e.target.value)}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500"
                 placeholder="Enter team ID"
                 disabled={syncResult?.loading}
               />
@@ -1059,7 +1059,7 @@ export default function TeamDataTab() {
                     value={teamFilters.name}
                     onChange={(e) => setTeamFilters({ ...teamFilters, name: e.target.value })}
                     placeholder="Filter Team..."
-                    className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
+                    className="w-full border border-gray-300 rounded px-2 py-1 text-xs text-gray-900 placeholder:text-gray-500"
                   />
                 </th>
                 <th className="px-3 py-2 bg-gray-100">
@@ -1068,7 +1068,7 @@ export default function TeamDataTab() {
                     value={teamFilters.mascot}
                     onChange={(e) => setTeamFilters({ ...teamFilters, mascot: e.target.value })}
                     placeholder="Filter Mascot..."
-                    className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
+                    className="w-full border border-gray-300 rounded px-2 py-1 text-xs text-gray-900 placeholder:text-gray-500"
                   />
                 </th>
                 <th className="px-3 py-2 bg-gray-100">
@@ -1077,7 +1077,7 @@ export default function TeamDataTab() {
                     value={teamFilters.key}
                     onChange={(e) => setTeamFilters({ ...teamFilters, key: e.target.value })}
                     placeholder="Filter Abbreviation..."
-                    className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
+                    className="w-full border border-gray-300 rounded px-2 py-1 text-xs text-gray-900 placeholder:text-gray-500"
                   />
                 </th>
                 <th className="px-3 py-2 bg-gray-100">
@@ -1086,7 +1086,7 @@ export default function TeamDataTab() {
                     value={teamFilters.id}
                     onChange={(e) => setTeamFilters({ ...teamFilters, id: e.target.value })}
                     placeholder="Filter ID..."
-                    className="w-full border border-gray-300 rounded px-2 py-1 text-xs"
+                    className="w-full border border-gray-300 rounded px-2 py-1 text-xs text-gray-900 placeholder:text-gray-500"
                   />
                 </th>
                 <th className="px-3 py-2 bg-gray-100">
@@ -1184,7 +1184,7 @@ export default function TeamDataTab() {
                               type="text"
                               value={editingTeamData?.name || ''}
                               onChange={(e) => setEditingTeamData({ ...editingTeamData!, name: e.target.value })}
-                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm text-gray-900"
                             />
                           </td>
                           <td className="px-3 py-4 whitespace-nowrap">
@@ -1192,7 +1192,7 @@ export default function TeamDataTab() {
                               type="text"
                               value={editingTeamData?.mascot || ''}
                               onChange={(e) => setEditingTeamData({ ...editingTeamData!, mascot: e.target.value })}
-                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm text-gray-900"
                             />
                           </td>
                           <td className="px-3 py-4 whitespace-nowrap">
@@ -1200,7 +1200,7 @@ export default function TeamDataTab() {
                               type="text"
                               value={editingTeamData?.key || ''}
                               onChange={(e) => setEditingTeamData({ ...editingTeamData!, key: e.target.value })}
-                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm text-gray-900"
                             />
                           </td>
                           <td className="px-3 py-4 whitespace-nowrap">
@@ -1208,7 +1208,7 @@ export default function TeamDataTab() {
                               type="text"
                               value={editingTeamData?.id || ''}
                               onChange={(e) => setEditingTeamData({ ...editingTeamData!, id: e.target.value })}
-                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm text-gray-900"
                             />
                           </td>
                           <td className="px-3 py-4 whitespace-nowrap">

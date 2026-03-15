@@ -704,7 +704,7 @@ export default function PrintBracketPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white" style={{ position: 'relative' }}>
+    <div className="min-h-screen bg-white" style={{ position: 'relative', color: '#111827' }}>
       {/* Header */}
       <div style={{ 
         padding: '8px 0px', 
