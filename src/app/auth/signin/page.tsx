@@ -15,7 +15,7 @@ type AuthTab = 'signin' | 'signup';
 
 export default function AuthPage() {
   const searchParams = useSearchParams();
-  const initialMode = searchParams.get('mode') === 'signup' ? 'signup' : 'signin';
+  const initialMode = searchParams?.get('mode') === 'signup' ? 'signup' : 'signin';
 
   const [activeTab, setActiveTab] = useState<AuthTab>(initialMode);
   const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
