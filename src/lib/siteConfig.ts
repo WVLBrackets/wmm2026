@@ -52,6 +52,8 @@ export interface SiteConfigData {
   finalFourHeaderMessage?: string;
   // Home page logo
   homePageLogo?: string;
+  // Bracket home page logo (separate from home page)
+  bracketHomeLogo?: string;
   // Email PDF template content
   emailPdfSubject?: string;
   emailPdfHeading?: string;
@@ -360,6 +362,9 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
             break;
           case 'home_page_logo':
             config.homePageLogo = value;
+            break;
+          case 'bracket_home_logo':
+            config.bracketHomeLogo = value;
             break;
           case 'email_pdf_subject':
             config.emailPdfSubject = value;
