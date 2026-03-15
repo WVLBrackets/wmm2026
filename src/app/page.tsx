@@ -61,14 +61,14 @@ export default async function Home() {
         {hasCTAs ? (
           <div className="hidden lg:grid lg:grid-cols-3 gap-6 mb-8">
             {/* Home Page Logo */}
-            <div className="bg-white rounded-lg shadow-lg p-4 h-full">
+            <div className="bg-white rounded-lg shadow-lg p-3 border-b-4 border-orange-400 h-full">
               <div className="w-full h-full flex items-center justify-center">
                 <HomePageLogo logoFileName={siteConfig?.homePageLogo} />
               </div>
             </div>
 
             {/* Countdown Clock */}
-            <div className="bg-white rounded-lg shadow-lg p-3 h-full flex flex-col justify-center">
+            <div className="bg-white rounded-lg shadow-lg p-3 border-b-4 border-orange-400 h-full flex flex-col justify-center">
               <div className="rounded h-full flex flex-col justify-center p-3" style={{ backgroundColor: '#022749' }}>
                 <CountdownClock />
               </div>
@@ -80,15 +80,15 @@ export default async function Home() {
         ) : (
           <div className="hidden lg:grid lg:grid-cols-2 gap-6 mb-8">
             {/* Home Page Logo */}
-            <div className="bg-white rounded-lg shadow-lg p-4 h-full">
+            <div className="bg-white rounded-lg shadow-lg p-3 border-b-4 border-orange-400 h-full">
               <div className="w-full h-full flex items-center justify-center min-h-[200px]">
                 <HomePageLogo logoFileName={siteConfig?.homePageLogo} />
               </div>
             </div>
 
             {/* Countdown Clock */}
-            <div className="bg-white rounded-lg shadow-lg p-4 h-full flex flex-col justify-center min-h-[200px]">
-              <div className="rounded h-full flex flex-col justify-center p-4" style={{ backgroundColor: '#022749' }}>
+            <div className="bg-white rounded-lg shadow-lg p-3 border-b-4 border-orange-400 h-full flex flex-col justify-center min-h-[200px]">
+              <div className="rounded h-full flex flex-col justify-center p-3" style={{ backgroundColor: '#022749' }}>
                 <CountdownClock />
               </div>
             </div>
@@ -103,14 +103,14 @@ export default async function Home() {
         {/* Mobile: Everything stacked vertically */}
         <div className="lg:hidden grid grid-cols-1 gap-4 mb-8">
           {/* Home Page Logo */}
-          <div className="bg-white rounded-lg shadow-lg p-4">
+          <div className="bg-white rounded-lg shadow-lg p-3 border-b-4 border-orange-400">
             <div className="w-full h-full flex items-center justify-center min-h-[150px]">
               <HomePageLogo logoFileName={siteConfig?.homePageLogo} />
             </div>
           </div>
 
           {/* Countdown Clock — compact padding to match logo height */}
-          <div className="bg-white rounded-lg shadow-lg p-2 flex flex-col justify-center">
+          <div className="bg-white rounded-lg shadow-lg p-2 border-b-4 border-orange-400 flex flex-col justify-center">
             <div className="rounded flex flex-col justify-center p-2" style={{ backgroundColor: '#022749' }}>
               <CountdownClock />
             </div>

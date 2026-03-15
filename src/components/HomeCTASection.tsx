@@ -69,22 +69,24 @@ export function CTACard({ item }: { item: CTAItem }) {
   if (hasImage) {
     return (
       <CTALinkWrapper destination={item.destination}>
-        <div className="h-full flex flex-col overflow-hidden rounded-lg bg-white shadow-lg border-b-4 border-orange-400 hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5">
-          <div className="flex-1 flex items-center justify-center p-2">
-            <Image
-              src={resolveImageSrc(item.image!)}
-              alt={item.isImageOnly ? 'Call to action' : item.title}
-              width={600}
-              height={300}
-              className="w-full h-auto object-cover rounded"
-              unoptimized
-            />
+        <div className="h-full bg-white rounded-lg shadow-lg p-3 border-b-4 border-orange-400 hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5">
+          <div className="flex flex-col h-full overflow-hidden rounded">
+            <div className="flex-1 flex items-center justify-center">
+              <Image
+                src={resolveImageSrc(item.image!)}
+                alt={item.isImageOnly ? 'Call to action' : item.title}
+                width={600}
+                height={300}
+                className="w-full h-auto object-cover rounded"
+                unoptimized
+              />
+            </div>
+            {!item.isImageOnly && (
+              <p className="text-center text-sm font-semibold text-gray-800 pt-2">
+                {item.title}
+              </p>
+            )}
           </div>
-          {!item.isImageOnly && (
-            <p className="text-center text-sm font-semibold text-gray-800 py-2 px-3 bg-gray-50">
-              {item.title}
-            </p>
-          )}
         </div>
       </CTALinkWrapper>
     );
@@ -92,11 +94,13 @@ export function CTACard({ item }: { item: CTAItem }) {
 
   return (
     <CTALinkWrapper destination={item.destination}>
-      <div
-        className="h-full flex items-center justify-center rounded-lg shadow-lg text-white font-bold text-lg px-6 py-5 border-b-4 border-orange-400 hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5 text-center"
-        style={{ backgroundColor: '#022749' }}
-      >
-        {item.title}
+      <div className="h-full bg-white rounded-lg shadow-lg p-3 border-b-4 border-orange-400 hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5">
+        <div
+          className="h-full flex items-center justify-center rounded text-white font-bold text-lg px-6 py-4 text-center"
+          style={{ backgroundColor: '#022749' }}
+        >
+          {item.title}
+        </div>
       </div>
     </CTALinkWrapper>
   );
