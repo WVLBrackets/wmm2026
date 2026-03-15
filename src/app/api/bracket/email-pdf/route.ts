@@ -742,7 +742,7 @@ async function generatePrintPageHTML(
     : '';
   
   // WMM Logo - convert to base64 for embedding in PDF, absolutely positioned to overlay content
-  const wmmLogoBase64 = getLogoAsBase64('/images/WMM Logo.png');
+  const wmmLogoBase64 = getLogoAsBase64('/images/WMM Logo - Primary.png');
   const wmmLogoHTML = wmmLogoBase64
     ? `<div style="position: absolute; top: 60px; left: 50%; transform: translateX(-50%); z-index: 10; pointer-events: none;">
         <img src="${wmmLogoBase64}" alt="WMM Logo" width="120" height="60" style="object-fit: contain;" />

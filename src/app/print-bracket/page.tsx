@@ -763,7 +763,7 @@ export default function PrintBracketPage() {
         pointerEvents: 'none' // Allow clicks to pass through
       }}>
         <Image
-          src="/images/WMM Logo.png"
+          src="/images/WMM Logo - Primary.png"
           alt="WMM Logo"
           width={120}
           height={60}
