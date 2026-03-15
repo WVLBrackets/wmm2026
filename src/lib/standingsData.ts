@@ -249,20 +249,27 @@ export async function getAvailableDays(): Promise<string[]> {
     const numberOfTabs = siteConfig.standingsTabs || 2;
     const days: string[] = [];
     
-    // First, check if "Final" tab exists and add it as the first option
-    try {
-      const finalUrl = `https://docs.google.com/spreadsheets/d/${STANDINGS_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Final`;
-      const finalResponse = await fetch(finalUrl);
-      if (finalResponse.ok) {
-        days.push('Final');
+    // Business rule:
+    // - standingsTabs = 10 => include Final + Day9..Day1
+    // - standingsTabs != 10 => include DayN..Day1 only (no Final)
+    const includeFinalTab = numberOfTabs === 10;
+    if (includeFinalTab) {
+      // Check if "Final" tab exists and add it as the first option
+      try {
+        const finalUrl = `https://docs.google.com/spreadsheets/d/${STANDINGS_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Final`;
+        const finalResponse = await fetch(finalUrl);
+        if (finalResponse.ok) {
+          days.push('Final');
+        }
+      } catch {
+        // Final tab not found, continue without it
       }
-    } catch {
-      // Final tab not found, continue without it
     }
-    
-    // Generate days in descending order (Day 9, Day 8, etc.)
-    // Cap at Day 9 since there's no Day 10
-    const maxDay = Math.min(numberOfTabs, 9);
+
+    // Generate days in descending order:
+    // - For 10 tabs, show 9..1
+    // - For any other value, show N..1
+    const maxDay = includeFinalTab ? 9 : numberOfTabs;
     for (let i = maxDay; i >= 1; i--) {
       days.push(`Day${i}`);
     }

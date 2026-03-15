@@ -477,7 +477,7 @@ export default function StandingsTable() {
               <select
                 value={displayDay}
                 onChange={(e) => handleDayChange(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {availableDays.map(day => (
                   <option key={day} value={day}>
@@ -504,7 +504,7 @@ export default function StandingsTable() {
                 placeholder="Search players..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-md text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
               />
             </div>
             
