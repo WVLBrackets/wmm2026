@@ -124,6 +124,19 @@ export interface SiteConfigData {
   autoReplyGreeting?: string;
   autoReplyMainMessage?: string;
   autoReplyClosing?: string;
+  // CTA configuration (Home page call-to-action cards)
+  cta1Title?: string;
+  cta1Destination?: string;
+  cta1Image?: string;
+  cta2Title?: string;
+  cta2Destination?: string;
+  cta2Image?: string;
+  cta3Title?: string;
+  cta3Destination?: string;
+  cta3Image?: string;
+  cta4Title?: string;
+  cta4Destination?: string;
+  cta4Image?: string;
 }
 
 /**
@@ -500,6 +513,42 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
             break;
           case 'auto_reply_closing':
             config.autoReplyClosing = value;
+            break;
+          case 'cta1_title':
+            config.cta1Title = value;
+            break;
+          case 'cta1_destination':
+            config.cta1Destination = value;
+            break;
+          case 'cta1_image':
+            config.cta1Image = value;
+            break;
+          case 'cta2_title':
+            config.cta2Title = value;
+            break;
+          case 'cta2_destination':
+            config.cta2Destination = value;
+            break;
+          case 'cta2_image':
+            config.cta2Image = value;
+            break;
+          case 'cta3_title':
+            config.cta3Title = value;
+            break;
+          case 'cta3_destination':
+            config.cta3Destination = value;
+            break;
+          case 'cta3_image':
+            config.cta3Image = value;
+            break;
+          case 'cta4_title':
+            config.cta4Title = value;
+            break;
+          case 'cta4_destination':
+            config.cta4Destination = value;
+            break;
+          case 'cta4_image':
+            config.cta4Image = value;
             break;
           default:
             // Unknown parameter - log for debugging (only in development)

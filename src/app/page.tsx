@@ -1,6 +1,7 @@
 import CountdownClock from '@/components/CountdownClock';
 import Announcements from '@/components/Announcements';
-import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
+import HomeCTASection, { CTAItem } from '@/components/HomeCTASection';
+import { getSiteConfigFromGoogleSheets, SiteConfigData } from '@/lib/siteConfig';
 import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 import HomePageLogo from '@/components/HomePageLogo';
 import { PageLogger } from '@/components/PageLogger';
@@ -11,10 +12,34 @@ import { getAnnouncements } from '@/lib/announcements';
 // Note: CountdownClock is a client component and updates dynamically
 export const revalidate = false;
 
+/**
+ * Parse CTA configuration from site config into a typed array.
+ * Stops at the first inactive CTA (title is "NO" or empty).
+ */
+function parseCTAItems(config: SiteConfigData): CTAItem[] {
+  const items: CTAItem[] = [];
+  const titles = [config.cta1Title, config.cta2Title, config.cta3Title, config.cta4Title];
+  const destinations = [config.cta1Destination, config.cta2Destination, config.cta3Destination, config.cta4Destination];
+  const images = [config.cta1Image, config.cta2Image, config.cta3Image, config.cta4Image];
+
+  for (let i = 0; i < 4; i++) {
+    const title = titles[i];
+    if (!title || title.toUpperCase() === 'NO') break;
+    items.push({
+      title,
+      destination: destinations[i] || '/',
+      image: images[i] || undefined,
+      isImageOnly: title === 'Image Only',
+    });
+  }
+  return items;
+}
+
 export default async function Home() {
   // Fetch all data server-side (baked into static HTML)
   const siteConfig = await getSiteConfigFromGoogleSheets() || FALLBACK_CONFIG;
   const announcements = await getAnnouncements();
+  const ctaItems = parseCTAItems(siteConfig);
 
   return (
     <>
@@ -56,7 +81,10 @@ export default async function Home() {
           </div>
         </div>
 
-        {/* Row 2: Announcements - Full Width */}
+        {/* CTA Section (between banners and announcements) */}
+        <HomeCTASection items={ctaItems} />
+
+        {/* Announcements - Full Width */}
         <div className="w-full">
           <Announcements announcements={announcements} />
         </div>
