@@ -4,6 +4,9 @@ import { unstable_cache } from 'next/cache';
 
 // Google Sheet ID for Site Config
 const SITE_CONFIG_SHEET_ID = '1BpNNLm9NfZdg5QgYalzKjxXeKQ-Lg8ng0GG5pwnhtPI';
+// Tab GIDs: PROD tab = 0 (original), STAGE tab = 483518827
+const SITE_CONFIG_GID_PROD = '0';
+const SITE_CONFIG_GID_STAGE = '483518827';
 
 export interface SiteConfigData {
   tournamentYear: string;
@@ -147,8 +150,10 @@ export interface SiteConfigData {
  */
 async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData | null> {
   try {
-    // Use Google Sheets public CSV export
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${SITE_CONFIG_SHEET_ID}/export?format=csv&gid=0`;
+    // Use Google Sheets public CSV export — select tab based on environment
+    const isProduction = process.env.VERCEL_ENV === 'production';
+    const gid = isProduction ? SITE_CONFIG_GID_PROD : SITE_CONFIG_GID_STAGE;
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${SITE_CONFIG_SHEET_ID}/export?format=csv&gid=${gid}`;
     
     // Add timeout to prevent hanging (10 seconds)
     const controller = new AbortController();
