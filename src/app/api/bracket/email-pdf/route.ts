@@ -282,10 +282,11 @@ export async function generateBracketPDF(
     page.setDefaultNavigationTimeout(90000);
     page.setDefaultTimeout(90000);
     
-    // Set viewport to A4 landscape dimensions (297mm x 210mm = 1123px x 794px at 96 DPI)
+    // Set viewport to A4 landscape printable area (297mm - 20mm margins = 277mm ≈ 1047px at 96 DPI)
+    // This ensures the HTML layout fits within the actual printable area after PDF margins are applied
     await page.setViewport({
-      width: 1123,
-      height: 794,
+      width: 1047,
+      height: 718,
       deviceScaleFactor: 1,
     });
 
@@ -818,21 +819,21 @@ async function generatePrintPageHTML(
           <!-- Top Row - Top Left and Top Right Regions -->
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <!-- Top Left Region -->
-            <div style="padding: 3px; display: flex; flex-direction: column;">
+            <div style="padding: 3px; display: flex; flex-direction: column; overflow: hidden; min-width: 0;">
               <div style="text-align: left; padding: 2px 15px; font-size: 14px; font-weight: bold; color: #374151; margin-bottom: 2px;">
                 ${topLeftRegionName}
               </div>
-              <div style="display: flex; gap: 0px;">
+              <div style="display: flex; gap: 0px; overflow: hidden;">
                 ${renderRegionColumns('Top Left', topLeftIndex, updatedBracket, picks, tournamentData)}
               </div>
             </div>
             
             <!-- Top Right Region -->
-            <div style="padding: 3px; display: flex; flex-direction: column;">
+            <div style="padding: 3px; display: flex; flex-direction: column; overflow: hidden; min-width: 0;">
               <div style="text-align: right; padding: 2px 15px; font-size: 14px; font-weight: bold; color: #374151; margin-bottom: 2px;">
                 ${topRightRegionName}
               </div>
-              <div style="display: flex; gap: 0px;">
+              <div style="display: flex; gap: 0px; overflow: hidden;">
                 ${renderRegionColumns('Top Right', topRightIndex, updatedBracket, picks, tournamentData)}
               </div>
             </div>
@@ -854,21 +855,21 @@ async function generatePrintPageHTML(
           <!-- Bottom Row - Bottom Left and Bottom Right Regions -->
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <!-- Bottom Left Region -->
-            <div style="padding: 3px; display: flex; flex-direction: column;">
+            <div style="padding: 3px; display: flex; flex-direction: column; overflow: hidden; min-width: 0;">
               <div style="text-align: left; padding: 2px 15px; font-size: 14px; font-weight: bold; color: #374151; margin-bottom: 2px;">
                 ${bottomLeftRegionName}
               </div>
-              <div style="display: flex; gap: 0px;">
+              <div style="display: flex; gap: 0px; overflow: hidden;">
                 ${renderRegionColumns('Bottom Left', bottomLeftIndex, updatedBracket, picks, tournamentData)}
               </div>
             </div>
             
             <!-- Bottom Right Region -->
-            <div style="padding: 3px; display: flex; flex-direction: column;">
+            <div style="padding: 3px; display: flex; flex-direction: column; overflow: hidden; min-width: 0;">
               <div style="text-align: right; padding: 2px 15px; font-size: 14px; font-weight: bold; color: #374151; margin-bottom: 2px;">
                 ${bottomRightRegionName}
               </div>
-              <div style="display: flex; gap: 0px;">
+              <div style="display: flex; gap: 0px; overflow: hidden;">
                 ${renderRegionColumns('Bottom Right', bottomRightIndex, updatedBracket, picks, tournamentData)}
               </div>
             </div>
