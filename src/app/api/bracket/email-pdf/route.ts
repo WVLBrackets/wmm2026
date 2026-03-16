@@ -426,10 +426,12 @@ function renderTeamCell(
       padding: 2px 4px;
       font-size: ${fontSize};
       background-color: #ffffff;
+      min-width: 0;
+      overflow: hidden;
     ">
       ${logoHtml}
-      <span style="font-weight: bold; margin-right: 2px;">#${team.seed}</span>
-      <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+      <span style="font-weight: bold; margin-right: 2px; flex-shrink: 0;">#${team.seed}</span>
+      <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;">
         ${team.name}
       </span>
     </div>
@@ -486,10 +488,12 @@ function renderVerticalTeamCell(
       padding: 2px 4px;
       font-size: ${fontSize};
       background-color: #ffffff;
+      min-width: 0;
+      overflow: hidden;
     ">
-      <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 2px;">
-        <span style="font-weight: bold; margin-right: 2px;">#${team.seed}</span>
-        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+      <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 2px; max-width: 100%; min-width: 0; overflow: hidden;">
+        <span style="font-weight: bold; margin-right: 2px; flex-shrink: 0;">#${team.seed}</span>
+        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;">
           ${team.name}
         </span>
       </div>
@@ -519,7 +523,7 @@ function renderRegionColumns(
     if (round === 'Round of 64') {
       const region = tournamentData.regions[regionIndex];
       return `
-        <div style="min-width: 90px; flex: 1 1 0; display: flex; flex-direction: column;">
+        <div style="min-width: 90px; flex: 1 1 0; display: flex; flex-direction: column; overflow: hidden;">
           <div style="display: flex; flex-direction: column; gap: 0px; flex: 1;">
             ${region.teams.map((team) => {
               return renderTeamCell(team, '6%', '8px', false, 0);
@@ -529,7 +533,7 @@ function renderRegionColumns(
       `;
     } else if (round === 'Round of 32') {
       return `
-        <div style="min-width: 90px; flex: 1 1 0; display: flex; flex-direction: column;">
+        <div style="min-width: 90px; flex: 1 1 0; display: flex; flex-direction: column; overflow: hidden;">
           <div style="display: flex; flex-direction: column; gap: 0px; flex: 1;">
             ${Array.from({ length: 8 }, (_, gameIndex) => {
               const roundOf64Game = regionGames.find(g => g.round === 'Round of 64' && g.gameNumber === gameIndex + 1);
@@ -541,7 +545,7 @@ function renderRegionColumns(
       `;
     } else if (round === 'Sweet 16') {
       return `
-        <div style="min-width: 90px; flex: 1 1 0; display: flex; flex-direction: column;">
+        <div style="min-width: 90px; flex: 1 1 0; display: flex; flex-direction: column; overflow: hidden;">
           <div style="display: flex; flex-direction: column; gap: 0px; flex: 1;">
             <div style="height: 6%;"></div>
             ${Array.from({ length: 4 }, (_, gameIndex) => {
@@ -560,7 +564,7 @@ function renderRegionColumns(
       `;
     } else if (round === 'Elite 8') {
       return `
-        <div style="min-width: 90px; flex: 1 1 0; display: flex; flex-direction: column;">
+        <div style="min-width: 90px; flex: 1 1 0; display: flex; flex-direction: column; overflow: hidden;">
           <div style="display: flex; flex-direction: column; gap: 0px; flex: 1;">
             <div style="height: 12%;"></div>
             ${Array.from({ length: 2 }, (_, gameIndex) => {
@@ -579,7 +583,7 @@ function renderRegionColumns(
       `;
     } else if (round === 'Final Four') {
       return `
-        <div style="min-width: 90px; flex: 1 1 0; display: flex; flex-direction: column;">
+        <div style="min-width: 90px; flex: 1 1 0; display: flex; flex-direction: column; overflow: hidden;">
           <div style="display: flex; flex-direction: column; gap: 0px; flex: 1;">
             <div style="height: 36%;"></div>
             ${(() => {
