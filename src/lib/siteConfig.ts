@@ -153,7 +153,8 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
     // Use Google Sheets public CSV export — select tab based on environment
     const isProduction = process.env.VERCEL_ENV === 'production';
     const gid = isProduction ? SITE_CONFIG_GID_PROD : SITE_CONFIG_GID_STAGE;
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${SITE_CONFIG_SHEET_ID}/export?format=csv&gid=${gid}`;
+    // Cache-busting parameter prevents Google's CDN from serving stale CSV exports
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${SITE_CONFIG_SHEET_ID}/export?format=csv&gid=${gid}&_t=${Date.now()}`;
     
     // Add timeout to prevent hanging (10 seconds)
     const controller = new AbortController();
@@ -163,7 +164,7 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
     try {
       response = await fetch(csvUrl, { 
         signal: controller.signal,
-        // Add headers to help with reliability
+        cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache',
         },
