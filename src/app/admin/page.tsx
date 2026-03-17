@@ -41,6 +41,24 @@ interface Bracket {
   picks: Record<string, string>;
 }
 
+interface ConfigValidationIssue {
+  severity: 'error' | 'warning' | 'info';
+  field: string;
+  message: string;
+}
+
+interface ConfigValidationResult {
+  summary: {
+    errors: number;
+    warnings: number;
+    infos: number;
+    activeCtaCount: number;
+    checkedAt: string;
+    isValid: boolean;
+  };
+  issues: ConfigValidationIssue[];
+}
+
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -55,6 +73,10 @@ export default function AdminPage() {
   // Revalidation state
   const [revalidating, setRevalidating] = useState<string | null>(null);
   const [revalidateMessage, setRevalidateMessage] = useState<string | null>(null);
+  const [isValidatingConfig, setIsValidatingConfig] = useState(false);
+  const [configValidationError, setConfigValidationError] = useState<string | null>(null);
+  const [configValidationResult, setConfigValidationResult] = useState<ConfigValidationResult | null>(null);
+  const [showValidationDetails, setShowValidationDetails] = useState(false);
 
   // Tab state
   const [activeTab, setActiveTab] = useState<'brackets' | 'users' | 'data' | 'logs' | 'usage'>('users');
@@ -125,6 +147,33 @@ export default function AdminPage() {
       setRevalidating(null);
       // Clear message after 3 seconds
       setTimeout(() => setRevalidateMessage(null), 3000);
+    }
+  };
+
+  /**
+   * Run server-side validation against the latest Google Sheets config values.
+   */
+  const handleValidateConfig = async () => {
+    setIsValidatingConfig(true);
+    setConfigValidationError(null);
+
+    try {
+      const response = await fetch('/api/admin/validate-config', { cache: 'no-store' });
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        setConfigValidationResult(null);
+        setConfigValidationError(result.error || 'Failed to validate config');
+        return;
+      }
+
+      setConfigValidationResult(result.data);
+      setShowValidationDetails(true);
+    } catch {
+      setConfigValidationResult(null);
+      setConfigValidationError('Failed to validate config');
+    } finally {
+      setIsValidatingConfig(false);
     }
   };
 
@@ -273,6 +322,24 @@ export default function AdminPage() {
                 )}
                 <span>Hall of Fame</span>
               </button>
+
+              <button
+                onClick={handleValidateConfig}
+                disabled={isValidatingConfig || revalidating !== null}
+                className={`flex items-center space-x-1 px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                  isValidatingConfig
+                    ? 'bg-gray-300 text-gray-500 cursor-wait'
+                    : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+                }`}
+                title="Validate config values, CTA setup, and image references"
+              >
+                {isValidatingConfig ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Info className="h-4 w-4" />
+                )}
+                <span>Validate Config</span>
+              </button>
               
               {/* Revalidate message */}
               {revalidateMessage && (
@@ -301,6 +368,66 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
+
+        {(configValidationResult || configValidationError) && (
+          <div className="bg-white rounded-lg shadow-lg p-4 mb-6">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+              <div>
+                {configValidationError ? (
+                  <p className="text-red-600 text-sm font-medium">
+                    Config validation failed: {configValidationError}
+                  </p>
+                ) : (
+                  <p className="text-sm font-medium text-gray-900">
+                    Config validation complete:
+                    <span className={`ml-2 ${configValidationResult?.summary.isValid ? 'text-green-600' : 'text-red-600'}`}>
+                      {configValidationResult?.summary.isValid ? 'No blocking errors' : 'Blocking errors found'}
+                    </span>
+                  </p>
+                )}
+                {configValidationResult && (
+                  <p className="text-xs text-gray-600 mt-1">
+                    Errors: {configValidationResult.summary.errors} | Warnings: {configValidationResult.summary.warnings} | Info: {configValidationResult.summary.infos} | Active CTAs: {configValidationResult.summary.activeCtaCount}
+                  </p>
+                )}
+              </div>
+
+              {configValidationResult && (
+                <button
+                  onClick={() => setShowValidationDetails((prev) => !prev)}
+                  className="text-sm px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
+                >
+                  {showValidationDetails ? 'Hide Details' : 'Show Details'}
+                </button>
+              )}
+            </div>
+
+            {configValidationResult && showValidationDetails && (
+              <div className="mt-4 border-t border-gray-200 pt-3 space-y-2 max-h-80 overflow-auto">
+                {configValidationResult.issues.length === 0 ? (
+                  <p className="text-sm text-green-700">No issues found.</p>
+                ) : (
+                  configValidationResult.issues.map((issue, index) => (
+                    <div
+                      key={`${issue.field}-${index}`}
+                      className={`text-sm px-3 py-2 rounded ${
+                        issue.severity === 'error'
+                          ? 'bg-red-50 text-red-700'
+                          : issue.severity === 'warning'
+                            ? 'bg-yellow-50 text-yellow-800'
+                            : 'bg-blue-50 text-blue-700'
+                      }`}
+                    >
+                      <span className="font-semibold uppercase mr-2">{issue.severity}</span>
+                      <span className="font-mono text-xs mr-2">{issue.field}</span>
+                      <span>{issue.message}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Navigation Tabs */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
