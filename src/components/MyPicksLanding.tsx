@@ -337,7 +337,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
               <div className="hidden md:block">
                 <div className="flex items-start justify-between">
                   {/* Site Logo - Far Left */}
-                  {(siteConfig?.bracketHomeLogo || siteConfig?.homePageLogo) && (
+                  {siteConfig?.wmmLogo && (
                     <div className="flex-shrink-0 mr-4">
                       <div className="h-32 w-auto flex items-center justify-center">
                         {logoError ? (
@@ -346,7 +346,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                           </div>
                         ) : (
                           <Image
-                            src={`/images/${siteConfig.bracketHomeLogo || siteConfig.homePageLogo}`}
+                            src={`/images/${siteConfig.wmmLogo}`}
                             alt="Site Logo"
                             width={200}
                             height={100}

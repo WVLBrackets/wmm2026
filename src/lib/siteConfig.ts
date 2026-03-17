@@ -53,10 +53,8 @@ export interface SiteConfigData {
   finalMessageDuplicateName?: string;
   finalMessageReadyToSubmit?: string;
   finalFourHeaderMessage?: string;
-  // Home page logo
-  homePageLogo?: string;
-  // Bracket home page logo (separate from home page)
-  bracketHomeLogo?: string;
+  // WMM logo used on brackets page, print bracket, and emailed PDF
+  wmmLogo?: string;
   // Email PDF template content
   emailPdfSubject?: string;
   emailPdfHeading?: string;
@@ -142,6 +140,12 @@ export interface SiteConfigData {
   cta4Title?: string;
   cta4Destination?: string;
   cta4Image?: string;
+  cta5Title?: string;
+  cta5Destination?: string;
+  cta5Image?: string;
+  cta6Title?: string;
+  cta6Destination?: string;
+  cta6Image?: string;
 }
 
 /**
@@ -366,11 +370,8 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
           case 'final_four_header_message':
             config.finalFourHeaderMessage = value;
             break;
-          case 'home_page_logo':
-            config.homePageLogo = value;
-            break;
-          case 'bracket_home_logo':
-            config.bracketHomeLogo = value;
+          case 'wmm_logo':
+            config.wmmLogo = value;
             break;
           case 'email_pdf_subject':
             config.emailPdfSubject = value;
@@ -560,6 +561,24 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
             break;
           case 'cta4_image':
             config.cta4Image = value;
+            break;
+          case 'cta5_title':
+            config.cta5Title = value;
+            break;
+          case 'cta5_destination':
+            config.cta5Destination = value;
+            break;
+          case 'cta5_image':
+            config.cta5Image = value;
+            break;
+          case 'cta6_title':
+            config.cta6Title = value;
+            break;
+          case 'cta6_destination':
+            config.cta6Destination = value;
+            break;
+          case 'cta6_image':
+            config.cta6Image = value;
             break;
           default:
             // Unknown parameter - log for debugging (only in development)

@@ -754,22 +754,24 @@ export default function PrintBracketPage() {
       </div>
       
       {/* WMM Logo - Absolutely positioned, overlaying content */}
-      <div style={{
-        position: 'absolute',
-        top: '60px', // Position just below header (header is ~40px + padding)
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 10,
-        pointerEvents: 'none' // Allow clicks to pass through
-      }}>
-        <Image
-          src="/images/WMM Logo - Primary.png"
-          alt="WMM Logo"
-          width={120}
-          height={60}
-          style={{ objectFit: 'contain' }}
-        />
-      </div>
+      {siteConfig?.wmmLogo && (
+        <div style={{
+          position: 'absolute',
+          top: '60px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 10,
+          pointerEvents: 'none',
+        }}>
+          <Image
+            src={`/images/${siteConfig.wmmLogo}`}
+            alt="WMM Logo"
+            width={120}
+            height={60}
+            style={{ objectFit: 'contain' }}
+          />
+        </div>
+      )}
       
       {/* Print/Close Buttons */}
       <div style={{ 
