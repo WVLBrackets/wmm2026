@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/lib/adminAuth';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 
 /**
  * POST /api/admin/revalidate - Trigger on-demand revalidation for static pages
@@ -42,7 +42,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Trigger revalidation
+    // Flush the cached site config so the page rebuilds with fresh Google Sheets data
+    revalidateTag('site-config');
+
+    // Trigger page revalidation
     revalidatePath(path);
 
     // Map path to friendly name
