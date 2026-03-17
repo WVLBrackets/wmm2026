@@ -103,7 +103,7 @@ export function CTACard({ item }: { item: CTAItem }) {
       <CTALinkWrapper destination={item.destination}>
         <div className={`h-full bg-white rounded-lg shadow-lg p-3 border-b-4 border-orange-400 transition-all duration-200 ${hoverClasses}`}>
           <div className="flex flex-col h-full overflow-hidden rounded">
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 flex items-center justify-center rounded" style={{ backgroundColor: '#022749' }}>
               <Image
                 src={resolveImageSrc(item.image!)}
                 alt={item.isImageOnly ? 'Call to action' : item.title}
