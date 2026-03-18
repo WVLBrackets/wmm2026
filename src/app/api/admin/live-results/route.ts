@@ -3,7 +3,51 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/lib/adminAuth';
 import { getUserByEmail, getUserById } from '@/lib/repositories/userRepository';
-import { getOrCreateKeyBracket, acquireKeyBracketLock } from '@/lib/repositories/bracketRepository';
+import { getOrCreateKeyBracket, acquireKeyBracketLock, getKeyBracketByYear } from '@/lib/repositories/bracketRepository';
+
+/**
+ * GET /api/admin/live-results?year=YYYY
+ * Fetch existing KEY picks for preview (no lock acquisition).
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email || !(await isAdmin(session.user.email))) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized - Admin access required' },
+        { status: 403 }
+      );
+    }
+
+    const yearParam = request.nextUrl.searchParams.get('year');
+    const parsedYear = Number(yearParam);
+    if (!Number.isInteger(parsedYear) || parsedYear < 2000 || parsedYear > 9999) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid year provided' },
+        { status: 400 }
+      );
+    }
+
+    const keyBracket = await getKeyBracketByYear(parsedYear);
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        year: parsedYear,
+        exists: Boolean(keyBracket),
+        picks: keyBracket?.picks ?? {},
+        bracketId: keyBracket?.id ?? null,
+        updatedAt: keyBracket?.updatedAt?.toISOString?.() ?? null,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching Live Results preview bracket:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to load Live Results preview bracket' },
+      { status: 500 }
+    );
+  }
+}
 
 /**
  * POST /api/admin/live-results

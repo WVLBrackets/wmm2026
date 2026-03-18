@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { KeyRound, Play, Loader2 } from 'lucide-react';
+import { KeyRound, Play, Loader2, Eye } from 'lucide-react';
+import KeyBracketPreviewModal from '@/components/admin/KeyBracketPreviewModal';
 
 interface BracketSummary {
   year?: number;
@@ -16,6 +17,7 @@ export default function LiveResultsTab({ brackets }: LiveResultsTabProps) {
   const router = useRouter();
   const [selectedYear, setSelectedYear] = useState<string>('');
   const [opening, setOpening] = useState(false);
+  const [showBracketPreview, setShowBracketPreview] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tournamentYear, setTournamentYear] = useState<string>('');
 
@@ -121,18 +123,33 @@ export default function LiveResultsTab({ brackets }: LiveResultsTabProps) {
           </select>
         </div>
 
-        <button
-          onClick={handleOpenLiveResults}
-          disabled={opening || !selectedYear}
-          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            opening || !selectedYear
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              : 'bg-blue-600 text-white hover:bg-blue-700'
-          }`}
-        >
-          {opening ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-          {opening ? 'Opening...' : 'Open Key'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleOpenLiveResults}
+            disabled={opening || !selectedYear}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              opening || !selectedYear
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+          >
+            {opening ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+            {opening ? 'Opening...' : 'Open Key'}
+          </button>
+
+          <button
+            onClick={() => setShowBracketPreview(true)}
+            disabled={!selectedYear}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              !selectedYear
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700'
+            }`}
+          >
+            <Eye className="h-4 w-4" />
+            Show Bracket
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -140,6 +157,12 @@ export default function LiveResultsTab({ brackets }: LiveResultsTabProps) {
           {error}
         </div>
       )}
+
+      <KeyBracketPreviewModal
+        isOpen={showBracketPreview}
+        year={selectedYear}
+        onClose={() => setShowBracketPreview(false)}
+      />
     </div>
   );
 }
