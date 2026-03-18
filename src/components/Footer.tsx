@@ -5,7 +5,11 @@ import { getSiteConfig } from '@/config/site';
 import { Mail } from 'lucide-react';
 import { usageLogger } from '@/lib/usageLogger';
 
-export default function Footer() {
+interface FooterProps {
+  buildStamp?: string;
+}
+
+export default function Footer({ buildStamp }: FooterProps) {
   const [footerText, setFooterText] = useState<string>('© 2001 Warren\'s March Madness | All rights reserved');
   const [contactEmail, setContactEmail] = useState<string>('warren@example.com');
 
@@ -42,6 +46,11 @@ export default function Footer() {
             </a>
           </div>
         </div>
+        {buildStamp && (
+          <div className="mt-3 text-center md:text-right">
+            <span className="text-[11px] text-gray-500 tracking-wide">{buildStamp}</span>
+          </div>
+        )}
       </div>
     </footer>
   );

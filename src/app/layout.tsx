@@ -33,6 +33,12 @@ export default function RootLayout({
   const isStagingEnvironment = process.env.VERCEL_ENV !== 'production';
   const stagingBannerHeight = isStagingEnvironment ? '28px' : '0px';
   const bodyStyle = { '--staging-banner-height': stagingBannerHeight } as CSSProperties;
+  const envLabel = process.env.VERCEL_ENV === 'production' ? 'PROD' : 'STAGE';
+  const shortSha = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || 'local';
+  const deployId = process.env.VERCEL_DEPLOYMENT_ID?.slice(0, 8);
+  const buildStamp = deployId
+    ? `${envLabel} • ${shortSha} • ${deployId}`
+    : `${envLabel} • ${shortSha}`;
 
   return (
     <html lang="en">
@@ -61,7 +67,7 @@ export default function RootLayout({
               <main>
                 {children}
               </main>
-              <Footer />
+              <Footer buildStamp={buildStamp} />
             </BracketModeProvider>
           </SessionProvider>
         </ErrorBoundary>
