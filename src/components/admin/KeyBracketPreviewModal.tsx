@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
-import { Loader2, X } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { generate64TeamBracket, updateBracketWithPicks } from '@/lib/bracketGenerator';
 import { loadTournamentData } from '@/lib/tournamentLoader';
 import { TournamentBracket, TournamentData, TournamentGame, TournamentTeam } from '@/types/tournament';
@@ -106,11 +106,9 @@ function getRoundSpacing(roundLevel: number): { gapPx: number; offsetPx: number 
  * Render one vertical round column with bracket-aligned spacing.
  */
 function RoundColumn({
-  title,
   roundLevel,
   slots,
 }: {
-  title: string;
   roundLevel: number;
   slots: RoundSlot[];
 }) {
@@ -118,7 +116,6 @@ function RoundColumn({
 
   return (
     <div className="min-w-0">
-      <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">{title}</p>
       <div style={{ paddingTop: `${offsetPx}px`, paddingBottom: `${offsetPx}px` }}>
         {slots.map((slot, index) => (
           <div key={slot.id} style={{ marginBottom: index < slots.length - 1 ? `${gapPx}px` : 0 }}>
@@ -134,12 +131,10 @@ function RoundColumn({
  * Render one region as round columns with alignment-accurate slot spacing.
  */
 function RegionBoard({
-  regionName,
   regionGames,
   picks,
   reverse,
 }: {
-  regionName: string;
   regionGames: TournamentGame[];
   picks: Record<string, string>;
   reverse?: boolean;
@@ -149,28 +144,24 @@ function RegionBoard({
   const sweet16 = regionGames.filter((game) => game.round === 'Sweet 16');
   const elite8 = regionGames.filter((game) => game.round === 'Elite 8');
 
-  const columns: Array<{ id: string; title: string; roundLevel: number; slots: RoundSlot[] }> = [
+  const columns: Array<{ id: string; roundLevel: number; slots: RoundSlot[] }> = [
     {
       id: 'r64',
-      title: 'Round of 64',
       roundLevel: 0,
       slots: buildRoundSlots(round64, picks),
     },
     {
       id: 'r32',
-      title: 'Round of 32',
       roundLevel: 1,
       slots: buildRoundSlots(round32, picks),
     },
     {
       id: 's16',
-      title: 'Sweet 16',
       roundLevel: 2,
       slots: buildRoundSlots(sweet16, picks),
     },
     {
       id: 'e8',
-      title: 'Elite 8',
       roundLevel: 3,
       slots: buildRoundSlots(elite8, picks),
     },
@@ -180,10 +171,9 @@ function RegionBoard({
 
   return (
     <div className="rounded-lg border border-gray-200 p-3 bg-gray-50 min-w-0">
-      <h4 className={`text-sm font-semibold text-gray-900 mb-3 ${reverse ? 'text-right' : 'text-left'}`}>{regionName}</h4>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {orderedColumns.map((column) => (
-          <RoundColumn key={column.id} title={column.title} roundLevel={column.roundLevel} slots={column.slots} />
+          <RoundColumn key={column.id} roundLevel={column.roundLevel} slots={column.slots} />
         ))}
       </div>
     </div>
@@ -266,10 +256,6 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
     };
   }, [tournamentData, updatedBracket]);
 
-  const semifinalWinner1 = updatedBracket ? getPickedWinner(updatedBracket.finalFour[0], picks) : null;
-  const semifinalWinner2 = updatedBracket ? getPickedWinner(updatedBracket.finalFour[1], picks) : null;
-  const champion = updatedBracket ? getPickedWinner(updatedBracket.championship, picks) : null;
-
   if (!isOpen) return null;
 
   return (
@@ -278,21 +264,7 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
         className="bg-white rounded-xl shadow-2xl w-[96vw] max-w-[1500px] max-h-[92vh] overflow-hidden"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">KEY Bracket Preview</h3>
-            <p className="text-sm text-gray-600">Tournament {year} - full 64-team bracket with current winners</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="h-8 w-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100 flex items-center justify-center"
-            aria-label="Close bracket preview"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="p-4 overflow-auto max-h-[calc(92vh-72px)] bg-white">
+        <div className="p-4 overflow-auto max-h-[92vh] bg-white">
           {loading && (
             <div className="h-[420px] flex items-center justify-center text-gray-600">
               <Loader2 className="h-5 w-5 mr-2 animate-spin" />
@@ -309,14 +281,12 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 {regionsByPosition.topLeft && (
                   <RegionBoard
-                    regionName={regionsByPosition.topLeft.name}
                     regionGames={regionsByPosition.bracketRegions[regionsByPosition.topLeft.position] || []}
                     picks={picks}
                   />
                 )}
                 {regionsByPosition.topRight && (
                   <RegionBoard
-                    regionName={regionsByPosition.topRight.name}
                     regionGames={regionsByPosition.bracketRegions[regionsByPosition.topRight.position] || []}
                     picks={picks}
                     reverse
@@ -324,55 +294,15 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
                 )}
               </div>
 
-              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-                <h4 className="text-sm font-semibold text-blue-900 mb-3">Final Four and Championship</h4>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-                  <div className="bg-white border border-blue-100 rounded-lg p-3">
-                    <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-2">Semifinal 1</p>
-                    <TeamRow team={updatedBracket?.finalFour[0]?.team1} isWinner={updatedBracket?.finalFour[0]?.team1?.id === picks['final-four-1']} />
-                    <div className="h-1" />
-                    <TeamRow team={updatedBracket?.finalFour[0]?.team2} isWinner={updatedBracket?.finalFour[0]?.team2?.id === picks['final-four-1']} />
-                    <div className="mt-2 pt-2 border-t border-gray-100">
-                      <p className="text-[11px] text-gray-500 mb-1">Winner</p>
-                      <TeamRow team={semifinalWinner1 ?? undefined} isWinner />
-                    </div>
-                  </div>
-
-                  <div className="bg-white border border-blue-100 rounded-lg p-3">
-                    <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-2">Semifinal 2</p>
-                    <TeamRow team={updatedBracket?.finalFour[1]?.team1} isWinner={updatedBracket?.finalFour[1]?.team1?.id === picks['final-four-2']} />
-                    <div className="h-1" />
-                    <TeamRow team={updatedBracket?.finalFour[1]?.team2} isWinner={updatedBracket?.finalFour[1]?.team2?.id === picks['final-four-2']} />
-                    <div className="mt-2 pt-2 border-t border-gray-100">
-                      <p className="text-[11px] text-gray-500 mb-1">Winner</p>
-                      <TeamRow team={semifinalWinner2 ?? undefined} isWinner />
-                    </div>
-                  </div>
-
-                  <div className="bg-white border border-blue-100 rounded-lg p-3">
-                    <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-2">Champion</p>
-                    <TeamRow team={updatedBracket?.championship?.team1} isWinner={updatedBracket?.championship?.team1?.id === picks.championship} />
-                    <div className="h-1" />
-                    <TeamRow team={updatedBracket?.championship?.team2} isWinner={updatedBracket?.championship?.team2?.id === picks.championship} />
-                    <div className="mt-2 pt-2 border-t border-gray-100">
-                      <p className="text-[11px] text-gray-500 mb-1">Selected Champion</p>
-                      <TeamRow team={champion ?? undefined} isWinner />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 {regionsByPosition.bottomLeft && (
                   <RegionBoard
-                    regionName={regionsByPosition.bottomLeft.name}
                     regionGames={regionsByPosition.bracketRegions[regionsByPosition.bottomLeft.position] || []}
                     picks={picks}
                   />
                 )}
                 {regionsByPosition.bottomRight && (
                   <RegionBoard
-                    regionName={regionsByPosition.bottomRight.name}
                     regionGames={regionsByPosition.bracketRegions[regionsByPosition.bottomRight.position] || []}
                     picks={picks}
                     reverse
