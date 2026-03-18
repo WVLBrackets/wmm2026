@@ -30,6 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const isStagingEnvironment = process.env.VERCEL_ENV !== 'production';
+  const stagingBannerHeight = isStagingEnvironment ? '28px' : '0px';
 
   return (
     <html lang="en">
@@ -40,12 +41,17 @@ export default function RootLayout({
         <link rel="shortcut icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/basketball-favicon.png" />
       </head>
-      <body className="font-sans antialiased" suppressHydrationWarning={true}>
+      <body
+        className="font-sans antialiased"
+        suppressHydrationWarning={true}
+        style={{ ['--staging-banner-height' as '--staging-banner-height']: stagingBannerHeight }}
+      >
         {isStagingEnvironment && (
-          <div className="bg-amber-500 text-white text-xs sm:text-sm font-semibold text-center py-1.5 tracking-wide">
+          <div className="fixed top-0 left-0 right-0 z-[60] bg-amber-500 text-white text-xs sm:text-sm font-semibold text-center h-7 leading-7 tracking-wide">
             STAGING
           </div>
         )}
+        {isStagingEnvironment && <div className="h-7" aria-hidden="true" />}
         <ErrorBoundary>
           <SessionProvider>
             <BracketModeProvider>

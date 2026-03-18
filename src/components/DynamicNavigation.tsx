@@ -90,7 +90,10 @@ export default function DynamicNavigation({ hideInBracketMode = false }: Dynamic
   if (!siteConfig) {
     // Show loading state or fallback
     return (
-      <nav className="sticky top-0 z-50 bg-white shadow-lg border-b">
+      <nav
+        className="sticky z-50 bg-white shadow-lg border-b"
+        style={{ top: 'var(--staging-banner-height, 0px)' }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center">
@@ -124,7 +127,10 @@ export default function DynamicNavigation({ hideInBracketMode = false }: Dynamic
   }
 
   return (
-    <nav className="sticky top-0 z-50 bg-white shadow-lg border-b">
+    <nav
+      className="sticky z-50 bg-white shadow-lg border-b"
+      style={{ top: 'var(--staging-banner-height, 0px)' }}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           {/* Logo/Brand */}
