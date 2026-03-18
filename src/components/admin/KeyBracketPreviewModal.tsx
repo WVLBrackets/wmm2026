@@ -27,29 +27,186 @@ interface RoundSlot {
   isWinner: boolean;
 }
 
-interface LayoutSettings {
+type RoundKey = 'r64' | 'r32' | 's16' | 'e8';
+
+interface RoundLayoutSettings {
   slotHeightPx: number;
-  baseGapPx: number;
+  matchupGapPx: number;
+  gameGapPx: number;
   columnWidthPx: number;
   overlapPx: number;
 }
 
+interface LayoutSettings {
+  rounds: Record<RoundKey, RoundLayoutSettings>;
+}
+
 const DEFAULT_LAYOUT_SETTINGS: LayoutSettings = {
-  slotHeightPx: 28,
-  baseGapPx: 4,
-  columnWidthPx: 120,
-  overlapPx: 60,
+  rounds: {
+    r64: {
+      slotHeightPx: 28,
+      matchupGapPx: 0,
+      gameGapPx: 4,
+      columnWidthPx: 120,
+      overlapPx: 0,
+    },
+    r32: {
+      slotHeightPx: 28,
+      matchupGapPx: 36,
+      gameGapPx: 36,
+      columnWidthPx: 120,
+      overlapPx: 0,
+    },
+    s16: {
+      slotHeightPx: 28,
+      matchupGapPx: 100,
+      gameGapPx: 100,
+      columnWidthPx: 120,
+      overlapPx: 60,
+    },
+    e8: {
+      slotHeightPx: 28,
+      matchupGapPx: 228,
+      gameGapPx: 228,
+      columnWidthPx: 120,
+      overlapPx: 60,
+    },
+  },
 };
 
 /**
- * Resolve the picked winner for a game from current picks.
+ * Build raw top offsets for each slot in a round.
  */
-function getPickedWinner(game: TournamentGame, picks: Record<string, string>): TournamentTeam | null {
-  const pickedTeamId = picks[game.id];
-  if (!pickedTeamId) return null;
-  if (game.team1?.id === pickedTeamId) return game.team1;
-  if (game.team2?.id === pickedTeamId) return game.team2;
-  return null;
+function buildRoundTopOffsets(slotCount: number, settings: RoundLayoutSettings): number[] {
+  const offsets: number[] = [];
+  let cursor = 0;
+
+  for (let index = 0; index < slotCount; index += 1) {
+    offsets.push(cursor);
+
+    if (index === slotCount - 1) continue;
+    const isTopTeamInGame = index % 2 === 0;
+    cursor += settings.slotHeightPx + (isTopTeamInGame ? settings.matchupGapPx : settings.gameGapPx);
+  }
+
+  return offsets;
+}
+
+/**
+ * Derive slot center points from top offsets and slot height.
+ */
+function getSlotCenters(topOffsets: number[], slotHeightPx: number): number[] {
+  return topOffsets.map((top) => top + slotHeightPx / 2);
+}
+
+/**
+ * Derive game centers by averaging each pair of slot centers.
+ */
+function getGameCenters(topOffsets: number[], slotHeightPx: number): number[] {
+  const centers = getSlotCenters(topOffsets, slotHeightPx);
+  const gameCenters: number[] = [];
+
+  for (let index = 0; index < centers.length; index += 2) {
+    const topCenter = centers[index];
+    const bottomCenter = centers[index + 1];
+    if (topCenter === undefined || bottomCenter === undefined) continue;
+    gameCenters.push((topCenter + bottomCenter) / 2);
+  }
+
+  return gameCenters;
+}
+
+/**
+ * Shift current round vertically toward previous-round game centers.
+ * Uses mean delta so user-controlled spacing can still diverge intentionally.
+ */
+function alignRoundToPrevious(
+  rawTopOffsets: number[],
+  currentSettings: RoundLayoutSettings,
+  previousTopOffsets: number[],
+  previousSettings: RoundLayoutSettings
+): number[] {
+  const previousGameCenters = getGameCenters(previousTopOffsets, previousSettings.slotHeightPx);
+  const currentSlotCenters = getSlotCenters(rawTopOffsets, currentSettings.slotHeightPx);
+  const comparableCount = Math.min(previousGameCenters.length, currentSlotCenters.length);
+
+  if (comparableCount === 0) {
+    return rawTopOffsets;
+  }
+
+  let deltaSum = 0;
+  for (let index = 0; index < comparableCount; index += 1) {
+    deltaSum += previousGameCenters[index] - currentSlotCenters[index];
+  }
+  const meanDelta = deltaSum / comparableCount;
+  return rawTopOffsets.map((top) => top + meanDelta);
+}
+
+interface RoundDefinition {
+  key: RoundKey;
+  slots: RoundSlot[];
+  settings: RoundLayoutSettings;
+}
+
+interface RoundGeometry {
+  topOffsets: number[];
+  settings: RoundLayoutSettings;
+  slots: RoundSlot[];
+}
+
+/**
+ * Compute vertically aligned geometry for all rounds in one region.
+ */
+function computeRoundGeometries(definitions: RoundDefinition[]): { byRound: Record<RoundKey, RoundGeometry>; columnHeight: number } {
+  const intermediate: Array<{ key: RoundKey; geometry: RoundGeometry }> = [];
+
+  definitions.forEach((definition, index) => {
+    const rawTopOffsets = buildRoundTopOffsets(definition.slots.length, definition.settings);
+    const topOffsets =
+      index === 0
+        ? rawTopOffsets
+        : alignRoundToPrevious(
+            rawTopOffsets,
+            definition.settings,
+            intermediate[index - 1].geometry.topOffsets,
+            intermediate[index - 1].geometry.settings
+          );
+
+    intermediate.push({
+      key: definition.key,
+      geometry: {
+        topOffsets,
+        settings: definition.settings,
+        slots: definition.slots,
+      },
+    });
+  });
+
+  let minTop = 0;
+  let maxBottom = 0;
+
+  intermediate.forEach(({ geometry }) => {
+    geometry.topOffsets.forEach((top) => {
+      if (top < minTop) minTop = top;
+      const bottom = top + geometry.settings.slotHeightPx;
+      if (bottom > maxBottom) maxBottom = bottom;
+    });
+  });
+
+  const globalShift = minTop < 0 ? -minTop : 0;
+
+  const byRound = {} as Record<RoundKey, RoundGeometry>;
+  intermediate.forEach(({ key, geometry }) => {
+    byRound[key] = {
+      ...geometry,
+      topOffsets: geometry.topOffsets.map((top) => top + globalShift),
+    };
+  });
+
+  return {
+    byRound,
+    columnHeight: maxBottom + globalShift,
+  };
 }
 
 /**
@@ -107,53 +264,56 @@ function buildRoundSlots(games: TournamentGame[], picks: Record<string, string>)
 }
 
 /**
- * Get vertical spacing values for each round level.
- * This keeps advancing slots centered between prior-round matchup teams.
- */
-function getRoundSpacing(roundLevel: number, slotHeightPx: number, baseGapPx: number): { gapPx: number; offsetPx: number } {
-  const multiplier = 2 ** roundLevel;
-  const gapPx = multiplier * (slotHeightPx + baseGapPx) - slotHeightPx;
-  const offsetPx = ((multiplier - 1) * (slotHeightPx + baseGapPx)) / 2;
-  return { gapPx, offsetPx };
-}
-
-/**
  * Render one vertical round column with bracket-aligned spacing.
  */
 function RoundColumn({
-  roundLevel,
   slots,
-  layout,
+  settings,
+  topOffsets,
+  columnHeight,
 }: {
-  roundLevel: number;
   slots: RoundSlot[];
-  layout: LayoutSettings;
+  settings: RoundLayoutSettings;
+  topOffsets: number[];
+  columnHeight: number;
 }) {
-  const { gapPx, offsetPx } = getRoundSpacing(roundLevel, layout.slotHeightPx, layout.baseGapPx);
-
   return (
-    <div className="min-w-0" style={{ width: `${layout.columnWidthPx}px` }}>
-      <div style={{ paddingTop: `${offsetPx}px`, paddingBottom: `${offsetPx}px` }}>
-        {slots.map((slot, index) => (
-          <div
-            key={slot.id}
-            style={{
-              marginBottom:
-                index < slots.length - 1
-                  ? roundLevel === 0
-                    ? index % 2 === 0
-                      ? 0
-                      : `${layout.baseGapPx}px`
-                    : `${gapPx}px`
-                  : 0,
-            }}
-          >
-            <TeamRow team={slot.team} isWinner={slot.isWinner} heightPx={layout.slotHeightPx} />
-          </div>
-        ))}
-      </div>
+    <div className="min-w-0 relative" style={{ width: `${settings.columnWidthPx}px`, height: `${columnHeight}px` }}>
+      {slots.map((slot, index) => (
+        <div key={slot.id} className="absolute left-0 right-0" style={{ top: `${topOffsets[index] ?? 0}px` }}>
+          <TeamRow team={slot.team} isWinner={slot.isWinner} heightPx={settings.slotHeightPx} />
+        </div>
+      ))}
     </div>
   );
+}
+
+function getRoundKeyFromLevel(level: number): RoundKey {
+  if (level === 0) return 'r64';
+  if (level === 1) return 'r32';
+  if (level === 2) return 's16';
+  return 'e8';
+}
+
+function getRoundLabel(roundKey: RoundKey): string {
+  if (roundKey === 'r64') return 'Round 1';
+  if (roundKey === 'r32') return 'Round 2';
+  if (roundKey === 's16') return 'Round 3';
+  return 'Round 4';
+}
+
+function withUpdatedRoundSetting(
+  previousLayout: LayoutSettings,
+  roundKey: RoundKey,
+  updater: (settings: RoundLayoutSettings) => RoundLayoutSettings
+): LayoutSettings {
+  return {
+    ...previousLayout,
+    rounds: {
+      ...previousLayout.rounds,
+      [roundKey]: updater(previousLayout.rounds[roundKey]),
+    },
+  };
 }
 
 /**
@@ -175,28 +335,44 @@ function RegionBoard({
   const sweet16 = regionGames.filter((game) => game.round === 'Sweet 16');
   const elite8 = regionGames.filter((game) => game.round === 'Elite 8');
 
-  const columns: Array<{ id: string; roundLevel: number; slots: RoundSlot[] }> = [
+  const columns: Array<{ id: string; roundLevel: number; slots: RoundSlot[]; settings: RoundLayoutSettings }> = [
     {
       id: 'r64',
       roundLevel: 0,
       slots: buildRoundSlots(round64, picks),
+      settings: layout.rounds.r64,
     },
     {
       id: 'r32',
       roundLevel: 1,
       slots: buildRoundSlots(round32, picks),
+      settings: layout.rounds.r32,
     },
     {
       id: 's16',
       roundLevel: 2,
       slots: buildRoundSlots(sweet16, picks),
+      settings: layout.rounds.s16,
     },
     {
       id: 'e8',
       roundLevel: 3,
       slots: buildRoundSlots(elite8, picks),
+      settings: layout.rounds.e8,
     },
   ];
+
+  const geometry = useMemo(
+    () =>
+      computeRoundGeometries(
+        columns.map((column) => ({
+          key: getRoundKeyFromLevel(column.roundLevel),
+          slots: column.slots,
+          settings: column.settings,
+        }))
+      ),
+    [columns]
+  );
 
   const orderedColumns = reverse ? [...columns].reverse() : columns;
 
@@ -204,21 +380,23 @@ function RegionBoard({
     <div className="rounded-lg border border-gray-200 p-3 bg-gray-50 min-w-0">
       <div className="flex items-start">
         {orderedColumns.map((column, index) => {
-          const previousRoundLevel = index > 0 ? orderedColumns[index - 1].roundLevel : null;
-          const touchesRoundOf64And32 =
-            previousRoundLevel !== null &&
-            ((previousRoundLevel === 0 && column.roundLevel === 1) ||
-              (previousRoundLevel === 1 && column.roundLevel === 0));
+          const roundKey = getRoundKeyFromLevel(column.roundLevel);
+          const roundGeometry = geometry.byRound[roundKey];
 
           return (
             <div
               key={column.id}
               className="flex-shrink-0"
               style={{
-                marginLeft: index === 0 ? 0 : touchesRoundOf64And32 ? 0 : `-${layout.overlapPx}px`,
+                marginLeft: index === 0 ? 0 : `-${column.settings.overlapPx}px`,
               }}
             >
-              <RoundColumn roundLevel={column.roundLevel} slots={column.slots} layout={layout} />
+              <RoundColumn
+                slots={column.slots}
+                settings={column.settings}
+                topOffsets={roundGeometry?.topOffsets || []}
+                columnHeight={geometry.columnHeight}
+              />
             </div>
           );
         })}
@@ -241,13 +419,54 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
     try {
       const raw = window.localStorage.getItem('keyBracketPreviewLayout');
       if (!raw) return;
-      const saved = JSON.parse(raw) as Partial<LayoutSettings>;
-      setLayout((previous) => ({
-        slotHeightPx: saved.slotHeightPx ?? previous.slotHeightPx,
-        baseGapPx: saved.baseGapPx ?? previous.baseGapPx,
-        columnWidthPx: saved.columnWidthPx ?? previous.columnWidthPx,
-        overlapPx: saved.overlapPx ?? previous.overlapPx,
-      }));
+      const saved = JSON.parse(raw) as Partial<LayoutSettings> & Partial<RoundLayoutSettings>;
+      setLayout((previous) => {
+        if (saved.rounds) {
+          return {
+            rounds: {
+              r64: { ...previous.rounds.r64, ...saved.rounds.r64 },
+              r32: { ...previous.rounds.r32, ...saved.rounds.r32 },
+              s16: { ...previous.rounds.s16, ...saved.rounds.s16 },
+              e8: { ...previous.rounds.e8, ...saved.rounds.e8 },
+            },
+          };
+        }
+
+        // Backward compatibility for earlier flat-layout control format.
+        const legacy = saved;
+        return {
+          rounds: {
+            r64: {
+              ...previous.rounds.r64,
+              slotHeightPx: legacy.slotHeightPx ?? previous.rounds.r64.slotHeightPx,
+              gameGapPx: legacy.gameGapPx ?? legacy.matchupGapPx ?? previous.rounds.r64.gameGapPx,
+              columnWidthPx: legacy.columnWidthPx ?? previous.rounds.r64.columnWidthPx,
+              overlapPx: 0,
+            },
+            r32: {
+              ...previous.rounds.r32,
+              slotHeightPx: legacy.slotHeightPx ?? previous.rounds.r32.slotHeightPx,
+              gameGapPx: legacy.gameGapPx ?? legacy.matchupGapPx ?? previous.rounds.r32.gameGapPx,
+              columnWidthPx: legacy.columnWidthPx ?? previous.rounds.r32.columnWidthPx,
+              overlapPx: 0,
+            },
+            s16: {
+              ...previous.rounds.s16,
+              slotHeightPx: legacy.slotHeightPx ?? previous.rounds.s16.slotHeightPx,
+              gameGapPx: legacy.gameGapPx ?? legacy.matchupGapPx ?? previous.rounds.s16.gameGapPx,
+              columnWidthPx: legacy.columnWidthPx ?? previous.rounds.s16.columnWidthPx,
+              overlapPx: legacy.overlapPx ?? previous.rounds.s16.overlapPx,
+            },
+            e8: {
+              ...previous.rounds.e8,
+              slotHeightPx: legacy.slotHeightPx ?? previous.rounds.e8.slotHeightPx,
+              gameGapPx: legacy.gameGapPx ?? legacy.matchupGapPx ?? previous.rounds.e8.gameGapPx,
+              columnWidthPx: legacy.columnWidthPx ?? previous.rounds.e8.columnWidthPx,
+              overlapPx: legacy.overlapPx ?? previous.rounds.e8.overlapPx,
+            },
+          },
+        };
+      });
     } catch (storageError) {
       console.warn('Failed to restore KEY bracket preview layout settings:', storageError);
     }
@@ -355,74 +574,120 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
 
           {showLayoutControls && (
             <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <label className="text-xs text-gray-700">
-                  Box Height (px)
-                  <input
-                    type="number"
-                    min={20}
-                    max={48}
-                    value={layout.slotHeightPx}
-                    onChange={(event) =>
-                      setLayout((previous) => ({
-                        ...previous,
-                        slotHeightPx: Number(event.target.value) || previous.slotHeightPx,
-                      }))
-                    }
-                    className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
-                  />
-                </label>
+              <div className="hidden lg:grid lg:grid-cols-[110px_repeat(5,minmax(120px,1fr))] gap-2 mb-2 px-1">
+                <div className="text-[11px] font-semibold text-gray-600">Round</div>
+                <div className="text-[11px] font-semibold text-gray-600">Box Height</div>
+                <div className="text-[11px] font-semibold text-gray-600">Matchup Gap</div>
+                <div className="text-[11px] font-semibold text-gray-600">Game Gap</div>
+                <div className="text-[11px] font-semibold text-gray-600">Column Width</div>
+                <div className="text-[11px] font-semibold text-gray-600">Overlap Shift</div>
+              </div>
 
-                <label className="text-xs text-gray-700">
-                  Game Gap (px)
-                  <input
-                    type="number"
-                    min={0}
-                    max={24}
-                    value={layout.baseGapPx}
-                    onChange={(event) =>
-                      setLayout((previous) => ({
-                        ...previous,
-                        baseGapPx: Number(event.target.value) || 0,
-                      }))
-                    }
-                    className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
-                  />
-                </label>
+              <div className="space-y-2">
+                {(['r64', 'r32', 's16', 'e8'] as RoundKey[]).map((roundKey) => {
+                  const settings = layout.rounds[roundKey];
 
-                <label className="text-xs text-gray-700">
-                  Column Width (px)
-                  <input
-                    type="number"
-                    min={90}
-                    max={220}
-                    value={layout.columnWidthPx}
-                    onChange={(event) =>
-                      setLayout((previous) => ({
-                        ...previous,
-                        columnWidthPx: Number(event.target.value) || previous.columnWidthPx,
-                      }))
-                    }
-                    className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
-                  />
-                </label>
+                  return (
+                    <div key={roundKey} className="grid grid-cols-1 lg:grid-cols-[110px_repeat(5,minmax(120px,1fr))] gap-2">
+                      <div className="text-xs font-semibold text-gray-700 self-center">{getRoundLabel(roundKey)}</div>
 
-                <label className="text-xs text-gray-700">
-                  Overlap Shift (px)
-                  <input
-                    type="number"
-                    min={0}
-                    max={180}
-                    value={layout.overlapPx}
-                    onChange={(event) =>
-                      setLayout((previous) => ({
-                        ...previous,
-                        overlapPx: Number(event.target.value) || 0,
-                      }))
-                    }
-                    className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
-                  />
-                </label>
+                      <label className="text-xs text-gray-700">
+                        <span className="lg:hidden">Box Height (px)</span>
+                        <input
+                          type="number"
+                          min={20}
+                          max={52}
+                          value={settings.slotHeightPx}
+                          onChange={(event) =>
+                            setLayout((previous) =>
+                              withUpdatedRoundSetting(previous, roundKey, (current) => ({
+                                ...current,
+                                slotHeightPx: Number(event.target.value) || current.slotHeightPx,
+                              }))
+                            )
+                          }
+                          className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                        />
+                      </label>
+
+                      <label className="text-xs text-gray-700">
+                        <span className="lg:hidden">Matchup Gap (px)</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={300}
+                          value={settings.matchupGapPx}
+                          onChange={(event) =>
+                            setLayout((previous) =>
+                              withUpdatedRoundSetting(previous, roundKey, (current) => ({
+                                ...current,
+                                matchupGapPx: Number(event.target.value) || 0,
+                              }))
+                            )
+                          }
+                          className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                        />
+                      </label>
+
+                      <label className="text-xs text-gray-700">
+                        <span className="lg:hidden">Game Gap (px)</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={300}
+                          value={settings.gameGapPx}
+                          onChange={(event) =>
+                            setLayout((previous) =>
+                              withUpdatedRoundSetting(previous, roundKey, (current) => ({
+                                ...current,
+                                gameGapPx: Number(event.target.value) || 0,
+                              }))
+                            )
+                          }
+                          className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                        />
+                      </label>
+
+                      <label className="text-xs text-gray-700">
+                        <span className="lg:hidden">Column Width (px)</span>
+                        <input
+                          type="number"
+                          min={90}
+                          max={240}
+                          value={settings.columnWidthPx}
+                          onChange={(event) =>
+                            setLayout((previous) =>
+                              withUpdatedRoundSetting(previous, roundKey, (current) => ({
+                                ...current,
+                                columnWidthPx: Number(event.target.value) || current.columnWidthPx,
+                              }))
+                            )
+                          }
+                          className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                        />
+                      </label>
+
+                      <label className="text-xs text-gray-700">
+                        <span className="lg:hidden">Overlap Shift (px)</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={200}
+                          value={settings.overlapPx}
+                          onChange={(event) =>
+                            setLayout((previous) =>
+                              withUpdatedRoundSetting(previous, roundKey, (current) => ({
+                                ...current,
+                                overlapPx: Number(event.target.value) || 0,
+                              }))
+                            )
+                          }
+                          className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                        />
+                      </label>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
