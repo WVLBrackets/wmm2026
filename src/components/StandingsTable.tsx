@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getStandingsData, getAvailableDays, StandingsEntry, StandingsData, getQuarterfinalColor, getSemifinalColor, getFinalColor } from '@/lib/standingsData';
+import { StandingsEntry, StandingsData, getQuarterfinalColor, getSemifinalColor, getFinalColor } from '@/lib/standingsData';
 import { getTeamInfo, getLogoUrlSync } from '@/lib/teamLogos';
 import { getTeamRefData } from '@/lib/teamRefData';
 import { getSiteConfig } from '@/config/site';
@@ -234,7 +234,12 @@ export default function StandingsTable() {
   useEffect(() => {
     const loadDays = async () => {
       try {
-        const days = await getAvailableDays();
+        const response = await fetch('/api/standings/days', { cache: 'no-store' });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || 'Failed to load standings day options');
+        }
+        const days = result.data as string[];
         setAvailableDays(days);
         // Set default to the most recent day (first in the array)
         if (days.length > 0 && !selectedDay) {
@@ -286,7 +291,12 @@ export default function StandingsTable() {
         
         // Now load standings data
         const standingsStart = performance.now();
-        const data = await getStandingsData(selectedDay);
+        const response = await fetch(`/api/standings?day=${encodeURIComponent(selectedDay)}`, { cache: 'no-store' });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || 'Failed to load standings data');
+        }
+        const data = result.data as StandingsData;
         const standingsTime = performance.now() - standingsStart;
         console.log(`[Performance] Standings data fetch: ${standingsTime.toFixed(2)}ms`);
         
