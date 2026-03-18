@@ -41,6 +41,7 @@ function BracketContent() {
   const [pendingDeleteBracketId, setPendingDeleteBracketId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string>('');
   const [isAdminMode, setIsAdminMode] = useState(false);
+  const [isLiveResultsMode, setIsLiveResultsMode] = useState(false);
   const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
   const [pendingBracketData, setPendingBracketData] = useState<Record<string, unknown> | null>(null);
 
@@ -76,9 +77,11 @@ function BracketContent() {
     
     const editId = searchParams.get('edit');
     const adminMode = searchParams.get('admin') === 'true';
+    const liveMode = searchParams.get('live') === 'true';
     
     if (editId && adminMode) {
       setIsAdminMode(true);
+      setIsLiveResultsMode(liveMode);
       
       // Clear sessionStorage when editing a different bracket to prevent stale state
       if (typeof window !== 'undefined') {
@@ -367,13 +370,13 @@ function BracketContent() {
   useEffect(() => {
     if (pendingBracketData && bracket && tournamentData) {
       setPicks(pendingBracketData.picks as { [gameId: string]: string } || {});
-      setEntryName(pendingBracketData.entryName as string || '');
+      setEntryName(isLiveResultsMode ? 'KEY' : (pendingBracketData.entryName as string || ''));
       setTieBreaker(pendingBracketData.tieBreaker?.toString() || '');
       setCurrentView('bracket');
       setIsLoading(false);
       setPendingBracketData(null); // Clear pending data
     }
-  }, [pendingBracketData, bracket, tournamentData]);
+  }, [pendingBracketData, bracket, tournamentData, isLiveResultsMode]);
 
   const handlePick = (gameId: string, teamId: string) => {
     setPicks(prev => {
@@ -635,7 +638,7 @@ function BracketContent() {
     
     // If in admin mode, redirect back to admin brackets tab
     if (isAdminMode) {
-      router.push('/admin?tab=brackets');
+      router.push(isLiveResultsMode ? '/admin?tab=live-results' : '/admin?tab=brackets');
       return;
     }
     
@@ -659,6 +662,14 @@ function BracketContent() {
     
     // If in admin mode, redirect back to admin brackets tab
     if (isAdminMode) {
+      if (isLiveResultsMode && editingBracket) {
+        const bracket = editingBracket as Record<string, unknown>;
+        await fetch(`/api/admin/live-results/${bracket.id}?action=cancel`, {
+          method: 'POST',
+        });
+        router.push('/admin?tab=live-results');
+        return;
+      }
       router.push('/admin?tab=brackets');
       return;
     }
@@ -728,7 +739,9 @@ function BracketContent() {
         // Update existing bracket
         const bracket = editingBracket as Record<string, unknown>;
         bracketNumber = bracket.bracketNumber as number | undefined;
-        const endpoint = isAdminMode 
+        const endpoint = isLiveResultsMode
+          ? `/api/admin/live-results/${bracket.id}`
+          : isAdminMode 
           ? `/api/admin/brackets/${bracket.id}`
           : `/api/tournament-bracket/${bracket.id}`;
         
@@ -737,7 +750,14 @@ function BracketContent() {
           ? await fetch(endpoint, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(saveData),
+              body: JSON.stringify(
+                isLiveResultsMode
+                  ? {
+                      picks,
+                      tieBreaker,
+                    }
+                  : saveData
+              ),
             })
           : await fetchWithCSRF(endpoint, {
               method: 'PUT',
@@ -769,7 +789,7 @@ function BracketContent() {
         
         // If in admin mode, redirect back to admin brackets tab
         if (isAdminMode) {
-          router.push('/admin?tab=brackets');
+          router.push(isLiveResultsMode ? '/admin?tab=live-results' : '/admin?tab=brackets');
           return;
         }
         
@@ -974,7 +994,7 @@ function BracketContent() {
           onSave={handleSaveBracket}
           onClose={handleCloseBracket}
           onCancel={handleCloseBracket}
-          onEntryNameChange={setEntryName}
+          onEntryNameChange={isLiveResultsMode ? () => {} : setEntryName}
           onTieBreakerChange={setTieBreaker}
           readOnly={isReadOnly}
           submitError={submitError}
@@ -984,6 +1004,7 @@ function BracketContent() {
           existingBracketNames={submittedBrackets.filter(b => b.status === 'submitted').map(b => b.entryName)}
           currentBracketId={editingBracket ? (editingBracket as Record<string, unknown>).id as string : undefined}
           isAdminMode={isAdminMode}
+          isLiveResultsMode={isLiveResultsMode}
         />
       </div>
     </div>

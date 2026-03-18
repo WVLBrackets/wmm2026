@@ -28,6 +28,7 @@ interface StepByStepBracketProps {
   existingBracketNames?: string[];
   currentBracketId?: string;
   isAdminMode?: boolean;
+  isLiveResultsMode?: boolean;
 }
 
 export default function StepByStepBracket({ 
@@ -50,7 +51,8 @@ export default function StepByStepBracket({
   siteConfig,
   existingBracketNames = [],
   currentBracketId,
-  isAdminMode = false
+  isAdminMode = false,
+  isLiveResultsMode = false
 }: StepByStepBracketProps) {
   // Restore current step from sessionStorage on mount
   const getInitialStep = () => {
@@ -201,6 +203,7 @@ export default function StepByStepBracket({
           isStepComplete={isStepComplete}
           entryName={entryName}
           onEntryNameChange={onEntryNameChange}
+          isLiveResultsMode={isLiveResultsMode}
         />
       );
     } else {
@@ -231,6 +234,7 @@ export default function StepByStepBracket({
           existingBracketNames={existingBracketNames}
           currentBracketId={currentBracketId}
           isAdminMode={isAdminMode}
+          isLiveResultsMode={isLiveResultsMode}
         />
       );
     }

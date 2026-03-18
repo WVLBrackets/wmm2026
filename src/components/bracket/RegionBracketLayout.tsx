@@ -3,7 +3,7 @@
 import { useEffect, useRef, RefObject } from 'react';
 import Image from 'next/image';
 import { TournamentGame } from '@/types/tournament';
-import { CheckCircle, ChevronLeft, ChevronRight, Save, ArrowRight } from 'lucide-react';
+import { CheckCircle, ChevronLeft, ChevronRight, Save, ArrowRight, KeyRound } from 'lucide-react';
 
 interface RegionBracketLayoutProps {
   regionName: string;
@@ -30,6 +30,7 @@ interface RegionBracketLayoutProps {
   // Entry name and region info props
   entryName?: string;
   onEntryNameChange?: (value: string) => void;
+  isLiveResultsMode?: boolean;
 }
 
 export default function RegionBracketLayout({ 
@@ -51,7 +52,8 @@ export default function RegionBracketLayout({
   onStepClick,
   isStepComplete,
   entryName = '',
-  onEntryNameChange
+  onEntryNameChange,
+  isLiveResultsMode = false
 }: RegionBracketLayoutProps) {
   const hasScrolledRoundOf64Ref = useRef(false);
   const hasScrolledRoundOf32Ref = useRef(false);
@@ -324,21 +326,28 @@ export default function RegionBracketLayout({
                 <label htmlFor="entryName" className="text-xs font-medium text-gray-700 whitespace-nowrap">
                   Entry Name:
                 </label>
-                <input
-                  type="text"
-                  id="entryName"
-                  value={entryName}
-                  onChange={(e) => onEntryNameChange?.(e.target.value)}
-                  disabled={readOnly}
-                  className={`px-3 py-2 border border-gray-300 rounded-lg text-sm ${
-                    readOnly 
-                      ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
-                      : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black'
-                  }`}
-                  style={{ width: 'max-content', minWidth: '200px' }}
-                  placeholder="Enter your bracket name"
-                  data-testid="entry-name-input"
-                />
+                {isLiveResultsMode ? (
+                  <div className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-800 font-bold flex items-center space-x-2 min-w-[200px] justify-center">
+                    <KeyRound className="h-4 w-4 text-amber-600" />
+                    <span>KEY</span>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    id="entryName"
+                    value={entryName}
+                    onChange={(e) => onEntryNameChange?.(e.target.value)}
+                    disabled={readOnly}
+                    className={`px-3 py-2 border border-gray-300 rounded-lg text-sm ${
+                      readOnly 
+                        ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
+                        : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black'
+                    }`}
+                    style={{ width: 'max-content', minWidth: '200px' }}
+                    placeholder="Enter your bracket name"
+                    data-testid="entry-name-input"
+                  />
+                )}
               </div>
 
               {/* Row 2: Region Name with checkmark on left (only when complete) */}

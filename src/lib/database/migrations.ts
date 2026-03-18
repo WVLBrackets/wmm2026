@@ -40,6 +40,8 @@ export async function initializeDatabase(): Promise<void> {
 
     // Add last_login column for existing databases
     await addLastLoginColumn();
+    // Add key/lock columns for live results support
+    await addBracketLiveResultsColumns();
 
     // Tokens table
     await sql`
@@ -233,6 +235,31 @@ async function addLastLoginColumn(): Promise<boolean> {
     }
     console.error('[addLastLoginColumn] Error:', error);
     return false;
+  }
+}
+
+/**
+ * Add live-results support columns to brackets table if missing.
+ */
+async function addBracketLiveResultsColumns(): Promise<void> {
+  try {
+    await sql`ALTER TABLE brackets ADD COLUMN IF NOT EXISTS is_key BOOLEAN DEFAULT FALSE`;
+    await sql`ALTER TABLE brackets ADD COLUMN IF NOT EXISTS lock_user_id VARCHAR(36)`;
+    await sql`ALTER TABLE brackets ADD COLUMN IF NOT EXISTS lock_acquired_at TIMESTAMP`;
+
+    // Backfill and enforce non-null behavior for existing rows.
+    await sql`UPDATE brackets SET is_key = FALSE WHERE is_key IS NULL`;
+    await sql`ALTER TABLE brackets ALTER COLUMN is_key SET DEFAULT FALSE`;
+    await sql`ALTER TABLE brackets ALTER COLUMN is_key SET NOT NULL`;
+
+    // One KEY bracket per year per environment.
+    await sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_brackets_one_key_per_year_env
+      ON brackets (year, environment)
+      WHERE is_key = TRUE
+    `;
+  } catch (error) {
+    console.error('[addBracketLiveResultsColumns] Error:', error);
   }
 }
 

@@ -45,6 +45,9 @@ export interface Bracket {
   status: string;
   bracketNumber: number;
   year: number;
+  isKey?: boolean;
+  lockUserId?: string | null;
+  lockAcquiredAt?: Date | null;
   environment: string;
   createdAt: Date;
   updatedAt: Date;
@@ -87,6 +90,8 @@ export interface UpdateBracketInput {
   picks?: Record<string, string>;
   status?: string;
   userId?: string;
+  lockUserId?: string | null;
+  lockAcquiredAt?: Date | null;
 }
 
 /**

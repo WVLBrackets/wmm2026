@@ -3,13 +3,14 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Users, Trophy, LogOut, Link2, Table, Zap, RefreshCw, Home, Info, Award } from 'lucide-react';
+import { Users, Trophy, LogOut, Link2, Table, Zap, RefreshCw, Home, Info, Award, KeyRound } from 'lucide-react';
 import { useBracketMode } from '@/contexts/BracketModeContext';
 import UsersTab from '@/components/admin/UsersTab';
 import BracketsTab from '@/components/admin/BracketsTab';
 import UsageMonitoringTab from '@/components/admin/UsageMonitoringTab';
 import TeamDataTab from '@/components/admin/TeamDataTab';
 import LogsTab from '@/components/admin/LogsTab';
+import LiveResultsTab from '@/components/admin/LiveResultsTab';
 
 interface User {
   id: string;
@@ -79,7 +80,7 @@ export default function AdminPage() {
   const [showValidationDetails, setShowValidationDetails] = useState(false);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'brackets' | 'users' | 'data' | 'logs' | 'usage'>('users');
+  const [activeTab, setActiveTab] = useState<'brackets' | 'users' | 'live-results' | 'data' | 'logs' | 'usage'>('users');
 
   // Ensure bracket mode is disabled when admin page loads
   useEffect(() => {
@@ -178,7 +179,7 @@ export default function AdminPage() {
   };
 
   // Helper function to update URL with new tab
-  const updateUrlTab = (tab: 'brackets' | 'users' | 'data' | 'logs' | 'usage', logsTab?: 'summary' | 'usage' | 'error' | 'email', emailView?: 'summary' | 'detail') => {
+  const updateUrlTab = (tab: 'brackets' | 'users' | 'live-results' | 'data' | 'logs' | 'usage', logsTab?: 'summary' | 'usage' | 'error' | 'email', emailView?: 'summary' | 'detail') => {
     const params = new URLSearchParams(searchParams?.toString() || '');
     params.set('tab', tab);
     
@@ -198,7 +199,7 @@ export default function AdminPage() {
   };
 
   // Wrapper functions that update both state and URL
-  const handleSetActiveTab = (tab: 'brackets' | 'users' | 'data' | 'logs' | 'usage') => {
+  const handleSetActiveTab = (tab: 'brackets' | 'users' | 'live-results' | 'data' | 'logs' | 'usage') => {
     setActiveTab(tab);
     // Update URL immediately to reflect the change
     updateUrlTab(tab);
@@ -212,8 +213,8 @@ export default function AdminPage() {
     if (!searchParams) return;
     
     const tabParam = searchParams.get('tab');
-    if (tabParam && ['brackets', 'users', 'data', 'logs', 'usage'].includes(tabParam)) {
-      const newTab = tabParam as 'brackets' | 'users' | 'data' | 'logs' | 'usage';
+    if (tabParam && ['brackets', 'users', 'live-results', 'data', 'logs', 'usage'].includes(tabParam)) {
+      const newTab = tabParam as 'brackets' | 'users' | 'live-results' | 'data' | 'logs' | 'usage';
       if (newTab !== activeTab) {
         setActiveTab(newTab);
       }
@@ -455,6 +456,17 @@ export default function AdminPage() {
               Brackets
             </button>
             <button
+              onClick={() => handleSetActiveTab('live-results')}
+              className={`px-4 py-2 border-b-2 font-medium text-sm ${
+                activeTab === 'live-results'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <KeyRound className="inline h-4 w-4 mr-2" />
+              Live Results
+            </button>
+            <button
               onClick={() => handleSetActiveTab('data')}
               className={`px-4 py-2 border-b-2 font-medium text-sm ${
                 activeTab === 'data'
@@ -497,6 +509,10 @@ export default function AdminPage() {
 
         {activeTab === 'brackets' && (
           <BracketsTab users={users} brackets={brackets} onReload={loadData} />
+        )}
+
+        {activeTab === 'live-results' && (
+          <LiveResultsTab brackets={brackets} />
         )}
 
         {/* Data Tab */}

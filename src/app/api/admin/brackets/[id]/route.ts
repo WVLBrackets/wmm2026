@@ -58,6 +58,14 @@ export async function PUT(
     }
     const body = await request.json();
 
+    const existing = await getBracketById(id);
+    if (existing?.isKey) {
+      return NextResponse.json(
+        { success: false, error: 'Use Live Results tab to edit the KEY bracket' },
+        { status: 400 }
+      );
+    }
+
     const updatedBracket = await updateBracket(id, {
       entryName: body.entryName,
       tieBreaker: body.tieBreaker,
@@ -99,6 +107,14 @@ export async function DELETE(
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 403 }
+      );
+    }
+
+    const existing = await getBracketById(id);
+    if (existing?.isKey) {
+      return NextResponse.json(
+        { success: false, error: 'KEY bracket cannot be deleted from Brackets tab' },
+        { status: 400 }
       );
     }
     const deleted = await deleteBracket(id);
