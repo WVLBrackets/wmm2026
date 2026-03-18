@@ -19,6 +19,32 @@ interface BracketQueryOptions {
   includeKey?: boolean;
 }
 
+let bracketLiveResultsColumnsEnsured = false;
+
+async function ensureBracketLiveResultsColumns(): Promise<void> {
+  if (bracketLiveResultsColumnsEnsured) {
+    return;
+  }
+
+  try {
+    await sql`ALTER TABLE brackets ADD COLUMN IF NOT EXISTS is_key BOOLEAN DEFAULT FALSE`;
+    await sql`ALTER TABLE brackets ADD COLUMN IF NOT EXISTS lock_user_id VARCHAR(36)`;
+    await sql`ALTER TABLE brackets ADD COLUMN IF NOT EXISTS lock_acquired_at TIMESTAMP`;
+    await sql`UPDATE brackets SET is_key = FALSE WHERE is_key IS NULL`;
+    await sql`ALTER TABLE brackets ALTER COLUMN is_key SET DEFAULT FALSE`;
+    await sql`ALTER TABLE brackets ALTER COLUMN is_key SET NOT NULL`;
+    await sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_brackets_one_key_per_year_env
+      ON brackets (year, environment)
+      WHERE is_key = TRUE
+    `;
+    bracketLiveResultsColumnsEnsured = true;
+  } catch (error) {
+    // Do not hard-fail normal bracket reads if schema migration cannot run here.
+    console.warn('[ensureBracketLiveResultsColumns] Non-blocking migration check failed:', error);
+  }
+}
+
 async function getNextBracketNumber(year: number, environment: string): Promise<number> {
   const result = await sql`
     SELECT COALESCE(MAX(bracket_number), 0) + 1 as next_number
@@ -96,19 +122,35 @@ export async function createBracket(
 export async function getBracketsByUserId(userId: string, options?: BracketQueryOptions): Promise<Bracket[]> {
   const environment = getCurrentEnvironment();
   const includeKey = options?.includeKey === true;
-  
-  const result = includeKey
-    ? await sql`
+
+  await ensureBracketLiveResultsColumns();
+
+  let result;
+  try {
+    result = includeKey
+      ? await sql`
+          SELECT * FROM brackets 
+          WHERE user_id = ${userId} AND environment = ${environment}
+          ORDER BY created_at DESC
+        `
+      : await sql`
+          SELECT * FROM brackets 
+          WHERE user_id = ${userId} AND environment = ${environment}
+            AND COALESCE(is_key, FALSE) = FALSE
+          ORDER BY created_at DESC
+        `;
+  } catch (error) {
+    // Backward-compatible fallback if deployed code reaches a DB without new columns.
+    if (error instanceof Error && error.message.includes('is_key')) {
+      result = await sql`
         SELECT * FROM brackets 
         WHERE user_id = ${userId} AND environment = ${environment}
-        ORDER BY created_at DESC
-      `
-    : await sql`
-        SELECT * FROM brackets 
-        WHERE user_id = ${userId} AND environment = ${environment}
-          AND COALESCE(is_key, FALSE) = FALSE
         ORDER BY created_at DESC
       `;
+    } else {
+      throw error;
+    }
+  }
   
   return result.rows.map(mapRowToBracket);
 }
@@ -203,24 +245,42 @@ export async function deleteBracket(bracketId: string): Promise<boolean> {
 export async function getAllBrackets(options?: BracketQueryOptions): Promise<BracketWithUser[]> {
   const environment = getCurrentEnvironment();
   const includeKey = options?.includeKey === true;
-  
-  const result = includeKey
-    ? await sql`
-        SELECT b.*, u.email as user_email, u.name as user_name
-        FROM brackets b
-        JOIN users u ON b.user_id = u.id
-        WHERE b.environment = ${environment} AND u.environment = ${environment}
-        ORDER BY b.created_at DESC
-      `
-    : await sql`
+
+  await ensureBracketLiveResultsColumns();
+
+  let result;
+  try {
+    result = includeKey
+      ? await sql`
+          SELECT b.*, u.email as user_email, u.name as user_name
+          FROM brackets b
+          JOIN users u ON b.user_id = u.id
+          WHERE b.environment = ${environment} AND u.environment = ${environment}
+          ORDER BY b.created_at DESC
+        `
+      : await sql`
+          SELECT b.*, u.email as user_email, u.name as user_name
+          FROM brackets b
+          JOIN users u ON b.user_id = u.id
+          WHERE b.environment = ${environment}
+            AND u.environment = ${environment}
+            AND COALESCE(b.is_key, FALSE) = FALSE
+          ORDER BY b.created_at DESC
+        `;
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('is_key')) {
+      result = await sql`
         SELECT b.*, u.email as user_email, u.name as user_name
         FROM brackets b
         JOIN users u ON b.user_id = u.id
         WHERE b.environment = ${environment}
           AND u.environment = ${environment}
-          AND COALESCE(b.is_key, FALSE) = FALSE
         ORDER BY b.created_at DESC
       `;
+    } else {
+      throw error;
+    }
+  }
   
   return result.rows.map((row: Record<string, unknown>) => ({
     ...mapRowToBracket(row),
@@ -233,6 +293,7 @@ export async function getAllBrackets(options?: BracketQueryOptions): Promise<Bra
  * Get the KEY bracket for a specific year in the current environment.
  */
 export async function getKeyBracketByYear(year: number): Promise<Bracket | null> {
+  await ensureBracketLiveResultsColumns();
   const environment = getCurrentEnvironment();
   const result = await sql`
     SELECT * FROM brackets
@@ -253,6 +314,7 @@ export async function getKeyBracketByYear(year: number): Promise<Bracket | null>
  * Returns the existing or newly-created bracket.
  */
 export async function getOrCreateKeyBracket(year: number, adminUserId: string): Promise<Bracket> {
+  await ensureBracketLiveResultsColumns();
   const environment = getCurrentEnvironment();
   const existing = await getKeyBracketByYear(year);
   if (existing) {
