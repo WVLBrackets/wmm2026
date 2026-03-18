@@ -22,11 +22,29 @@ export interface StandingsData {
   eliminatedTeams?: string[]; // Column O: Teams that are out
 }
 
-const STANDINGS_SHEET_ID = '12c8VEI6ZoIhRXg8b0rEfYWAOI86Ye_ZPY9G1sPaBRFs';
+const DEFAULT_STANDINGS_SHEET_ID = '12c8VEI6ZoIhRXg8b0rEfYWAOI86Ye_ZPY9G1sPaBRFs';
 
 // Cache for standings data to improve performance
 const standingsCache = new Map<string, { data: StandingsData; timestamp: number }>();
 const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes cache
+
+/**
+ * Resolve the standings sheet ID for the current deployment environment.
+ * - production: STANDINGS_SHEET_ID_PROD (fallback to generic/default)
+ * - non-production (staging/preview/dev): STANDINGS_SHEET_ID_STAGE (fallback to generic/default)
+ */
+function getStandingsSheetId(): string {
+  const isProduction = process.env.VERCEL_ENV === 'production';
+  const generic = process.env.STANDINGS_SHEET_ID;
+  const prod = process.env.STANDINGS_SHEET_ID_PROD;
+  const stage = process.env.STANDINGS_SHEET_ID_STAGE;
+
+  if (isProduction) {
+    return prod || generic || DEFAULT_STANDINGS_SHEET_ID;
+  }
+
+  return stage || generic || DEFAULT_STANDINGS_SHEET_ID;
+}
 
 /**
  * Get the last modified time from the Google Sheet
@@ -34,8 +52,9 @@ const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes cache
  */
 async function getSheetLastModified(day: string): Promise<string | null> {
   try {
+    const sheetId = getStandingsSheetId();
     // Read from cell A1 which should contain the last modified timestamp
-    const timestampUrl = `https://docs.google.com/spreadsheets/d/${STANDINGS_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(day)}&range=A1`;
+    const timestampUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(day)}&range=A1`;
     
     const response = await fetch(timestampUrl);
     if (response.ok) {
@@ -60,9 +79,11 @@ async function getSheetLastModified(day: string): Promise<string | null> {
  */
 export async function getStandingsData(day: string = 'Day1'): Promise<StandingsData> {
   const startTime = performance.now();
+  const sheetId = getStandingsSheetId();
+  const cacheKey = `${sheetId}:${day}`;
   
   // Check cache first
-  const cached = standingsCache.get(day);
+  const cached = standingsCache.get(cacheKey);
   if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
     return cached.data;
   }
@@ -72,7 +93,7 @@ export async function getStandingsData(day: string = 'Day1'): Promise<StandingsD
     // But don't modify "Final" - it should stay as "Final"
     const sheetName = day === 'Final' ? 'Final' : day.replace(/^Day(\d+)$/, 'Day $1');
     const encodedSheetName = encodeURIComponent(sheetName);
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${STANDINGS_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodedSheetName}`;
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodedSheetName}`;
     
     const response = await fetch(csvUrl);
     
@@ -99,7 +120,7 @@ export async function getStandingsData(day: string = 'Day1'): Promise<StandingsD
         };
     
     // Cache the result
-    standingsCache.set(day, { data: standingsData, timestamp: Date.now() });
+    standingsCache.set(cacheKey, { data: standingsData, timestamp: Date.now() });
     
     const totalTime = performance.now() - startTime;
     console.log(`[Performance] Standings data loaded: ${totalTime.toFixed(2)}ms (${entries.length} entries)`);
@@ -242,6 +263,7 @@ function parseCSVLine(line: string): string[] {
  */
 export async function getAvailableDays(): Promise<string[]> {
   try {
+    const sheetId = getStandingsSheetId();
     // Import the site config to get the number of standings tabs
     const { getSiteConfig } = await import('@/config/site');
     const siteConfig = await getSiteConfig();
@@ -256,7 +278,7 @@ export async function getAvailableDays(): Promise<string[]> {
     if (includeFinalTab) {
       // Check if "Final" tab exists and add it as the first option
       try {
-        const finalUrl = `https://docs.google.com/spreadsheets/d/${STANDINGS_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Final`;
+        const finalUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=Final`;
         const finalResponse = await fetch(finalUrl);
         if (finalResponse.ok) {
           days.push('Final');

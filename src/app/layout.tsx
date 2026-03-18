@@ -29,6 +29,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const isStagingEnvironment = process.env.VERCEL_ENV !== 'production';
+
   return (
     <html lang="en">
       <head>
@@ -39,6 +41,11 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/basketball-favicon.png" />
       </head>
       <body className="font-sans antialiased" suppressHydrationWarning={true}>
+        {isStagingEnvironment && (
+          <div className="bg-amber-500 text-white text-xs sm:text-sm font-semibold text-center py-1.5 tracking-wide">
+            STAGING
+          </div>
+        )}
         <ErrorBoundary>
           <SessionProvider>
             <BracketModeProvider>
