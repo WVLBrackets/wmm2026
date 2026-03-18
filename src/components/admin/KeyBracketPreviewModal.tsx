@@ -21,6 +21,15 @@ interface LiveResultsPreviewResponse {
   };
 }
 
+interface RoundSlot {
+  id: string;
+  team?: TournamentTeam;
+  isWinner: boolean;
+}
+
+const SLOT_HEIGHT_PX = 28;
+const BASE_GAP_PX = 4;
+
 /**
  * Resolve the picked winner for a game from current picks.
  */
@@ -60,7 +69,69 @@ function TeamRow({ team, isWinner }: { team?: TournamentTeam; isWinner?: boolean
 }
 
 /**
- * Render one region as round columns with currently selected winners.
+ * Convert games in a round to explicit vertical team slots.
+ */
+function buildRoundSlots(games: TournamentGame[], picks: Record<string, string>): RoundSlot[] {
+  const slots: RoundSlot[] = [];
+
+  games.forEach((game) => {
+    const pickedTeamId = picks[game.id];
+    slots.push({
+      id: `${game.id}-1`,
+      team: game.team1,
+      isWinner: game.team1?.id === pickedTeamId,
+    });
+    slots.push({
+      id: `${game.id}-2`,
+      team: game.team2,
+      isWinner: game.team2?.id === pickedTeamId,
+    });
+  });
+
+  return slots;
+}
+
+/**
+ * Get vertical spacing values for each round level.
+ * This keeps advancing slots centered between prior-round matchup teams.
+ */
+function getRoundSpacing(roundLevel: number): { gapPx: number; offsetPx: number } {
+  const multiplier = 2 ** roundLevel;
+  const gapPx = multiplier * (SLOT_HEIGHT_PX + BASE_GAP_PX) - SLOT_HEIGHT_PX;
+  const offsetPx = ((multiplier - 1) * (SLOT_HEIGHT_PX + BASE_GAP_PX)) / 2;
+  return { gapPx, offsetPx };
+}
+
+/**
+ * Render one vertical round column with bracket-aligned spacing.
+ */
+function RoundColumn({
+  title,
+  roundLevel,
+  slots,
+}: {
+  title: string;
+  roundLevel: number;
+  slots: RoundSlot[];
+}) {
+  const { gapPx, offsetPx } = getRoundSpacing(roundLevel);
+
+  return (
+    <div className="min-w-0">
+      <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">{title}</p>
+      <div style={{ paddingTop: `${offsetPx}px`, paddingBottom: `${offsetPx}px` }}>
+        {slots.map((slot, index) => (
+          <div key={slot.id} style={{ marginBottom: index < slots.length - 1 ? `${gapPx}px` : 0 }}>
+            <TeamRow team={slot.team} isWinner={slot.isWinner} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Render one region as round columns with alignment-accurate slot spacing.
  */
 function RegionBoard({
   regionName,
@@ -78,58 +149,30 @@ function RegionBoard({
   const sweet16 = regionGames.filter((game) => game.round === 'Sweet 16');
   const elite8 = regionGames.filter((game) => game.round === 'Elite 8');
 
-  const columns = [
+  const columns: Array<{ id: string; title: string; roundLevel: number; slots: RoundSlot[] }> = [
     {
       id: 'r64',
       title: 'Round of 64',
-      content: round64.map((game) => {
-        const pickedTeamId = picks[game.id];
-        return (
-          <div key={game.id} className="space-y-1">
-            <TeamRow team={game.team1} isWinner={game.team1?.id === pickedTeamId} />
-            <TeamRow team={game.team2} isWinner={game.team2?.id === pickedTeamId} />
-          </div>
-        );
-      }),
+      roundLevel: 0,
+      slots: buildRoundSlots(round64, picks),
     },
     {
       id: 'r32',
       title: 'Round of 32',
-      content: round32.map((game) => {
-        const pickedTeamId = picks[game.id];
-        return (
-          <div key={game.id} className="space-y-1">
-            <TeamRow team={game.team1} isWinner={game.team1?.id === pickedTeamId} />
-            <TeamRow team={game.team2} isWinner={game.team2?.id === pickedTeamId} />
-          </div>
-        );
-      }),
+      roundLevel: 1,
+      slots: buildRoundSlots(round32, picks),
     },
     {
       id: 's16',
       title: 'Sweet 16',
-      content: sweet16.map((game) => {
-        const pickedTeamId = picks[game.id];
-        return (
-          <div key={game.id} className="space-y-1">
-            <TeamRow team={game.team1} isWinner={game.team1?.id === pickedTeamId} />
-            <TeamRow team={game.team2} isWinner={game.team2?.id === pickedTeamId} />
-          </div>
-        );
-      }),
+      roundLevel: 2,
+      slots: buildRoundSlots(sweet16, picks),
     },
     {
       id: 'e8',
       title: 'Elite 8',
-      content: elite8.map((game) => {
-        const pickedTeamId = picks[game.id];
-        return (
-          <div key={game.id} className="space-y-1">
-            <TeamRow team={game.team1} isWinner={game.team1?.id === pickedTeamId} />
-            <TeamRow team={game.team2} isWinner={game.team2?.id === pickedTeamId} />
-          </div>
-        );
-      }),
+      roundLevel: 3,
+      slots: buildRoundSlots(elite8, picks),
     },
   ];
 
@@ -140,10 +183,7 @@ function RegionBoard({
       <h4 className={`text-sm font-semibold text-gray-900 mb-3 ${reverse ? 'text-right' : 'text-left'}`}>{regionName}</h4>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {orderedColumns.map((column) => (
-          <div key={column.id} className="min-w-0">
-            <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">{column.title}</p>
-            <div className="space-y-2">{column.content}</div>
-          </div>
+          <RoundColumn key={column.id} title={column.title} roundLevel={column.roundLevel} slots={column.slots} />
         ))}
       </div>
     </div>
