@@ -374,12 +374,10 @@ function RegionBoard({
     [columns]
   );
 
-  const orderedColumns = reverse ? [...columns].reverse() : columns;
-
   return (
     <div className="rounded-lg border border-gray-200 p-3 bg-gray-50 min-w-0">
-      <div className="flex items-start">
-        {orderedColumns.map((column, index) => {
+      <div className="flex items-start" style={{ flexDirection: reverse ? 'row-reverse' : 'row' }}>
+        {columns.map((column, index) => {
           const roundKey = getRoundKeyFromLevel(column.roundLevel);
           const roundGeometry = geometry.byRound[roundKey];
 
@@ -388,7 +386,8 @@ function RegionBoard({
               key={column.id}
               className="flex-shrink-0"
               style={{
-                marginLeft: index === 0 ? 0 : `-${column.settings.overlapPx}px`,
+                marginLeft: !reverse && index > 0 ? `-${column.settings.overlapPx}px` : 0,
+                marginRight: reverse && index > 0 ? `-${column.settings.overlapPx}px` : 0,
               }}
             >
               <RoundColumn
