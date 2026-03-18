@@ -44,7 +44,7 @@ export default function RootLayout({
       <body
         className="font-sans antialiased"
         suppressHydrationWarning={true}
-        style={{ ['--staging-banner-height' as '--staging-banner-height']: stagingBannerHeight }}
+        style={{ ['--staging-banner-height' as const]: stagingBannerHeight }}
       >
         {isStagingEnvironment && (
           <div className="fixed top-0 left-0 right-0 z-[60] bg-amber-500 text-white text-xs sm:text-sm font-semibold text-center h-7 leading-7 tracking-wide">
