@@ -37,8 +37,21 @@ interface RoundLayoutSettings {
   overlapPx: number;
 }
 
+interface FinalsLayoutSettings {
+  finalistWidthPx: number;
+  finalistHeightPx: number;
+  finalistGapPx: number;
+  finalistOffsetXPx: number;
+  finalistOffsetYPx: number;
+  champWidthPx: number;
+  champHeightPx: number;
+  champOffsetXPx: number;
+  champOffsetYPx: number;
+}
+
 interface LayoutSettings {
   rounds: Record<RoundKey, RoundLayoutSettings>;
+  finals: FinalsLayoutSettings;
 }
 
 const DEFAULT_LAYOUT_SETTINGS: LayoutSettings = {
@@ -78,6 +91,17 @@ const DEFAULT_LAYOUT_SETTINGS: LayoutSettings = {
       columnWidthPx: 120,
       overlapPx: 60,
     },
+  },
+  finals: {
+    finalistWidthPx: 120,
+    finalistHeightPx: 28,
+    finalistGapPx: 6,
+    finalistOffsetXPx: 0,
+    finalistOffsetYPx: -20,
+    champWidthPx: 120,
+    champHeightPx: 28,
+    champOffsetXPx: 0,
+    champOffsetYPx: 45,
   },
 };
 
@@ -219,12 +243,22 @@ function computeRoundGeometries(definitions: RoundDefinition[]): { byRound: Reco
 /**
  * Render a compact team row with optional winner highlighting.
  */
-function TeamRow({ team, isWinner, heightPx }: { team?: TournamentTeam; isWinner?: boolean; heightPx: number }) {
+function TeamRow({
+  team,
+  isWinner,
+  heightPx,
+  widthPx,
+}: {
+  team?: TournamentTeam;
+  isWinner?: boolean;
+  heightPx: number;
+  widthPx?: number;
+}) {
   if (!team) {
     return (
       <div
         className="px-2 rounded border border-dashed border-gray-300 bg-gray-50 text-xs text-gray-400 flex items-center"
-        style={{ height: `${heightPx}px` }}
+        style={{ height: `${heightPx}px`, width: widthPx ? `${widthPx}px` : undefined }}
       >
         TBD
       </div>
@@ -236,7 +270,7 @@ function TeamRow({ team, isWinner, heightPx }: { team?: TournamentTeam; isWinner
       className={`px-2 rounded border text-xs flex items-center gap-1.5 ${
         isWinner ? 'border-blue-500 bg-blue-50 text-blue-900 font-semibold' : 'border-gray-300 bg-white text-gray-800'
       }`}
-      style={{ height: `${heightPx}px` }}
+      style={{ height: `${heightPx}px`, width: widthPx ? `${widthPx}px` : undefined }}
     >
       <span className="font-bold">#{team.seed}</span>
       {team.logo && (
@@ -292,6 +326,18 @@ function buildRegionalChampionSlots(elite8Games: TournamentGame[], picks: Record
 }
 
 /**
+ * Resolve picked winner for a game if teams are available.
+ */
+function getPickedWinner(game: TournamentGame | undefined, picks: Record<string, string>): TournamentTeam | null {
+  if (!game) return null;
+  const pickedTeamId = picks[game.id];
+  if (!pickedTeamId) return null;
+  if (game.team1?.id === pickedTeamId) return game.team1;
+  if (game.team2?.id === pickedTeamId) return game.team2;
+  return null;
+}
+
+/**
  * Render one vertical round column with bracket-aligned spacing.
  */
 function RoundColumn({
@@ -312,6 +358,65 @@ function RoundColumn({
           <TeamRow team={slot.team} isWinner={slot.isWinner} heightPx={settings.slotHeightPx} />
         </div>
       ))}
+    </div>
+  );
+}
+
+/**
+ * Render finalists and champion in a centered, tunable layout zone.
+ */
+function FinalsPlacement({
+  updatedBracket,
+  picks,
+  finalsLayout,
+}: {
+  updatedBracket: TournamentBracket;
+  picks: Record<string, string>;
+  finalsLayout: FinalsLayoutSettings;
+}) {
+  const finalistLeft = getPickedWinner(updatedBracket.finalFour[0], picks);
+  const finalistRight = getPickedWinner(updatedBracket.finalFour[1], picks);
+  const champion = getPickedWinner(updatedBracket.championship, picks);
+
+  return (
+    <div className="relative h-[160px]">
+      <div
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+        style={{
+          marginLeft: `${finalsLayout.finalistOffsetXPx}px`,
+          marginTop: `${finalsLayout.finalistOffsetYPx}px`,
+        }}
+      >
+        <div className="flex items-center" style={{ gap: `${finalsLayout.finalistGapPx}px` }}>
+          <TeamRow
+            team={finalistLeft ?? undefined}
+            isWinner={Boolean(finalistLeft)}
+            heightPx={finalsLayout.finalistHeightPx}
+            widthPx={finalsLayout.finalistWidthPx}
+          />
+          <TeamRow
+            team={finalistRight ?? undefined}
+            isWinner={Boolean(finalistRight)}
+            heightPx={finalsLayout.finalistHeightPx}
+            widthPx={finalsLayout.finalistWidthPx}
+          />
+        </div>
+      </div>
+
+      <div
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+        style={{
+          marginLeft: `${finalsLayout.champOffsetXPx}px`,
+          marginTop: `${finalsLayout.champOffsetYPx}px`,
+        }}
+      >
+        <TeamRow
+          team={champion ?? undefined}
+          isWinner={Boolean(champion)}
+          heightPx={finalsLayout.champHeightPx}
+          widthPx={finalsLayout.champWidthPx}
+        />
+      </div>
     </div>
   );
 }
@@ -465,6 +570,10 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
               e8: { ...previous.rounds.e8, ...saved.rounds.e8 },
               r5: { ...previous.rounds.r5, ...saved.rounds.r5 },
             },
+            finals: {
+              ...previous.finals,
+              ...(saved.finals ?? {}),
+            },
           };
         }
 
@@ -507,6 +616,7 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
               overlapPx: legacy.overlapPx ?? previous.rounds.r5.overlapPx,
             },
           },
+          finals: previous.finals,
         };
       });
     } catch (storageError) {
@@ -731,6 +841,196 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
                   );
                 })}
               </div>
+
+              <div className="mt-4 border-t border-gray-200 pt-3">
+                <div className="text-xs font-semibold text-gray-700 mb-2">Finalists</div>
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
+                  <label className="text-xs text-gray-700">
+                    Width (px)
+                    <input
+                      type="number"
+                      min={80}
+                      max={260}
+                      value={layout.finals.finalistWidthPx}
+                      onChange={(event) =>
+                        setLayout((previous) => ({
+                          ...previous,
+                          finals: {
+                            ...previous.finals,
+                            finalistWidthPx: Number(event.target.value) || previous.finals.finalistWidthPx,
+                          },
+                        }))
+                      }
+                      className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                    />
+                  </label>
+
+                  <label className="text-xs text-gray-700">
+                    Height (px)
+                    <input
+                      type="number"
+                      min={20}
+                      max={52}
+                      value={layout.finals.finalistHeightPx}
+                      onChange={(event) =>
+                        setLayout((previous) => ({
+                          ...previous,
+                          finals: {
+                            ...previous.finals,
+                            finalistHeightPx: Number(event.target.value) || previous.finals.finalistHeightPx,
+                          },
+                        }))
+                      }
+                      className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                    />
+                  </label>
+
+                  <label className="text-xs text-gray-700">
+                    Gap (px)
+                    <input
+                      type="number"
+                      min={0}
+                      max={80}
+                      value={layout.finals.finalistGapPx}
+                      onChange={(event) =>
+                        setLayout((previous) => ({
+                          ...previous,
+                          finals: {
+                            ...previous.finals,
+                            finalistGapPx: Number(event.target.value) || 0,
+                          },
+                        }))
+                      }
+                      className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                    />
+                  </label>
+
+                  <label className="text-xs text-gray-700">
+                    Move X (px)
+                    <input
+                      type="number"
+                      min={-300}
+                      max={300}
+                      value={layout.finals.finalistOffsetXPx}
+                      onChange={(event) =>
+                        setLayout((previous) => ({
+                          ...previous,
+                          finals: {
+                            ...previous.finals,
+                            finalistOffsetXPx: Number(event.target.value) || 0,
+                          },
+                        }))
+                      }
+                      className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                    />
+                  </label>
+
+                  <label className="text-xs text-gray-700">
+                    Move Y (px)
+                    <input
+                      type="number"
+                      min={-300}
+                      max={300}
+                      value={layout.finals.finalistOffsetYPx}
+                      onChange={(event) =>
+                        setLayout((previous) => ({
+                          ...previous,
+                          finals: {
+                            ...previous.finals,
+                            finalistOffsetYPx: Number(event.target.value) || 0,
+                          },
+                        }))
+                      }
+                      className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div className="mt-3 border-t border-gray-200 pt-3">
+                <div className="text-xs font-semibold text-gray-700 mb-2">Champion</div>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                  <label className="text-xs text-gray-700">
+                    Width (px)
+                    <input
+                      type="number"
+                      min={80}
+                      max={260}
+                      value={layout.finals.champWidthPx}
+                      onChange={(event) =>
+                        setLayout((previous) => ({
+                          ...previous,
+                          finals: {
+                            ...previous.finals,
+                            champWidthPx: Number(event.target.value) || previous.finals.champWidthPx,
+                          },
+                        }))
+                      }
+                      className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                    />
+                  </label>
+
+                  <label className="text-xs text-gray-700">
+                    Height (px)
+                    <input
+                      type="number"
+                      min={20}
+                      max={52}
+                      value={layout.finals.champHeightPx}
+                      onChange={(event) =>
+                        setLayout((previous) => ({
+                          ...previous,
+                          finals: {
+                            ...previous.finals,
+                            champHeightPx: Number(event.target.value) || previous.finals.champHeightPx,
+                          },
+                        }))
+                      }
+                      className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                    />
+                  </label>
+
+                  <label className="text-xs text-gray-700">
+                    Move X (px)
+                    <input
+                      type="number"
+                      min={-300}
+                      max={300}
+                      value={layout.finals.champOffsetXPx}
+                      onChange={(event) =>
+                        setLayout((previous) => ({
+                          ...previous,
+                          finals: {
+                            ...previous.finals,
+                            champOffsetXPx: Number(event.target.value) || 0,
+                          },
+                        }))
+                      }
+                      className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                    />
+                  </label>
+
+                  <label className="text-xs text-gray-700">
+                    Move Y (px)
+                    <input
+                      type="number"
+                      min={-300}
+                      max={300}
+                      value={layout.finals.champOffsetYPx}
+                      onChange={(event) =>
+                        setLayout((previous) => ({
+                          ...previous,
+                          finals: {
+                            ...previous.finals,
+                            champOffsetYPx: Number(event.target.value) || 0,
+                          },
+                        }))
+                      }
+                      className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                    />
+                  </label>
+                </div>
+              </div>
             </div>
           )}
 
@@ -764,6 +1064,10 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
                   />
                 )}
               </div>
+
+              {updatedBracket && (
+                <FinalsPlacement updatedBracket={updatedBracket} picks={picks} finalsLayout={layout.finals} />
+              )}
 
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 {regionsByPosition.bottomLeft && (
