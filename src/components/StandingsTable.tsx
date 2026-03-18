@@ -241,8 +241,10 @@ export default function StandingsTable() {
           setSelectedDay(days[0]);
           setDisplayDay(days[0]); // Also set display day
         }
-      } catch {
-        // Error loading days - will retry on next render
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to load standings configuration';
+        setError(message);
+        setLoading(false);
       }
     };
     loadDays();

@@ -22,28 +22,33 @@ export interface StandingsData {
   eliminatedTeams?: string[]; // Column O: Teams that are out
 }
 
-const DEFAULT_STANDINGS_SHEET_ID = '12c8VEI6ZoIhRXg8b0rEfYWAOI86Ye_ZPY9G1sPaBRFs';
-
 // Cache for standings data to improve performance
 const standingsCache = new Map<string, { data: StandingsData; timestamp: number }>();
 const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes cache
 
 /**
  * Resolve the standings sheet ID for the current deployment environment.
- * - production: STANDINGS_SHEET_ID_PROD (fallback to generic/default)
- * - non-production (staging/preview/dev): STANDINGS_SHEET_ID_STAGE (fallback to generic/default)
+ * - production: STANDINGS_SHEET_ID_PROD
+ * - non-production (staging/preview/dev): STANDINGS_SHEET_ID_STAGE
+ *
+ * Hard-fails when the expected environment variable is missing.
  */
 function getStandingsSheetId(): string {
   const isProduction = process.env.VERCEL_ENV === 'production';
-  const generic = process.env.STANDINGS_SHEET_ID;
   const prod = process.env.STANDINGS_SHEET_ID_PROD;
   const stage = process.env.STANDINGS_SHEET_ID_STAGE;
 
   if (isProduction) {
-    return prod || generic || DEFAULT_STANDINGS_SHEET_ID;
+    if (!prod) {
+      throw new Error('Missing required environment variable: STANDINGS_SHEET_ID_PROD');
+    }
+    return prod;
   }
 
-  return stage || generic || DEFAULT_STANDINGS_SHEET_ID;
+  if (!stage) {
+    throw new Error('Missing required environment variable: STANDINGS_SHEET_ID_STAGE');
+  }
+  return stage;
 }
 
 /**
@@ -88,48 +93,42 @@ export async function getStandingsData(day: string = 'Day1'): Promise<StandingsD
     return cached.data;
   }
 
-  try {
-    // Convert "Day1" to "Day 1", "Day2" to "Day 2", etc.
-    // But don't modify "Final" - it should stay as "Final"
-    const sheetName = day === 'Final' ? 'Final' : day.replace(/^Day(\d+)$/, 'Day $1');
-    const encodedSheetName = encodeURIComponent(sheetName);
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodedSheetName}`;
-    
-    const response = await fetch(csvUrl);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch standings data: ${response.status} ${response.statusText}`);
-    }
-    
-    const csvText = await response.text();
-    const { entries, quarterfinalWinners, semifinalWinners, semifinalKey, finalWinner, eliminatedTeams } = parseStandingsCSV(csvText);
-    
-    // Get the sheet's last modified time
-    const sheetLastModified = await getSheetLastModified(day);
-    
-        const standingsData: StandingsData = {
-          day,
-          entries,
-          lastUpdated: new Date().toISOString(),
-          sheetLastModified: sheetLastModified || new Date().toISOString(),
-          quarterfinalWinners,
-          semifinalWinners,
-          semifinalKey,
-          finalWinner,
-          eliminatedTeams
-        };
-    
-    // Cache the result
-    standingsCache.set(cacheKey, { data: standingsData, timestamp: Date.now() });
-    
-    const totalTime = performance.now() - startTime;
-    console.log(`[Performance] Standings data loaded: ${totalTime.toFixed(2)}ms (${entries.length} entries)`);
-    return standingsData;
-  } catch (error) {
-    console.error('[Standings] Error fetching standings data:', error);
-    // Return fallback data
-    return getFallbackStandingsData(day);
+  // Convert "Day1" to "Day 1", "Day2" to "Day 2", etc.
+  // But don't modify "Final" - it should stay as "Final"
+  const sheetName = day === 'Final' ? 'Final' : day.replace(/^Day(\d+)$/, 'Day $1');
+  const encodedSheetName = encodeURIComponent(sheetName);
+  const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodedSheetName}`;
+  
+  const response = await fetch(csvUrl);
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch standings data: ${response.status} ${response.statusText}`);
   }
+  
+  const csvText = await response.text();
+  const { entries, quarterfinalWinners, semifinalWinners, semifinalKey, finalWinner, eliminatedTeams } = parseStandingsCSV(csvText);
+  
+  // Get the sheet's last modified time
+  const sheetLastModified = await getSheetLastModified(day);
+  
+  const standingsData: StandingsData = {
+    day,
+    entries,
+    lastUpdated: new Date().toISOString(),
+    sheetLastModified: sheetLastModified || new Date().toISOString(),
+    quarterfinalWinners,
+    semifinalWinners,
+    semifinalKey,
+    finalWinner,
+    eliminatedTeams
+  };
+  
+  // Cache the result
+  standingsCache.set(cacheKey, { data: standingsData, timestamp: Date.now() });
+  
+  const totalTime = performance.now() - startTime;
+  console.log(`[Performance] Standings data loaded: ${totalTime.toFixed(2)}ms (${entries.length} entries)`);
+  return standingsData;
 }
 
 /**
@@ -262,46 +261,35 @@ function parseCSVLine(line: string): string[] {
  * Get available days/tabs from the standings sheet
  */
 export async function getAvailableDays(): Promise<string[]> {
-  try {
-    const sheetId = getStandingsSheetId();
-    // Import the site config to get the number of standings tabs
-    const { getSiteConfig } = await import('@/config/site');
-    const siteConfig = await getSiteConfig();
-    
-    const numberOfTabs = siteConfig.standingsTabs || 2;
-    const days: string[] = [];
-    
-    // Business rule:
-    // - standingsTabs = 10 => include Final + Day9..Day1
-    // - standingsTabs != 10 => include DayN..Day1 only (no Final)
-    const includeFinalTab = numberOfTabs === 10;
-    if (includeFinalTab) {
-      // Check if "Final" tab exists and add it as the first option
-      try {
-        const finalUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=Final`;
-        const finalResponse = await fetch(finalUrl);
-        if (finalResponse.ok) {
-          days.push('Final');
-        }
-      } catch {
-        // Final tab not found, continue without it
-      }
+  const sheetId = getStandingsSheetId();
+  // Import the site config to get the number of standings tabs
+  const { getSiteConfig } = await import('@/config/site');
+  const siteConfig = await getSiteConfig();
+  
+  const numberOfTabs = siteConfig.standingsTabs || 2;
+  const days: string[] = [];
+  
+  // Business rule:
+  // - standingsTabs = 10 => include Final + Day9..Day1
+  // - standingsTabs != 10 => include DayN..Day1 only (no Final)
+  const includeFinalTab = numberOfTabs === 10;
+  if (includeFinalTab) {
+    const finalUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=Final`;
+    const finalResponse = await fetch(finalUrl);
+    if (finalResponse.ok) {
+      days.push('Final');
     }
-
-    // Generate days in descending order:
-    // - For 10 tabs, show 9..1
-    // - For any other value, show N..1
-    const maxDay = includeFinalTab ? 9 : numberOfTabs;
-    for (let i = maxDay; i >= 1; i--) {
-      days.push(`Day${i}`);
-    }
-    
-    return days;
-  } catch (error) {
-    console.error('Error getting available days:', error);
-    // Fallback to Final + Day 9, Day 8, etc.
-    return ['Final', 'Day9', 'Day8', 'Day7', 'Day6', 'Day5', 'Day4', 'Day3', 'Day2', 'Day1'];
   }
+
+  // Generate days in descending order:
+  // - For 10 tabs, show 9..1
+  // - For any other value, show N..1
+  const maxDay = includeFinalTab ? 9 : numberOfTabs;
+  for (let i = maxDay; i >= 1; i--) {
+    days.push(`Day${i}`);
+  }
+  
+  return days;
 }
 
 /**
@@ -420,53 +408,3 @@ export function getFinalColor(
   return 'neutral';
 }
 
-/**
- * Fallback standings data when Google Sheets is unavailable
- */
-function getFallbackStandingsData(day: string): StandingsData {
-  return {
-    day,
-    lastUpdated: new Date().toISOString(),
-    sheetLastModified: new Date().toISOString(),
-    quarterfinalWinners: [], // No quarterfinal winners in fallback
-    semifinalWinners: [], // No semifinal winners in fallback
-    semifinalKey: ['', ''], // No semifinal results in fallback
-    finalWinner: '', // No final winner in fallback
-    eliminatedTeams: [], // No eliminated teams in fallback
-    entries: [
-      {
-        rank: 1,
-        player: 'Utes_1',
-        points: 56,
-        tbDiff: 0,
-        finalFour: ['UConn', 'UNC', 'UK', 'Tenn'],
-        finals: ['UNC', 'UK'],
-        champion: 'UNC',
-        tb: 150,
-        paid: true
-      },
-      {
-        rank: 2,
-        player: 'Kyle Glossy',
-        points: 55,
-        tbDiff: 1,
-        finalFour: ['UConn', 'UNC', 'Duke', 'Purd'],
-        finals: ['UConn', 'Purd'],
-        champion: 'Purd',
-        tb: 145,
-        paid: true
-      },
-      {
-        rank: 2,
-        player: 'Peter Bernstein 2',
-        points: 55,
-        tbDiff: 1,
-        finalFour: ['UConn', 'UNC', 'Hou', 'Cre'],
-        finals: ['UConn', 'Hou'],
-        champion: 'Hou',
-        tb: 139,
-        paid: true
-      }
-    ]
-  };
-}
