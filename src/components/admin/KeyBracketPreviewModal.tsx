@@ -27,9 +27,19 @@ interface RoundSlot {
   isWinner: boolean;
 }
 
-const SLOT_HEIGHT_PX = 28;
-const BASE_GAP_PX = 4;
-const COLUMN_WIDTH_PX = 120;
+interface LayoutSettings {
+  slotHeightPx: number;
+  baseGapPx: number;
+  columnWidthPx: number;
+  overlapPx: number;
+}
+
+const DEFAULT_LAYOUT_SETTINGS: LayoutSettings = {
+  slotHeightPx: 28,
+  baseGapPx: 4,
+  columnWidthPx: 120,
+  overlapPx: 60,
+};
 
 /**
  * Resolve the picked winner for a game from current picks.
@@ -45,10 +55,13 @@ function getPickedWinner(game: TournamentGame, picks: Record<string, string>): T
 /**
  * Render a compact team row with optional winner highlighting.
  */
-function TeamRow({ team, isWinner }: { team?: TournamentTeam; isWinner?: boolean }) {
+function TeamRow({ team, isWinner, heightPx }: { team?: TournamentTeam; isWinner?: boolean; heightPx: number }) {
   if (!team) {
     return (
-      <div className="h-7 px-2 rounded border border-dashed border-gray-300 bg-gray-50 text-xs text-gray-400 flex items-center">
+      <div
+        className="px-2 rounded border border-dashed border-gray-300 bg-gray-50 text-xs text-gray-400 flex items-center"
+        style={{ height: `${heightPx}px` }}
+      >
         TBD
       </div>
     );
@@ -56,9 +69,10 @@ function TeamRow({ team, isWinner }: { team?: TournamentTeam; isWinner?: boolean
 
   return (
     <div
-      className={`h-7 px-2 rounded border text-xs flex items-center gap-1.5 ${
+      className={`px-2 rounded border text-xs flex items-center gap-1.5 ${
         isWinner ? 'border-blue-500 bg-blue-50 text-blue-900 font-semibold' : 'border-gray-300 bg-white text-gray-800'
       }`}
+      style={{ height: `${heightPx}px` }}
     >
       <span className="font-bold">#{team.seed}</span>
       {team.logo && (
@@ -96,10 +110,10 @@ function buildRoundSlots(games: TournamentGame[], picks: Record<string, string>)
  * Get vertical spacing values for each round level.
  * This keeps advancing slots centered between prior-round matchup teams.
  */
-function getRoundSpacing(roundLevel: number): { gapPx: number; offsetPx: number } {
+function getRoundSpacing(roundLevel: number, slotHeightPx: number, baseGapPx: number): { gapPx: number; offsetPx: number } {
   const multiplier = 2 ** roundLevel;
-  const gapPx = multiplier * (SLOT_HEIGHT_PX + BASE_GAP_PX) - SLOT_HEIGHT_PX;
-  const offsetPx = ((multiplier - 1) * (SLOT_HEIGHT_PX + BASE_GAP_PX)) / 2;
+  const gapPx = multiplier * (slotHeightPx + baseGapPx) - slotHeightPx;
+  const offsetPx = ((multiplier - 1) * (slotHeightPx + baseGapPx)) / 2;
   return { gapPx, offsetPx };
 }
 
@@ -109,14 +123,16 @@ function getRoundSpacing(roundLevel: number): { gapPx: number; offsetPx: number 
 function RoundColumn({
   roundLevel,
   slots,
+  layout,
 }: {
   roundLevel: number;
   slots: RoundSlot[];
+  layout: LayoutSettings;
 }) {
-  const { gapPx, offsetPx } = getRoundSpacing(roundLevel);
+  const { gapPx, offsetPx } = getRoundSpacing(roundLevel, layout.slotHeightPx, layout.baseGapPx);
 
   return (
-    <div className="min-w-0" style={{ width: `${COLUMN_WIDTH_PX}px` }}>
+    <div className="min-w-0" style={{ width: `${layout.columnWidthPx}px` }}>
       <div style={{ paddingTop: `${offsetPx}px`, paddingBottom: `${offsetPx}px` }}>
         {slots.map((slot, index) => (
           <div
@@ -127,12 +143,12 @@ function RoundColumn({
                   ? roundLevel === 0
                     ? index % 2 === 0
                       ? 0
-                      : `${BASE_GAP_PX}px`
+                      : `${layout.baseGapPx}px`
                     : `${gapPx}px`
                   : 0,
             }}
           >
-            <TeamRow team={slot.team} isWinner={slot.isWinner} />
+            <TeamRow team={slot.team} isWinner={slot.isWinner} heightPx={layout.slotHeightPx} />
           </div>
         ))}
       </div>
@@ -147,10 +163,12 @@ function RegionBoard({
   regionGames,
   picks,
   reverse,
+  layout,
 }: {
   regionGames: TournamentGame[];
   picks: Record<string, string>;
   reverse?: boolean;
+  layout: LayoutSettings;
 }) {
   const round64 = regionGames.filter((game) => game.round === 'Round of 64');
   const round32 = regionGames.filter((game) => game.round === 'Round of 32');
@@ -191,17 +209,16 @@ function RegionBoard({
             previousRoundLevel !== null &&
             ((previousRoundLevel === 0 && column.roundLevel === 1) ||
               (previousRoundLevel === 1 && column.roundLevel === 0));
-          const overlapPx = Math.floor(COLUMN_WIDTH_PX / 2);
 
           return (
             <div
               key={column.id}
               className="flex-shrink-0"
               style={{
-                marginLeft: index === 0 ? 0 : touchesRoundOf64And32 ? 0 : `-${overlapPx}px`,
+                marginLeft: index === 0 ? 0 : touchesRoundOf64And32 ? 0 : `-${layout.overlapPx}px`,
               }}
             >
-              <RoundColumn roundLevel={column.roundLevel} slots={column.slots} />
+              <RoundColumn roundLevel={column.roundLevel} slots={column.slots} layout={layout} />
             </div>
           );
         })}
@@ -216,6 +233,30 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
   const [picks, setPicks] = useState<Record<string, string>>({});
   const [tournamentData, setTournamentData] = useState<TournamentData | null>(null);
   const [updatedBracket, setUpdatedBracket] = useState<TournamentBracket | null>(null);
+  const [layout, setLayout] = useState<LayoutSettings>(DEFAULT_LAYOUT_SETTINGS);
+  const [showLayoutControls, setShowLayoutControls] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = window.localStorage.getItem('keyBracketPreviewLayout');
+      if (!raw) return;
+      const saved = JSON.parse(raw) as Partial<LayoutSettings>;
+      setLayout((previous) => ({
+        slotHeightPx: saved.slotHeightPx ?? previous.slotHeightPx,
+        baseGapPx: saved.baseGapPx ?? previous.baseGapPx,
+        columnWidthPx: saved.columnWidthPx ?? previous.columnWidthPx,
+        overlapPx: saved.overlapPx ?? previous.overlapPx,
+      }));
+    } catch (storageError) {
+      console.warn('Failed to restore KEY bracket preview layout settings:', storageError);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem('keyBracketPreviewLayout', JSON.stringify(layout));
+  }, [layout]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -295,6 +336,97 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
         onClick={(event) => event.stopPropagation()}
       >
         <div className="p-4 overflow-auto max-h-[92vh] bg-white">
+          <div className="mb-3 flex items-center gap-2">
+            <button
+              onClick={() => setShowLayoutControls((previous) => !previous)}
+              className="px-3 py-1.5 text-xs font-medium rounded border border-gray-300 bg-gray-50 text-gray-700 hover:bg-gray-100"
+            >
+              {showLayoutControls ? 'Hide Layout Controls' : 'Show Layout Controls'}
+            </button>
+            {showLayoutControls && (
+              <button
+                onClick={() => setLayout(DEFAULT_LAYOUT_SETTINGS)}
+                className="px-3 py-1.5 text-xs font-medium rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+              >
+                Reset Defaults
+              </button>
+            )}
+          </div>
+
+          {showLayoutControls && (
+            <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <label className="text-xs text-gray-700">
+                  Box Height (px)
+                  <input
+                    type="number"
+                    min={20}
+                    max={48}
+                    value={layout.slotHeightPx}
+                    onChange={(event) =>
+                      setLayout((previous) => ({
+                        ...previous,
+                        slotHeightPx: Number(event.target.value) || previous.slotHeightPx,
+                      }))
+                    }
+                    className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                  />
+                </label>
+
+                <label className="text-xs text-gray-700">
+                  Game Gap (px)
+                  <input
+                    type="number"
+                    min={0}
+                    max={24}
+                    value={layout.baseGapPx}
+                    onChange={(event) =>
+                      setLayout((previous) => ({
+                        ...previous,
+                        baseGapPx: Number(event.target.value) || 0,
+                      }))
+                    }
+                    className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                  />
+                </label>
+
+                <label className="text-xs text-gray-700">
+                  Column Width (px)
+                  <input
+                    type="number"
+                    min={90}
+                    max={220}
+                    value={layout.columnWidthPx}
+                    onChange={(event) =>
+                      setLayout((previous) => ({
+                        ...previous,
+                        columnWidthPx: Number(event.target.value) || previous.columnWidthPx,
+                      }))
+                    }
+                    className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                  />
+                </label>
+
+                <label className="text-xs text-gray-700">
+                  Overlap Shift (px)
+                  <input
+                    type="number"
+                    min={0}
+                    max={180}
+                    value={layout.overlapPx}
+                    onChange={(event) =>
+                      setLayout((previous) => ({
+                        ...previous,
+                        overlapPx: Number(event.target.value) || 0,
+                      }))
+                    }
+                    className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                  />
+                </label>
+              </div>
+            </div>
+          )}
+
           {loading && (
             <div className="h-[420px] flex items-center justify-center text-gray-600">
               <Loader2 className="h-5 w-5 mr-2 animate-spin" />
@@ -313,6 +445,7 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
                   <RegionBoard
                     regionGames={regionsByPosition.bracketRegions[regionsByPosition.topLeft.position] || []}
                     picks={picks}
+                    layout={layout}
                   />
                 )}
                 {regionsByPosition.topRight && (
@@ -320,6 +453,7 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
                     regionGames={regionsByPosition.bracketRegions[regionsByPosition.topRight.position] || []}
                     picks={picks}
                     reverse
+                    layout={layout}
                   />
                 )}
               </div>
@@ -329,6 +463,7 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
                   <RegionBoard
                     regionGames={regionsByPosition.bracketRegions[regionsByPosition.bottomLeft.position] || []}
                     picks={picks}
+                    layout={layout}
                   />
                 )}
                 {regionsByPosition.bottomRight && (
@@ -336,6 +471,7 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
                     regionGames={regionsByPosition.bracketRegions[regionsByPosition.bottomRight.position] || []}
                     picks={picks}
                     reverse
+                    layout={layout}
                   />
                 )}
               </div>
