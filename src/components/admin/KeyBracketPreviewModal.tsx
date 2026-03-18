@@ -27,7 +27,7 @@ interface RoundSlot {
   isWinner: boolean;
 }
 
-type RoundKey = 'r64' | 'r32' | 's16' | 'e8';
+type RoundKey = 'r64' | 'r32' | 's16' | 'e8' | 'r5';
 
 interface RoundLayoutSettings {
   slotHeightPx: number;
@@ -68,6 +68,13 @@ const DEFAULT_LAYOUT_SETTINGS: LayoutSettings = {
       slotHeightPx: 28,
       matchupGapPx: 228,
       gameGapPx: 228,
+      columnWidthPx: 120,
+      overlapPx: 60,
+    },
+    r5: {
+      slotHeightPx: 28,
+      matchupGapPx: 0,
+      gameGapPx: 0,
       columnWidthPx: 120,
       overlapPx: 60,
     },
@@ -264,6 +271,27 @@ function buildRoundSlots(games: TournamentGame[], picks: Record<string, string>)
 }
 
 /**
+ * Build Round 5 as the regional champion slot (winner of Elite 8).
+ */
+function buildRegionalChampionSlots(elite8Games: TournamentGame[], picks: Record<string, string>): RoundSlot[] {
+  const game = elite8Games[0];
+  if (!game) {
+    return [{ id: 'regional-champion-empty', team: undefined, isWinner: false }];
+  }
+
+  const pickedTeamId = picks[game.id];
+  const winnerTeam = game.team1?.id === pickedTeamId ? game.team1 : game.team2?.id === pickedTeamId ? game.team2 : undefined;
+
+  return [
+    {
+      id: `${game.id}-winner`,
+      team: winnerTeam,
+      isWinner: Boolean(winnerTeam),
+    },
+  ];
+}
+
+/**
  * Render one vertical round column with bracket-aligned spacing.
  */
 function RoundColumn({
@@ -292,14 +320,16 @@ function getRoundKeyFromLevel(level: number): RoundKey {
   if (level === 0) return 'r64';
   if (level === 1) return 'r32';
   if (level === 2) return 's16';
-  return 'e8';
+  if (level === 3) return 'e8';
+  return 'r5';
 }
 
 function getRoundLabel(roundKey: RoundKey): string {
   if (roundKey === 'r64') return 'Round 1';
   if (roundKey === 'r32') return 'Round 2';
   if (roundKey === 's16') return 'Round 3';
-  return 'Round 4';
+  if (roundKey === 'e8') return 'Round 4';
+  return 'Round 5';
 }
 
 function withUpdatedRoundSetting(
@@ -359,6 +389,12 @@ function RegionBoard({
       roundLevel: 3,
       slots: buildRoundSlots(elite8, picks),
       settings: layout.rounds.e8,
+    },
+    {
+      id: 'r5',
+      roundLevel: 4,
+      slots: buildRegionalChampionSlots(elite8, picks),
+      settings: layout.rounds.r5,
     },
   ];
 
@@ -427,6 +463,7 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
               r32: { ...previous.rounds.r32, ...saved.rounds.r32 },
               s16: { ...previous.rounds.s16, ...saved.rounds.s16 },
               e8: { ...previous.rounds.e8, ...saved.rounds.e8 },
+              r5: { ...previous.rounds.r5, ...saved.rounds.r5 },
             },
           };
         }
@@ -462,6 +499,12 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
               gameGapPx: legacy.gameGapPx ?? legacy.matchupGapPx ?? previous.rounds.e8.gameGapPx,
               columnWidthPx: legacy.columnWidthPx ?? previous.rounds.e8.columnWidthPx,
               overlapPx: legacy.overlapPx ?? previous.rounds.e8.overlapPx,
+            },
+            r5: {
+              ...previous.rounds.r5,
+              slotHeightPx: legacy.slotHeightPx ?? previous.rounds.r5.slotHeightPx,
+              columnWidthPx: legacy.columnWidthPx ?? previous.rounds.r5.columnWidthPx,
+              overlapPx: legacy.overlapPx ?? previous.rounds.r5.overlapPx,
             },
           },
         };
@@ -583,7 +626,7 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
               </div>
 
               <div className="space-y-2">
-                {(['r64', 'r32', 's16', 'e8'] as RoundKey[]).map((roundKey) => {
+                {(['r64', 'r32', 's16', 'e8', 'r5'] as RoundKey[]).map((roundKey) => {
                   const settings = layout.rounds[roundKey];
 
                   return (
