@@ -92,7 +92,7 @@ export default function LiveResultsTab({ brackets }: LiveResultsTabProps) {
     <div className="bg-white rounded-lg shadow-lg p-6">
       <div className="flex items-center gap-3 mb-4">
         <KeyRound className="h-5 w-5 text-blue-600" />
-        <h3 className="text-xl font-semibold text-gray-900">Live Results</h3>
+        <h3 className="text-xl font-semibold text-gray-900">Key</h3>
       </div>
 
       <p className="text-sm text-gray-600 mb-6">
@@ -131,7 +131,7 @@ export default function LiveResultsTab({ brackets }: LiveResultsTabProps) {
           }`}
         >
           {opening ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-          {opening ? 'Opening...' : 'Open Live Results'}
+          {opening ? 'Opening...' : 'Open Key'}
         </button>
       </div>
 

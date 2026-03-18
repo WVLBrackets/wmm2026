@@ -464,7 +464,7 @@ export default function AdminPage() {
               }`}
             >
               <KeyRound className="inline h-4 w-4 mr-2" />
-              Live Results
+              Key
             </button>
             <button
               onClick={() => handleSetActiveTab('data')}
