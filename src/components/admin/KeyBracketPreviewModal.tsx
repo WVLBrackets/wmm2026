@@ -95,17 +95,41 @@ function RegionBoard({
     {
       id: 'r32',
       title: 'Round of 32',
-      content: round32.map((game) => <TeamRow key={game.id} team={getPickedWinner(game, picks) ?? undefined} isWinner />),
+      content: round32.map((game) => {
+        const pickedTeamId = picks[game.id];
+        return (
+          <div key={game.id} className="space-y-1">
+            <TeamRow team={game.team1} isWinner={game.team1?.id === pickedTeamId} />
+            <TeamRow team={game.team2} isWinner={game.team2?.id === pickedTeamId} />
+          </div>
+        );
+      }),
     },
     {
       id: 's16',
       title: 'Sweet 16',
-      content: sweet16.map((game) => <TeamRow key={game.id} team={getPickedWinner(game, picks) ?? undefined} isWinner />),
+      content: sweet16.map((game) => {
+        const pickedTeamId = picks[game.id];
+        return (
+          <div key={game.id} className="space-y-1">
+            <TeamRow team={game.team1} isWinner={game.team1?.id === pickedTeamId} />
+            <TeamRow team={game.team2} isWinner={game.team2?.id === pickedTeamId} />
+          </div>
+        );
+      }),
     },
     {
       id: 'e8',
       title: 'Elite 8',
-      content: elite8.map((game) => <TeamRow key={game.id} team={getPickedWinner(game, picks) ?? undefined} isWinner />),
+      content: elite8.map((game) => {
+        const pickedTeamId = picks[game.id];
+        return (
+          <div key={game.id} className="space-y-1">
+            <TeamRow team={game.team1} isWinner={game.team1?.id === pickedTeamId} />
+            <TeamRow team={game.team2} isWinner={game.team2?.id === pickedTeamId} />
+          </div>
+        );
+      }),
     },
   ];
 
