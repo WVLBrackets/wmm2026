@@ -43,7 +43,7 @@ export default function Footer({ buildStamp }: FooterProps) {
     <footer className="bg-gray-800 text-white py-8 mt-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-4">
-          <div>
+          <div className="order-1">
             {/* Mobile: replace "|" with a line break and center both lines */}
             <p className="md:hidden text-gray-300 text-center">
               <span className="block">{footerLines.line1}</span>
@@ -56,14 +56,14 @@ export default function Footer({ buildStamp }: FooterProps) {
           </div>
 
           {buildStamp ? (
-            <div className="text-center">
+            <div className="order-3 md:order-2 text-center">
               <span className="text-[11px] text-gray-500 tracking-wide">{buildStamp}</span>
             </div>
           ) : (
-            <div />
+            <div className="order-3 md:order-2" />
           )}
 
-          <div className="flex items-center justify-center md:justify-end gap-4">
+          <div className="order-2 md:order-3 flex items-center justify-center md:justify-end gap-4">
             <span className="text-gray-400">Questions?</span>
             <a 
               href={`mailto:${contactEmail}`} 
