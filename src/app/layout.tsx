@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 import SessionProvider from "@/components/SessionProvider";
 import { BracketModeProvider } from "@/contexts/BracketModeContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import type { CSSProperties } from "react";
 
 export const metadata: Metadata = {
   title: siteConfig.siteName,
@@ -31,6 +32,7 @@ export default function RootLayout({
 }>) {
   const isStagingEnvironment = process.env.VERCEL_ENV !== 'production';
   const stagingBannerHeight = isStagingEnvironment ? '28px' : '0px';
+  const bodyStyle = { '--staging-banner-height': stagingBannerHeight } as CSSProperties;
 
   return (
     <html lang="en">
@@ -44,7 +46,7 @@ export default function RootLayout({
       <body
         className="font-sans antialiased"
         suppressHydrationWarning={true}
-        style={{ ['--staging-banner-height' as const]: stagingBannerHeight }}
+        style={bodyStyle}
       >
         {isStagingEnvironment && (
           <div className="fixed top-0 left-0 right-0 z-[60] bg-amber-500 text-white text-xs sm:text-sm font-semibold text-center h-7 leading-7 tracking-wide">
