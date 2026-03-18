@@ -29,6 +29,7 @@ interface RoundSlot {
 
 const SLOT_HEIGHT_PX = 28;
 const BASE_GAP_PX = 4;
+const COLUMN_WIDTH_PX = 120;
 
 /**
  * Resolve the picked winner for a game from current picks.
@@ -115,10 +116,22 @@ function RoundColumn({
   const { gapPx, offsetPx } = getRoundSpacing(roundLevel);
 
   return (
-    <div className="min-w-0">
+    <div className="min-w-0" style={{ width: `${COLUMN_WIDTH_PX}px` }}>
       <div style={{ paddingTop: `${offsetPx}px`, paddingBottom: `${offsetPx}px` }}>
         {slots.map((slot, index) => (
-          <div key={slot.id} style={{ marginBottom: index < slots.length - 1 ? `${gapPx}px` : 0 }}>
+          <div
+            key={slot.id}
+            style={{
+              marginBottom:
+                index < slots.length - 1
+                  ? roundLevel === 0
+                    ? index % 2 === 0
+                      ? 0
+                      : `${BASE_GAP_PX}px`
+                    : `${gapPx}px`
+                  : 0,
+            }}
+          >
             <TeamRow team={slot.team} isWinner={slot.isWinner} />
           </div>
         ))}
@@ -171,10 +184,27 @@ function RegionBoard({
 
   return (
     <div className="rounded-lg border border-gray-200 p-3 bg-gray-50 min-w-0">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {orderedColumns.map((column) => (
-          <RoundColumn key={column.id} roundLevel={column.roundLevel} slots={column.slots} />
-        ))}
+      <div className="flex items-start">
+        {orderedColumns.map((column, index) => {
+          const previousRoundLevel = index > 0 ? orderedColumns[index - 1].roundLevel : null;
+          const touchesRoundOf64And32 =
+            previousRoundLevel !== null &&
+            ((previousRoundLevel === 0 && column.roundLevel === 1) ||
+              (previousRoundLevel === 1 && column.roundLevel === 0));
+          const overlapPx = Math.floor(COLUMN_WIDTH_PX / 2);
+
+          return (
+            <div
+              key={column.id}
+              className="flex-shrink-0"
+              style={{
+                marginLeft: index === 0 ? 0 : touchesRoundOf64And32 ? 0 : `-${overlapPx}px`,
+              }}
+            >
+              <RoundColumn roundLevel={column.roundLevel} slots={column.slots} />
+            </div>
+          );
+        })}
       </div>
     </div>
   );
