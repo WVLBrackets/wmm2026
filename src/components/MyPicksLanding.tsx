@@ -358,6 +358,7 @@ export default function MyPicksLanding({
   }, [siteConfig?.stopSubmitDateTime]);
 
   const countdownDisplay = countdownMs !== null ? formatCountdown(countdownMs) : null;
+  const scoreboardTime = killSwitchEnabled ? (countdownDisplay || '00:00:00') : '00:00:00';
 
   // Get the reason bracket creation is disabled
   const getBracketCreationDisabledReason = () => {
@@ -438,6 +439,11 @@ export default function MyPicksLanding({
                         {renderMessageWithLineBreaks(siteConfig.bracketsMessage)}
                       </p>
                     )}
+                    {!killSwitchEnabled && (
+                      <p className="text-sm text-red-600 mt-1 font-medium">
+                        {killSwitchDisabledReason}
+                      </p>
+                    )}
                     
                     {/* Line 3: Status bubbles - always shown */}
                     <div className="flex items-center gap-2 mt-2">
@@ -485,18 +491,19 @@ export default function MyPicksLanding({
                         <span>Logout</span>
                       </LoggedButton>
                     </div>
-                    {!killSwitchEnabled ? (
-                      <p className="text-xs text-red-600 max-w-64 text-right">
-                        {killSwitchDisabledReason}
-                      </p>
-                    ) : (
-                      countdownDisplay && (
-                        <div className="inline-flex items-center gap-1 rounded bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
-                          <Clock className="h-3.5 w-3.5" />
-                          <span>{countdownDisplay}</span>
-                        </div>
-                      )
-                    )}
+                    <div
+                      className={`inline-flex items-center gap-2 rounded border border-gray-700 bg-black px-2.5 py-1 font-mono text-sm tracking-wider shadow-inner ${
+                        killSwitchEnabled ? 'text-white' : 'text-red-500'
+                      }`}
+                      title={
+                        killSwitchEnabled
+                          ? 'Countdown to bracket submission deadline'
+                          : killSwitchDisabledReason
+                      }
+                    >
+                      <Clock className={`h-3.5 w-3.5 ${killSwitchEnabled ? 'text-white' : 'text-red-500'}`} />
+                      <span>{scoreboardTime}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -516,6 +523,11 @@ export default function MyPicksLanding({
                       {siteConfig?.mobileBracketsMessage && (
                         <p className="text-sm text-gray-600 mt-1">
                           {renderMessageWithLineBreaks(siteConfig.mobileBracketsMessage)}
+                        </p>
+                      )}
+                      {!killSwitchEnabled && (
+                        <p className="text-sm text-red-600 mt-1 font-medium">
+                          {killSwitchDisabledReason}
                         </p>
                       )}
                     </div>
@@ -547,18 +559,19 @@ export default function MyPicksLanding({
                           <LogOut className="h-4 w-4" />
                         </LoggedButton>
                       </div>
-                      {!killSwitchEnabled ? (
-                        <p className="text-xs text-red-600 text-right max-w-40">
-                          {killSwitchDisabledReason}
-                        </p>
-                      ) : (
-                        countdownDisplay && (
-                          <div className="inline-flex items-center gap-1 rounded bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
-                            <Clock className="h-3.5 w-3.5" />
-                            <span>{countdownDisplay}</span>
-                          </div>
-                        )
-                      )}
+                      <div
+                        className={`inline-flex items-center gap-2 rounded border border-gray-700 bg-black px-2 py-1 font-mono text-xs tracking-wider shadow-inner ${
+                          killSwitchEnabled ? 'text-white' : 'text-red-500'
+                        }`}
+                        title={
+                          killSwitchEnabled
+                            ? 'Countdown to bracket submission deadline'
+                            : killSwitchDisabledReason
+                        }
+                      >
+                        <Clock className={`h-3 w-3 ${killSwitchEnabled ? 'text-white' : 'text-red-500'}`} />
+                        <span>{scoreboardTime}</span>
+                      </div>
                     </div>
                   </div>
                   
