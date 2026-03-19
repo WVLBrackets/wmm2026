@@ -3,11 +3,17 @@
 import React, { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
+import { Press_Start_2P } from 'next/font/google';
 import { Trophy, Plus, Edit, Eye, Clock, CheckCircle, LogOut, Trash2, Copy, Printer, Info, X, Mail } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { TournamentData, TournamentBracket } from '@/types/tournament';
 import { SiteConfigData } from '@/lib/siteConfig';
 import { LoggedButton } from '@/components/LoggedButton';
+
+const scoreboardFont = Press_Start_2P({
+  weight: '400',
+  subsets: ['latin'],
+});
 
 interface Bracket {
   id: string;
@@ -492,7 +498,7 @@ export default function MyPicksLanding({
                       </LoggedButton>
                     </div>
                     <div
-                      className={`inline-flex items-center gap-2 rounded border border-gray-700 bg-black px-2.5 py-1 font-mono text-sm tracking-wider shadow-inner ${
+                      className={`inline-flex items-center rounded border border-gray-700 bg-black px-2.5 py-1 shadow-inner ${
                         killSwitchEnabled ? 'text-white' : 'text-red-500'
                       }`}
                       title={
@@ -500,9 +506,22 @@ export default function MyPicksLanding({
                           ? 'Countdown to bracket submission deadline'
                           : killSwitchDisabledReason
                       }
+                      style={{
+                        backgroundImage:
+                          'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.14) 0.7px, transparent 0.7px)',
+                        backgroundSize: '4px 4px',
+                      }}
                     >
-                      <Clock className={`h-3.5 w-3.5 ${killSwitchEnabled ? 'text-white' : 'text-red-500'}`} />
-                      <span>{scoreboardTime}</span>
+                      <span
+                        className={`${scoreboardFont.className} text-[11px] tracking-[0.14em]`}
+                        style={{
+                          textShadow: killSwitchEnabled
+                            ? '0 0 4px rgba(255,255,255,0.55)'
+                            : '0 0 4px rgba(239,68,68,0.75)',
+                        }}
+                      >
+                        {scoreboardTime}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -560,7 +579,7 @@ export default function MyPicksLanding({
                         </LoggedButton>
                       </div>
                       <div
-                        className={`inline-flex items-center gap-2 rounded border border-gray-700 bg-black px-2 py-1 font-mono text-xs tracking-wider shadow-inner ${
+                        className={`inline-flex items-center rounded border border-gray-700 bg-black px-2 py-1 shadow-inner ${
                           killSwitchEnabled ? 'text-white' : 'text-red-500'
                         }`}
                         title={
@@ -568,9 +587,22 @@ export default function MyPicksLanding({
                             ? 'Countdown to bracket submission deadline'
                             : killSwitchDisabledReason
                         }
+                        style={{
+                          backgroundImage:
+                            'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.14) 0.7px, transparent 0.7px)',
+                          backgroundSize: '4px 4px',
+                        }}
                       >
-                        <Clock className={`h-3 w-3 ${killSwitchEnabled ? 'text-white' : 'text-red-500'}`} />
-                        <span>{scoreboardTime}</span>
+                        <span
+                          className={`${scoreboardFont.className} text-[9px] tracking-[0.12em]`}
+                          style={{
+                            textShadow: killSwitchEnabled
+                              ? '0 0 4px rgba(255,255,255,0.55)'
+                              : '0 0 4px rgba(239,68,68,0.75)',
+                          }}
+                        >
+                          {scoreboardTime}
+                        </span>
                       </div>
                     </div>
                   </div>
