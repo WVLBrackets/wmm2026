@@ -312,7 +312,7 @@ function BracketContent() {
       setIsLoading(true);
       
       // Load site config first to get tournament year (via API route)
-      const configResponse = await fetch('/api/site-config');
+      const configResponse = await fetch('/api/site-config?fresh=true', { cache: 'no-store' });
       const configResult = await configResponse.json();
       const config = configResult.success ? configResult.data : null;
       setSiteConfig(config);
@@ -393,7 +393,7 @@ function BracketContent() {
       // Load tournament data first if not already loaded
       if (!tournamentData || !bracket) {
         // Load site config first to get tournament year (via API route)
-        const configResponse = await fetch('/api/site-config');
+        const configResponse = await fetch('/api/site-config?fresh=true', { cache: 'no-store' });
         const configResult = await configResponse.json();
         const config = configResult.success ? configResult.data : null;
         setSiteConfig(config);
