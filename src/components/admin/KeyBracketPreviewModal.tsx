@@ -379,9 +379,9 @@ function FinalsPlacement({
   const champion = getPickedWinner(updatedBracket.championship, picks);
 
   return (
-    <div className="relative h-[160px]">
+    <div className="relative w-full h-0 pointer-events-none">
       <div
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+        className="absolute left-1/2 top-0 -translate-x-1/2"
         style={{
           marginLeft: `${finalsLayout.finalistOffsetXPx}px`,
           marginTop: `${finalsLayout.finalistOffsetYPx}px`,
@@ -404,7 +404,7 @@ function FinalsPlacement({
       </div>
 
       <div
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+        className="absolute left-1/2 top-0 -translate-x-1/2"
         style={{
           marginLeft: `${finalsLayout.champOffsetXPx}px`,
           marginTop: `${finalsLayout.champOffsetYPx}px`,
@@ -1046,7 +1046,7 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
           )}
 
           {!loading && !error && regionsByPosition && (
-            <div className="space-y-4 min-w-[1100px]">
+            <div className="relative space-y-4 min-w-[1100px]">
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 {regionsByPosition.topLeft && (
                   <RegionBoard
@@ -1065,9 +1065,9 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
                 )}
               </div>
 
-              {updatedBracket && (
-                <FinalsPlacement updatedBracket={updatedBracket} picks={picks} finalsLayout={layout.finals} />
-              )}
+              <div className="absolute inset-x-0 top-1/2 -translate-y-1/2">
+                {updatedBracket && <FinalsPlacement updatedBracket={updatedBracket} picks={picks} finalsLayout={layout.finals} />}
+              </div>
 
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 {regionsByPosition.bottomLeft && (
