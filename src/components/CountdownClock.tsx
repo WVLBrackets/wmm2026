@@ -5,6 +5,7 @@ import { Calendar } from 'lucide-react';
 import { getSiteConfig } from '@/config/site';
 import { SiteConfigData } from '@/lib/siteConfig';
 import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
+import { useServerTime } from '@/hooks/useServerTime';
 
 interface TimeLeft {
   days: number;
@@ -17,6 +18,7 @@ export default function CountdownClock() {
   const [timeLeft, setTimeLeft] = useState<TimeLeft>({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [isClient, setIsClient] = useState(false);
   const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
+  const { getServerNowMs } = useServerTime();
 
   useEffect(() => {
     setIsClient(true);
@@ -40,8 +42,7 @@ export default function CountdownClock() {
     
     const calculateTimeLeft = (): TimeLeft => {
       const tournamentDate = new Date(siteConfig.tournamentStartDate);
-      const now = new Date();
-      const difference = tournamentDate.getTime() - now.getTime();
+      const difference = tournamentDate.getTime() - getServerNowMs();
 
       if (difference > 0) {
         return {
@@ -64,7 +65,7 @@ export default function CountdownClock() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [siteConfig]);
+  }, [siteConfig, getServerNowMs]);
 
   // Don't render on server to avoid hydration mismatch
   if (!isClient || !siteConfig) {

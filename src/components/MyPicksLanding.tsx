@@ -9,6 +9,7 @@ import { signOut } from 'next-auth/react';
 import { TournamentData, TournamentBracket } from '@/types/tournament';
 import { SiteConfigData } from '@/lib/siteConfig';
 import { LoggedButton } from '@/components/LoggedButton';
+import { useServerTime } from '@/hooks/useServerTime';
 
 const scoreboardFont = Press_Start_2P({
   weight: '400',
@@ -69,6 +70,7 @@ export default function MyPicksLanding({
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailMessage, setEmailMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [countdownMs, setCountdownMs] = useState<number | null>(null);
+  const { getServerNowMs } = useServerTime();
   const killSwitchDisabledReason = killSwitchMessage || siteConfig?.killSwitchOn || 'Bracket actions are temporarily disabled by the administrator.';
   
   // Get tournament year from config or tournament data
@@ -316,8 +318,7 @@ export default function MyPicksLanding({
     if (siteConfig?.stopSubmitDateTime) {
       try {
         const deadline = new Date(siteConfig.stopSubmitDateTime);
-        const now = new Date();
-        if (now >= deadline) {
+        if (getServerNowMs() >= deadline.getTime()) {
           return true;
         }
       } catch {
@@ -361,13 +362,13 @@ export default function MyPicksLanding({
     }
 
     const updateCountdown = () => {
-      setCountdownMs(Math.max(0, deadline.getTime() - Date.now()));
+      setCountdownMs(Math.max(0, deadline.getTime() - getServerNowMs()));
     };
 
     updateCountdown();
     const intervalId = window.setInterval(updateCountdown, 1000);
     return () => window.clearInterval(intervalId);
-  }, [siteConfig?.stopSubmitDateTime]);
+  }, [siteConfig?.stopSubmitDateTime, getServerNowMs]);
 
   const countdownDisplay = countdownMs !== null ? formatCountdown(countdownMs) : null;
   const showCountdownTimer = siteConfig?.showCountdownTimer?.trim().toUpperCase() === 'YES';
@@ -384,8 +385,7 @@ export default function MyPicksLanding({
     if (siteConfig?.stopSubmitDateTime) {
       try {
         const deadline = new Date(siteConfig.stopSubmitDateTime);
-        const now = new Date();
-        if (now >= deadline) {
+        if (getServerNowMs() >= deadline.getTime()) {
           return siteConfig?.finalMessageTooLate || 'Bracket submissions are closed. The deadline has passed.';
         }
       } catch {
