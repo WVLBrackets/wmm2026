@@ -315,6 +315,14 @@ export async function DELETE(
       );
     }
 
+    const killSwitchMessage = await getKillSwitchDisabledMessage();
+    if (killSwitchMessage) {
+      return NextResponse.json(
+        { success: false, error: killSwitchMessage },
+        { status: 403 }
+      );
+    }
+
     const bracket = await getBracketById(id);
     
     if (!bracket) {

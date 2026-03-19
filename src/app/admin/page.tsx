@@ -11,6 +11,7 @@ import UsageMonitoringTab from '@/components/admin/UsageMonitoringTab';
 import TeamDataTab from '@/components/admin/TeamDataTab';
 import LogsTab from '@/components/admin/LogsTab';
 import LiveResultsTab from '@/components/admin/LiveResultsTab';
+import { getCSRFHeaders } from '@/hooks/useCSRF';
 
 interface User {
   id: string;
@@ -143,9 +144,10 @@ export default function AdminPage() {
     const nextValue = !killSwitchEnabled;
 
     try {
+      const csrfHeaders = await getCSRFHeaders();
       const response = await fetch('/api/admin/kill-switch', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders },
         body: JSON.stringify({ enabled: nextValue }),
       });
       const result = await response.json();

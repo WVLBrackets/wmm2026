@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
+import { csrfProtection } from '@/lib/csrf';
 import { getMasterKillSwitchEnabled, setMasterKillSwitchEnabled } from '@/lib/repositories/featureFlagRepository';
 import { getSiteConfigFromGoogleSheetsFresh } from '@/lib/siteConfig';
 import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
+import { validateTrustedOrigin } from '@/lib/requestSecurity';
 
 /**
  * GET /api/admin/kill-switch - Admin-only kill switch state.
@@ -21,7 +23,7 @@ export async function GET() {
         enabled,
         message: config?.killSwitchOn || FALLBACK_CONFIG.killSwitchOn,
       },
-    });
+    }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     console.error('Admin kill switch GET error:', error);
 
@@ -37,6 +39,19 @@ export async function GET() {
  * PUT /api/admin/kill-switch - Admin-only kill switch update.
  */
 export async function PUT(request: NextRequest) {
+  const csrfError = csrfProtection(request);
+  if (csrfError) {
+    return csrfError;
+  }
+
+  const originValidation = validateTrustedOrigin(request);
+  if (!originValidation.valid) {
+    return NextResponse.json(
+      { success: false, error: originValidation.error || 'Untrusted request origin' },
+      { status: 403 }
+    );
+  }
+
   try {
     await requireAdmin();
     const body = await request.json();
