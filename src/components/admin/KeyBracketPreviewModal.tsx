@@ -40,18 +40,31 @@ interface RoundLayoutSettings {
 interface FinalsLayoutSettings {
   finalistWidthPx: number;
   finalistHeightPx: number;
+  finalistFontSizePx: number;
   finalistGapPx: number;
   finalistOffsetXPx: number;
   finalistOffsetYPx: number;
   champWidthPx: number;
   champHeightPx: number;
+  champFontSizePx: number;
   champOffsetXPx: number;
   champOffsetYPx: number;
+  finalScoreWidthPx: number;
+  finalScoreHeightPx: number;
+  finalScoreFontSizePx: number;
+  finalScoreOffsetXPx: number;
+  finalScoreOffsetYPx: number;
+}
+
+interface RegionLabelLayoutSettings {
+  fontSizePx: number;
+  offsetYPx: number;
 }
 
 interface LayoutSettings {
   rounds: Record<RoundKey, RoundLayoutSettings>;
   finals: FinalsLayoutSettings;
+  regionLabels: RegionLabelLayoutSettings;
 }
 
 const DEFAULT_LAYOUT_SETTINGS: LayoutSettings = {
@@ -95,13 +108,24 @@ const DEFAULT_LAYOUT_SETTINGS: LayoutSettings = {
   finals: {
     finalistWidthPx: 120,
     finalistHeightPx: 28,
+    finalistFontSizePx: 12,
     finalistGapPx: 6,
     finalistOffsetXPx: 0,
     finalistOffsetYPx: -20,
     champWidthPx: 120,
     champHeightPx: 28,
+    champFontSizePx: 12,
     champOffsetXPx: 0,
     champOffsetYPx: 45,
+    finalScoreWidthPx: 120,
+    finalScoreHeightPx: 28,
+    finalScoreFontSizePx: 12,
+    finalScoreOffsetXPx: 0,
+    finalScoreOffsetYPx: 85,
+  },
+  regionLabels: {
+    fontSizePx: 16,
+    offsetYPx: 0,
   },
 };
 
@@ -248,17 +272,32 @@ function TeamRow({
   isWinner,
   heightPx,
   widthPx,
+  fontSizePx,
+  labelText,
 }: {
   team?: TournamentTeam;
   isWinner?: boolean;
   heightPx: number;
   widthPx?: number;
+  fontSizePx?: number;
+  labelText?: string;
 }) {
+  if (labelText) {
+    return (
+      <div
+        className="px-2 rounded border border-gray-300 bg-white text-gray-800 flex items-center justify-center font-semibold"
+        style={{ height: `${heightPx}px`, width: widthPx ? `${widthPx}px` : undefined, fontSize: `${fontSizePx ?? 12}px` }}
+      >
+        {labelText}
+      </div>
+    );
+  }
+
   if (!team) {
     return (
       <div
-        className="px-2 rounded border border-dashed border-gray-300 bg-gray-50 text-xs text-gray-400 flex items-center"
-        style={{ height: `${heightPx}px`, width: widthPx ? `${widthPx}px` : undefined }}
+        className="px-2 rounded border border-dashed border-gray-300 bg-gray-50 text-gray-400 flex items-center"
+        style={{ height: `${heightPx}px`, width: widthPx ? `${widthPx}px` : undefined, fontSize: `${fontSizePx ?? 12}px` }}
       >
         TBD
       </div>
@@ -267,10 +306,10 @@ function TeamRow({
 
   return (
     <div
-      className={`px-2 rounded border text-xs flex items-center gap-1.5 ${
+      className={`px-2 rounded border flex items-center gap-1.5 ${
         isWinner ? 'border-blue-500 bg-blue-50 text-blue-900 font-semibold' : 'border-gray-300 bg-white text-gray-800'
       }`}
-      style={{ height: `${heightPx}px`, width: widthPx ? `${widthPx}px` : undefined }}
+      style={{ height: `${heightPx}px`, width: widthPx ? `${widthPx}px` : undefined, fontSize: `${fontSizePx ?? 12}px` }}
     >
       <span className="font-bold">#{team.seed}</span>
       {team.logo && (
@@ -393,12 +432,14 @@ function FinalsPlacement({
             isWinner={Boolean(finalistLeft)}
             heightPx={finalsLayout.finalistHeightPx}
             widthPx={finalsLayout.finalistWidthPx}
+            fontSizePx={finalsLayout.finalistFontSizePx}
           />
           <TeamRow
             team={finalistRight ?? undefined}
             isWinner={Boolean(finalistRight)}
             heightPx={finalsLayout.finalistHeightPx}
             widthPx={finalsLayout.finalistWidthPx}
+            fontSizePx={finalsLayout.finalistFontSizePx}
           />
         </div>
       </div>
@@ -415,6 +456,22 @@ function FinalsPlacement({
           isWinner={Boolean(champion)}
           heightPx={finalsLayout.champHeightPx}
           widthPx={finalsLayout.champWidthPx}
+          fontSizePx={finalsLayout.champFontSizePx}
+        />
+      </div>
+
+      <div
+        className="absolute left-1/2 top-0 -translate-x-1/2"
+        style={{
+          marginLeft: `${finalsLayout.finalScoreOffsetXPx}px`,
+          marginTop: `${finalsLayout.finalScoreOffsetYPx}px`,
+        }}
+      >
+        <TeamRow
+          heightPx={finalsLayout.finalScoreHeightPx}
+          widthPx={finalsLayout.finalScoreWidthPx}
+          fontSizePx={finalsLayout.finalScoreFontSizePx}
+          labelText="Final Score"
         />
       </div>
     </div>
@@ -455,11 +512,13 @@ function withUpdatedRoundSetting(
  * Render one region as round columns with alignment-accurate slot spacing.
  */
 function RegionBoard({
+  regionName,
   regionGames,
   picks,
   reverse,
   layout,
 }: {
+  regionName: string;
   regionGames: TournamentGame[];
   picks: Record<string, string>;
   reverse?: boolean;
@@ -516,7 +575,13 @@ function RegionBoard({
   );
 
   return (
-    <div className="rounded-lg border border-gray-200 p-3 bg-gray-50 min-w-0">
+    <div className="rounded-lg border border-gray-200 p-3 bg-gray-50 min-w-0 relative overflow-hidden">
+      <div
+        className={`absolute top-1 ${reverse ? 'left-2' : 'right-2'} text-gray-500 font-semibold pointer-events-none`}
+        style={{ marginTop: `${layout.regionLabels.offsetYPx}px`, fontSize: `${layout.regionLabels.fontSizePx}px` }}
+      >
+        {regionName}
+      </div>
       <div className="flex items-start" style={{ flexDirection: reverse ? 'row-reverse' : 'row' }}>
         {columns.map((column, index) => {
           const roundKey = getRoundKeyFromLevel(column.roundLevel);
@@ -574,6 +639,10 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
               ...previous.finals,
               ...(saved.finals ?? {}),
             },
+            regionLabels: {
+              ...previous.regionLabels,
+              ...(saved.regionLabels ?? {}),
+            },
           };
         }
 
@@ -617,6 +686,7 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
             },
           },
           finals: previous.finals,
+          regionLabels: previous.regionLabels,
         };
       });
     } catch (storageError) {
@@ -886,6 +956,26 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
                   </label>
 
                   <label className="text-xs text-gray-700">
+                    Font Size (px)
+                    <input
+                      type="number"
+                      min={9}
+                      max={24}
+                      value={layout.finals.finalistFontSizePx}
+                      onChange={(event) =>
+                        setLayout((previous) => ({
+                          ...previous,
+                          finals: {
+                            ...previous.finals,
+                            finalistFontSizePx: Number(event.target.value) || previous.finals.finalistFontSizePx,
+                          },
+                        }))
+                      }
+                      className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                    />
+                  </label>
+
+                  <label className="text-xs text-gray-700">
                     Gap (px)
                     <input
                       type="number"
@@ -949,7 +1039,7 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
 
               <div className="mt-3 border-t border-gray-200 pt-3">
                 <div className="text-xs font-semibold text-gray-700 mb-2">Champion</div>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
                   <label className="text-xs text-gray-700">
                     Width (px)
                     <input
@@ -983,6 +1073,26 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
                           finals: {
                             ...previous.finals,
                             champHeightPx: Number(event.target.value) || previous.finals.champHeightPx,
+                          },
+                        }))
+                      }
+                      className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                    />
+                  </label>
+
+                  <label className="text-xs text-gray-700">
+                    Font Size (px)
+                    <input
+                      type="number"
+                      min={9}
+                      max={24}
+                      value={layout.finals.champFontSizePx}
+                      onChange={(event) =>
+                        setLayout((previous) => ({
+                          ...previous,
+                          finals: {
+                            ...previous.finals,
+                            champFontSizePx: Number(event.target.value) || previous.finals.champFontSizePx,
                           },
                         }))
                       }
@@ -1031,6 +1141,156 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
                   </label>
                 </div>
               </div>
+
+              <div className="mt-3 border-t border-gray-200 pt-3">
+                <div className="text-xs font-semibold text-gray-700 mb-2">Final Score Box</div>
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
+                  <label className="text-xs text-gray-700">
+                    Width (px)
+                    <input
+                      type="number"
+                      min={80}
+                      max={260}
+                      value={layout.finals.finalScoreWidthPx}
+                      onChange={(event) =>
+                        setLayout((previous) => ({
+                          ...previous,
+                          finals: {
+                            ...previous.finals,
+                            finalScoreWidthPx: Number(event.target.value) || previous.finals.finalScoreWidthPx,
+                          },
+                        }))
+                      }
+                      className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                    />
+                  </label>
+
+                  <label className="text-xs text-gray-700">
+                    Height (px)
+                    <input
+                      type="number"
+                      min={20}
+                      max={52}
+                      value={layout.finals.finalScoreHeightPx}
+                      onChange={(event) =>
+                        setLayout((previous) => ({
+                          ...previous,
+                          finals: {
+                            ...previous.finals,
+                            finalScoreHeightPx: Number(event.target.value) || previous.finals.finalScoreHeightPx,
+                          },
+                        }))
+                      }
+                      className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                    />
+                  </label>
+
+                  <label className="text-xs text-gray-700">
+                    Font Size (px)
+                    <input
+                      type="number"
+                      min={9}
+                      max={24}
+                      value={layout.finals.finalScoreFontSizePx}
+                      onChange={(event) =>
+                        setLayout((previous) => ({
+                          ...previous,
+                          finals: {
+                            ...previous.finals,
+                            finalScoreFontSizePx: Number(event.target.value) || previous.finals.finalScoreFontSizePx,
+                          },
+                        }))
+                      }
+                      className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                    />
+                  </label>
+
+                  <label className="text-xs text-gray-700">
+                    Move X (px)
+                    <input
+                      type="number"
+                      min={-300}
+                      max={300}
+                      value={layout.finals.finalScoreOffsetXPx}
+                      onChange={(event) =>
+                        setLayout((previous) => ({
+                          ...previous,
+                          finals: {
+                            ...previous.finals,
+                            finalScoreOffsetXPx: Number(event.target.value) || 0,
+                          },
+                        }))
+                      }
+                      className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                    />
+                  </label>
+
+                  <label className="text-xs text-gray-700">
+                    Move Y (px)
+                    <input
+                      type="number"
+                      min={-300}
+                      max={300}
+                      value={layout.finals.finalScoreOffsetYPx}
+                      onChange={(event) =>
+                        setLayout((previous) => ({
+                          ...previous,
+                          finals: {
+                            ...previous.finals,
+                            finalScoreOffsetYPx: Number(event.target.value) || 0,
+                          },
+                        }))
+                      }
+                      className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div className="mt-3 border-t border-gray-200 pt-3">
+                <div className="text-xs font-semibold text-gray-700 mb-2">Region Labels</div>
+                <div className="grid grid-cols-2 lg:grid-cols-2 gap-2">
+                  <label className="text-xs text-gray-700">
+                    Font Size (px)
+                    <input
+                      type="number"
+                      min={10}
+                      max={36}
+                      value={layout.regionLabels.fontSizePx}
+                      onChange={(event) =>
+                        setLayout((previous) => ({
+                          ...previous,
+                          regionLabels: {
+                            ...previous.regionLabels,
+                            fontSizePx: Number(event.target.value) || previous.regionLabels.fontSizePx,
+                          },
+                        }))
+                      }
+                      className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                    />
+                  </label>
+
+                  <label className="text-xs text-gray-700">
+                    Move Y (px)
+                    <input
+                      type="number"
+                      min={-60}
+                      max={120}
+                      value={layout.regionLabels.offsetYPx}
+                      onChange={(event) =>
+                        setLayout((previous) => ({
+                          ...previous,
+                          regionLabels: {
+                            ...previous.regionLabels,
+                            offsetYPx: Number(event.target.value) || 0,
+                          },
+                        }))
+                      }
+                      className="mt-1 w-full px-2 py-1 border border-gray-300 rounded bg-white text-gray-900"
+                    />
+                  </label>
+                </div>
+              </div>
             </div>
           )}
 
@@ -1050,6 +1310,7 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 {regionsByPosition.topLeft && (
                   <RegionBoard
+                    regionName={regionsByPosition.topLeft.name}
                     regionGames={regionsByPosition.bracketRegions[regionsByPosition.topLeft.position] || []}
                     picks={picks}
                     layout={layout}
@@ -1057,6 +1318,7 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
                 )}
                 {regionsByPosition.topRight && (
                   <RegionBoard
+                    regionName={regionsByPosition.topRight.name}
                     regionGames={regionsByPosition.bracketRegions[regionsByPosition.topRight.position] || []}
                     picks={picks}
                     reverse
@@ -1072,6 +1334,7 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 {regionsByPosition.bottomLeft && (
                   <RegionBoard
+                    regionName={regionsByPosition.bottomLeft.name}
                     regionGames={regionsByPosition.bracketRegions[regionsByPosition.bottomLeft.position] || []}
                     picks={picks}
                     layout={layout}
@@ -1079,6 +1342,7 @@ export default function KeyBracketPreviewModal({ isOpen, year, onClose }: KeyBra
                 )}
                 {regionsByPosition.bottomRight && (
                   <RegionBoard
+                    regionName={regionsByPosition.bottomRight.name}
                     regionGames={regionsByPosition.bracketRegions[regionsByPosition.bottomRight.position] || []}
                     picks={picks}
                     reverse
