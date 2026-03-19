@@ -102,7 +102,7 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   tieBreakerHigh: 500,
   // Submission deadline and toggle
   stopSubmitDateTime: '',
-  showConutdownTimer: 'No',
+  showCountdownTimer: 'No',
   stopSubmitToggle: 'No',
   finalMessageTooLate: 'Bracket submissions are closed. The deadline has passed.',
   finalMessageSubmitOff: 'Bracket submissions are currently disabled.',

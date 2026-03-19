@@ -370,7 +370,7 @@ export default function MyPicksLanding({
   }, [siteConfig?.stopSubmitDateTime]);
 
   const countdownDisplay = countdownMs !== null ? formatCountdown(countdownMs) : null;
-  const showCountdownTimer = siteConfig?.showConutdownTimer?.trim().toUpperCase() === 'YES';
+  const showCountdownTimer = siteConfig?.showCountdownTimer?.trim().toUpperCase() === 'YES';
   const scoreboardTime = killSwitchEnabled ? (countdownDisplay || '00:00') : '00:00';
 
   // Get the reason bracket creation is disabled
