@@ -107,6 +107,7 @@ export interface SiteConfigData {
   tieBreakerHigh?: number;
   // Submission deadline and toggle
   stopSubmitDateTime?: string;
+  showConutdownTimer?: string;
   stopSubmitToggle?: string;
   finalMessageTooLate?: string;
   finalMessageSubmitOff?: string;
@@ -353,6 +354,13 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
             break;
           case 'stop_submit_date_time':
             config.stopSubmitDateTime = value;
+            break;
+          case 'show_conutdown_timer':
+            config.showConutdownTimer = value;
+            break;
+          case 'show_countdown_timer':
+            // Support corrected spelling while keeping legacy key compatibility.
+            config.showConutdownTimer = value;
             break;
           case 'stop_submit_toggle':
             config.stopSubmitToggle = value;

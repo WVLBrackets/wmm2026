@@ -331,13 +331,19 @@ export default function MyPicksLanding({
   const isKillSwitchDisabled = () => !killSwitchEnabled;
 
   /**
-   * Convert a millisecond duration into HH:MM:SS.
+   * Convert a millisecond duration into HH:MM:SS or MM:SS.
+   * Switches to MM:SS once remaining time is under one hour.
    */
   const formatCountdown = (remainingMs: number) => {
     const totalSeconds = Math.max(0, Math.floor(remainingMs / 1000));
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
+
+    if (hours < 1) {
+      return [minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':');
+    }
+
     return [hours, minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':');
   };
 
@@ -364,7 +370,8 @@ export default function MyPicksLanding({
   }, [siteConfig?.stopSubmitDateTime]);
 
   const countdownDisplay = countdownMs !== null ? formatCountdown(countdownMs) : null;
-  const scoreboardTime = killSwitchEnabled ? (countdownDisplay || '00:00:00') : '00:00:00';
+  const showCountdownTimer = siteConfig?.showConutdownTimer?.trim().toUpperCase() === 'YES';
+  const scoreboardTime = killSwitchEnabled ? (countdownDisplay || '00:00') : '00:00';
 
   // Get the reason bracket creation is disabled
   const getBracketCreationDisabledReason = () => {
@@ -439,13 +446,14 @@ export default function MyPicksLanding({
                       Welcome {session?.user?.name || 'User'}
                     </h1>
                     
-                    {/* Line 2: Brackets message */}
-                    {siteConfig?.bracketsMessage && (
-                      <p className="text-sm text-gray-600 mt-1">
-                        {renderMessageWithLineBreaks(siteConfig.bracketsMessage)}
-                      </p>
-                    )}
-                    {!killSwitchEnabled && (
+                    {/* Line 2: Brackets message (or kill-switch replacement) */}
+                    {killSwitchEnabled ? (
+                      siteConfig?.bracketsMessage && (
+                        <p className="text-sm text-gray-600 mt-1">
+                          {renderMessageWithLineBreaks(siteConfig.bracketsMessage)}
+                        </p>
+                      )
+                    ) : (
                       <p className="text-sm text-red-600 mt-1 font-medium">
                         {killSwitchDisabledReason}
                       </p>
@@ -497,32 +505,34 @@ export default function MyPicksLanding({
                         <span>Logout</span>
                       </LoggedButton>
                     </div>
-                    <div
-                      className={`inline-flex items-center rounded border border-gray-700 bg-black px-2.5 py-1 shadow-inner ${
-                        killSwitchEnabled ? 'text-white' : 'text-red-500'
-                      }`}
-                      title={
-                        killSwitchEnabled
-                          ? 'Countdown to bracket submission deadline'
-                          : killSwitchDisabledReason
-                      }
-                      style={{
-                        backgroundImage:
-                          'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.14) 0.7px, transparent 0.7px)',
-                        backgroundSize: '4px 4px',
-                      }}
-                    >
-                      <span
-                        className={`${scoreboardFont.className} text-[11px] tracking-[0.14em]`}
+                    {showCountdownTimer && (
+                      <div
+                        className={`inline-flex items-center rounded border border-gray-700 bg-black px-2.5 py-1 shadow-inner ${
+                          killSwitchEnabled ? 'text-amber-300' : 'text-red-500'
+                        }`}
+                        title={
+                          killSwitchEnabled
+                            ? 'Countdown to bracket submission deadline'
+                            : killSwitchDisabledReason
+                        }
                         style={{
-                          textShadow: killSwitchEnabled
-                            ? '0 0 4px rgba(255,255,255,0.55)'
-                            : '0 0 4px rgba(239,68,68,0.75)',
+                          backgroundImage:
+                            'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.14) 0.7px, transparent 0.7px)',
+                          backgroundSize: '4px 4px',
                         }}
                       >
-                        {scoreboardTime}
-                      </span>
-                    </div>
+                        <span
+                          className={`${scoreboardFont.className} text-[11px] tracking-[0.06em]`}
+                          style={{
+                            textShadow: killSwitchEnabled
+                              ? '0 0 5px rgba(252,211,77,0.9)'
+                              : '0 0 5px rgba(239,68,68,0.9)',
+                          }}
+                        >
+                          {scoreboardTime}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -538,13 +548,14 @@ export default function MyPicksLanding({
                         Welcome {getFirstName(session?.user?.name)}
                       </h1>
                       
-                      {/* Line 2: Mobile brackets message */}
-                      {siteConfig?.mobileBracketsMessage && (
-                        <p className="text-sm text-gray-600 mt-1">
-                          {renderMessageWithLineBreaks(siteConfig.mobileBracketsMessage)}
-                        </p>
-                      )}
-                      {!killSwitchEnabled && (
+                      {/* Line 2: Mobile brackets message (or kill-switch replacement) */}
+                      {killSwitchEnabled ? (
+                        siteConfig?.mobileBracketsMessage && (
+                          <p className="text-sm text-gray-600 mt-1">
+                            {renderMessageWithLineBreaks(siteConfig.mobileBracketsMessage)}
+                          </p>
+                        )
+                      ) : (
                         <p className="text-sm text-red-600 mt-1 font-medium">
                           {killSwitchDisabledReason}
                         </p>
@@ -578,32 +589,34 @@ export default function MyPicksLanding({
                           <LogOut className="h-4 w-4" />
                         </LoggedButton>
                       </div>
-                      <div
-                        className={`inline-flex items-center rounded border border-gray-700 bg-black px-2 py-1 shadow-inner ${
-                          killSwitchEnabled ? 'text-white' : 'text-red-500'
-                        }`}
-                        title={
-                          killSwitchEnabled
-                            ? 'Countdown to bracket submission deadline'
-                            : killSwitchDisabledReason
-                        }
-                        style={{
-                          backgroundImage:
-                            'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.14) 0.7px, transparent 0.7px)',
-                          backgroundSize: '4px 4px',
-                        }}
-                      >
-                        <span
-                          className={`${scoreboardFont.className} text-[9px] tracking-[0.12em]`}
+                      {showCountdownTimer && (
+                        <div
+                          className={`inline-flex items-center rounded border border-gray-700 bg-black px-2 py-1 shadow-inner ${
+                            killSwitchEnabled ? 'text-amber-300' : 'text-red-500'
+                          }`}
+                          title={
+                            killSwitchEnabled
+                              ? 'Countdown to bracket submission deadline'
+                              : killSwitchDisabledReason
+                          }
                           style={{
-                            textShadow: killSwitchEnabled
-                              ? '0 0 4px rgba(255,255,255,0.55)'
-                              : '0 0 4px rgba(239,68,68,0.75)',
+                            backgroundImage:
+                              'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.14) 0.7px, transparent 0.7px)',
+                            backgroundSize: '4px 4px',
                           }}
                         >
-                          {scoreboardTime}
-                        </span>
-                      </div>
+                          <span
+                            className={`${scoreboardFont.className} text-[9px] tracking-[0.05em]`}
+                            style={{
+                              textShadow: killSwitchEnabled
+                                ? '0 0 5px rgba(252,211,77,0.9)'
+                                : '0 0 5px rgba(239,68,68,0.9)',
+                            }}
+                          >
+                            {scoreboardTime}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   
