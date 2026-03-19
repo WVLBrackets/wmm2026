@@ -478,7 +478,7 @@ export default function MyPicksLanding({
                   </div>
                   
                   {/* Action buttons */}
-                  <div className="flex flex-col items-end gap-2 flex-shrink-0 ml-4">
+                  <div className="flex flex-col gap-2 flex-shrink-0 ml-4">
                     <div className="flex items-center space-x-3">
                       <button
                         onClick={onCreateNew}
@@ -507,7 +507,7 @@ export default function MyPicksLanding({
                     </div>
                     {showCountdownTimer && (
                       <div
-                        className={`inline-flex items-center rounded border border-gray-700 bg-black px-2.5 py-1 shadow-inner ${
+                        className={`flex w-full items-center justify-center rounded border border-gray-700 bg-black px-4 py-2.5 shadow-inner ${
                           killSwitchEnabled ? 'text-amber-300' : 'text-red-500'
                         }`}
                         title={
@@ -522,7 +522,7 @@ export default function MyPicksLanding({
                         }}
                       >
                         <span
-                          className={`${scoreboardFont.className} text-[11px] tracking-[0.06em]`}
+                          className={`${scoreboardFont.className} text-[16px] tracking-[0.05em]`}
                           style={{
                             textShadow: killSwitchEnabled
                               ? '0 0 5px rgba(252,211,77,0.9)'
