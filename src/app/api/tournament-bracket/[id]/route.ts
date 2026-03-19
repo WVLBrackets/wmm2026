@@ -7,6 +7,7 @@ import { sendSubmissionConfirmationEmail, processEmailAsync } from '@/lib/bracke
 import { getSiteConfigFromGoogleSheetsFresh } from '@/lib/siteConfig';
 import { checkSubmissionAllowed } from '@/lib/bracketSubmissionValidator';
 import { csrfProtection } from '@/lib/csrf';
+import { getKillSwitchDisabledMessage } from '@/lib/killSwitch';
 
 /**
  * GET /api/tournament-bracket/[id] - Get a specific bracket
@@ -23,6 +24,14 @@ export async function GET(
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
+      );
+    }
+
+    const killSwitchMessage = await getKillSwitchDisabledMessage();
+    if (killSwitchMessage) {
+      return NextResponse.json(
+        { success: false, error: killSwitchMessage },
+        { status: 403 }
       );
     }
 
@@ -104,6 +113,14 @@ export async function PUT(
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
+      );
+    }
+
+    const killSwitchMessage = await getKillSwitchDisabledMessage();
+    if (killSwitchMessage) {
+      return NextResponse.json(
+        { success: false, error: killSwitchMessage },
+        { status: 403 }
       );
     }
 

@@ -29,6 +29,8 @@ interface StepByStepBracketProps {
   currentBracketId?: string;
   isAdminMode?: boolean;
   isLiveResultsMode?: boolean;
+  disableSaveSubmit?: boolean;
+  disableMessage?: string;
 }
 
 export default function StepByStepBracket({ 
@@ -52,7 +54,9 @@ export default function StepByStepBracket({
   existingBracketNames = [],
   currentBracketId,
   isAdminMode = false,
-  isLiveResultsMode = false
+  isLiveResultsMode = false,
+  disableSaveSubmit = false,
+  disableMessage = ''
 }: StepByStepBracketProps) {
   // Restore current step from sessionStorage on mount
   const getInitialStep = () => {
@@ -204,6 +208,8 @@ export default function StepByStepBracket({
           entryName={entryName}
           onEntryNameChange={onEntryNameChange}
           isLiveResultsMode={isLiveResultsMode}
+          disableSave={disableSaveSubmit}
+          disableSaveMessage={disableMessage}
         />
       );
     } else {
@@ -235,6 +241,8 @@ export default function StepByStepBracket({
           currentBracketId={currentBracketId}
           isAdminMode={isAdminMode}
           isLiveResultsMode={isLiveResultsMode}
+          disableSaveSubmit={disableSaveSubmit}
+          disableSaveSubmitMessage={disableMessage}
         />
       );
     }

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSiteConfigFromGoogleSheetsFresh } from '@/lib/siteConfig';
 import { checkSubmissionAllowed } from '@/lib/bracketSubmissionValidator';
+import { getKillSwitchState } from '@/lib/killSwitch';
 
 /**
  * GET /api/bracket/check-creation - Check if bracket creation is currently allowed
@@ -17,6 +18,15 @@ export async function GET() {
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
+    }
+
+    const killSwitchState = await getKillSwitchState();
+    if (!killSwitchState.enabled) {
+      return NextResponse.json({
+        success: true,
+        allowed: false,
+        reason: killSwitchState.message,
+      });
     }
 
     // Get fresh site config to check submission rules (bypass cache for real-time validation)

@@ -110,6 +110,8 @@ export interface SiteConfigData {
   stopSubmitToggle?: string;
   finalMessageTooLate?: string;
   finalMessageSubmitOff?: string;
+  // Global kill switch hover/help message
+  killSwitchOn?: string;
   // Test configuration (browser-specific to avoid duplication)
   happy_path_email_test_chrome?: string;
   happy_path_email_test_firefox?: string;
@@ -360,6 +362,9 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
             break;
           case 'final_message_submit_off':
             config.finalMessageSubmitOff = value;
+            break;
+          case 'kill_switch_on':
+            config.killSwitchOn = value;
             break;
           case 'final_message_duplicate_name':
             config.finalMessageDuplicateName = value;

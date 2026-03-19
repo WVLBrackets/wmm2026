@@ -31,6 +31,8 @@ interface RegionBracketLayoutProps {
   entryName?: string;
   onEntryNameChange?: (value: string) => void;
   isLiveResultsMode?: boolean;
+  disableSave?: boolean;
+  disableSaveMessage?: string;
 }
 
 export default function RegionBracketLayout({ 
@@ -53,7 +55,9 @@ export default function RegionBracketLayout({
   isStepComplete,
   entryName = '',
   onEntryNameChange,
-  isLiveResultsMode = false
+  isLiveResultsMode = false,
+  disableSave = false,
+  disableSaveMessage = ''
 }: RegionBracketLayoutProps) {
   const hasScrolledRoundOf64Ref = useRef(false);
   const hasScrolledRoundOf32Ref = useRef(false);
@@ -464,8 +468,14 @@ export default function RegionBracketLayout({
             <>
               {onSave && (
                 <button
-                  onClick={onSave}
-                  className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors cursor-pointer"
+                  onClick={() => !disableSave && onSave()}
+                  disabled={disableSave}
+                  title={disableSave ? disableSaveMessage : 'Save'}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                    disableSave
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-purple-600 text-white hover:bg-purple-700 cursor-pointer'
+                  }`}
                 >
                   <Save className="h-4 w-4" />
                   <span>Save</span>

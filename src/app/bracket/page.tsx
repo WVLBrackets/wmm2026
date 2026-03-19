@@ -44,6 +44,8 @@ function BracketContent() {
   const [isLiveResultsMode, setIsLiveResultsMode] = useState(false);
   const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
   const [pendingBracketData, setPendingBracketData] = useState<Record<string, unknown> | null>(null);
+  const [killSwitchEnabled, setKillSwitchEnabled] = useState<boolean>(true);
+  const [killSwitchMessage, setKillSwitchMessage] = useState<string>('Bracket actions are temporarily disabled by the administrator.');
 
   const loadTournamentRef = useRef<(() => Promise<void>) | undefined>(undefined);
   const hasRestoredState = useRef(false);
@@ -255,6 +257,22 @@ function BracketContent() {
   }, [session?.user?.name, entryName]);
 
   // Assign function to ref after it's declared
+  const loadKillSwitchState = async () => {
+    try {
+      const response = await fetch('/api/kill-switch', { cache: 'no-store' });
+      const result = await response.json();
+      if (response.ok && result.success && result.data) {
+        setKillSwitchEnabled(Boolean(result.data.enabled));
+        if (result.data.message) {
+          setKillSwitchMessage(String(result.data.message));
+        }
+      }
+    } catch (error) {
+      console.error('Error loading kill switch state:', error);
+    }
+  };
+
+  // Assign function to ref after it's declared
   const loadTournament = async () => {
     try {
       setIsLoading(true);
@@ -264,6 +282,7 @@ function BracketContent() {
       const configResult = await configResponse.json();
       const config = configResult.success ? configResult.data : null;
       setSiteConfig(config);
+      await loadKillSwitchState();
       
       // Use tournament year from config (fallback to '2025' if not available)
       const tournamentYear = config?.tournamentYear || '2025';
@@ -301,6 +320,18 @@ function BracketContent() {
     loadTournamentRef.current?.();
   }, [status, router, searchParams]);
 
+  useEffect(() => {
+    if (currentView !== 'bracket') return;
+
+    loadKillSwitchState();
+    const intervalId = window.setInterval(() => {
+      loadKillSwitchState();
+    }, 15000);
+
+    return () => window.clearInterval(intervalId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentView]);
+
   const loadSubmittedBrackets = async () => {
     try {
       const response = await fetch('/api/tournament-bracket');
@@ -332,6 +363,7 @@ function BracketContent() {
         const configResult = await configResponse.json();
         const config = configResult.success ? configResult.data : null;
         setSiteConfig(config);
+        await loadKillSwitchState();
         
         // Use tournament year from config (fallback to '2025' if not available)
         const tournamentYear = config?.tournamentYear || '2025';
@@ -467,6 +499,11 @@ function BracketContent() {
   };
 
   const handleSubmitBracket = async () => {
+    if (!killSwitchEnabled) {
+      setSubmitError(killSwitchMessage);
+      return;
+    }
+
     if (!session?.user?.name || !session?.user?.email) {
       setSubmitError('User information not available');
       setTimeout(() => setSubmitError(''), 10000);
@@ -550,6 +587,11 @@ function BracketContent() {
 
   // Landing page handlers
   const handleCreateNew = async () => {
+    if (!killSwitchEnabled) {
+      alert(killSwitchMessage);
+      return;
+    }
+
     // Log New Bracket immediately when button is clicked (no bracket ID yet)
     const { usageLogger } = await import('@/lib/usageLogger');
     usageLogger.log('Click', 'New Bracket', null);
@@ -581,8 +623,13 @@ function BracketContent() {
   };
 
   const handleEditBracket = (bracketToEdit: unknown) => {
-    setEditingBracket(bracketToEdit);
     const bracketData = bracketToEdit as Record<string, unknown>;
+    if (!killSwitchEnabled && bracketData.status === 'in_progress') {
+      alert(killSwitchMessage);
+      return;
+    }
+
+    setEditingBracket(bracketToEdit);
     const bracketPicks = (bracketData.picks as Record<string, string>) || {};
     setPicks(bracketPicks);
     setEntryName((bracketData.entryName as string) || session?.user?.name || '');
@@ -678,6 +725,11 @@ function BracketContent() {
   };
 
   const handleCopyBracket = async (bracketToCopy: unknown) => {
+    if (!killSwitchEnabled) {
+      alert(killSwitchMessage);
+      return;
+    }
+
     if (!session?.user?.name || !session?.user?.email) {
       alert('User information not available');
       return;
@@ -718,6 +770,11 @@ function BracketContent() {
   };
 
   const handleSaveBracket = async () => {
+    if (!killSwitchEnabled) {
+      alert(killSwitchMessage);
+      return;
+    }
+
     if (!session?.user?.name || !session?.user?.email) {
       alert('User information not available');
       return;
@@ -805,6 +862,11 @@ function BracketContent() {
   };
 
   const handleDeleteBracket = (bracketId: string) => {
+    if (!killSwitchEnabled) {
+      alert(killSwitchMessage);
+      return;
+    }
+
     // For in_progress brackets, show embedded confirmation
     // For submitted brackets, still use popup (hard delete is more serious)
     const bracketToDelete = submittedBrackets.find(b => b.id === bracketId);
@@ -954,6 +1016,8 @@ function BracketContent() {
             tournamentData={tournamentData}
             bracket={bracket}
             siteConfig={siteConfig}
+            killSwitchEnabled={killSwitchEnabled}
+            killSwitchMessage={killSwitchMessage}
           />
         );
   }
@@ -1005,6 +1069,8 @@ function BracketContent() {
           currentBracketId={editingBracket ? (editingBracket as Record<string, unknown>).id as string : undefined}
           isAdminMode={isAdminMode}
           isLiveResultsMode={isLiveResultsMode}
+          disableSaveSubmit={!killSwitchEnabled && !isAdminMode}
+          disableMessage={killSwitchMessage}
         />
       </div>
     </div>

@@ -9,6 +9,7 @@ import { validateBracketSubmission, checkSubmissionAllowed } from '@/lib/bracket
 import { loadTournamentData } from '@/lib/tournamentLoader';
 import { logError } from '@/lib/serverErrorLogger';
 import { csrfProtection } from '@/lib/csrf';
+import { getKillSwitchDisabledMessage } from '@/lib/killSwitch';
 
 /**
  * POST /api/tournament-bracket - Create a new tournament bracket (submit)
@@ -39,6 +40,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
+      );
+    }
+
+    const killSwitchMessage = await getKillSwitchDisabledMessage();
+    if (killSwitchMessage) {
+      return NextResponse.json(
+        { success: false, error: killSwitchMessage },
+        { status: 403 }
       );
     }
 
@@ -269,6 +278,14 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
+      );
+    }
+
+    const killSwitchMessage = await getKillSwitchDisabledMessage();
+    if (killSwitchMessage) {
+      return NextResponse.json(
+        { success: false, error: killSwitchMessage },
+        { status: 403 }
       );
     }
 

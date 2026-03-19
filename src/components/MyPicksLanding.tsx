@@ -36,9 +36,25 @@ interface MyPicksLandingProps {
   tournamentData?: TournamentData | null;
   bracket?: TournamentBracket | null;
   siteConfig?: SiteConfigData | null;
+  killSwitchEnabled?: boolean;
+  killSwitchMessage?: string;
 }
 
-export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBracket, onDeleteBracket, onCopyBracket, deletingBracketId, pendingDeleteBracketId, onConfirmDelete, onCancelDelete, tournamentData, siteConfig }: MyPicksLandingProps) {
+export default function MyPicksLanding({
+  brackets = [],
+  onCreateNew,
+  onEditBracket,
+  onDeleteBracket,
+  onCopyBracket,
+  deletingBracketId,
+  pendingDeleteBracketId,
+  onConfirmDelete,
+  onCancelDelete,
+  tournamentData,
+  siteConfig,
+  killSwitchEnabled = true,
+  killSwitchMessage,
+}: MyPicksLandingProps) {
   const { data: session } = useSession();
   const [expandedStatus, setExpandedStatus] = useState<'info' | null>(null);
   const [logoError, setLogoError] = useState(false);
@@ -46,6 +62,7 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
   const [emailBracket, setEmailBracket] = useState<Bracket | null>(null);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailMessage, setEmailMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const killSwitchDisabledReason = killSwitchMessage || siteConfig?.killSwitchOn || 'Bracket actions are temporarily disabled by the administrator.';
   
   // Get tournament year from config or tournament data
   const tournamentYear = siteConfig?.tournamentYear ? parseInt(siteConfig.tournamentYear) : (tournamentData?.year ? parseInt(tournamentData.year) : new Date().getFullYear());
@@ -304,6 +321,8 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
     return false;
   };
 
+  const isKillSwitchDisabled = () => !killSwitchEnabled;
+
   // Get the reason bracket creation is disabled
   const getBracketCreationDisabledReason = () => {
     // Check stop_submit_toggle first
@@ -324,6 +343,19 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
       }
     }
     
+    return null;
+  };
+
+  /**
+   * Get tooltip/disable reason for user actions.
+   */
+  const getActionDisabledReason = (action: 'new' | 'copy' | 'edit' | 'delete') => {
+    if ((action === 'new' || action === 'copy') && isBracketCreationDisabled()) {
+      return getBracketCreationDisabledReason();
+    }
+    if (isKillSwitchDisabled()) {
+      return killSwitchDisabledReason;
+    }
     return null;
   };
 
@@ -393,11 +425,11 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                   <div className="flex items-center space-x-3 flex-shrink-0 ml-4">
                     <button
                       onClick={onCreateNew}
-                      disabled={isBracketCreationDisabled()}
-                      title={isBracketCreationDisabled() ? getBracketCreationDisabledReason() || '' : 'Create a new bracket'}
+                      disabled={Boolean(getActionDisabledReason('new'))}
+                      title={getActionDisabledReason('new') || 'Create a new bracket'}
                       data-testid="new-bracket-button-desktop"
                       className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
-                        isBracketCreationDisabled()
+                        getActionDisabledReason('new')
                           ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                           : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
                       }`}
@@ -442,12 +474,12 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                     <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
                       <button
                         onClick={onCreateNew}
-                        disabled={isBracketCreationDisabled()}
-                        title={isBracketCreationDisabled() ? getBracketCreationDisabledReason() || '' : 'Create a new bracket'}
+                        disabled={Boolean(getActionDisabledReason('new'))}
+                        title={getActionDisabledReason('new') || 'Create a new bracket'}
                         aria-label="New Bracket"
                         data-testid="new-bracket-button-mobile"
                         className={`px-2 py-2 rounded-lg flex items-center space-x-2 ${
-                          isBracketCreationDisabled()
+                          getActionDisabledReason('new')
                             ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                             : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
                         }`}
@@ -595,21 +627,33 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                     return (
                     <tr key={bracket.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 whitespace-nowrap text-center">
+                        {(() => {
+                          const editDisabled = bracket.status === 'in_progress' && Boolean(getActionDisabledReason('edit'));
+                          return (
                         <div 
-                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium cursor-pointer ${getStatusColor(bracket.status)}`}
-                          onClick={() => onEditBracket(bracket)}
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${editDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${getStatusColor(bracket.status)}`}
+                          onClick={() => !editDisabled && onEditBracket(bracket)}
+                          title={editDisabled ? getActionDisabledReason('edit') || '' : 'Open bracket'}
                         >
                           {getStatusIcon(bracket.status)}
                           <span className="ml-1">{bracket.entryName || `Bracket #${index + 1}`}</span>
                         </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-center">
+                        {(() => {
+                          const editDisabled = bracket.status === 'in_progress' && Boolean(getActionDisabledReason('edit'));
+                          return (
                         <div 
-                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium cursor-pointer ${getStatusColor(bracket.status)}`}
-                          onClick={() => onEditBracket(bracket)}
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${editDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${getStatusColor(bracket.status)}`}
+                          onClick={() => !editDisabled && onEditBracket(bracket)}
+                          title={editDisabled ? getActionDisabledReason('edit') || '' : 'Open bracket'}
                         >
                           <span>{getStatusText(bracket.status)}</span>
                         </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-center">
                         <div className="text-sm font-medium text-gray-600">
@@ -713,37 +757,45 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                                 <>
                                   {/* In Progress: Edit, Copy, Delete */}
                                   <LoggedButton
-                                    onClick={() => onEditBracket(bracket)}
+                                    onClick={() => !getActionDisabledReason('edit') && onEditBracket(bracket)}
                                     logLocation="Edit"
                                     bracketId={number ? String(number).padStart(6, '0') : null}
-                                    className="bg-blue-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-blue-700 cursor-pointer transition-colors"
-                                    title="Edit"
+                                    disabled={Boolean(getActionDisabledReason('edit'))}
+                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
+                                      getActionDisabledReason('edit')
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                                    }`}
+                                    title={getActionDisabledReason('edit') || 'Edit'}
                                   >
                                     <Edit className="h-4 w-4" />
                                   </LoggedButton>
-                                  {!isBracketCreationDisabled() && (
-                                    <LoggedButton
-                                      onClick={() => onCopyBracket(bracket)}
-                                      logLocation="Copy"
-                                      bracketId={number ? String(number).padStart(6, '0') : null}
-                                      className="bg-green-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-green-700 cursor-pointer transition-colors"
-                                      title="Copy"
-                                      data-testid="copy-bracket-button"
-                                    >
-                                      <Copy className="h-4 w-4" />
-                                    </LoggedButton>
-                                  )}
                                   <LoggedButton
-                                    onClick={() => onDeleteBracket(bracket.id)}
+                                    onClick={() => !getActionDisabledReason('copy') && onCopyBracket(bracket)}
+                                    logLocation="Copy"
+                                    bracketId={number ? String(number).padStart(6, '0') : null}
+                                    disabled={Boolean(getActionDisabledReason('copy'))}
+                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
+                                      getActionDisabledReason('copy')
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
+                                    }`}
+                                    title={getActionDisabledReason('copy') || 'Copy'}
+                                    data-testid="copy-bracket-button"
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </LoggedButton>
+                                  <LoggedButton
+                                    onClick={() => !getActionDisabledReason('delete') && onDeleteBracket(bracket.id)}
                                     logLocation="Delete"
                                     bracketId={number ? String(number).padStart(6, '0') : null}
-                                    disabled={deletingBracketId === bracket.id || pendingDeleteBracketId === bracket.id}
+                                    disabled={Boolean(getActionDisabledReason('delete')) || deletingBracketId === bracket.id || pendingDeleteBracketId === bracket.id}
                                     className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
-                                      deletingBracketId === bracket.id || pendingDeleteBracketId === bracket.id
+                                      getActionDisabledReason('delete') || deletingBracketId === bracket.id || pendingDeleteBracketId === bracket.id
                                         ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
                                         : 'bg-red-600 text-white hover:bg-red-700 cursor-pointer'
                                     }`}
-                                    title={deletingBracketId === bracket.id ? 'Deleting...' : 'Delete'}
+                                    title={getActionDisabledReason('delete') || (deletingBracketId === bracket.id ? 'Deleting...' : 'Delete')}
                                     data-testid="delete-bracket-button"
                                   >
                                     <Trash2 className="h-4 w-4" />
@@ -763,18 +815,21 @@ export default function MyPicksLanding({ brackets = [], onCreateNew, onEditBrack
                               >
                                 <Eye className="h-4 w-4" />
                               </LoggedButton>
-                              {!isBracketCreationDisabled() && (
-                                <LoggedButton
-                                  onClick={() => onCopyBracket(bracket)}
-                                  logLocation="Copy"
-                                  bracketId={number ? String(number).padStart(6, '0') : null}
-                                  className="bg-green-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-green-700 cursor-pointer transition-colors"
-                                  title="Copy"
-                                  data-testid="copy-bracket-button"
-                                >
-                                  <Copy className="h-4 w-4" />
-                                </LoggedButton>
-                              )}
+                              <LoggedButton
+                                onClick={() => !getActionDisabledReason('copy') && onCopyBracket(bracket)}
+                                logLocation="Copy"
+                                bracketId={number ? String(number).padStart(6, '0') : null}
+                                disabled={Boolean(getActionDisabledReason('copy'))}
+                                className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
+                                  getActionDisabledReason('copy')
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
+                                }`}
+                                title={getActionDisabledReason('copy') || 'Copy'}
+                                data-testid="copy-bracket-button"
+                              >
+                                <Copy className="h-4 w-4" />
+                              </LoggedButton>
                               <LoggedButton
                                 onClick={() => handlePrintBracket(bracket)}
                                 logLocation="Print"

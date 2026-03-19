@@ -37,6 +37,8 @@ interface FinalFourChampionshipProps {
   currentBracketId?: string;
   isAdminMode?: boolean;
   isLiveResultsMode?: boolean;
+  disableSaveSubmit?: boolean;
+  disableSaveSubmitMessage?: string;
 }
 
 export default function FinalFourChampionship({ 
@@ -65,6 +67,8 @@ export default function FinalFourChampionship({
   existingBracketNames = [],
   isAdminMode = false,
   isLiveResultsMode = false,
+  disableSaveSubmit = false,
+  disableSaveSubmitMessage = '',
 }: FinalFourChampionshipProps) {
   
   const handleTeamClick = (game: TournamentGame, team: Record<string, unknown>) => {
@@ -591,8 +595,14 @@ export default function FinalFourChampionship({
             <>
               {onSave && (
                 <button
-                  onClick={onSave}
-                  className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors cursor-pointer"
+                  onClick={() => !disableSaveSubmit && onSave()}
+                  disabled={disableSaveSubmit}
+                  title={disableSaveSubmit ? disableSaveSubmitMessage : 'Save'}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                    disableSaveSubmit
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-purple-600 text-white hover:bg-purple-700 cursor-pointer'
+                  }`}
                 >
                   <Save className="h-4 w-4" />
                   <span>Save</span>
@@ -609,10 +619,11 @@ export default function FinalFourChampionship({
               {onNext && !isAdminMode && (
                 <button
                   onClick={onNext}
-                  disabled={!canProceed || isDuplicateName() || isSubmissionDisabled()}
+                  disabled={disableSaveSubmit || !canProceed || isDuplicateName() || isSubmissionDisabled()}
+                  title={disableSaveSubmit ? disableSaveSubmitMessage : 'Submit Bracket'}
                   className={`
                     flex items-center space-x-2 px-6 py-2 rounded-lg transition-colors
-                    ${canProceed && !isDuplicateName() && !isSubmissionDisabled()
+                    ${!disableSaveSubmit && canProceed && !isDuplicateName() && !isSubmissionDisabled()
                       ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }

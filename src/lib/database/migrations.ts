@@ -137,6 +137,17 @@ export async function initializeDatabase(): Promise<void> {
       )
     `;
 
+    // Feature flags table (environment-scoped)
+    await sql`
+      CREATE TABLE IF NOT EXISTS feature_flags (
+        key VARCHAR(100) NOT NULL,
+        environment VARCHAR(50) NOT NULL,
+        is_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (key, environment)
+      )
+    `;
+
     // Team reference data (shared across environments, uses production DB)
     const { teamDataSql } = await import('../teamDataConnection');
     await teamDataSql`
@@ -319,6 +330,7 @@ async function createIndexes(): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS idx_error_logs_environment ON error_logs(environment)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_error_logs_timestamp ON error_logs(timestamp)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_error_logs_username ON error_logs(username)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_feature_flags_environment ON feature_flags(environment)`;
 }
 
 /**

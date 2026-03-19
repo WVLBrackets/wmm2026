@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Users, Trophy, LogOut, Link2, Table, Zap, RefreshCw, Home, Info, Award, KeyRound } from 'lucide-react';
+import { Users, Trophy, LogOut, Link2, Table, Zap, RefreshCw, Home, Info, Award, KeyRound, Power } from 'lucide-react';
 import { useBracketMode } from '@/contexts/BracketModeContext';
 import UsersTab from '@/components/admin/UsersTab';
 import BracketsTab from '@/components/admin/BracketsTab';
@@ -78,6 +78,10 @@ export default function AdminPage() {
   const [configValidationError, setConfigValidationError] = useState<string | null>(null);
   const [configValidationResult, setConfigValidationResult] = useState<ConfigValidationResult | null>(null);
   const [showValidationDetails, setShowValidationDetails] = useState(false);
+  const [killSwitchEnabled, setKillSwitchEnabled] = useState<boolean>(true);
+  const [killSwitchMessage, setKillSwitchMessage] = useState<string>('Bracket actions are temporarily disabled by the administrator.');
+  const [killSwitchLoading, setKillSwitchLoading] = useState(false);
+  const [killSwitchError, setKillSwitchError] = useState<string | null>(null);
 
   // Tab state
   const [activeTab, setActiveTab] = useState<'brackets' | 'users' | 'live-results' | 'data' | 'logs' | 'usage'>('users');
@@ -94,13 +98,15 @@ export default function AdminPage() {
       setIsLoading(true);
       setError('');
       
-      const [usersRes, bracketsRes] = await Promise.all([
+      const [usersRes, bracketsRes, killSwitchRes] = await Promise.all([
         fetch('/api/admin/users'),
-        fetch('/api/admin/brackets')
+        fetch('/api/admin/brackets'),
+        fetch('/api/admin/kill-switch'),
       ]);
       
       const usersData = await usersRes.json();
       const bracketsData = await bracketsRes.json();
+      const killSwitchData = await killSwitchRes.json();
       
       if (!usersRes.ok || !bracketsRes.ok) {
         if (usersRes.status === 403 || bracketsRes.status === 403) {
@@ -113,11 +119,47 @@ export default function AdminPage() {
       
       setUsers(usersData.users || usersData.data || []);
       setBrackets(bracketsData.data || []);
+      if (killSwitchRes.ok && killSwitchData.success && killSwitchData.data) {
+        setKillSwitchEnabled(Boolean(killSwitchData.data.enabled));
+        if (killSwitchData.data.message) {
+          setKillSwitchMessage(String(killSwitchData.data.message));
+        }
+      }
     } catch (error) {
       console.error('Error loading admin data:', error);
       setError('Failed to load admin data');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  /**
+   * Toggle master kill switch for bracket actions.
+   */
+  const handleToggleKillSwitch = async () => {
+    if (killSwitchLoading) return;
+    setKillSwitchLoading(true);
+    setKillSwitchError(null);
+    const nextValue = !killSwitchEnabled;
+
+    try {
+      const response = await fetch('/api/admin/kill-switch', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: nextValue }),
+      });
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        setKillSwitchError(result.error || 'Failed to update kill switch');
+        return;
+      }
+
+      setKillSwitchEnabled(Boolean(result.data?.enabled));
+    } catch {
+      setKillSwitchError('Failed to update kill switch');
+    } finally {
+      setKillSwitchLoading(false);
     }
   };
 
@@ -429,6 +471,43 @@ export default function AdminPage() {
             )}
           </div>
         )}
+
+        <div className="bg-white rounded-lg shadow-lg p-4 mb-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                <Power className={`h-4 w-4 ${killSwitchEnabled ? 'text-green-600' : 'text-red-600'}`} />
+                Master Kill Switch
+              </p>
+              <p className="text-xs text-gray-600 mt-1">
+                Controls New, Copy, Edit, Delete, Save, and Submit bracket actions.
+              </p>
+              {!killSwitchEnabled && (
+                <p className="text-xs text-amber-700 mt-1">
+                  Disabled hover message: {killSwitchMessage}
+                </p>
+              )}
+              {killSwitchError && (
+                <p className="text-xs text-red-600 mt-1">{killSwitchError}</p>
+              )}
+            </div>
+
+            <button
+              onClick={handleToggleKillSwitch}
+              disabled={killSwitchLoading}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                killSwitchLoading
+                  ? 'bg-gray-300 text-gray-500 cursor-wait'
+                  : killSwitchEnabled
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : 'bg-red-600 text-white hover:bg-red-700'
+              }`}
+            >
+              <Power className="h-4 w-4" />
+              {killSwitchLoading ? 'Updating...' : killSwitchEnabled ? 'ON' : 'OFF'}
+            </button>
+          </div>
+        </div>
 
         {/* Navigation Tabs */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">

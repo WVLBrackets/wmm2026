@@ -105,6 +105,7 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   stopSubmitToggle: 'No',
   finalMessageTooLate: 'Bracket submissions are closed. The deadline has passed.',
   finalMessageSubmitOff: 'Bracket submissions are currently disabled.',
+  killSwitchOn: 'Bracket actions are temporarily disabled by the administrator.',
   // Auto-reply message configuration (for do-not-reply addresses)
   autoReplyHeading: 'Automatic Reply',
   autoReplyGreeting: 'Hello,',
