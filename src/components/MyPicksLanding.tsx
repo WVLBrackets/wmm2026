@@ -62,6 +62,7 @@ export default function MyPicksLanding({
   const [emailBracket, setEmailBracket] = useState<Bracket | null>(null);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailMessage, setEmailMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [countdownMs, setCountdownMs] = useState<number | null>(null);
   const killSwitchDisabledReason = killSwitchMessage || siteConfig?.killSwitchOn || 'Bracket actions are temporarily disabled by the administrator.';
   
   // Get tournament year from config or tournament data
@@ -323,6 +324,41 @@ export default function MyPicksLanding({
 
   const isKillSwitchDisabled = () => !killSwitchEnabled;
 
+  /**
+   * Convert a millisecond duration into HH:MM:SS.
+   */
+  const formatCountdown = (remainingMs: number) => {
+    const totalSeconds = Math.max(0, Math.floor(remainingMs / 1000));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return [hours, minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':');
+  };
+
+  React.useEffect(() => {
+    const stopDateTime = siteConfig?.stopSubmitDateTime;
+    if (!stopDateTime) {
+      setCountdownMs(null);
+      return;
+    }
+
+    const deadline = new Date(stopDateTime);
+    if (Number.isNaN(deadline.getTime())) {
+      setCountdownMs(null);
+      return;
+    }
+
+    const updateCountdown = () => {
+      setCountdownMs(Math.max(0, deadline.getTime() - Date.now()));
+    };
+
+    updateCountdown();
+    const intervalId = window.setInterval(updateCountdown, 1000);
+    return () => window.clearInterval(intervalId);
+  }, [siteConfig?.stopSubmitDateTime]);
+
+  const countdownDisplay = countdownMs !== null ? formatCountdown(countdownMs) : null;
+
   // Get the reason bracket creation is disabled
   const getBracketCreationDisabledReason = () => {
     // Check stop_submit_toggle first
@@ -422,31 +458,45 @@ export default function MyPicksLanding({
                   </div>
                   
                   {/* Action buttons */}
-                  <div className="flex items-center space-x-3 flex-shrink-0 ml-4">
-                    <button
-                      onClick={onCreateNew}
-                      disabled={Boolean(getActionDisabledReason('new'))}
-                      title={getActionDisabledReason('new') || 'Create a new bracket'}
-                      data-testid="new-bracket-button-desktop"
-                      className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
-                        getActionDisabledReason('new')
-                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                      }`}
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span>New Bracket</span>
-                    </button>
-                    
-                    <LoggedButton
-                      onClick={() => signOut({ callbackUrl: '/auth/signin' })}
-                      logLocation="Logout"
-                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
-                      data-testid="logout-button-desktop"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      <span>Logout</span>
-                    </LoggedButton>
+                  <div className="flex flex-col items-end gap-2 flex-shrink-0 ml-4">
+                    <div className="flex items-center space-x-3">
+                      <button
+                        onClick={onCreateNew}
+                        disabled={Boolean(getActionDisabledReason('new'))}
+                        title={getActionDisabledReason('new') || 'Create a new bracket'}
+                        data-testid="new-bracket-button-desktop"
+                        className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
+                          getActionDisabledReason('new')
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                        }`}
+                      >
+                        <Plus className="h-4 w-4" />
+                        <span>New Bracket</span>
+                      </button>
+                      
+                      <LoggedButton
+                        onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+                        logLocation="Logout"
+                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
+                        data-testid="logout-button-desktop"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        <span>Logout</span>
+                      </LoggedButton>
+                    </div>
+                    {!killSwitchEnabled ? (
+                      <p className="text-xs text-red-600 max-w-64 text-right">
+                        {killSwitchDisabledReason}
+                      </p>
+                    ) : (
+                      countdownDisplay && (
+                        <div className="inline-flex items-center gap-1 rounded bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
+                          <Clock className="h-3.5 w-3.5" />
+                          <span>{countdownDisplay}</span>
+                        </div>
+                      )
+                    )}
                   </div>
                 </div>
               </div>
@@ -471,30 +521,44 @@ export default function MyPicksLanding({
                     </div>
                     
                     {/* Action buttons */}
-                    <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
-                      <button
-                        onClick={onCreateNew}
-                        disabled={Boolean(getActionDisabledReason('new'))}
-                        title={getActionDisabledReason('new') || 'Create a new bracket'}
-                        aria-label="New Bracket"
-                        data-testid="new-bracket-button-mobile"
-                        className={`px-2 py-2 rounded-lg flex items-center space-x-2 ${
-                          getActionDisabledReason('new')
-                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                            : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                        }`}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </button>
-                      
-                      <LoggedButton
-                        onClick={() => signOut({ callbackUrl: '/auth/signin' })}
-                        logLocation="Logout"
-                        className="bg-blue-600 text-white px-2 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
-                        data-testid="logout-button-mobile"
-                      >
-                        <LogOut className="h-4 w-4" />
-                      </LoggedButton>
+                    <div className="flex flex-col items-end flex-shrink-0 ml-2 gap-2">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={onCreateNew}
+                          disabled={Boolean(getActionDisabledReason('new'))}
+                          title={getActionDisabledReason('new') || 'Create a new bracket'}
+                          aria-label="New Bracket"
+                          data-testid="new-bracket-button-mobile"
+                          className={`px-2 py-2 rounded-lg flex items-center space-x-2 ${
+                            getActionDisabledReason('new')
+                              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                              : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                          }`}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                        
+                        <LoggedButton
+                          onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+                          logLocation="Logout"
+                          className="bg-blue-600 text-white px-2 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
+                          data-testid="logout-button-mobile"
+                        >
+                          <LogOut className="h-4 w-4" />
+                        </LoggedButton>
+                      </div>
+                      {!killSwitchEnabled ? (
+                        <p className="text-xs text-red-600 text-right max-w-40">
+                          {killSwitchDisabledReason}
+                        </p>
+                      ) : (
+                        countdownDisplay && (
+                          <div className="inline-flex items-center gap-1 rounded bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
+                            <Clock className="h-3.5 w-3.5" />
+                            <span>{countdownDisplay}</span>
+                          </div>
+                        )
+                      )}
                     </div>
                   </div>
                   

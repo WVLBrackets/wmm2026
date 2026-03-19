@@ -272,6 +272,40 @@ function BracketContent() {
     }
   };
 
+  /**
+   * Fetch latest kill switch state from server to avoid stale client state.
+   */
+  const getLatestKillSwitchState = async (): Promise<{ enabled: boolean; message: string }> => {
+    try {
+      const response = await fetch('/api/kill-switch', { cache: 'no-store' });
+      const result = await response.json();
+      if (response.ok && result.success && result.data) {
+        const enabled = Boolean(result.data.enabled);
+        const message = String(result.data.message || killSwitchMessage);
+        setKillSwitchEnabled(enabled);
+        setKillSwitchMessage(message);
+        return { enabled, message };
+      }
+    } catch (error) {
+      console.error('Error checking latest kill switch state:', error);
+    }
+
+    return { enabled: killSwitchEnabled, message: killSwitchMessage };
+  };
+
+  /**
+   * Ensure kill switch is enabled before starting a mutating/editing action.
+   */
+  const ensureKillSwitchEnabledForAction = async (): Promise<boolean> => {
+    if (isAdminMode) return true;
+    const state = await getLatestKillSwitchState();
+    if (!state.enabled) {
+      alert(state.message);
+      return false;
+    }
+    return true;
+  };
+
   // Assign function to ref after it's declared
   const loadTournament = async () => {
     try {
@@ -587,8 +621,7 @@ function BracketContent() {
 
   // Landing page handlers
   const handleCreateNew = async () => {
-    if (!killSwitchEnabled) {
-      alert(killSwitchMessage);
+    if (!(await ensureKillSwitchEnabledForAction())) {
       return;
     }
 
@@ -622,12 +655,12 @@ function BracketContent() {
     setBracketResetKey(prev => prev + 1);
   };
 
-  const handleEditBracket = (bracketToEdit: unknown) => {
-    const bracketData = bracketToEdit as Record<string, unknown>;
-    if (!killSwitchEnabled && bracketData.status === 'in_progress') {
-      alert(killSwitchMessage);
+  const handleEditBracket = async (bracketToEdit: unknown) => {
+    if (!(await ensureKillSwitchEnabledForAction())) {
       return;
     }
+
+    const bracketData = bracketToEdit as Record<string, unknown>;
 
     setEditingBracket(bracketToEdit);
     const bracketPicks = (bracketData.picks as Record<string, string>) || {};
@@ -725,8 +758,7 @@ function BracketContent() {
   };
 
   const handleCopyBracket = async (bracketToCopy: unknown) => {
-    if (!killSwitchEnabled) {
-      alert(killSwitchMessage);
+    if (!(await ensureKillSwitchEnabledForAction())) {
       return;
     }
 
@@ -770,8 +802,7 @@ function BracketContent() {
   };
 
   const handleSaveBracket = async () => {
-    if (!killSwitchEnabled) {
-      alert(killSwitchMessage);
+    if (!(await ensureKillSwitchEnabledForAction())) {
       return;
     }
 
@@ -862,7 +893,7 @@ function BracketContent() {
   };
 
   const handleDeleteBracket = (bracketId: string) => {
-    if (!killSwitchEnabled) {
+    if (!killSwitchEnabled && !isAdminMode) {
       alert(killSwitchMessage);
       return;
     }
