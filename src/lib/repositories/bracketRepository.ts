@@ -11,6 +11,8 @@ import { getCurrentEnvironment } from '../databaseConfig';
 import { getSiteConfigFromGoogleSheets } from '../siteConfig';
 import { FALLBACK_CONFIG } from '../fallbackConfig';
 import type { Bracket, BracketWithUser, UpdateBracketInput } from '../types/database';
+import { normalizeStoredDisplayName } from '../stringNormalize';
+import { parseDbInstant } from '../dbInstant';
 
 const KEY_ENTRY_NAME = 'KEY';
 const KEY_LOCK_TIMEOUT_MINUTES = 30;
@@ -29,14 +31,24 @@ async function ensureBracketLiveResultsColumns(): Promise<void> {
   try {
     await sql`ALTER TABLE brackets ADD COLUMN IF NOT EXISTS is_key BOOLEAN DEFAULT FALSE`;
     await sql`ALTER TABLE brackets ADD COLUMN IF NOT EXISTS lock_user_id VARCHAR(36)`;
-    await sql`ALTER TABLE brackets ADD COLUMN IF NOT EXISTS lock_acquired_at TIMESTAMP`;
+    await sql`ALTER TABLE brackets ADD COLUMN IF NOT EXISTS lock_acquired_at TIMESTAMPTZ`;
+    await sql`ALTER TABLE brackets ADD COLUMN IF NOT EXISTS source VARCHAR(50)`;
     await sql`UPDATE brackets SET is_key = FALSE WHERE is_key IS NULL`;
+    await sql`UPDATE brackets SET source = 'site' WHERE source IS NULL OR source = ''`;
     await sql`ALTER TABLE brackets ALTER COLUMN is_key SET DEFAULT FALSE`;
     await sql`ALTER TABLE brackets ALTER COLUMN is_key SET NOT NULL`;
+    await sql`ALTER TABLE brackets ALTER COLUMN source SET DEFAULT 'site'`;
+    await sql`ALTER TABLE brackets ALTER COLUMN source SET NOT NULL`;
     await sql`
       CREATE UNIQUE INDEX IF NOT EXISTS idx_brackets_one_key_per_year_env
       ON brackets (year, environment)
       WHERE is_key = TRUE
+    `;
+    await sql`ALTER TABLE brackets ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMPTZ`;
+    await sql`
+      UPDATE brackets
+      SET submitted_at = updated_at
+      WHERE status = 'submitted' AND submitted_at IS NULL
     `;
     bracketLiveResultsColumnsEnsured = true;
   } catch (error) {
@@ -71,6 +83,7 @@ export async function createBracket(
   yearOverride?: number
 ): Promise<Bracket> {
   const environment = getCurrentEnvironment();
+  const storedEntryName = normalizeStoredDisplayName(entryName);
   const bracketId = crypto.randomUUID();
   
   // Get tournament year from config
@@ -93,20 +106,22 @@ export async function createBracket(
   const bracketNumber = await getNextBracketNumber(year, environment);
   
   await sql`
-    INSERT INTO brackets (id, user_id, entry_name, tie_breaker, picks, bracket_number, year, environment, is_key)
-    VALUES (${bracketId}, ${userId}, ${entryName}, ${tieBreaker || null}, ${JSON.stringify(picks)}, ${bracketNumber}, ${year}, ${environment}, FALSE)
+    INSERT INTO brackets (id, user_id, entry_name, tie_breaker, picks, bracket_number, year, environment, is_key, source)
+    VALUES (${bracketId}, ${userId}, ${storedEntryName}, ${tieBreaker || null}, ${JSON.stringify(picks)}, ${bracketNumber}, ${year}, ${environment}, FALSE, 'site')
   `;
   
   return {
     id: bracketId,
     userId,
-    entryName,
+    entryName: storedEntryName,
     tieBreaker,
     picks,
     status: 'draft',
     bracketNumber,
     year,
     isKey: false,
+    source: 'site',
+    submittedAt: null,
     environment,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -188,6 +203,8 @@ export async function updateBracket(
   updates: UpdateBracketInput
 ): Promise<Bracket | null> {
   const environment = getCurrentEnvironment();
+
+  await ensureBracketLiveResultsColumns();
   
   const currentBracket = await getBracketById(bracketId);
   if (!currentBracket) {
@@ -195,14 +212,31 @@ export async function updateBracket(
   }
   
   // Merge updates with current values
-  const entryName = updates.entryName ?? currentBracket.entryName;
+  const entryName =
+    updates.entryName !== undefined
+      ? normalizeStoredDisplayName(updates.entryName)
+      : currentBracket.entryName;
   const tieBreaker = updates.tieBreaker ?? currentBracket.tieBreaker;
   const picks = updates.picks ?? currentBracket.picks;
   const status = updates.status ?? currentBracket.status;
   const userId = updates.userId ?? currentBracket.userId;
   const lockUserId = updates.lockUserId !== undefined ? updates.lockUserId : currentBracket.lockUserId;
   const lockAcquiredAt = updates.lockAcquiredAt !== undefined ? updates.lockAcquiredAt : currentBracket.lockAcquiredAt;
-  
+
+  const previousStatus = currentBracket.status;
+  const nextStatus = status;
+  let nextSubmittedAt: Date | null =
+    currentBracket.submittedAt != null ? currentBracket.submittedAt : null;
+  if (updates.submittedAt !== undefined) {
+    nextSubmittedAt = updates.submittedAt;
+  } else if (nextStatus === 'submitted' && previousStatus !== 'submitted') {
+    nextSubmittedAt = new Date();
+  } else if (nextStatus !== 'submitted') {
+    nextSubmittedAt = null;
+  }
+
+  const touchNow = new Date();
+
   await sql`
     UPDATE brackets 
     SET 
@@ -213,7 +247,8 @@ export async function updateBracket(
       user_id = ${userId},
       lock_user_id = ${lockUserId || null},
       lock_acquired_at = ${lockAcquiredAt || null},
-      updated_at = CURRENT_TIMESTAMP
+      submitted_at = ${nextSubmittedAt},
+      updated_at = ${touchNow}
     WHERE id = ${bracketId} AND environment = ${environment}
   `;
   
@@ -290,6 +325,34 @@ export async function getAllBrackets(options?: BracketQueryOptions): Promise<Bra
 }
 
 /**
+ * Submitted, non-KEY brackets for a tournament year (for live standings scoring).
+ */
+export async function getSubmittedBracketsForLiveStandingsYear(
+  year: number
+): Promise<BracketWithUser[]> {
+  await ensureBracketLiveResultsColumns();
+  const environment = getCurrentEnvironment();
+
+  const result = await sql`
+    SELECT b.*, u.email as user_email, u.name as user_name
+    FROM brackets b
+    JOIN users u ON b.user_id = u.id
+    WHERE b.environment = ${environment}
+      AND u.environment = ${environment}
+      AND b.year = ${year}
+      AND b.status = 'submitted'
+      AND COALESCE(b.is_key, FALSE) = FALSE
+    ORDER BY b.entry_name ASC, b.id ASC
+  `;
+
+  return result.rows.map((row: Record<string, unknown>) => ({
+    ...mapRowToBracket(row),
+    userEmail: row.user_email as string,
+    userName: row.user_name as string,
+  }));
+}
+
+/**
  * Get the KEY bracket for a specific year in the current environment.
  */
 export async function getKeyBracketByYear(year: number): Promise<Bracket | null> {
@@ -336,7 +399,8 @@ export async function getOrCreateKeyBracket(year: number, adminUserId: string): 
         bracket_number,
         year,
         environment,
-        is_key
+        is_key,
+        source
       )
       VALUES (
         ${bracketId},
@@ -348,7 +412,8 @@ export async function getOrCreateKeyBracket(year: number, adminUserId: string): 
         ${bracketNumber},
         ${year},
         ${environment},
-        ${true}
+        ${true},
+        ${'site'}
       )
     `;
   } catch {
@@ -425,13 +490,20 @@ function mapRowToBracket(row: Record<string, unknown>): Bracket {
     tieBreaker: row.tie_breaker as number | undefined,
     picks: row.picks as Record<string, string>,
     status: row.status as string,
+    source: (row.source as string | null) ?? 'site',
     bracketNumber: row.bracket_number as number,
     year: row.year as number,
     isKey: (row.is_key as boolean | null) ?? false,
     lockUserId: (row.lock_user_id as string | null) ?? null,
-    lockAcquiredAt: row.lock_acquired_at ? new Date(row.lock_acquired_at as string) : null,
+    lockAcquiredAt: row.lock_acquired_at ? parseDbInstant(row.lock_acquired_at) : null,
+    submittedAt: (() => {
+      const raw = row.submitted_at;
+      if (raw == null || raw === '') return null;
+      const d = parseDbInstant(raw);
+      return Number.isNaN(d.getTime()) ? null : d;
+    })(),
     environment: row.environment as string,
-    createdAt: new Date(row.created_at as string),
-    updatedAt: new Date(row.updated_at as string),
+    createdAt: parseDbInstant(row.created_at),
+    updatedAt: parseDbInstant(row.updated_at),
   };
 }

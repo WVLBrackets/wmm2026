@@ -51,8 +51,7 @@ export async function POST() {
     return NextResponse.json(
       { 
         success: false, 
-        error: 'Failed to cleanup logs',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        error: 'Failed to cleanup logs'
       },
       { status: 500 }
     );

@@ -11,6 +11,9 @@ export interface Announcement {
 // Google Sheet ID for Announcements
 const ANNOUNCEMENTS_SHEET_ID = '1_SkkH81ClEFGYyPmo6joN8vV1gdeCtRnzikkMskCB4k';
 
+/** Must match site config fetch — avoids hung home page when Sheets/network stalls locally */
+const ANNOUNCEMENTS_FETCH_TIMEOUT_MS = 10_000;
+
 /**
  * Parse a CSV line with proper handling of quoted fields
  */
@@ -43,13 +46,32 @@ function parseCSVLine(line: string): string[] {
 export async function getAnnouncements(): Promise<Announcement[]> {
   try {
     const csvUrl = `https://docs.google.com/spreadsheets/d/${ANNOUNCEMENTS_SHEET_ID}/export?format=csv&gid=0`;
-    
-    const response = await fetch(csvUrl);
-    
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), ANNOUNCEMENTS_FETCH_TIMEOUT_MS);
+
+    let response: Response;
+    try {
+      response = await fetch(csvUrl, {
+        signal: controller.signal,
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' },
+      });
+      clearTimeout(timeoutId);
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        throw new Error(
+          `Announcements fetch timed out after ${ANNOUNCEMENTS_FETCH_TIMEOUT_MS / 1000} seconds`
+        );
+      }
+      throw fetchError;
+    }
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
+
     const csvText = await response.text();
     const lines = csvText.split('\n');
     

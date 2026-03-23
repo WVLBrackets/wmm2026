@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
         year: parsedYear,
         exists: Boolean(keyBracket),
         picks: keyBracket?.picks ?? {},
+        tieBreaker: keyBracket?.tieBreaker ?? null,
         bracketId: keyBracket?.id ?? null,
         updatedAt: keyBracket?.updatedAt?.toISOString?.() ?? null,
       },

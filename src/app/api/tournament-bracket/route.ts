@@ -10,6 +10,7 @@ import { loadTournamentData } from '@/lib/tournamentLoader';
 import { logError } from '@/lib/serverErrorLogger';
 import { csrfProtection } from '@/lib/csrf';
 import { getKillSwitchDisabledMessage } from '@/lib/killSwitch';
+import { normalizeStoredDisplayName } from '@/lib/stringNormalize';
 
 /**
  * POST /api/tournament-bracket - Create a new tournament bracket (submit)
@@ -111,10 +112,12 @@ export async function POST(request: NextRequest) {
 
     // Get all existing brackets for this user
     const existingBrackets = await getBracketsByUserId(user.id);
+
+    const normalizedEntryName = normalizeStoredDisplayName(String(body.entryName ?? ''));
     
     // Check if there's already a submitted bracket with this name for the same year
     const duplicateNameExists = existingBrackets.some(
-      bracket => bracket.entryName === body.entryName && 
+      bracket => bracket.entryName === normalizedEntryName && 
                  bracket.status === 'submitted' && 
                  bracket.year === tournamentYear
     );
@@ -123,7 +126,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { 
           success: false, 
-          error: `A submitted bracket with the name "${body.entryName}" already exists for ${tournamentYear}. Please choose a different name.`
+          error: `A submitted bracket with the name "${normalizedEntryName}" already exists for ${tournamentYear}. Please choose a different name.`
         },
         { status: 400 }
       );
@@ -239,7 +242,11 @@ export async function POST(request: NextRequest) {
         playerEmail: user.email,
         entryName: updatedBracket.entryName,
         tieBreaker: updatedBracket.tieBreaker,
-        submittedAt: updatedBracket.updatedAt.toISOString(),
+        submittedAt:
+          updatedBracket.status === 'submitted' && updatedBracket.submittedAt
+            ? updatedBracket.submittedAt.toISOString()
+            : undefined,
+        updatedAt: updatedBracket.updatedAt.toISOString(),
         picks: updatedBracket.picks,
         totalPoints: 0,
         isComplete: bracketStatus === 'submitted',
@@ -319,12 +326,11 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Get fresh site config to check submission rules (bypass cache for real-time validation)
+    // Cached config is sufficient for in-progress save (not final submit); avoids a slow Fresh Sheets round-trip.
     let siteConfig = null;
     try {
-      siteConfig = await getSiteConfigFromGoogleSheetsFresh();
+      siteConfig = await getSiteConfigFromGoogleSheets();
     } catch {
-      // Use fallback config if Google Sheets fails
       const { FALLBACK_CONFIG } = await import('@/lib/fallbackConfig');
       siteConfig = FALLBACK_CONFIG;
     }
@@ -369,6 +375,7 @@ export async function PUT(request: NextRequest) {
         playerEmail: user.email,
         entryName: updatedBracket.entryName,
         tieBreaker: updatedBracket.tieBreaker,
+        updatedAt: updatedBracket.updatedAt.toISOString(),
         lastSaved: updatedBracket.updatedAt.toISOString(),
         picks: updatedBracket.picks,
         totalPoints: 0,
@@ -429,7 +436,11 @@ export async function GET() {
       playerEmail: user.email,
       entryName: bracket.entryName,
       tieBreaker: bracket.tieBreaker,
-      submittedAt: bracket.status === 'submitted' ? bracket.updatedAt.toISOString() : undefined,
+      submittedAt:
+        bracket.status === 'submitted' && bracket.submittedAt
+          ? bracket.submittedAt.toISOString()
+          : undefined,
+      updatedAt: bracket.updatedAt.toISOString(),
       lastSaved: bracket.status === 'in_progress' ? bracket.updatedAt.toISOString() : undefined,
       picks: bracket.picks,
       totalPoints: 0,
@@ -440,11 +451,18 @@ export async function GET() {
       status: bracket.status
     }));
     
-    return NextResponse.json({
-      success: true,
-      data: formattedBrackets,
-      count: formattedBrackets.length
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        data: formattedBrackets,
+        count: formattedBrackets.length,
+      },
+      {
+        headers: {
+          'Cache-Control': 'private, no-store, max-age=0',
+        },
+      }
+    );
   } catch (error) {
     console.error('Error fetching tournament brackets:', error);
     return NextResponse.json(

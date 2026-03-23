@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
-import { getAllUsers, getUserBracketCounts } from '@/lib/repositories/userRepository';
+import { getAllUsers, getBracketCountsGroupedByUser } from '@/lib/repositories/userRepository';
 
 /**
  * GET /api/admin/users - Get all users with bracket counts (admin only)
@@ -20,42 +20,28 @@ export async function GET() {
         count: 0
       });
     }
-    
-    // Get bracket counts for each user and map field names
-    const usersWithCounts = await Promise.all(
-      users.map(async (user) => {
-        try {
-          const bracketCounts = await getUserBracketCounts(user.id);
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          emailConfirmed: user.emailConfirmed,
-          createdAt: user.createdAt.toISOString(),
-          lastLogin: user.lastLogin instanceof Date ? user.lastLogin.toISOString() : null,
-          bracketCounts,
-        };
-        } catch (error) {
-          // Log error but don't expose user IDs in production
-          // Always return generic error for security
-          if (false) {
-            console.error(`[Admin Users API] Error getting bracket counts for user ${user.id}:`, error);
-          } else {
-            console.error('[Admin Users API] Error getting bracket counts for user');
-          }
-          // Return user without bracket counts if query fails
-          return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            emailConfirmed: user.emailConfirmed,
-            createdAt: user.createdAt.toISOString(),
-            lastLogin: user.lastLogin instanceof Date ? user.lastLogin.toISOString() : null,
-            bracketCounts: { submitted: 0, inProgress: 0, deleted: 0 },
-          };
-        }
-      })
-    );
+
+    const emptyCounts = { submitted: 0, inProgress: 0, deleted: 0 } as const;
+    let countsByUser: Map<string, { submitted: number; inProgress: number; deleted: number }>;
+    try {
+      countsByUser = await getBracketCountsGroupedByUser();
+    } catch (error) {
+      console.error('[Admin Users API] Error loading grouped bracket counts:', error);
+      countsByUser = new Map();
+    }
+
+    const usersWithCounts = users.map((user) => {
+      const bracketCounts = countsByUser.get(user.id) ?? emptyCounts;
+      return {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        emailConfirmed: user.emailConfirmed,
+        createdAt: user.createdAt.toISOString(),
+        lastLogin: user.lastLogin instanceof Date ? user.lastLogin.toISOString() : null,
+        bracketCounts,
+      };
+    });
     
     return NextResponse.json({
       success: true,

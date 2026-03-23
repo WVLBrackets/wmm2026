@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/lib/adminAuth';
-import { getBracketById, updateBracket, deleteBracket } from '@/lib/repositories/bracketRepository';
+import { getBracketById, getBracketsByUserId, updateBracket, deleteBracket } from '@/lib/repositories/bracketRepository';
+import { normalizeStoredDisplayName } from '@/lib/stringNormalize';
 
 export async function GET(
   request: NextRequest,
@@ -65,13 +66,46 @@ export async function PUT(
         { status: 400 }
       );
     }
+    if (!existing) {
+      return NextResponse.json(
+        { success: false, error: 'Bracket not found' },
+        { status: 404 }
+      );
+    }
+
+    const nextEntryName =
+      typeof body.entryName === 'string'
+        ? normalizeStoredDisplayName(body.entryName)
+        : existing.entryName;
+    const nextStatus = typeof body.status === 'string' ? body.status : existing.status;
+    const nextUserId = typeof body.userId === 'string' ? body.userId : existing.userId;
+
+    if (nextStatus === 'submitted') {
+      const userBrackets = await getBracketsByUserId(nextUserId);
+      const hasDuplicateSubmittedName = userBrackets.some((bracket) =>
+        bracket.id !== id &&
+        bracket.status === 'submitted' &&
+        bracket.year === existing.year &&
+        bracket.entryName.toLowerCase() === nextEntryName.toLowerCase()
+      );
+
+      if (hasDuplicateSubmittedName) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Rename failed: user already has a submitted bracket named "${nextEntryName}" for ${existing.year}.`,
+          },
+          { status: 409 }
+        );
+      }
+    }
 
     const updatedBracket = await updateBracket(id, {
-      entryName: body.entryName,
+      entryName: nextEntryName,
       tieBreaker: body.tieBreaker,
       picks: body.picks,
-      status: body.status,
-      userId: body.userId,
+      status: nextStatus,
+      userId: nextUserId,
     });
 
     if (!updatedBracket) {
@@ -88,6 +122,20 @@ export async function PUT(
     });
   } catch (error) {
     console.error('Error updating bracket (admin):', error);
+    const maybeCode = (error as { code?: string })?.code;
+    const maybeMessage = error instanceof Error ? error.message.toLowerCase() : '';
+    if (
+      maybeCode === '23505' ||
+      maybeMessage.includes('idx_brackets_submitted_unique_entry_name_per_user_year_env')
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Rename failed: user already has a submitted bracket with that name for this year.',
+        },
+        { status: 409 }
+      );
+    }
     return NextResponse.json(
       { success: false, error: 'Failed to update bracket' },
       { status: 500 }

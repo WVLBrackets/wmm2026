@@ -18,6 +18,10 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   oldSiteUrl: 'https://warrensmadness.webnode.page/',
   standingsTabs: 2,
   standingsYear: '2026',
+  showLiveStandings: 'No',
+  liveStandingsWarning:
+    'Live standings compare submitted picks to the official KEY bracket. Rankings can change as games complete.||If you continue, your preference will be saved as Live standings.',
+  liveStandingsButtons: 'Continue to live standings|Back to daily standings',
   footerText: '© 2001 Warren\'s March Madness | All rights reserved',
   contactMe: 'warren@example.com',
   prizesActiveForecast: 'Forecast',
@@ -50,6 +54,8 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   finalMessageDuplicateName: 'An entry with this name already exists for this year. Please choose a different name.',
   finalMessageReadyToSubmit: 'Your bracket is complete and ready to submit!',
   finalFourHeaderMessage: 'Final Four & Championship',
+  finalFourDisabledMessage:
+    'Complete all four regions before you can work on the Final Four and championship.',
   // Email PDF template defaults
   emailPdfSubject: 'Your Bracket - Warren\'s March Madness',
   emailPdfHeading: 'Your Bracket is Attached!',
@@ -103,10 +109,27 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   // Submission deadline and toggle
   stopSubmitDateTime: '',
   showCountdownTimer: 'No',
+  countdownTimerMessage: 'X Days Away',
+  countdownTimerMessageMobile: '',
   stopSubmitToggle: 'No',
   finalMessageTooLate: 'Bracket submissions are closed. The deadline has passed.',
   finalMessageSubmitOff: 'Bracket submissions are currently disabled.',
   killSwitchOn: 'Bracket actions are temporarily disabled by the administrator.',
+  permDeleteMessage:
+    'Permanently delete this bracket? This cannot be undone.||Are you sure you want to continue?',
+  inThePoolHeader: 'In the pool',
+  inThePoolMessage: 'Submitted entries count toward the contest.',
+  notInThePoolHeader: 'Not in the pool',
+  notInThePoolMessage:
+    'In progress and deleted entries are not included until you submit.',
+  /** `desktopPx|mobilePx` — pool banner icon + header + message (see MyPicksLanding). */
+  poolHeaderFontSize: '14|12',
+  returnActionConfirmMessage:
+    'This bracket will leave the contest pool until you submit again.||Are you sure you want to return it to In Progress?',
+  returnActionHoverMessage:
+    'Return to In Progress (you must submit again to re-enter the pool)',
+  bracketReturnMessage:
+    'This bracket will leave the contest pool until you submit again.||Are you sure you want to return it to In Progress?',
   // Auto-reply message configuration (for do-not-reply addresses)
   autoReplyHeading: 'Automatic Reply',
   autoReplyGreeting: 'Hello,',

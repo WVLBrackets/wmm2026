@@ -3,7 +3,12 @@
 import { useEffect, useRef, RefObject } from 'react';
 import Image from 'next/image';
 import { TournamentGame } from '@/types/tournament';
-import { CheckCircle, ChevronLeft, ChevronRight, Save, ArrowRight, KeyRound } from 'lucide-react';
+import { CheckCircle, Save, KeyRound, ArrowRight, Send, X } from 'lucide-react';
+import {
+  BRACKET_EDITOR_BAR_ACTION_CLASSES,
+  BRACKET_EDITOR_STAGE_MIN_HEIGHT_CLASS,
+} from '@/lib/bracketStepNavMetrics';
+import BracketStepNavBar from './BracketStepNavBar';
 
 interface RegionBracketLayoutProps {
   regionName: string;
@@ -12,21 +17,27 @@ interface RegionBracketLayoutProps {
   onPick: (gameId: string, teamId: string) => void;
   readOnly?: boolean;
   scrollContainerRef?: RefObject<HTMLDivElement | null>;
-  // Control buttons props
-  onPrevious?: () => void;
   onSave?: () => void;
-  onNext?: () => void;
   onClose?: () => void;
   onCancel?: () => void;
+  /** Large circular control to advance to the next region (bottom text Next removed). */
+  onNext?: () => void;
   canProceed?: boolean;
+  /** Full-bracket submit (uses `submitEnabled` / `submitDisabledMessage` from parent). */
+  onSubmitBracket?: () => void;
+  submitEnabled?: boolean;
+  submitDisabledMessage?: string;
+  isAdminMode?: boolean;
   currentStep?: number;
   totalSteps?: number;
   bracketNumber?: number;
   year?: number;
-  nextButtonText?: string;
-  // Progress dots props
+  // Step nav (region names + Final Four)
   onStepClick?: (stepIndex: number) => void;
   isStepComplete?: (step: number) => boolean;
+  stepNavLabels?: string[];
+  stepButtonWidthCh?: number;
+  finalFourDisabledMessage?: string;
   // Entry name and region info props
   entryName?: string;
   onEntryNameChange?: (value: string) => void;
@@ -42,17 +53,22 @@ export default function RegionBracketLayout({
   onPick,
   readOnly = false,
   scrollContainerRef,
-  onPrevious,
   onSave,
-  onNext,
   onClose,
   onCancel,
+  onNext,
   canProceed = false,
+  onSubmitBracket,
+  submitEnabled = false,
+  submitDisabledMessage = '',
+  isAdminMode = false,
   currentStep = 0,
   totalSteps = 5,
-  nextButtonText = 'Next',
   onStepClick,
   isStepComplete,
+  stepNavLabels = [],
+  stepButtonWidthCh = 12,
+  finalFourDisabledMessage = '',
   entryName = '',
   onEntryNameChange,
   isLiveResultsMode = false,
@@ -221,27 +237,31 @@ export default function RegionBracketLayout({
   const regionLetters = regionName.toUpperCase().split('').filter(char => char.trim() !== '');
 
   return (
-    <div className="flex items-center mx-auto" style={{ width: 'fit-content' }}>
-      {/* Region Name - Vertical Letters in separate container to the left */}
-      <div className="flex flex-col items-center justify-center pr-4" style={{ height: '100%', minWidth: '2rem' }}>
-        {regionLetters.map((letter, index) => (
-          <div 
-            key={index} 
-            className="text-2xl font-bold text-gray-700"
-            style={{ 
-              lineHeight: '1.2',
-              marginBottom: index < regionLetters.length - 1 ? '0.25rem' : '0'
-            }}
-          >
-            {letter}
+    <div
+      className={`mx-auto flex w-max max-w-full flex-col ${BRACKET_EDITOR_STAGE_MIN_HEIGHT_CLASS}`}
+    >
+      <div className="flex min-h-0 flex-1 flex-col justify-center">
+        <div className="flex items-center" style={{ width: 'fit-content' }}>
+          {/* Region Name - Vertical Letters in separate container to the left */}
+          <div className="flex flex-col items-center justify-center pr-4" style={{ height: '100%', minWidth: '2rem' }}>
+            {regionLetters.map((letter, index) => (
+              <div
+                key={index}
+                className="text-2xl font-bold text-gray-700"
+                style={{
+                  lineHeight: '1.2',
+                  marginBottom: index < regionLetters.length - 1 ? '0.25rem' : '0',
+                }}
+              >
+                {letter}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* Bracket Container */}
-      <div className="flex flex-col border-2 border-gray-300 rounded-lg" style={{ width: 'fit-content' }}>
-        {/* Bracket Columns */}
-        <div className="flex items-start">
+          {/* Bracket Container */}
+          <div className="flex flex-col border-2 border-gray-300 rounded-lg" style={{ width: 'fit-content' }}>
+            {/* Bracket Columns */}
+            <div className="flex items-start">
           {/* Round of 64 */}
           <div className="w-48">
             {roundOf64.map(game => renderGame(game))}
@@ -286,43 +306,54 @@ export default function RegionBracketLayout({
             </div>
           </div>
 
-          {/* Fifth Column - Summary Panel (half width, right-aligned, can overlap) */}
+          {/* Fifth Column - large Next control (flow), aligned with Elite 8 */}
           <div className="w-24 flex-shrink-0 relative">
-            {/* Arrow button - aligned with Elite 8 matchup */}
             {onNext && !readOnly && (
-              <div 
-                className="absolute" 
-                style={{ 
+              <div
+                className="absolute"
+                style={{
                   top: 'calc(14rem - 3px)',
                   left: '50%',
                   transform: 'translateX(-50%)',
-                  width: '76.5%', // 90% * 0.85 = 76.5%
+                  width: '76.5%',
                   display: 'flex',
                   justifyContent: 'center',
-                  alignItems: 'center'
+                  alignItems: 'center',
                 }}
               >
                 <button
+                  type="button"
+                  aria-label="Next region"
+                  data-testid="bracket-region-next-arrow"
                   onClick={isComplete ? onNext : undefined}
                   disabled={!isComplete || !canProceed}
                   className={`
-                    w-full aspect-square rounded-full flex items-center justify-center transition-all
+                    flex aspect-square w-full max-w-[76.5%] items-center justify-center rounded-full transition-all
                     ${isComplete && canProceed
-                      ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 cursor-pointer shadow-lg hover:shadow-xl active:shadow-md'
-                      : 'bg-gradient-to-br from-gray-300 to-gray-400 text-gray-500 cursor-not-allowed shadow'
+                      ? 'cursor-pointer bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-lg hover:from-blue-700 hover:to-blue-800 hover:shadow-xl active:shadow-md'
+                      : 'cursor-not-allowed bg-gradient-to-br from-gray-300 to-gray-400 text-gray-500 shadow'
                     }
                   `}
-                  style={{ 
-                    maxWidth: '76.5%',
-                    boxShadow: isComplete && canProceed 
-                      ? '0 4px 6px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -1px 0 rgba(0, 0, 0, 0.2)'
-                      : '0 2px 4px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                  style={{
+                    boxShadow:
+                      isComplete && canProceed
+                        ? '0 4px 6px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -1px 0 rgba(0, 0, 0, 0.2)'
+                        : '0 2px 4px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
                   }}
                 >
-                  <ArrowRight className="w-7 h-7" style={{ filter: isComplete && canProceed ? 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3))' : 'none' }} />
+                  <ArrowRight
+                    className="h-7 w-7"
+                    style={{
+                      filter: isComplete && canProceed ? 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3))' : 'none',
+                    }}
+                  />
                 </button>
               </div>
             )}
+          </div>
+
+          {/* Sixth Column - Summary Panel (half width, right-aligned, can overlap) */}
+          <div className="w-24 flex-shrink-0 relative">
             {/* Summary Panel: Entry Name, Region Name, Champion Info - right-aligned, top aligned with Game 1 */}
             <div className="absolute right-0" style={{ minWidth: 'max-content' }}>
               {/* Row 1: Entry Name - label and field on same row */}
@@ -378,137 +409,94 @@ export default function RegionBracketLayout({
           </div>
         </div>
 
-        {/* Control Buttons at bottom of bracket */}
-        <div className="flex items-center justify-between mt-4" style={{ width: '100%', maxWidth: '100%', paddingLeft: '2px', paddingRight: '2px', paddingBottom: '2px' }}>
-        {/* Left: Previous Button */}
-        <div className="flex-shrink-0">
-          {onPrevious && (
-            <button
-              onClick={onPrevious}
-              disabled={currentStep === 0}
-              className={`
-                flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors
-                ${currentStep === 0
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+        {/* Bottom bar: step nav grouped left — Save / Cancel / Close (right) */}
+        <div
+          className="mt-4 flex w-full max-w-full flex-nowrap items-stretch justify-between gap-4"
+          style={{ paddingLeft: '2px', paddingRight: '2px', paddingBottom: '2px' }}
+        >
+          <div className="flex min-w-0 shrink-0 items-center justify-start overflow-x-auto">
+            {onStepClick && isStepComplete && (
+              <BracketStepNavBar
+                totalSteps={totalSteps}
+                currentStep={currentStep}
+                stepLabels={stepNavLabels}
+                columnWidthCh={stepButtonWidthCh}
+                isStepComplete={isStepComplete}
+                onStepClick={onStepClick}
+                finalFourDisabledMessage={
+                  finalFourDisabledMessage.trim() ||
+                  'Complete all four regions before you can work on the Final Four and championship.'
                 }
-              `}
-            >
-              <ChevronLeft className="w-4 h-4" />
-              <span>Previous</span>
-            </button>
-          )}
-        </div>
-
-        {/* Center: Progress Dots */}
-        {onStepClick && isStepComplete && (
-          <div className="flex items-center space-x-2 flex-1 justify-center">
-            {Array.from({ length: totalSteps }, (_, i) => {
-              const isFinalStep = i === totalSteps - 1;
-              const allRegionsComplete = Array.from({ length: totalSteps - 1 }, (_, j) => isStepComplete(j)).every(Boolean);
-              const isClickable = !isFinalStep || allRegionsComplete;
-
-              return (
-                <div key={i} className="flex items-center">
-                  <button
-                    onClick={() => onStepClick(i)}
-                    disabled={!isClickable}
-                    title={isFinalStep && !allRegionsComplete ? "Complete all four regions first" : ""}
-                    className={`
-                      w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors
-                      ${isClickable ? 'cursor-pointer' : 'cursor-not-allowed'}
-                      ${i === currentStep ? 'bg-blue-600 text-white' :
-                        isStepComplete(i) ? 'bg-green-600 text-white hover:bg-green-700' :
-                        isClickable ? 'bg-gray-300 text-gray-600 hover:bg-gray-400' : 'bg-gray-200 text-gray-400'}
-                    `}
-                  >
-                    {isStepComplete(i) ? <CheckCircle className="w-5 h-5" /> : i + 1}
-                  </button>
-                  {i < totalSteps - 1 && (
-                    <div className={`w-6 h-0.5 ${isStepComplete(i) ? 'bg-green-600' : 'bg-gray-300'} transition-colors`} />
-                  )}
-                </div>
-              );
-            })}
+              />
+            )}
           </div>
-        )}
 
-        {/* Right: Cancel, Save/Close and Next/Submit Buttons */}
-        <div className="flex items-center space-x-3 flex-shrink-0">
-          {readOnly ? (
-            <>
-              {/* View mode: Close and Next buttons - Next on far right */}
-              {/* Previous button is shown on the left side, not here */}
-              {onClose && (
+          <div className="flex shrink-0 items-center justify-end gap-1.5">
+            {readOnly ? (
+              onClose && (
                 <button
+                  type="button"
                   onClick={onClose}
-                  className="flex items-center space-x-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer"
+                  style={{ width: `${stepButtonWidthCh}ch`, minWidth: `${stepButtonWidthCh}ch`, maxWidth: `${stepButtonWidthCh}ch` }}
+                  className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} bg-red-500 text-white hover:bg-red-600 cursor-pointer`}
                 >
                   <span>Close</span>
                 </button>
-              )}
-              {onNext && (
-                <button
-                  onClick={onNext}
-                  disabled={currentStep === (totalSteps ? totalSteps - 1 : 4)}
-                  className={`
-                    flex items-center space-x-2 px-6 py-2 rounded-lg transition-colors
-                    ${currentStep === (totalSteps ? totalSteps - 1 : 4)
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                    }
-                  `}
-                >
-                  <span>Next</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              )}
-            </>
-          ) : (
-            <>
-              {onSave && (
-                <button
-                  onClick={() => !disableSave && onSave()}
-                  disabled={disableSave}
-                  title={disableSave ? disableSaveMessage : 'Save'}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                    disableSave
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-purple-600 text-white hover:bg-purple-700 cursor-pointer'
-                  }`}
-                >
-                  <Save className="h-4 w-4" />
-                  <span>Save</span>
-                </button>
-              )}
-              {onCancel && (
-                <button
-                  onClick={onCancel}
-                  className="flex items-center space-x-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer"
-                >
-                  <span>Cancel</span>
-                </button>
-              )}
-              {onNext && (
-                <button
-                  onClick={onNext}
-                  disabled={!canProceed}
-                  className={`
-                    flex items-center space-x-2 px-6 py-2 rounded-lg transition-colors
-                    ${canProceed
-                      ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }
-                  `}
-                >
-                  <span>{nextButtonText}</span>
-                  {currentStep < totalSteps - 1 && <ChevronRight className="w-4 h-4" />}
-                </button>
-              )}
-            </>
-          )}
+              )
+            ) : (
+              <>
+                {onSave && (
+                  <button
+                    type="button"
+                    onClick={() => !disableSave && onSave()}
+                    disabled={disableSave}
+                    title={disableSave ? disableSaveMessage : 'Save'}
+                    style={{ width: `${stepButtonWidthCh}ch`, minWidth: `${stepButtonWidthCh}ch`, maxWidth: `${stepButtonWidthCh}ch` }}
+                    className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} ${
+                      disableSave
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-purple-600 text-white hover:bg-purple-700 cursor-pointer'
+                    }`}
+                  >
+                    <Save className="h-3.5 w-3.5 shrink-0" />
+                    <span>Save</span>
+                  </button>
+                )}
+                {onCancel && (
+                  <button
+                    type="button"
+                    onClick={onCancel}
+                    style={{ width: `${stepButtonWidthCh}ch`, minWidth: `${stepButtonWidthCh}ch`, maxWidth: `${stepButtonWidthCh}ch` }}
+                    className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} bg-red-500 text-white hover:bg-red-600 cursor-pointer`}
+                  >
+                    <X className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
+                    <span>Cancel</span>
+                  </button>
+                )}
+                {onSubmitBracket && !isAdminMode && (
+                  <button
+                    type="button"
+                    data-testid="submit-bracket-editor-button"
+                    onClick={() => submitEnabled && onSubmitBracket()}
+                    disabled={!submitEnabled}
+                    title={submitDisabledMessage || undefined}
+                    style={{ width: `${stepButtonWidthCh}ch`, minWidth: `${stepButtonWidthCh}ch`, maxWidth: `${stepButtonWidthCh}ch` }}
+                    className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} ${
+                      submitEnabled
+                        ? 'cursor-pointer bg-blue-600 text-white hover:bg-blue-700'
+                        : 'cursor-not-allowed bg-gray-300 text-gray-500'
+                    }`}
+                  >
+                    <Send className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <span>Submit</span>
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         </div>
-      </div>
+          </div>
+        </div>
       </div>
     </div>
   );

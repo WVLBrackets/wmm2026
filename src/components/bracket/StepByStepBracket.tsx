@@ -1,9 +1,18 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { TournamentData, TournamentBracket } from '@/types/tournament';
 import { updateBracketWithPicks } from '@/lib/bracketGenerator';
+import {
+  computeCanProceedToSubmit,
+  getBracketSubmitReadinessHint,
+  getBracketSubmissionClosedMessage,
+  isBracketSubmissionClosed,
+  isSubmitDuplicateEntryName,
+} from '@/lib/bracketSubmitReadiness';
 import { SiteConfigData } from '@/lib/siteConfig';
+import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
+import { computeUniformStepNavWidthCh } from '@/lib/bracketStepNavMetrics';
 import RegionBracketLayout from './RegionBracketLayout';
 import FinalFourChampionship from './FinalFourChampionship';
 
@@ -107,7 +116,92 @@ export default function StepByStepBracket({
   
   const regions = tournamentData.regions;
   const totalSteps = regions.length + 1; // 4 regions + Final Four & Championship
-  
+
+  const stepNavLabels = useMemo(
+    () => [...regions.map((r) => r.name), 'Final Four'],
+    [regions],
+  );
+
+  const stepBarButtonWidthCh = useMemo(
+    () => computeUniformStepNavWidthCh(stepNavLabels),
+    [stepNavLabels],
+  );
+
+  const updatedBracketForSubmit = useMemo(
+    () => updateBracketWithPicks(bracket, picks, tournamentData),
+    [bracket, picks, tournamentData],
+  );
+
+  const { submitEnabled, submitDisabledMessage } = useMemo(() => {
+    if (readOnly || isAdminMode) {
+      return { submitEnabled: false, submitDisabledMessage: '' };
+    }
+    if (disableSaveSubmit) {
+      return {
+        submitEnabled: false,
+        submitDisabledMessage: disableMessage?.trim() || 'Saving and submitting are temporarily disabled.',
+      };
+    }
+    if (isBracketSubmissionClosed(siteConfig)) {
+      return {
+        submitEnabled: false,
+        submitDisabledMessage: getBracketSubmissionClosedMessage(siteConfig),
+      };
+    }
+    if (isSubmitDuplicateEntryName(entryName, siteConfig, existingBracketNames)) {
+      return {
+        submitEnabled: false,
+        submitDisabledMessage:
+          siteConfig?.finalMessageDuplicateName ||
+          'An entry with this name already exists for this year. Please choose a different name.',
+      };
+    }
+    if (
+      !computeCanProceedToSubmit(
+        tournamentData,
+        updatedBracketForSubmit,
+        picks,
+        entryName,
+        tieBreaker,
+        siteConfig,
+      )
+    ) {
+      return {
+        submitEnabled: false,
+        submitDisabledMessage: getBracketSubmitReadinessHint(
+          tournamentData,
+          updatedBracketForSubmit,
+          picks,
+          entryName,
+          tieBreaker,
+          siteConfig,
+        ),
+      };
+    }
+    return { submitEnabled: true, submitDisabledMessage: 'Submit your bracket' };
+  }, [
+    readOnly,
+    isAdminMode,
+    disableSaveSubmit,
+    disableMessage,
+    siteConfig,
+    entryName,
+    existingBracketNames,
+    tournamentData,
+    updatedBracketForSubmit,
+    picks,
+    tieBreaker,
+  ]);
+
+  const handleSubmitBracket = useCallback(() => {
+    if (!submitEnabled) return;
+    onComplete();
+  }, [submitEnabled, onComplete]);
+
+  const finalFourNavDisabledMessage =
+    siteConfig?.finalFourDisabledMessage?.trim() ||
+    FALLBACK_CONFIG.finalFourDisabledMessage ||
+    'Complete all four regions before you can work on the Final Four and championship.';
 
   const getStepProgress = (step: number) => {
     if (step < regions.length) {
@@ -136,15 +230,7 @@ export default function StepByStepBracket({
     if (currentStep < regions.length) {
       return isStepComplete(currentStep);
     } else if (currentStep === regions.length) {
-      // Final Four & Championship - need all regions complete, all Final Four games picked, and tie breaker filled
-      const allRegionsComplete = regions.every(region => isStepComplete(regions.indexOf(region)));
-      const finalFourComplete = isStepComplete(regions.length);
-      const low = siteConfig?.tieBreakerLow ?? 50;
-      const high = siteConfig?.tieBreakerHigh ?? 500;
-      const tieBreakerValid = Boolean(tieBreaker && !isNaN(Number(tieBreaker)) && Number(tieBreaker) >= low && Number(tieBreaker) <= high);
-      const entryNameValid = entryName.trim().length > 0;
-      
-      return allRegionsComplete && finalFourComplete && tieBreakerValid && entryNameValid;
+      return computeCanProceedToSubmit(tournamentData, bracket, picks, entryName, tieBreaker, siteConfig);
     } else {
       // Championship - need Final Four complete
       return isStepComplete(regions.length);
@@ -162,12 +248,6 @@ export default function StepByStepBracket({
   const handleSave = () => {
     if (onSave) {
       onSave();
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
     }
   };
 
@@ -192,19 +272,24 @@ export default function StepByStepBracket({
           onPick={onPick}
           readOnly={readOnly}
           scrollContainerRef={scrollContainerRef}
-          onPrevious={handlePrevious}
           onSave={handleSave}
-          onNext={handleNext}
           onClose={onClose}
           onCancel={onCancel}
+          onNext={handleNext}
           canProceed={canProceed()}
+          onSubmitBracket={handleSubmitBracket}
+          submitEnabled={submitEnabled}
+          submitDisabledMessage={submitDisabledMessage}
+          isAdminMode={isAdminMode}
           currentStep={currentStep}
           totalSteps={totalSteps}
           bracketNumber={bracketNumber}
           year={year}
-          nextButtonText={currentStep === totalSteps - 1 ? 'Submit Bracket' : 'Next'}
           onStepClick={handleStepClick}
           isStepComplete={isStepComplete}
+          stepNavLabels={stepNavLabels}
+          stepButtonWidthCh={stepBarButtonWidthCh}
+          finalFourDisabledMessage={finalFourNavDisabledMessage}
           entryName={entryName}
           onEntryNameChange={onEntryNameChange}
           isLiveResultsMode={isLiveResultsMode}
@@ -223,17 +308,19 @@ export default function StepByStepBracket({
           onTieBreakerChange={onTieBreakerChange || (() => {})}
           readOnly={readOnly}
           scrollContainerRef={scrollContainerRef}
-          onPrevious={handlePrevious}
           onSave={handleSave}
-          onNext={handleNext}
+          onSubmitBracket={handleSubmitBracket}
+          submitEnabled={submitEnabled}
+          submitDisabledMessage={submitDisabledMessage}
           onClose={onClose}
           onCancel={onCancel}
-          canProceed={canProceed()}
           currentStep={currentStep}
           totalSteps={totalSteps}
-          nextButtonText="Submit Bracket"
           onStepClick={handleStepClick}
           isStepComplete={isStepComplete}
+          stepNavLabels={stepNavLabels}
+          stepButtonWidthCh={stepBarButtonWidthCh}
+          finalFourDisabledMessage={finalFourNavDisabledMessage}
           entryName={entryName}
           onEntryNameChange={onEntryNameChange}
           siteConfig={siteConfig as SiteConfigData | null}

@@ -466,7 +466,12 @@ export async function GET(request: NextRequest) {
     }
     const logs = result.rows.map((row: UsageLogRow) => ({
       id: row.id,
-      environment: row.environment === 'production' ? 'Prod' : 'Preview',
+      environment:
+        row.environment === 'production'
+          ? 'Prod'
+          : row.environment === 'local'
+            ? 'Local'
+            : 'Preview',
       timestamp: row.timestamp,
       isLoggedIn: row.is_logged_in,
       username: row.username,

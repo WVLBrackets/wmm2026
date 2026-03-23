@@ -49,6 +49,15 @@ The following environment variables are required (automatically pulled via `pull
 - `TEST_USER_EMAIL` - Test user email for Playwright tests
 - `TEST_USER_PASSWORD_STAGING` / `TEST_USER_PASSWORD_PRODUCTION` - Test user passwords
 
+### Standings page (Google Sheet)
+
+The standings tab reads from a **published-format** Google Sheet (via the `gviz` CSV URL).
+
+- **`STANDINGS_SHEET_ID_PROD`** — Required in **production** (`VERCEL_ENV=production`).
+- **`STANDINGS_SHEET_ID_STAGE`** — Required on **Vercel preview / staging** (any non-production deploy).
+- **Local `npm run dev`:** If `STANDINGS_SHEET_ID_STAGE` is missing but **`STANDINGS_SHEET_ID_PROD`** is set (e.g. from `pull-env-all.ps1`), the app **reuses the prod sheet** and logs a short warning. To use the staging sheet locally, add `STANDINGS_SHEET_ID_STAGE` to `.env.local`.
+- **`STANDINGS_SHEET_ID`** (optional) — If set, **overrides** prod/stage for all environments (handy for one-off local testing).
+
 ### Optional
 - `SUPPRESS_TEST_EMAILS` - Set to 'true' to suppress emails during test runs
 

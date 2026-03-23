@@ -2,28 +2,30 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
 import { getAllBrackets } from '@/lib/repositories/bracketRepository';
 import { getAllTeamReferenceData } from '@/lib/repositories/teamDataRepository';
+import { encodeCsvUtf8WithBom, escapeCsvCell } from '@/lib/csvExport';
 
 /**
  * GET /api/admin/brackets/export - Export all brackets to CSV (admin only)
  * 
- * CSV Format (74 columns):
+ * CSV Format (75 columns):
  * 1. Friendly Bracket ID (YYYY-NNNNNN)
  * 2. Raw UUID
  * 3. Status
- * 4. Entry Name
- * 5. Player Name
- * 6. Player Name (duplicate)
- * 7. Player Email
- * 8. Updated Timestamp
- * 9. Submitted Timestamp (blank if not submitted)
- * 10. Entry Name (duplicate)
- * 11-42. Round 1 picks (32) - 8 per region: top-left, bottom-left, top-right, bottom-right
- * 43-58. Round 2 picks (16) - same regional order
- * 59-66. Sweet 16 picks (8) - same regional order
- * 67-70. Elite 8 picks (4) - same regional order
- * 71-72. Final Four picks (2) - left, right
- * 73. Champion
- * 74. Tie Breaker
+ * 4. Source
+ * 5. Entry Name
+ * 6. Player Name
+ * 7. Player Name (duplicate)
+ * 8. Player Email
+ * 9. Updated Timestamp
+ * 10. Submitted Timestamp from `brackets.submitted_at` (blank if not submitted or unset)
+ * 11. Entry Name (duplicate)
+ * 12-43. Round 1 picks (32) - 8 per region: top-left, bottom-left, top-right, bottom-right
+ * 44-59. Round 2 picks (16) - same regional order
+ * 60-67. Sweet 16 picks (8) - same regional order
+ * 68-71. Elite 8 picks (4) - same regional order
+ * 72-73. Final Four picks (2) - left, right
+ * 74. Champion
+ * 75. Tie Breaker
  * 
  * Sorting: Submitted → In Progress → Deleted
  * 
@@ -116,17 +118,6 @@ export async function GET(request: NextRequest) {
       return teamIdToAbbr.get(teamId) || '';
     };
     
-    /**
-     * Escape CSV values properly
-     */
-    const escapeCsvValue = (value: string | number | undefined | null): string => {
-      if (value === null || value === undefined) return '';
-      const str = String(value);
-      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-        return `"${str.replace(/"/g, '""')}"`;
-      }
-      return str;
-    };
     
     /**
      * Format timestamp for CSV
@@ -142,6 +133,7 @@ export async function GET(request: NextRequest) {
       'Bracket ID',
       'UUID',
       'Status',
+      'Source',
       'Entry Name',
       'Player Name',
       'Player Name',
@@ -182,30 +174,30 @@ export async function GET(request: NextRequest) {
       const finalFour2 = getTeamAbbr(picks['final-four-2']);
       const champion = getTeamAbbr(picks['championship']);
       
-      // Submitted timestamp - only if status is 'submitted'
-      const submittedTimestamp = bracket.status === 'submitted' 
-        ? formatTimestamp(bracket.updatedAt) 
-        : '';
+      // Submitted timestamp from `submitted_at` (not last edit time)
+      const submittedTimestamp =
+        bracket.status === 'submitted' ? formatTimestamp(bracket.submittedAt ?? null) : '';
       
       return [
-        escapeCsvValue(friendlyId),
-        escapeCsvValue(bracket.id),
-        escapeCsvValue(bracket.status),
-        escapeCsvValue(bracket.entryName),
-        escapeCsvValue(bracket.userName),
-        escapeCsvValue(bracket.userName), // Duplicate
-        escapeCsvValue(bracket.userEmail),
-        escapeCsvValue(formatTimestamp(bracket.updatedAt)),
-        escapeCsvValue(submittedTimestamp),
-        escapeCsvValue(bracket.entryName), // Duplicate
-        ...round1Picks.map(escapeCsvValue),
-        ...round2Picks.map(escapeCsvValue),
-        ...sweet16Picks.map(escapeCsvValue),
-        ...elite8Picks.map(escapeCsvValue),
-        escapeCsvValue(finalFour1),
-        escapeCsvValue(finalFour2),
-        escapeCsvValue(champion),
-        escapeCsvValue(bracket.tieBreaker)
+        escapeCsvCell(friendlyId),
+        escapeCsvCell(bracket.id),
+        escapeCsvCell(bracket.status),
+        escapeCsvCell(bracket.source || 'site'),
+        escapeCsvCell(bracket.entryName),
+        escapeCsvCell(bracket.userName),
+        escapeCsvCell(bracket.userName), // Duplicate
+        escapeCsvCell(bracket.userEmail),
+        escapeCsvCell(formatTimestamp(bracket.updatedAt)),
+        escapeCsvCell(submittedTimestamp),
+        escapeCsvCell(bracket.entryName), // Duplicate
+        ...round1Picks.map(escapeCsvCell),
+        ...round2Picks.map(escapeCsvCell),
+        ...sweet16Picks.map(escapeCsvCell),
+        ...elite8Picks.map(escapeCsvCell),
+        escapeCsvCell(finalFour1),
+        escapeCsvCell(finalFour2),
+        escapeCsvCell(champion),
+        escapeCsvCell(bracket.tieBreaker)
       ];
     });
     
@@ -214,13 +206,14 @@ export async function GET(request: NextRequest) {
       headers.join(','),
       ...rows.map(row => row.join(','))
     ];
-    const csvContent = csvLines.join('\n');
-    
+    const csvText = csvLines.join('\n');
+    const body = encodeCsvUtf8WithBom(csvText);
+
     // Generate filename with timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
     const filename = `brackets-export-${timestamp}.csv`;
-    
-    return new NextResponse(csvContent, {
+
+    return new NextResponse(body, {
       status: 200,
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',

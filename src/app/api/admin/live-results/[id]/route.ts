@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/lib/adminAuth';
 import { getUserByEmail } from '@/lib/repositories/userRepository';
 import { getBracketById, updateBracket, releaseKeyBracketLock, deleteBracket } from '@/lib/repositories/bracketRepository';
+import { recomputeLiveStandingsAfterKeySave } from '@/lib/liveStandingsService';
 
 /**
  * PUT /api/admin/live-results/[id]
@@ -61,6 +62,11 @@ export async function PUT(
         { success: false, error: 'Failed to save Live Results bracket' },
         { status: 500 }
       );
+    }
+
+    const liveResult = await recomputeLiveStandingsAfterKeySave(updated.year, updated.id);
+    if (!liveResult.ok) {
+      console.error('[live-results PUT] Live standings recompute failed:', liveResult.error);
     }
 
     return NextResponse.json({ success: true, data: updated });

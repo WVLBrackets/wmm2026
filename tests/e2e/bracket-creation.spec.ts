@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { signInUser } from '../fixtures/auth-helpers';
+import { getTestUserCredentials } from '../fixtures/test-helpers';
 
 /**
  * E2E tests for bracket creation
@@ -12,35 +13,9 @@ import { signInUser } from '../fixtures/auth-helpers';
  */
 
 test.describe('Bracket Creation', () => {
-  /**
-   * Get test user credentials from environment variables
-   */
-  const getTestUserCredentials = () => {
-    const isProduction = process.env.TEST_ENV === 'production' || 
-                         process.env.TEST_ENV === 'prod' ||
-                         (process.env.PLAYWRIGHT_TEST_BASE_URL && 
-                          process.env.PLAYWRIGHT_TEST_BASE_URL.includes('warrensmm.com'));
-    
-    const password = isProduction 
-      ? (process.env.TEST_USER_PASSWORD_PRODUCTION || process.env.TEST_USER_PASSWORD)
-      : (process.env.TEST_USER_PASSWORD_STAGING || process.env.TEST_USER_PASSWORD);
-    
-    if (!process.env.TEST_USER_EMAIL || !password) {
-      throw new Error(
-        'TEST_USER_EMAIL and TEST_USER_PASSWORD_STAGING/PRODUCTION environment variables are required. ' +
-        'See tests/AUTHENTICATION_TEST_SETUP.md for setup instructions.'
-      );
-    }
-    
-    return {
-      email: process.env.TEST_USER_EMAIL,
-      password: password,
-    };
-  };
-
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page }, testInfo) => {
     // Authenticate via API before each test
-    const credentials = getTestUserCredentials();
+    const credentials = getTestUserCredentials(testInfo.project.name);
     await signInUser(page, credentials.email, credentials.password);
   });
 

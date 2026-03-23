@@ -1,27 +1,40 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Trash2, Edit, Save, X, Plus, Download, AlertCircle, CheckCircle, Power, PowerOff, Zap } from 'lucide-react';
+import { Trash2, Edit, Save, X, Plus, Download, Upload, AlertCircle, CheckCircle, Power, PowerOff, Zap } from 'lucide-react';
+import { getTeamReferenceDisplayName } from '@/lib/teamDisplayName';
+import { clearTeamRefDataClientCache } from '@/lib/teamRefData';
+
+/** Row shape for admin team reference table and API payloads */
+interface AdminTeamRow {
+  id: string;
+  name: string;
+  displayName?: string;
+  mascot?: string;
+  logo: string;
+  active?: boolean;
+}
 
 export default function TeamDataTab() {
   const router = useRouter();
-  const [teamData, setTeamData] = useState<Record<string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }>>({});
+  const [teamData, setTeamData] = useState<Record<string, AdminTeamRow>>({});
   const [editingTeam, setEditingTeam] = useState<string | null>(null);
-  const [editingTeamData, setEditingTeamData] = useState<{ key: string; id: string; name: string; mascot?: string; logo: string; active?: boolean } | null>(null);
+  const [editingTeamData, setEditingTeamData] = useState<(AdminTeamRow & { key: string }) | null>(null);
   const [isAddingTeam, setIsAddingTeam] = useState(false);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [syncTeamId, setSyncTeamId] = useState('');
   const [syncResult, setSyncResult] = useState<{ report: { id?: string; action?: string; dbName?: string; espnName?: string; mascot?: string; logoUrl?: string; message?: string; details?: string } | null; loading: boolean } | null>(null);
-  const [newTeamData, setNewTeamData] = useState<{ key: string; id: string; name: string; mascot?: string; logo: string; active?: boolean }>({ key: '', id: '', name: '', mascot: '', logo: '', active: true });
+  const [newTeamData, setNewTeamData] = useState<AdminTeamRow & { key: string }>({ key: '', id: '', name: '', displayName: '', mascot: '', logo: '', active: true });
   const [teamDataError, setTeamDataError] = useState('');
-  const [teamFilters, setTeamFilters] = useState<{ key: string; id: string; name: string; mascot: string; logo: string }>({ key: '', id: '', name: '', mascot: '', logo: '' });
-  const [teamSortColumn, setTeamSortColumn] = useState<'name' | 'mascot' | 'key' | 'id' | null>('name');
+  const [teamFilters, setTeamFilters] = useState<{ key: string; id: string; name: string; displayName: string; mascot: string; logo: string }>({ key: '', id: '', name: '', displayName: '', mascot: '', logo: '' });
+  const [teamSortColumn, setTeamSortColumn] = useState<'name' | 'displayName' | 'mascot' | 'key' | 'id' | null>('name');
   const [teamSortOrder, setTeamSortOrder] = useState<'asc' | 'desc'>('asc');
   const [duplicateCheck, setDuplicateCheck] = useState<{ hasDuplicates: boolean; duplicateIds: string[] }>({ hasDuplicates: false, duplicateIds: [] });
   const [teamActiveFilter, setTeamActiveFilter] = useState<'all' | 'active' | 'inactive'>('active');
   const [isLoading, setIsLoading] = useState(false);
+  const importFileInputRef = useRef<HTMLInputElement | null>(null);
   const loadTeamDataRef = useRef<(() => Promise<void>) | undefined>(undefined);
 
   const loadTeamData = async () => {
@@ -50,14 +63,14 @@ export default function TeamDataTab() {
       }
       
       // Type assertion for team data from API
-      const loadedData = (data.data as Record<string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }>) || {};
+      const loadedData = (data.data as Record<string, AdminTeamRow>) || {};
       
       // Filter by active status if needed
       let filteredData = loadedData;
       if (teamActiveFilter === 'inactive') {
         // Filter to show only teams where active is explicitly false
         const allEntries = Object.entries(loadedData);
-        const inactiveEntries: Array<[string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }]> = [];
+        const inactiveEntries: Array<[string, AdminTeamRow]> = [];
         
         allEntries.forEach(([key, team]) => {
           const activeValue = team.active;
@@ -94,7 +107,7 @@ export default function TeamDataTab() {
   /**
    * Check for duplicate values in Team (name), Abbreviation (key), and ID columns
    */
-  const checkForDuplicates = (data: Record<string, { id: string; name: string; logo: string }>) => {
+  const checkForDuplicates = (data: Record<string, Pick<AdminTeamRow, 'name' | 'id'> & { logo: string }>) => {
     const nameCounts: Record<string, string[]> = {};
     const keyCounts: Record<string, string[]> = {};
     const idCounts: Record<string, string[]> = {};
@@ -164,7 +177,7 @@ export default function TeamDataTab() {
   /**
    * Handle column sorting
    */
-  const handleSort = (column: 'name' | 'mascot' | 'key' | 'id') => {
+  const handleSort = (column: 'name' | 'displayName' | 'mascot' | 'key' | 'id') => {
     if (teamSortColumn === column) {
       // Same column, toggle order
       setTeamSortOrder(teamSortOrder === 'asc' ? 'desc' : 'asc');
@@ -185,11 +198,17 @@ export default function TeamDataTab() {
 
   const handleEditTeam = (key: string) => {
     const team = teamData[key];
+    const customDisplay =
+      team.displayName?.trim() &&
+      team.displayName.trim() !== team.name.trim()
+        ? team.displayName.trim()
+        : '';
     setEditingTeam(key);
     setEditingTeamData({
       key,
       id: team.id,
       name: team.name,
+      displayName: customDisplay,
       mascot: team.mascot,
       logo: team.logo,
       active: team.active ?? false,
@@ -208,7 +227,7 @@ export default function TeamDataTab() {
 
     // Validate
     if (!editingTeamData.key || !editingTeamData.id || !editingTeamData.name) {
-      setTeamDataError('Key, ID, and Name are required');
+      setTeamDataError('Key, ID, and School are required');
       return;
     }
 
@@ -227,9 +246,15 @@ export default function TeamDataTab() {
       }
       
       // Update/add the team
+      const trimmedDisplay = editingTeamData.displayName?.trim();
+      const schoolTrimmed = editingTeamData.name.trim();
       updatedTeamData[editingTeamData.key] = {
         id: editingTeamData.id,
         name: editingTeamData.name,
+        displayName:
+          trimmedDisplay && trimmedDisplay !== schoolTrimmed
+            ? trimmedDisplay
+            : undefined,
         mascot: editingTeamData.mascot || undefined,
         logo: editingTeamData.logo,
         active: editingTeamData.active ?? false,
@@ -247,6 +272,7 @@ export default function TeamDataTab() {
         throw new Error(data.error || 'Failed to save team data');
       }
 
+      clearTeamRefDataClientCache();
       // Reload team data to get sorted version
       await loadTeamData();
       setEditingTeam(null);
@@ -277,6 +303,7 @@ export default function TeamDataTab() {
         throw new Error(data.error || 'Failed to delete team');
       }
 
+      clearTeamRefDataClientCache();
       // Reload team data
       await loadTeamData();
       
@@ -289,12 +316,12 @@ export default function TeamDataTab() {
 
   const handleAddTeam = () => {
     setIsAddingTeam(true);
-    setNewTeamData({ key: '', id: '', name: '', mascot: '', logo: '', active: true });
+    setNewTeamData({ key: '', id: '', name: '', displayName: '', mascot: '', logo: '', active: true });
   };
 
   const handleCancelAddTeam = () => {
     setIsAddingTeam(false);
-    setNewTeamData({ key: '', id: '', name: '', mascot: '', logo: '', active: true });
+    setNewTeamData({ key: '', id: '', name: '', displayName: '', mascot: '', logo: '', active: true });
   };
 
   const handleSyncTeam = async (mode: 'report' | 'update') => {
@@ -321,6 +348,7 @@ export default function TeamDataTab() {
         setSyncResult({ report: data.report, loading: false });
         // If update mode and successful, reload team data
         if (mode === 'update') {
+          clearTeamRefDataClientCache();
           await loadTeamData();
         }
       } else {
@@ -336,7 +364,7 @@ export default function TeamDataTab() {
 
     // Validate
     if (!newTeamData.key || !newTeamData.id || !newTeamData.name) {
-      setTeamDataError('Key, ID, and Name are required');
+      setTeamDataError('Key, ID, and School are required');
       return;
     }
 
@@ -352,6 +380,11 @@ export default function TeamDataTab() {
         [newTeamData.key]: {
           id: newTeamData.id,
           name: newTeamData.name,
+          displayName: (() => {
+            const d = newTeamData.displayName?.trim();
+            const n = newTeamData.name.trim();
+            return d && d !== n ? d : undefined;
+          })(),
           mascot: newTeamData.mascot || undefined,
           logo: newTeamData.logo,
           active: newTeamData.active ?? true,
@@ -370,10 +403,11 @@ export default function TeamDataTab() {
         throw new Error(data.error || 'Failed to save team data');
       }
 
+      clearTeamRefDataClientCache();
       // Reload team data to get sorted version
       await loadTeamData();
       setIsAddingTeam(false);
-      setNewTeamData({ key: '', id: '', name: '', mascot: '', logo: '', active: true });
+      setNewTeamData({ key: '', id: '', name: '', displayName: '', mascot: '', logo: '', active: true });
       
       // Duplicate check will run in loadTeamData
     } catch (error) {
@@ -399,20 +433,24 @@ export default function TeamDataTab() {
           const keyMatch = !teamFilters.key || key.toLowerCase().includes(teamFilters.key.toLowerCase());
           const idMatch = !teamFilters.id || team.id.toLowerCase().includes(teamFilters.id.toLowerCase());
           const nameMatch = !teamFilters.name || team.name.toLowerCase().includes(teamFilters.name.toLowerCase());
+          const displayNameMatch =
+            !teamFilters.displayName ||
+            getTeamReferenceDisplayName(team).toLowerCase().includes(teamFilters.displayName.toLowerCase());
           const mascotMatch = !teamFilters.mascot || (team.mascot && team.mascot.toLowerCase().includes(teamFilters.mascot.toLowerCase()));
           
-          return keyMatch && idMatch && nameMatch && mascotMatch;
+          return keyMatch && idMatch && nameMatch && displayNameMatch && mascotMatch;
         })
         .reduce((acc, [key, team]) => {
           acc[key] = {
             id: team.id,
             name: team.name,
+            displayName: team.displayName,
             mascot: team.mascot || undefined,
             logo: team.logo,
             active: team.active ?? undefined,
           };
           return acc;
-        }, {} as Record<string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }>);
+        }, {} as Record<string, AdminTeamRow>);
 
       // Create JSON blob from filtered data
       const jsonString = JSON.stringify(filteredTeams, null, 2);
@@ -428,6 +466,69 @@ export default function TeamDataTab() {
     } catch (error) {
       console.error('Error exporting team data:', error);
       setTeamDataError(error instanceof Error ? error.message : 'Failed to export team data');
+    }
+  };
+
+  /**
+   * Import team mappings JSON and replace current team data.
+   */
+  const handleImportTeamData = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsLoading(true);
+      setTeamDataError('');
+
+      const raw = await file.text();
+      const parsed = JSON.parse(raw) as Record<string, { id: string; name: string; displayName?: string; mascot?: string; logo?: string; active?: boolean }>;
+
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new Error('Invalid JSON format. Expected an object keyed by team abbreviation.');
+      }
+
+      const normalized: Record<string, AdminTeamRow> = {};
+
+      for (const [key, value] of Object.entries(parsed)) {
+        if (!value || typeof value !== 'object') {
+          throw new Error(`Invalid entry for key "${key}"`);
+        }
+        if (!value.id || !value.name) {
+          throw new Error(`Entry "${key}" must include both id and name`);
+        }
+
+        normalized[key] = {
+          id: String(value.id),
+          name: String(value.name),
+          displayName: value.displayName ? String(value.displayName).trim() || undefined : undefined,
+          mascot: value.mascot ? String(value.mascot) : undefined,
+          logo: value.logo ? String(value.logo) : `/logos/teams/${value.id}.png`,
+          active: typeof value.active === 'boolean' ? value.active : true,
+        };
+      }
+
+      const response = await fetch('/api/admin/team-data', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teams: normalized }),
+      });
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to import team data');
+      }
+
+      clearTeamRefDataClientCache();
+      await loadTeamData();
+      alert(`Imported ${Object.keys(normalized).length} teams successfully.`);
+    } catch (error) {
+      console.error('Error importing team data:', error);
+      setTeamDataError(error instanceof Error ? error.message : 'Failed to import team data');
+    } finally {
+      if (importFileInputRef.current) {
+        importFileInputRef.current.value = '';
+      }
+      setIsLoading(false);
     }
   };
 
@@ -473,6 +574,7 @@ export default function TeamDataTab() {
       // Reload team data from database to ensure we have the latest state
       // This is important because the filter view needs fresh data from DB
       if (loadTeamDataRef.current) {
+        clearTeamRefDataClientCache();
         await loadTeamDataRef.current();
       }
     } catch (error) {
@@ -482,13 +584,16 @@ export default function TeamDataTab() {
   };
 
   // Helper function to get filtered teams based on current filters
-  const getFilteredTeams = (): Array<[string, { id: string; name: string; mascot?: string; logo: string; active?: boolean }]> => {
+  const getFilteredTeams = (): Array<[string, AdminTeamRow]> => {
     return Object.entries(teamData).filter(([key, team]) => {
       const keyMatch = !teamFilters.key || key.toLowerCase().includes(teamFilters.key.toLowerCase());
       const idMatch = !teamFilters.id || team.id.toLowerCase().includes(teamFilters.id.toLowerCase());
       const nameMatch = !teamFilters.name || team.name.toLowerCase().includes(teamFilters.name.toLowerCase());
+      const displayNameMatch =
+        !teamFilters.displayName ||
+        getTeamReferenceDisplayName(team).toLowerCase().includes(teamFilters.displayName.toLowerCase());
       const mascotMatch = !teamFilters.mascot || (team.mascot && team.mascot.toLowerCase().includes(teamFilters.mascot.toLowerCase()));
-      return keyMatch && idMatch && nameMatch && mascotMatch;
+      return keyMatch && idMatch && nameMatch && displayNameMatch && mascotMatch;
     });
   };
 
@@ -531,6 +636,7 @@ export default function TeamDataTab() {
 
       // Reload team data
       if (loadTeamDataRef.current) {
+        clearTeamRefDataClientCache();
         await loadTeamDataRef.current();
       }
 
@@ -585,6 +691,7 @@ export default function TeamDataTab() {
 
       // Reload team data
       if (loadTeamDataRef.current) {
+        clearTeamRefDataClientCache();
         await loadTeamDataRef.current();
       }
 
@@ -639,6 +746,7 @@ export default function TeamDataTab() {
 
       // Reload team data
       if (loadTeamDataRef.current) {
+        clearTeamRefDataClientCache();
         await loadTeamDataRef.current();
       }
 
@@ -762,6 +870,21 @@ export default function TeamDataTab() {
                 <Download className="h-4 w-4" />
                 <span>Export JSON</span>
               </button>
+              <button
+                onClick={() => importFileInputRef.current?.click()}
+                className="flex items-center space-x-1 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                title="Import team data from exported JSON"
+              >
+                <Upload className="h-4 w-4" />
+                <span>Import JSON</span>
+              </button>
+              <input
+                ref={importFileInputRef}
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                onChange={handleImportTeamData}
+              />
             </div>
           )}
         </div>
@@ -804,7 +927,7 @@ export default function TeamDataTab() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Name *
+                School *
               </label>
               <input
                 type="text"
@@ -812,6 +935,18 @@ export default function TeamDataTab() {
                 onChange={(e) => setNewTeamData({ ...newTeamData, name: e.target.value })}
                 className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500"
                 placeholder="e.g., Connecticut"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Display Name
+              </label>
+              <input
+                type="text"
+                value={newTeamData.displayName || ''}
+                onChange={(e) => setNewTeamData({ ...newTeamData, displayName: e.target.value })}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500"
+                placeholder="Short label (defaults to School)"
               />
             </div>
             <div>
@@ -1005,6 +1140,19 @@ export default function TeamDataTab() {
                 </th>
                 <th 
                   className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
+                  onClick={() => handleSort('displayName')}
+                >
+                  <div className="flex items-center space-x-1">
+                    <span>Display Name</span>
+                    {teamSortColumn === 'displayName' && (
+                      <span className="text-gray-400">
+                        {teamSortOrder === 'asc' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('mascot')}
                 >
                   <div className="flex items-center space-x-1">
@@ -1058,7 +1206,16 @@ export default function TeamDataTab() {
                     type="text"
                     value={teamFilters.name}
                     onChange={(e) => setTeamFilters({ ...teamFilters, name: e.target.value })}
-                    placeholder="Filter Team..."
+                    placeholder="Filter School..."
+                    className="w-full border border-gray-300 rounded px-2 py-1 text-xs text-gray-900 placeholder:text-gray-500"
+                  />
+                </th>
+                <th className="px-3 py-2 bg-gray-100">
+                  <input
+                    type="text"
+                    value={teamFilters.displayName}
+                    onChange={(e) => setTeamFilters({ ...teamFilters, displayName: e.target.value })}
+                    placeholder="Filter display..."
                     className="w-full border border-gray-300 rounded px-2 py-1 text-xs text-gray-900 placeholder:text-gray-500"
                   />
                 </th>
@@ -1103,7 +1260,7 @@ export default function TeamDataTab() {
             <tbody className="bg-white divide-y divide-gray-200">
               {teamDataError ? (
                 <tr>
-                  <td colSpan={7} className="px-3 py-4 text-center">
+                  <td colSpan={8} className="px-3 py-4 text-center">
                     <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
                       <p className="text-sm font-medium text-red-800">Error loading team data</p>
                       <p className="text-sm text-red-700 mt-1">{teamDataError}</p>
@@ -1118,13 +1275,13 @@ export default function TeamDataTab() {
                 </tr>
               ) : Object.keys(teamData).length === 0 && isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
                     Loading team data...
                   </td>
                 </tr>
               ) : Object.keys(teamData).length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
                     No team data found. Click &quot;Add Team&quot; to add your first team.
                   </td>
                 </tr>
@@ -1134,13 +1291,24 @@ export default function TeamDataTab() {
                     const keyMatch = !teamFilters.key || key.toLowerCase().includes(teamFilters.key.toLowerCase());
                     const idMatch = !teamFilters.id || team.id.toLowerCase().includes(teamFilters.id.toLowerCase());
                     const nameMatch = !teamFilters.name || team.name.toLowerCase().includes(teamFilters.name.toLowerCase());
+                    const displayNameMatch =
+                      !teamFilters.displayName ||
+                      getTeamReferenceDisplayName(team).toLowerCase().includes(teamFilters.displayName.toLowerCase());
                     const mascotMatch = !teamFilters.mascot || (team.mascot && team.mascot.toLowerCase().includes(teamFilters.mascot.toLowerCase()));
-                    return keyMatch && idMatch && nameMatch && mascotMatch;
+                    return keyMatch && idMatch && nameMatch && displayNameMatch && mascotMatch;
                   })
                   .sort((a, b) => {
                     if (teamSortColumn === 'name') {
                       const compareA = a[1].name.toLowerCase();
                       const compareB = b[1].name.toLowerCase();
+                      if (teamSortOrder === 'asc') {
+                        return compareA.localeCompare(compareB);
+                      } else {
+                        return compareB.localeCompare(compareA);
+                      }
+                    } else if (teamSortColumn === 'displayName') {
+                      const compareA = getTeamReferenceDisplayName(a[1]).toLowerCase();
+                      const compareB = getTeamReferenceDisplayName(b[1]).toLowerCase();
                       if (teamSortOrder === 'asc') {
                         return compareA.localeCompare(compareB);
                       } else {
@@ -1185,6 +1353,16 @@ export default function TeamDataTab() {
                               value={editingTeamData?.name || ''}
                               onChange={(e) => setEditingTeamData({ ...editingTeamData!, name: e.target.value })}
                               className="w-full border border-gray-300 rounded px-2 py-1 text-sm text-gray-900"
+                              title="Official school name (e.g. from ESPN)"
+                            />
+                          </td>
+                          <td className="px-3 py-4 whitespace-nowrap">
+                            <input
+                              type="text"
+                              value={editingTeamData?.displayName ?? ''}
+                              onChange={(e) => setEditingTeamData({ ...editingTeamData!, displayName: e.target.value })}
+                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm text-gray-900"
+                              placeholder="Defaults to School"
                             />
                           </td>
                           <td className="px-3 py-4 whitespace-nowrap">
@@ -1258,6 +1436,17 @@ export default function TeamDataTab() {
                         <>
                           <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
                             {team.name}
+                          </td>
+                          <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {(() => {
+                              const d = team.displayName?.trim();
+                              if (!d || d === team.name.trim()) {
+                                return (
+                                  <span className="text-gray-400 italic">Same as school</span>
+                                );
+                              }
+                              return d;
+                            })()}
                           </td>
                           <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
                             {team.mascot || <span className="text-gray-400">—</span>}

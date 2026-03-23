@@ -17,7 +17,7 @@ async function ensureFeatureFlagsTable(): Promise<void> {
       key VARCHAR(100) NOT NULL,
       environment VARCHAR(50) NOT NULL,
       is_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ DEFAULT now(),
       PRIMARY KEY (key, environment)
     )
   `;
@@ -73,7 +73,7 @@ export async function setMasterKillSwitchEnabled(enabled: boolean): Promise<bool
   await sql`
     UPDATE feature_flags
     SET is_enabled = ${enabled},
-        updated_at = CURRENT_TIMESTAMP
+        updated_at = ${new Date()}
     WHERE key = ${MASTER_KILL_SWITCH_KEY}
       AND environment = ${environment}
   `;

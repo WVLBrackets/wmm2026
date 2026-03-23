@@ -27,28 +27,53 @@ const standingsCache = new Map<string, { data: StandingsData; timestamp: number 
 const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes cache
 
 /**
- * Resolve the standings sheet ID for the current deployment environment.
- * - production: STANDINGS_SHEET_ID_PROD
- * - non-production (staging/preview/dev): STANDINGS_SHEET_ID_STAGE
+ * Resolve the Google Spreadsheet ID for standings (see docs/SETUP_GUIDE.md).
  *
- * Hard-fails when the expected environment variable is missing.
+ * Priority:
+ * 1. `STANDINGS_SHEET_ID` — optional override (useful for `.env.local`)
+ * 2. Production (`VERCEL_ENV === 'production'`): `STANDINGS_SHEET_ID_PROD` (required)
+ * 3. Staging / preview: `STANDINGS_SHEET_ID_STAGE` (required on Vercel preview)
+ * 4. Local `next dev` only (`NODE_ENV === 'development'`): if stage is unset but
+ *    `STANDINGS_SHEET_ID_PROD` is set, use prod sheet with a console warning
  */
 function getStandingsSheetId(): string {
-  const isProduction = process.env.VERCEL_ENV === 'production';
-  const prod = process.env.STANDINGS_SHEET_ID_PROD;
-  const stage = process.env.STANDINGS_SHEET_ID_STAGE;
+  const override = process.env.STANDINGS_SHEET_ID?.trim();
+  if (override) {
+    return override;
+  }
 
-  if (isProduction) {
+  const isVercelProduction = process.env.VERCEL_ENV === 'production';
+  const prod = process.env.STANDINGS_SHEET_ID_PROD?.trim();
+  const stage = process.env.STANDINGS_SHEET_ID_STAGE?.trim();
+
+  if (isVercelProduction) {
     if (!prod) {
       throw new Error('Missing required environment variable: STANDINGS_SHEET_ID_PROD');
     }
     return prod;
   }
 
-  if (!stage) {
-    throw new Error('Missing required environment variable: STANDINGS_SHEET_ID_STAGE');
+  if (stage) {
+    return stage;
   }
-  return stage;
+
+  const isLocalNextDev =
+    process.env.NODE_ENV === 'development' && process.env.VERCEL_ENV !== 'production';
+
+  if (isLocalNextDev && prod) {
+    console.warn(
+      '[standings] STANDINGS_SHEET_ID_STAGE is not set; using STANDINGS_SHEET_ID_PROD for local development. ' +
+        'Add STANDINGS_SHEET_ID_STAGE or STANDINGS_SHEET_ID to .env.local to use a different sheet.'
+    );
+    return prod;
+  }
+
+  throw new Error(
+    'Missing standings Google Sheet id. Set STANDINGS_SHEET_ID_STAGE (staging / Vercel preview), ' +
+      'or STANDINGS_SHEET_ID to force a specific sheet, ' +
+      'or for local dev only set STANDINGS_SHEET_ID_PROD to reuse the prod standings sheet. ' +
+      'See docs/SETUP_GUIDE.md.'
+  );
 }
 
 /**

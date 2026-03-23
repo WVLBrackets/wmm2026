@@ -1,5 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 import { signInUser } from '../fixtures/auth-helpers';
+import { getTestUserCredentials } from '../fixtures/test-helpers';
 
 /**
  * Smoke Test - Critical User Journey
@@ -11,23 +12,6 @@ import { signInUser } from '../fixtures/auth-helpers';
  */
 
 test.setTimeout(300000); // 5 minutes
-
-const getTestUserCredentials = () => {
-  const isProduction = process.env.TEST_ENV === 'production' || 
-                       process.env.TEST_ENV === 'prod' ||
-                       (process.env.PLAYWRIGHT_TEST_BASE_URL && 
-                        process.env.PLAYWRIGHT_TEST_BASE_URL.includes('warrensmm.com'));
-  
-  const password = isProduction 
-    ? (process.env.TEST_USER_PASSWORD_PRODUCTION || process.env.TEST_USER_PASSWORD)
-    : (process.env.TEST_USER_PASSWORD_STAGING || process.env.TEST_USER_PASSWORD);
-  
-  if (!process.env.TEST_USER_EMAIL || !password) {
-    throw new Error('TEST_USER_EMAIL and TEST_USER_PASSWORD required');
-  }
-  
-  return { email: process.env.TEST_USER_EMAIL, password };
-};
 
 /**
  * Helper to make picks - EXACT copy from Group 5
@@ -49,8 +33,8 @@ async function completeRegionPicks(page: Page): Promise<number> {
 }
 
 test.describe('Smoke Test', () => {
-  test('Critical Path - Site, Auth, Create, Submit', async ({ page }) => {
-    const credentials = getTestUserCredentials();
+  test('Critical Path - Site, Auth, Create, Submit', async ({ page }, testInfo) => {
+    const credentials = getTestUserCredentials(testInfo.project.name);
     
     console.log('🔥 SMOKE TEST');
     
@@ -115,15 +99,22 @@ test.describe('Smoke Test', () => {
       totalPicks += regionPicks;
       console.log(`  Region ${step}: ${regionPicks} total picks`);
       
-      // Navigate to next step
-      const nextButton = page.getByRole('button', { name: /next/i });
-      if (await nextButton.isEnabled()) {
-        await nextButton.click();
-        await page.waitForTimeout(500);
+      if (step < 4) {
+        const nextRegion = page.getByTestId(`bracket-step-nav-${step}`);
+        if (await nextRegion.isEnabled()) {
+          await nextRegion.click();
+          await page.waitForTimeout(500);
+        }
       }
     }
-    
-    // Now on step 5 (Final Four) - complete Final Four picks
+
+    const finalFourNav = page.getByTestId('bracket-step-nav-4');
+    if (await finalFourNav.isEnabled()) {
+      await finalFourNav.click();
+      await page.waitForTimeout(500);
+    }
+
+    // Final Four — complete picks
     let finalFourPicks = 0;
     for (let round = 0; round < 3; round++) {
       const picksMade = await completeRegionPicks(page);

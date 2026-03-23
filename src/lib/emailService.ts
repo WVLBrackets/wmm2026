@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
 import type { SiteConfigData } from '@/lib/siteConfig';
 import { isTestUserEmail, getTestUserReason } from '@/lib/testUserDetection';
+import { getAppEnvironment, isProductionEnvironment } from '@/lib/appEnvironment';
 
 export interface EmailServiceConfig {
   provider: 'gmail' | 'sendgrid' | 'resend' | 'console' | 'disabled';
@@ -37,9 +38,9 @@ class EmailService {
   }
 
   private detectEmailConfig(): EmailServiceConfig {
-    // Determine environment (staging/preview vs production)
-    const vercelEnv = process.env.VERCEL_ENV || 'production';
-    const isProduction = vercelEnv === 'production';
+    // Determine environment (local/preview vs production)
+    const appEnvironment = getAppEnvironment();
+    const isProduction = appEnvironment === 'production';
     
     // Use environment-specific Gmail accounts
     // Staging/Preview: Use EMAIL_USER_STAGING and EMAIL_PASS_STAGING
@@ -65,7 +66,7 @@ class EmailService {
     }
     
     // Log which account is being used (for debugging)
-    console.log(`[EmailService] Environment: ${vercelEnv} (${isProduction ? 'production' : 'staging/preview'})`);
+    console.log(`[EmailService] Environment: ${appEnvironment} (${isProduction ? 'production' : 'non-production'})`);
     
     // Log Gmail configuration
     if (emailUser && emailPass) {
@@ -204,8 +205,7 @@ class EmailService {
     }
     
     // Determine environment for FROM_EMAIL selection
-    const vercelEnv = process.env.VERCEL_ENV || 'production';
-    const isProduction = vercelEnv === 'production';
+    const isProduction = isProductionEnvironment();
     
     // Try Resend first if configured
     if (this.config.provider === 'resend' && this.resend) {
@@ -473,8 +473,7 @@ export async function sendConfirmationEmail(
   siteConfig?: SiteConfigData | null
 ): Promise<boolean> {
   // Only show badge for non-production environments
-  const environment = process.env.VERCEL_ENV || 'production';
-  const isProduction = environment === 'production';
+  const isProduction = isProductionEnvironment();
   const showBadge = !isProduction;
   
   // Get config values with fallbacks
@@ -650,8 +649,7 @@ export async function sendPasswordResetEmail(
   siteConfig?: SiteConfigData | null
 ): Promise<boolean> {
   // Only show badge for non-production environments
-  const environment = process.env.VERCEL_ENV || 'production';
-  const isProduction = environment === 'production';
+  const isProduction = isProductionEnvironment();
   const showBadge = !isProduction;
   
   // Environment badge (only for Preview/Development)

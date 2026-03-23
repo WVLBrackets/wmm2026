@@ -49,8 +49,11 @@ function parseCTAItems(config: SiteConfigData): CTAItem[] {
 }
 
 export default async function Home() {
-  const siteConfig = await getSiteConfigFromGoogleSheets() || FALLBACK_CONFIG;
-  const announcements = await getAnnouncements();
+  const [siteConfigResult, announcements] = await Promise.all([
+    getSiteConfigFromGoogleSheets(),
+    getAnnouncements(),
+  ]);
+  const siteConfig = siteConfigResult || FALLBACK_CONFIG;
   const ctaItems = parseCTAItems(siteConfig);
 
   return (

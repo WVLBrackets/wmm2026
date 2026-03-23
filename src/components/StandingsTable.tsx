@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { StandingsEntry, StandingsData, getQuarterfinalColor, getSemifinalColor, getFinalColor } from '@/lib/standingsData';
 import { getTeamInfo, getLogoUrlSync } from '@/lib/teamLogos';
 import { getTeamRefData } from '@/lib/teamRefData';
@@ -185,7 +185,12 @@ function TeamLogo({
 // Global team cache that persists across day changes
 const globalTeamCache = new Map<string, { id: string; name: string }>();
 
-export default function StandingsTable() {
+interface StandingsTableProps {
+  /** Daily/Live mode control rendered in the header row with the title and day selector. */
+  viewModeToggle?: ReactNode;
+}
+
+export default function StandingsTable({ viewModeToggle }: StandingsTableProps) {
   const [standingsData, setStandingsData] = useState<StandingsData | null>(null);
   const [availableDays, setAvailableDays] = useState<string[]>([]);
   const [selectedDay, setSelectedDay] = useState<string>('');
@@ -482,7 +487,7 @@ export default function StandingsTable() {
       {/* Header with controls */}
       <div className="p-6 border-b border-gray-200">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-2xl font-bold text-gray-900">{standingsYear} Standings</h2>
             {/* Day selector moved next to title */}
             <div className="flex items-center gap-2">
@@ -504,6 +509,9 @@ export default function StandingsTable() {
                 </div>
               )}
             </div>
+            {viewModeToggle ? (
+              <div className="flex shrink-0 items-center">{viewModeToggle}</div>
+            ) : null}
           </div>
           
           <div className="flex flex-row gap-3 items-center">

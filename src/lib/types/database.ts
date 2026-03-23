@@ -8,6 +8,9 @@
 /**
  * User entity representing an authenticated user
  */
+/** Stored in `users.standings_view_preference` when live standings feature is enabled. */
+export type StandingsViewPreference = 'daily' | 'live';
+
 export interface User {
   id: string;
   email: string;
@@ -21,6 +24,10 @@ export interface User {
   environment: string;
   createdAt: Date;
   lastLogin?: Date | null;
+  /** When set, default Standings page mode for logged-in users (see `show_live_standings` site config). */
+  standingsViewPreference?: StandingsViewPreference;
+  /** After user confirms `live_standings_warning` (button 1); stored in `users.live_standings_warning_acknowledged`. */
+  liveStandingsWarningAcknowledged?: boolean;
 }
 
 /**
@@ -43,11 +50,14 @@ export interface Bracket {
   tieBreaker?: number;
   picks: Record<string, string>;
   status: string;
+  source?: string;
   bracketNumber: number;
   year: number;
   isKey?: boolean;
   lockUserId?: string | null;
   lockAcquiredAt?: Date | null;
+  /** Set on each transition into `submitted`; cleared when status leaves `submitted`. */
+  submittedAt?: Date | null;
   environment: string;
   createdAt: Date;
   updatedAt: Date;
@@ -66,7 +76,10 @@ export interface BracketWithUser extends Bracket {
  */
 export interface TeamReferenceData {
   id: string;
+  /** Official school name (e.g. from ESPN). */
   name: string;
+  /** Optional shorter label for UI; when unset, `name` is shown. */
+  displayName?: string;
   mascot?: string;
   logo: string;
   active?: boolean;
@@ -92,6 +105,8 @@ export interface UpdateBracketInput {
   userId?: string;
   lockUserId?: string | null;
   lockAcquiredAt?: Date | null;
+  /** When set (including `null`), overrides automatic submitted_at rules (e.g. CSV import). */
+  submittedAt?: Date | null;
 }
 
 /**

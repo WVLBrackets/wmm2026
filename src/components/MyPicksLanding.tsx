@@ -1,13 +1,19 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import { Press_Start_2P } from 'next/font/google';
-import { Trophy, Plus, Edit, Eye, Clock, CheckCircle, LogOut, Trash2, Copy, Printer, Info, X, Mail } from 'lucide-react';
+import { Trophy, Plus, Edit, Clock, CheckCircle, LogOut, Trash2, Copy, Printer, Info, X, Mail, RotateCcw, Undo2, Search, Pencil, Send } from 'lucide-react';
 import { signOut } from 'next-auth/react';
+import { useCSRF } from '@/hooks/useCSRF';
 import { TournamentData, TournamentBracket } from '@/types/tournament';
 import { SiteConfigData } from '@/lib/siteConfig';
+import {
+  computeCanProceedToSubmit,
+  getBracketSubmitReadinessHint,
+  isSubmitDuplicateEntryName,
+} from '@/lib/bracketSubmitReadiness';
 import { LoggedButton } from '@/components/LoggedButton';
 import { useServerTime } from '@/hooks/useServerTime';
 
@@ -22,6 +28,8 @@ interface Bracket {
   playerEmail: string;
   entryName?: string;
   tieBreaker?: string;
+  /** Last row modification (ISO); present from API for all statuses. */
+  updatedAt?: string;
   submittedAt?: string;
   lastSaved?: string;
   picks: { [gameId: string]: string };
@@ -30,16 +38,200 @@ interface Bracket {
   year?: number;
 }
 
+/** Which bracket statuses appear in the My Picks table (user-controlled). */
+type BracketStatusVisibility = {
+  submitted: boolean;
+  in_progress: boolean;
+  deleted: boolean;
+};
+
+const DEFAULT_STATUS_VISIBILITY: BracketStatusVisibility = {
+  submitted: true,
+  in_progress: true,
+  deleted: true,
+};
+
+const BRACKET_STATUS_FILTER_STORAGE_PREFIX = 'wmm2026.myPicks.bracketStatusFilters:';
+
+/** localStorage key for My Picks status chips, scoped per user id. */
+function bracketStatusFilterStorageKey(userId: string): string {
+  return `${BRACKET_STATUS_FILTER_STORAGE_PREFIX}${userId}`;
+}
+
+/**
+ * Reads and validates stored bracket status filter toggles for the signed-in user.
+ */
+function readBracketStatusVisibilityFromStorage(userId: string): BracketStatusVisibility | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(bracketStatusFilterStorageKey(userId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== 'object') return null;
+    const o = parsed as Record<string, unknown>;
+    if (
+      typeof o.submitted !== 'boolean' ||
+      typeof o.in_progress !== 'boolean' ||
+      typeof o.deleted !== 'boolean'
+    ) {
+      return null;
+    }
+    return {
+      submitted: o.submitted,
+      in_progress: o.in_progress,
+      deleted: o.deleted,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Persists bracket status filters for the given user (best-effort; ignores quota / private mode errors).
+ */
+function writeBracketStatusVisibilityToStorage(userId: string, value: BracketStatusVisibility): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(bracketStatusFilterStorageKey(userId), JSON.stringify(value));
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Splits an entry label for narrow mobile display: after 10 characters, break at the next space;
+ * if 12 characters pass with no space, hard-break at 12. Desktop uses the raw string instead.
+ */
+function computeMyPicksEntryNameMobileLines(text: string): string[] {
+  if (text === '') return [''];
+  const lines: string[] = [];
+  let i = 0;
+  const n = text.length;
+  while (i < n) {
+    while (i < n && text[i] === ' ') i++;
+    if (i >= n) break;
+    const rest = text.slice(i);
+    if (rest.length <= 12) {
+      lines.push(rest);
+      break;
+    }
+    const first12 = rest.slice(0, 12);
+    if (!first12.includes(' ')) {
+      lines.push(first12);
+      i += 12;
+      continue;
+    }
+    let brk = -1;
+    for (let j = 10; j < rest.length; j++) {
+      if (rest[j] === ' ') {
+        brk = j;
+        break;
+      }
+    }
+    if (brk !== -1) {
+      lines.push(rest.slice(0, brk));
+      i += brk + 1;
+      continue;
+    }
+    lines.push(rest.slice(0, 12));
+    i += 12;
+  }
+  return lines.length > 0 ? lines : [text];
+}
+
+/**
+ * Whether a bracket matches the entry search (entry name, 6-digit display ID, and optionally raw DB id).
+ *
+ * For queries that are **digits only** (e.g. `54`, `000547`), we only match entry name and the
+ * zero-padded `bracketNumber`. We intentionally do **not** match `bracket.id` in that case: MongoDB
+ * ObjectIds are hex strings where substrings like `54` appear often and are unrelated to the
+ * human-visible bracket ID.
+ */
+function bracketMatchesEntrySearch(bracket: Bracket, queryLower: string): boolean {
+  if (!queryLower) return true;
+  const entry = (bracket.entryName || '').toLowerCase();
+  if (entry.includes(queryLower)) return true;
+  const data = bracket as unknown as Record<string, unknown>;
+  const num = data.bracketNumber as number | undefined;
+  const idStr = String(bracket.id).toLowerCase();
+  const digits = queryLower.replace(/\D/g, '');
+  const digitsOnlyQuery = /^\d+$/.test(queryLower);
+
+  if (digits.length > 0 && num !== undefined && num !== null) {
+    const padded = String(num).padStart(6, '0');
+    if (padded.includes(digits)) return true;
+  }
+
+  if (digitsOnlyQuery) {
+    return false;
+  }
+
+  if (idStr.includes(queryLower)) return true;
+  return false;
+}
+
+/**
+ * Parses `pool_header_font_size`: two positive integers separated by `|`, e.g. `14|12`.
+ * First = font/icon size for header and message on desktop (`md` and up); second = same on mobile.
+ */
+function parsePoolHeaderFontSizes(raw: string | undefined): { desktopPx: number; mobilePx: number } {
+  const defaults = { desktopPx: 14, mobilePx: 12 };
+  if (!raw?.trim()) return defaults;
+
+  const parts = raw
+    .trim()
+    .split('|')
+    .map((s) => parseInt(s.trim(), 10));
+  const desktopPx = parts[0];
+  const mobilePx = parts[1];
+
+  return {
+    desktopPx: !Number.isNaN(desktopPx) && desktopPx > 0 ? desktopPx : defaults.desktopPx,
+    mobilePx: !Number.isNaN(mobilePx) && mobilePx > 0 ? mobilePx : defaults.mobilePx,
+  };
+}
+
+/**
+ * Expands `in_the_pool_message` placeholders: each `{X}` becomes
+ * `"{count} submitted entry"` (when count is 1) or `"{count} submitted entries"` otherwise.
+ * If `template` does not contain `{X}`, it is returned unchanged.
+ *
+ * @param template - Raw message from site config (may include `{X}`).
+ * @param submittedCount - Number of submitted brackets for the current user (same scope as the list).
+ */
+function formatInThePoolMessage(template: string, submittedCount: number): string {
+  if (!template.includes('{X}')) {
+    return template;
+  }
+  const phrase = submittedCount === 1 ? 'submitted entry' : 'submitted entries';
+  const replacement = `${submittedCount} ${phrase}`;
+  return template.split('{X}').join(replacement);
+}
+
 interface MyPicksLandingProps {
   brackets?: Bracket[];
   onCreateNew: () => void;
   onEditBracket: (bracket: Bracket) => void;
   onDeleteBracket: (bracketId: string) => void;
   onCopyBracket: (bracket: Bracket) => void;
+  /** Submit an in-progress bracket from the list (same validation as in-editor Submit). */
+  onSubmitBracket: (bracket: Bracket) => void | Promise<void>;
+  /** While set, the matching row’s Submit control shows a busy state. */
+  submittingBracketId?: string | null;
+  onRestoreBracket?: (bracketId: string) => void;
+  onPermanentDeleteClick?: (bracketId: string) => void;
   deletingBracketId?: string | null;
   pendingDeleteBracketId?: string | null;
   onConfirmDelete?: (bracketId: string) => void;
   onCancelDelete?: () => void;
+  pendingPermanentDeleteBracketId?: string | null;
+  onConfirmPermanentDelete?: (bracketId: string) => void;
+  onCancelPermanentDelete?: () => void;
+  pendingReturnBracketId?: string | null;
+  onReturnBracketClick?: (bracketId: string) => void;
+  onConfirmReturnBracket?: (bracketId: string) => void;
+  onCancelReturnBracket?: () => void;
+  returningBracketId?: string | null;
   tournamentData?: TournamentData | null;
   bracket?: TournamentBracket | null;
   siteConfig?: SiteConfigData | null;
@@ -53,34 +245,112 @@ export default function MyPicksLanding({
   onEditBracket,
   onDeleteBracket,
   onCopyBracket,
+  onSubmitBracket,
+  submittingBracketId = null,
+  onRestoreBracket,
+  onPermanentDeleteClick,
   deletingBracketId,
   pendingDeleteBracketId,
   onConfirmDelete,
   onCancelDelete,
+  pendingPermanentDeleteBracketId,
+  onConfirmPermanentDelete,
+  onCancelPermanentDelete,
+  pendingReturnBracketId,
+  onReturnBracketClick,
+  onConfirmReturnBracket,
+  onCancelReturnBracket,
+  returningBracketId,
   tournamentData,
+  bracket: emptyBracketTemplate = null,
   siteConfig,
   killSwitchEnabled = true,
   killSwitchMessage,
 }: MyPicksLandingProps) {
-  const { data: session } = useSession();
+  const { data: session, update: updateSession } = useSession();
+  const { fetchWithCSRF } = useCSRF();
   const [expandedStatus, setExpandedStatus] = useState<'info' | null>(null);
+  /** In-pool / out-of-pool table section: optional detail shown after clicking the info icon. */
+  const [poolBannerExpanded, setPoolBannerExpanded] = useState<'in-pool' | 'out-pool' | null>(null);
   const [logoError, setLogoError] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailBracket, setEmailBracket] = useState<Bracket | null>(null);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailMessage, setEmailMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [countdownMs, setCountdownMs] = useState<number | null>(null);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileLoadError, setProfileLoadError] = useState<string | null>(null);
+  const [profileSaveError, setProfileSaveError] = useState<string | null>(null);
+  const [profileDisplayName, setProfileDisplayName] = useState('');
+  const [profileDetails, setProfileDetails] = useState<{
+    email: string;
+    createdAt: string;
+    tournamentsPlayed: number;
+    bracketsEntered: number;
+  } | null>(null);
   const { getServerNowMs } = useServerTime();
   const killSwitchDisabledReason = killSwitchMessage || siteConfig?.killSwitchOn || 'Bracket actions are temporarily disabled by the administrator.';
   
   // Get tournament year from config or tournament data
   const tournamentYear = siteConfig?.tournamentYear ? parseInt(siteConfig.tournamentYear) : (tournamentData?.year ? parseInt(tournamentData.year) : new Date().getFullYear());
   
-  // Filter out deleted brackets and filter by tournament year
-  const visibleBrackets = brackets.filter(b => 
-    b.status !== 'deleted' && 
-    (b.year === tournamentYear || (!b.year && tournamentYear === new Date().getFullYear()))
+  /** All brackets for the current tournament year (counts and filters are based on this). */
+  const bracketsForYear = useMemo(
+    () =>
+      brackets.filter(
+        (b) => b.year === tournamentYear || (!b.year && tournamentYear === new Date().getFullYear())
+      ),
+    [brackets, tournamentYear]
   );
+
+  const [statusVisibility, setStatusVisibility] = useState<BracketStatusVisibility>(DEFAULT_STATUS_VISIBILITY);
+  const [entrySearchQuery, setEntrySearchQuery] = useState('');
+
+  /** Restore filters from localStorage when the session user is known (per-user key). */
+  useEffect(() => {
+    const uid = session?.user?.id;
+    if (!uid || typeof window === 'undefined') return;
+    const stored = readBracketStatusVisibilityFromStorage(uid);
+    if (stored) {
+      setStatusVisibility(stored);
+    }
+  }, [session?.user?.id]);
+
+  /**
+   * Updates status filters and persists to localStorage for the current user.
+   */
+  const updateStatusVisibility = useCallback(
+    (update: BracketStatusVisibility | ((prev: BracketStatusVisibility) => BracketStatusVisibility)) => {
+      setStatusVisibility((prev) => {
+        const next = typeof update === 'function' ? update(prev) : update;
+        const uid = session?.user?.id;
+        if (uid && typeof window !== 'undefined') {
+          writeBracketStatusVisibilityToStorage(uid, next);
+        }
+        return next;
+      });
+    },
+    [session?.user?.id]
+  );
+
+  /** Rows shown in the table after status toggles and search. */
+  const filteredDisplayBrackets = useMemo(() => {
+    const q = entrySearchQuery.trim().toLowerCase();
+    let list = bracketsForYear.filter((b) => {
+      if (b.status === 'submitted') return statusVisibility.submitted;
+      if (b.status === 'in_progress') return statusVisibility.in_progress;
+      return statusVisibility.deleted;
+    });
+    if (q) {
+      list = list.filter((b) => bracketMatchesEntrySearch(b, q));
+    }
+    return list;
+  }, [bracketsForYear, statusVisibility, entrySearchQuery]);
+
+  const allStatusFiltersOn =
+    statusVisibility.submitted && statusVisibility.in_progress && statusVisibility.deleted;
 
   // Calculate bracket progress (number of picks out of 63)
   const calculateProgress = (picks: { [gameId: string]: string }) => {
@@ -133,6 +403,7 @@ export default function MyPicksLanding({
       // Store IDs to check which teams are finalists
       finalist1Id,
       finalist2Id,
+      championId,
       topLeftId,
       bottomLeftId,
       topRightId,
@@ -156,7 +427,7 @@ export default function MyPicksLanding({
         alt="Team logo"
         width={24}
         height={24}
-        className="object-contain"
+        className="max-h-[22px] max-w-[22px] object-contain"
         onError={() => setImageError(true)}
         unoptimized
       />
@@ -226,21 +497,31 @@ export default function MyPicksLanding({
     if (status === 'submitted') {
       return <CheckCircle className="h-5 w-5 text-green-500" />;
     }
+    if (status === 'deleted') {
+      return <Trash2 className="h-5 w-5 text-gray-500" />;
+    }
     return <Clock className="h-5 w-5 text-yellow-500" />;
   };
 
   const getStatusText = (status: string) => {
-    if (status === 'submitted') {
-      return 'Submitted';
-    }
+    if (status === 'submitted') return 'Submitted';
+    if (status === 'deleted') return 'Deleted';
     return 'In Progress';
   };
 
   const getStatusColor = (status: string) => {
-    if (status === 'submitted') {
-      return 'bg-green-100 text-green-800';
-    }
+    if (status === 'submitted') return 'bg-green-100 text-green-800';
+    if (status === 'deleted') return 'bg-gray-200 text-gray-800';
     return 'bg-yellow-100 text-yellow-800';
+  };
+
+  /**
+   * Progress bar fill color aligned with row status (avoids implying “submitted” when still in progress).
+   */
+  const getProgressBarFillClass = (status: string) => {
+    if (status === 'submitted') return 'bg-green-600';
+    if (status === 'deleted') return 'bg-gray-500';
+    return 'bg-yellow-500';
   };
 
   // Get first name from full name
@@ -251,11 +532,12 @@ export default function MyPicksLanding({
 
   // Calculate submitted and in-progress brackets count
   const getBracketsInfo = () => {
-    const submittedCount = visibleBrackets.filter(bracket => bracket.status === 'submitted').length;
-    const inProgressCount = visibleBrackets.filter(bracket => bracket.status === 'in_progress').length;
+    const submittedCount = bracketsForYear.filter((bracket) => bracket.status === 'submitted').length;
+    const inProgressCount = bracketsForYear.filter((bracket) => bracket.status === 'in_progress').length;
+    const deletedCount = bracketsForYear.filter((bracket) => bracket.status === 'deleted').length;
     const entryCost = siteConfig?.entryCost || 5;
     const totalCost = submittedCount * entryCost;
-    return { submittedCount, inProgressCount, totalCost };
+    return { submittedCount, inProgressCount, deletedCount, totalCost };
   };
 
   // Get dynamic message based on bracket counts
@@ -334,12 +616,31 @@ export default function MyPicksLanding({
   /**
    * Convert a millisecond duration into HH:MM:SS or MM:SS.
    * Switches to MM:SS once remaining time is under one hour.
+   * For long horizons (>100 hours), display "X Days Away" for readability.
    */
-  const formatCountdown = (remainingMs: number) => {
+  /**
+   * @param useMobileDaysTemplate When true and the “X days away” branch applies, use `countdownTimerMessageMobile` (fallback: desktop message).
+   */
+  const formatCountdown = (remainingMs: number, useMobileDaysTemplate = false) => {
     const totalSeconds = Math.max(0, Math.floor(remainingMs / 1000));
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
+
+    if (hours > 100 && siteConfig?.stopSubmitDateTime) {
+      const deadline = new Date(siteConfig.stopSubmitDateTime);
+      const serverNow = new Date(getServerNowMs());
+      if (!Number.isNaN(deadline.getTime()) && !Number.isNaN(serverNow.getTime())) {
+        const dayDelta = deadline.getDate() - serverNow.getDate();
+        const fallbackDays = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
+        const daysAway = dayDelta > 0 ? dayDelta : Math.max(1, fallbackDays);
+        const desktopTemplate = siteConfig?.countdownTimerMessage?.trim() || 'X Days Away';
+        const mobileTemplate =
+          siteConfig?.countdownTimerMessageMobile?.trim() || desktopTemplate;
+        const template = useMobileDaysTemplate ? mobileTemplate : desktopTemplate;
+        return template.replace(/X/g, String(daysAway));
+      }
+    }
 
     if (hours < 1) {
       return [minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':');
@@ -370,9 +671,13 @@ export default function MyPicksLanding({
     return () => window.clearInterval(intervalId);
   }, [siteConfig?.stopSubmitDateTime, getServerNowMs]);
 
-  const countdownDisplay = countdownMs !== null ? formatCountdown(countdownMs) : null;
+  const countdownDisplayDesktop =
+    countdownMs !== null ? formatCountdown(countdownMs, false) : null;
+  const countdownDisplayMobile =
+    countdownMs !== null ? formatCountdown(countdownMs, true) : null;
   const showCountdownTimer = siteConfig?.showCountdownTimer?.trim().toUpperCase() === 'YES';
-  const scoreboardTime = killSwitchEnabled ? (countdownDisplay || '00:00') : '00:00';
+  const scoreboardTimeDesktop = killSwitchEnabled ? (countdownDisplayDesktop || '00:00') : '00:00';
+  const scoreboardTimeMobile = killSwitchEnabled ? (countdownDisplayMobile || '00:00') : '00:00';
 
   // Get the reason bracket creation is disabled
   const getBracketCreationDisabledReason = () => {
@@ -399,15 +704,253 @@ export default function MyPicksLanding({
   /**
    * Get tooltip/disable reason for user actions.
    */
-  const getActionDisabledReason = (action: 'new' | 'copy' | 'edit' | 'delete') => {
+  const getActionDisabledReason = (action: 'new' | 'copy' | 'edit' | 'delete' | 'return') => {
     if ((action === 'new' || action === 'copy') && isBracketCreationDisabled()) {
       return getBracketCreationDisabledReason();
     }
-    if (isKillSwitchDisabled()) {
+    // Opening a bracket is allowed under the kill switch (read-only in-editor). Block other actions.
+    if (action !== 'edit' && isKillSwitchDisabled()) {
       return killSwitchDisabledReason;
     }
     return null;
   };
+
+  const submittedEntryNamesForDuplicateCheck = useMemo(
+    () =>
+      bracketsForYear
+        .filter((b) => b.status === 'submitted')
+        .map((b) => b.entryName || '')
+        .filter((name) => name.length > 0),
+    [bracketsForYear]
+  );
+
+  /**
+   * Disable reason for the in-progress row Submit action. Matches in-editor Submit ordering:
+   * kill switch → incomplete picks/entry/tie-breaker → duplicate name → submission deadline/toggle.
+   */
+  const getInProgressSubmitDisabledReason = (row: Bracket): string | null => {
+    if (row.status !== 'in_progress') return null;
+    if (submittingBracketId === row.id) return 'Submitting…';
+    if (isKillSwitchDisabled()) return killSwitchDisabledReason;
+    if (!tournamentData || !emptyBracketTemplate) {
+      return 'Tournament data not loaded. Try refreshing.';
+    }
+    const picks = row.picks || {};
+    const entry = row.entryName || '';
+    const tb = String(row.tieBreaker ?? '');
+    const canProceed = computeCanProceedToSubmit(
+      tournamentData,
+      emptyBracketTemplate,
+      picks,
+      entry,
+      tb,
+      siteConfig
+    );
+    if (!canProceed) {
+      return getBracketSubmitReadinessHint(
+        tournamentData,
+        emptyBracketTemplate,
+        picks,
+        entry,
+        tb,
+        siteConfig
+      );
+    }
+    if (isSubmitDuplicateEntryName(entry, siteConfig, submittedEntryNamesForDuplicateCheck)) {
+      return (
+        siteConfig?.finalMessageDuplicateName ||
+        'An entry with this name already exists for this year. Please choose a different name.'
+      );
+    }
+    if (isBracketCreationDisabled()) {
+      return getBracketCreationDisabledReason();
+    }
+    return null;
+  };
+
+  /**
+   * Stable tie-breaker for brackets in the same status group (year, then bracket number).
+   */
+  const compareBracketNumber = (a: Bracket, b: Bracket) => {
+    const aData = a as unknown as Record<string, unknown>;
+    const bData = b as unknown as Record<string, unknown>;
+    const aYear = (aData.year as number) || 0;
+    const bYear = (bData.year as number) || 0;
+    const aNumber = (aData.bracketNumber as number) || 0;
+    const bNumber = (bData.bracketNumber as number) || 0;
+    if (aYear !== bYear) return aYear - bYear;
+    return aNumber - bNumber;
+  };
+
+  /**
+   * Sort My Picks rows: submitted (in pool) first, then in progress, then deleted.
+   */
+  const sortBracketsForDisplay = (list: Bracket[]): Bracket[] => {
+    return [...list].sort((a, b) => {
+      const poolTier = (s: string) => (s === 'submitted' ? 0 : 1);
+      const outOrder = (s: string) => {
+        if (s === 'in_progress') return 0;
+        if (s === 'deleted') return 1;
+        return 2;
+      };
+
+      const tierA = poolTier(a.status);
+      const tierB = poolTier(b.status);
+      if (tierA !== tierB) return tierA - tierB;
+
+      if (a.status === 'submitted' && b.status === 'submitted') {
+        const nameA = (a.entryName || '').toLowerCase();
+        const nameB = (b.entryName || '').toLowerCase();
+        const byName = nameA.localeCompare(nameB);
+        if (byName !== 0) return byName;
+        return compareBracketNumber(a, b);
+      }
+
+      const oa = outOrder(a.status);
+      const ob = outOrder(b.status);
+      if (oa !== ob) return oa - ob;
+
+      if (a.status === 'in_progress' && b.status === 'in_progress') {
+        const progressA = calculateProgress(a.picks).completed;
+        const progressB = calculateProgress(b.picks).completed;
+        if (progressA !== progressB) return progressA - progressB;
+        return compareBracketNumber(a, b);
+      }
+
+      if (a.status === 'deleted' && b.status === 'deleted') {
+        const nameA = (a.entryName || '').toLowerCase();
+        const nameB = (b.entryName || '').toLowerCase();
+        const byName = nameA.localeCompare(nameB);
+        if (byName !== 0) return byName;
+        return compareBracketNumber(a, b);
+      }
+
+      return 0;
+    });
+  };
+
+  const { desktopPx: poolFontDesktopPx, mobilePx: poolFontMobilePx } = parsePoolHeaderFontSizes(
+    siteConfig?.poolHeaderFontSize
+  );
+  const poolSectionFontStyle = {
+    ['--pool-font-mobile' as string]: `${poolFontMobilePx}px`,
+    ['--pool-font-desktop' as string]: `${poolFontDesktopPx}px`,
+  } as React.CSSProperties;
+  /** In-pool / out-of-pool banner: icon + bold + message share one size per breakpoint. */
+  const poolBannerIconClass =
+    'shrink-0 h-[length:var(--pool-font-mobile)] w-[length:var(--pool-font-mobile)] md:h-[length:var(--pool-font-desktop)] md:w-[length:var(--pool-font-desktop)]';
+  const poolBannerHeadingClass =
+    'font-bold text-[length:var(--pool-font-mobile)] md:text-[length:var(--pool-font-desktop)]';
+  /** Desktop: em dash + subtitle after title (same line when space allows). Mobile: hidden; detail via info panel. */
+  const poolBannerDetailClass =
+    'font-normal text-gray-600 text-[length:var(--pool-font-mobile)] md:text-[length:var(--pool-font-desktop)]';
+  const submittedEntryCountForPoolMessage = useMemo(
+    () => bracketsForYear.filter((b) => b.status === 'submitted').length,
+    [bracketsForYear]
+  );
+
+  /** Bold header + optional detail; sheet keys `in_the_pool_header` / `in_the_pool_message`. */
+  const inPoolCopy = {
+    header: siteConfig?.inThePoolHeader?.trim() || 'In the pool',
+    detail: formatInThePoolMessage(
+      siteConfig?.inThePoolMessage?.trim() || 'Submitted entries count toward the contest.',
+      submittedEntryCountForPoolMessage
+    ),
+  };
+  /** Sheet keys `not_in_the_pool_header` / `not_in_the_pool_message`. */
+  const outPoolCopy = {
+    header: siteConfig?.notInThePoolHeader?.trim() || 'Not in the pool',
+    detail:
+      siteConfig?.notInThePoolMessage?.trim() ||
+      'In progress and deleted entries are not included until you submit.',
+  };
+
+  /**
+   * Open profile modal and load `/api/user/profile` (display name, email, stats).
+   */
+  const openProfileModal = async () => {
+    setProfileModalOpen(true);
+    setProfileLoadError(null);
+    setProfileSaveError(null);
+    setProfileLoading(true);
+    setProfileDetails(null);
+    try {
+      const res = await fetch('/api/user/profile', { cache: 'no-store' });
+      const json = (await res.json()) as {
+        success?: boolean;
+        error?: string;
+        data?: {
+          email: string;
+          displayName: string;
+          createdAt: string;
+          tournamentsPlayed: number;
+          bracketsEntered: number;
+        };
+      };
+      if (!json.success || !json.data) {
+        throw new Error(json.error || 'Failed to load profile');
+      }
+      setProfileDisplayName(json.data.displayName || '');
+      setProfileDetails({
+        email: json.data.email,
+        createdAt: json.data.createdAt,
+        tournamentsPlayed: json.data.tournamentsPlayed,
+        bracketsEntered: json.data.bracketsEntered,
+      });
+    } catch (e) {
+      setProfileLoadError(e instanceof Error ? e.message : 'Failed to load profile');
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const closeProfileModal = () => {
+    setProfileModalOpen(false);
+    setProfileLoadError(null);
+    setProfileSaveError(null);
+  };
+
+  /**
+   * Persist display name and refresh NextAuth session so the welcome line updates.
+   */
+  const saveProfileDisplayName = async () => {
+    setProfileSaveError(null);
+    setProfileSaving(true);
+    try {
+      const res = await fetchWithCSRF('/api/user/profile', {
+        method: 'PUT',
+        body: JSON.stringify({ displayName: profileDisplayName.trim() }),
+      });
+      const json = (await res.json()) as {
+        success?: boolean;
+        error?: string;
+        data?: { displayName: string };
+      };
+      if (!json.success || !json.data) {
+        throw new Error(json.error || 'Failed to save profile');
+      }
+      await updateSession({ name: json.data.displayName });
+      closeProfileModal();
+    } catch (e) {
+      setProfileSaveError(e instanceof Error ? e.message : 'Failed to save profile');
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  /** Renders a fresh button instance (desktop + mobile headers each include one). */
+  const renderProfileEditButton = (variant: 'desktop' | 'mobile') => (
+    <button
+      type="button"
+      onClick={openProfileModal}
+      title="Edit Profile Information"
+      aria-label="Edit Profile Information"
+      className="inline-flex shrink-0 rounded-md p-1.5 text-blue-600 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      data-testid={`edit-profile-button-${variant}`}
+    >
+      <Pencil className="h-5 w-5" aria-hidden />
+    </button>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -442,8 +985,11 @@ export default function MyPicksLanding({
                   
                   <div className="flex-1">
                     {/* Line 1: Welcome message with full name */}
-                    <h1 className="text-2xl font-bold text-gray-900">
-                      Welcome {session?.user?.name || 'User'}
+                    <h1 className="text-2xl font-bold text-gray-900 flex flex-wrap items-center gap-2">
+                      <span>
+                        Welcome {session?.user?.name || 'User'}
+                      </span>
+                      {renderProfileEditButton('desktop')}
                     </h1>
                     
                     {/* Line 2: Brackets message (or kill-switch replacement) */}
@@ -460,7 +1006,7 @@ export default function MyPicksLanding({
                     )}
                     
                     {/* Line 3: Status bubbles - always shown */}
-                    <div className="flex items-center gap-2 mt-2">
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                         <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
                         Submitted {getBracketsInfo().submittedCount}
@@ -469,6 +1015,12 @@ export default function MyPicksLanding({
                         <Clock className="h-4 w-4 text-yellow-500 mr-1" />
                         In Progress {getBracketsInfo().inProgressCount}
                       </span>
+                      {getBracketsInfo().deletedCount > 0 && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-800">
+                          <Trash2 className="h-4 w-4 text-gray-600 mr-1" />
+                          Deleted {getBracketsInfo().deletedCount}
+                        </span>
+                      )}
                     </div>
                     
                     {/* Line 4: Dynamic message - always shown on desktop */}
@@ -529,7 +1081,7 @@ export default function MyPicksLanding({
                               : '0 0 5px rgba(239,68,68,0.9)',
                           }}
                         >
-                          {scoreboardTime}
+                          {scoreboardTimeDesktop}
                         </span>
                       </div>
                     )}
@@ -544,8 +1096,9 @@ export default function MyPicksLanding({
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       {/* Line 1: Welcome message with first name only */}
-                      <h1 className="text-xl font-bold text-gray-900">
-                        Welcome {getFirstName(session?.user?.name)}
+                      <h1 className="text-xl font-bold text-gray-900 flex flex-wrap items-center gap-2">
+                        <span>Welcome {getFirstName(session?.user?.name)}</span>
+                        {renderProfileEditButton('mobile')}
                       </h1>
                       
                       {/* Line 2: Mobile brackets message (or kill-switch replacement) */}
@@ -613,7 +1166,7 @@ export default function MyPicksLanding({
                                 : '0 0 5px rgba(239,68,68,0.9)',
                             }}
                           >
-                            {scoreboardTime}
+                            {scoreboardTimeMobile}
                           </span>
                         </div>
                       )}
@@ -621,8 +1174,8 @@ export default function MyPicksLanding({
                   </div>
                   
                   {/* Line 3: Status bubbles with info icon on same line - always shown */}
-                  <div className="flex items-center justify-between mt-2">
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between mt-2 gap-2">
+                    <div className="flex flex-wrap items-center gap-2 min-w-0">
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                         <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
                         Submitted {getBracketsInfo().submittedCount}
@@ -631,6 +1184,12 @@ export default function MyPicksLanding({
                         <Clock className="h-4 w-4 text-yellow-500 mr-1" />
                         In Progress {getBracketsInfo().inProgressCount}
                       </span>
+                      {getBracketsInfo().deletedCount > 0 && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-800">
+                          <Trash2 className="h-4 w-4 text-gray-600 mr-1" />
+                          Deleted {getBracketsInfo().deletedCount}
+                        </span>
+                      )}
                     </div>
                     
                     {/* Info icon - aligned with logout button */}
@@ -666,7 +1225,7 @@ export default function MyPicksLanding({
         {/* Brackets List */}
         <div className="bg-white rounded-lg shadow-lg p-6">
 
-          {visibleBrackets.length === 0 ? (
+          {bracketsForYear.length === 0 ? (
             <div className="text-center py-12">
               <Trophy className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No brackets yet</h3>
@@ -676,29 +1235,131 @@ export default function MyPicksLanding({
               </p>
             </div>
           ) : (
+            <>
+              <div
+                className="mb-4 flex flex-col gap-3 border-b border-gray-100 pb-4"
+                data-testid="brackets-list-filters"
+              >
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+                  <span className="text-sm font-medium text-gray-700 shrink-0">Show:</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => updateStatusVisibility({ ...DEFAULT_STATUS_VISIBILITY })}
+                      aria-pressed={allStatusFiltersOn}
+                      data-testid="bracket-filter-all"
+                      className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                        allStatusFiltersOn
+                          ? 'border-blue-600 bg-blue-600 text-white'
+                          : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateStatusVisibility((v) => ({ ...v, submitted: !v.submitted }))
+                      }
+                      aria-pressed={statusVisibility.submitted}
+                      data-testid="bracket-filter-submitted"
+                      className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
+                        statusVisibility.submitted
+                          ? 'border-green-400 bg-green-100 text-green-900'
+                          : 'border-gray-200 bg-gray-50 text-gray-400'
+                      }`}
+                    >
+                      Submitted
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateStatusVisibility((v) => ({ ...v, in_progress: !v.in_progress }))
+                      }
+                      aria-pressed={statusVisibility.in_progress}
+                      data-testid="bracket-filter-in-progress"
+                      className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
+                        statusVisibility.in_progress
+                          ? 'border-amber-400 bg-amber-100 text-amber-900'
+                          : 'border-gray-200 bg-gray-50 text-gray-400'
+                      }`}
+                    >
+                      In progress
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateStatusVisibility((v) => ({ ...v, deleted: !v.deleted }))
+                      }
+                      aria-pressed={statusVisibility.deleted}
+                      data-testid="bracket-filter-deleted"
+                      className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
+                        statusVisibility.deleted
+                          ? 'border-gray-400 bg-gray-200 text-gray-800'
+                          : 'border-gray-200 bg-gray-50 text-gray-400'
+                      }`}
+                    >
+                      Deleted
+                    </button>
+                  </div>
+                </div>
+                <div className="relative w-full max-w-md">
+                  <label htmlFor="bracket-entry-search" className="sr-only">
+                    Search brackets by entry name or ID
+                  </label>
+                  <Search
+                    className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                    aria-hidden
+                  />
+                  <input
+                    id="bracket-entry-search"
+                    type="search"
+                    value={entrySearchQuery}
+                    onChange={(e) => setEntrySearchQuery(e.target.value)}
+                    placeholder="Search by entry name or bracket ID…"
+                    autoComplete="off"
+                    data-testid="bracket-entry-search"
+                    className="w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              {filteredDisplayBrackets.length === 0 ? (
+                <div className="py-10 text-center text-gray-600">
+                  <p className="text-sm font-medium text-gray-900">No brackets match your filters</p>
+                  <p className="mt-1 text-sm">
+                    Try turning on more statuses, clearing the search, or click Reset below.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateStatusVisibility({ ...DEFAULT_STATUS_VISIBILITY });
+                      setEntrySearchQuery('');
+                    }}
+                    data-testid="bracket-filters-reset"
+                    className="mt-4 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  >
+                    Reset filters
+                  </button>
+                </div>
+              ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Entry Name
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="hidden px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider md:table-cell">
                       Status
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      ID
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="hidden px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider md:table-cell">
                       Progress
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      TB
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Final Four
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="hidden px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider md:table-cell">
                       Champ
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -707,140 +1368,295 @@ export default function MyPicksLanding({
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {[...visibleBrackets].sort((a, b) => {
-                    // First, sort by status: in_progress first, submitted last
-                    if (a.status !== b.status) {
-                      return a.status === 'in_progress' ? -1 : 1;
-                    }
-                    
-                    // For in_progress brackets: sort by progress (least to most), then by bracket ID
-                    if (a.status === 'in_progress') {
-                      const progressA = calculateProgress(a.picks).completed;
-                      const progressB = calculateProgress(b.picks).completed;
-                      
-                      if (progressA !== progressB) {
-                        return progressA - progressB; // Ascending order (least to most)
-                      }
-                      
-                      // If progress is the same, sort by bracket ID (year-number)
-                      const aData = a as unknown as Record<string, unknown>;
-                      const bData = b as unknown as Record<string, unknown>;
-                      const aYear = (aData.year as number) || 0;
-                      const bYear = (bData.year as number) || 0;
-                      const aNumber = (aData.bracketNumber as number) || 0;
-                      const bNumber = (bData.bracketNumber as number) || 0;
-                      
-                      if (aYear !== bYear) {
-                        return aYear - bYear;
-                      }
-                      return aNumber - bNumber;
-                    }
-                    
-                    // For submitted brackets: sort by entry name alphabetically
-                    const nameA = (a.entryName || '').toLowerCase();
-                    const nameB = (b.entryName || '').toLowerCase();
-                    return nameA.localeCompare(nameB);
-                  }).map((bracket, index) => {
+                  {(() => {
+                    const sortedBrackets = sortBracketsForDisplay(filteredDisplayBrackets);
+                    return sortedBrackets.map((bracket, index) => {
+                    const inPool = bracket.status === 'submitted';
+                    const prev = sortedBrackets[index - 1];
+                    const prevInPool = prev ? prev.status === 'submitted' : false;
+                    const showInHeader = inPool && (index === 0 || !prevInPool);
+                    const showOutHeader = !inPool && (index === 0 || prevInPool);
+
                     const bracketData = bracket as unknown as Record<string, unknown>;
                     const number = (bracketData.bracketNumber as number) || 0;
+                    const submitDisabledReason =
+                      bracket.status === 'in_progress'
+                        ? getInProgressSubmitDisabledReason(bracket)
+                        : null;
                     const progress = calculateProgress(bracket.picks);
                     const finalFour = getFinalFourTeams(bracket.picks);
                     
+                    const isDeletedRow = bracket.status === 'deleted';
+                    /** In-progress brackets open read-only when the kill switch blocks saves/submits. */
+                    const killSwitchForcesViewOnly =
+                      bracket.status === 'in_progress' && isKillSwitchDisabled();
                     return (
-                    <tr key={bracket.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 whitespace-nowrap text-center">
+                    <React.Fragment key={bracket.id}>
+                    {showInHeader && (
+                      <tr className="bg-white" data-testid="brackets-section-in-pool">
+                        <td colSpan={6} className="px-4 pt-2 pb-2 border-b border-gray-100 text-left">
+                          <div
+                            className="flex flex-row flex-wrap items-center justify-start gap-x-2 gap-y-1 text-gray-900"
+                            style={poolSectionFontStyle}
+                          >
+                            <CheckCircle className={`${poolBannerIconClass} text-green-600`} aria-hidden />
+                            <strong className={poolBannerHeadingClass}>{inPoolCopy.header}</strong>
+                            {inPoolCopy.detail ? (
+                              <span className={`hidden md:inline ${poolBannerDetailClass}`}>
+                                — {inPoolCopy.detail}
+                              </span>
+                            ) : null}
+                            {inPoolCopy.detail ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setPoolBannerExpanded((prev) =>
+                                    prev === 'in-pool' ? null : 'in-pool',
+                                  )
+                                }
+                                className="inline-flex shrink-0 rounded-md p-0.5 text-blue-600 hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 md:hidden"
+                                aria-label={`More about ${inPoolCopy.header}`}
+                                aria-expanded={poolBannerExpanded === 'in-pool'}
+                                data-testid="brackets-section-in-pool-info"
+                              >
+                                <Info className="h-4 w-4" aria-hidden />
+                              </button>
+                            ) : null}
+                          </div>
+                          {poolBannerExpanded === 'in-pool' && inPoolCopy.detail ? (
+                            <div className="relative mt-2 rounded bg-blue-50 p-2 pr-8 text-sm text-gray-700 md:hidden">
+                              <button
+                                type="button"
+                                onClick={() => setPoolBannerExpanded(null)}
+                                className="absolute right-2 top-2 text-gray-500 hover:text-gray-700"
+                                aria-label="Close section message"
+                                data-testid="brackets-section-in-pool-close"
+                              >
+                                <X className="h-4 w-4" aria-hidden />
+                              </button>
+                              <div>{renderMessageWithLineBreaks(inPoolCopy.detail)}</div>
+                            </div>
+                          ) : null}
+                        </td>
+                      </tr>
+                    )}
+                    {showOutHeader && (
+                      <tr className="bg-white" data-testid="brackets-section-out-pool">
+                        <td
+                          colSpan={6}
+                          className={`px-4 pb-2 border-b border-gray-100 text-left ${
+                            index > 0 && prevInPool ? 'pt-8 border-t-2 border-gray-300' : 'pt-2'
+                          }`}
+                        >
+                          <div
+                            className="flex flex-row flex-wrap items-center justify-start gap-x-2 gap-y-1 text-gray-900"
+                            style={poolSectionFontStyle}
+                          >
+                            <Clock className={`${poolBannerIconClass} text-yellow-500`} aria-hidden />
+                            <strong className={poolBannerHeadingClass}>{outPoolCopy.header}</strong>
+                            {outPoolCopy.detail ? (
+                              <span className={`hidden md:inline ${poolBannerDetailClass}`}>
+                                — {outPoolCopy.detail}
+                              </span>
+                            ) : null}
+                            {outPoolCopy.detail ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setPoolBannerExpanded((prev) =>
+                                    prev === 'out-pool' ? null : 'out-pool',
+                                  )
+                                }
+                                className="inline-flex shrink-0 rounded-md p-0.5 text-blue-600 hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 md:hidden"
+                                aria-label={`More about ${outPoolCopy.header}`}
+                                aria-expanded={poolBannerExpanded === 'out-pool'}
+                                data-testid="brackets-section-out-pool-info"
+                              >
+                                <Info className="h-4 w-4" aria-hidden />
+                              </button>
+                            ) : null}
+                          </div>
+                          {poolBannerExpanded === 'out-pool' && outPoolCopy.detail ? (
+                            <div className="relative mt-2 rounded bg-blue-50 p-2 pr-8 text-sm text-gray-700 md:hidden">
+                              <button
+                                type="button"
+                                onClick={() => setPoolBannerExpanded(null)}
+                                className="absolute right-2 top-2 text-gray-500 hover:text-gray-700"
+                                aria-label="Close section message"
+                                data-testid="brackets-section-out-pool-close"
+                              >
+                                <X className="h-4 w-4" aria-hidden />
+                              </button>
+                              <div>{renderMessageWithLineBreaks(outPoolCopy.detail)}</div>
+                            </div>
+                          ) : null}
+                        </td>
+                      </tr>
+                    )}
+                    <tr className={`hover:bg-gray-50 ${isDeletedRow ? 'bg-gray-50/80' : ''}`}>
+                      <td className="px-4 py-3 text-left align-top max-md:max-w-[7.25rem] max-md:min-w-0 max-md:pr-2">
                         {(() => {
                           const editDisabled = bracket.status === 'in_progress' && Boolean(getActionDisabledReason('edit'));
+                          const idDisplay = String(number).padStart(6, '0');
+                          const rawEntryName = bracket.entryName || `Bracket #${index + 1}`;
+                          const mobileNameLines = computeMyPicksEntryNameMobileLines(rawEntryName);
                           return (
-                        <div 
-                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${editDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${getStatusColor(bracket.status)}`}
-                          onClick={() => !editDisabled && onEditBracket(bracket)}
-                          title={editDisabled ? getActionDisabledReason('edit') || '' : 'Open bracket'}
-                        >
-                          {getStatusIcon(bracket.status)}
-                          <span className="ml-1">{bracket.entryName || `Bracket #${index + 1}`}</span>
+                        <div>
+                          <div
+                            className={`inline-flex max-w-full flex-row items-start px-2 py-1 rounded-full text-xs font-medium md:items-center ${isDeletedRow ? 'cursor-default' : editDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${getStatusColor(bracket.status)}`}
+                            onClick={() => !isDeletedRow && !editDisabled && onEditBracket(bracket)}
+                            title={
+                              isDeletedRow
+                                ? 'Restore or copy this bracket from Actions'
+                                : editDisabled
+                                  ? getActionDisabledReason('edit') || ''
+                                  : killSwitchForcesViewOnly
+                                    ? 'View bracket'
+                                    : 'Open bracket'
+                            }
+                          >
+                            <span className="mt-0.5 shrink-0 md:mt-0">{getStatusIcon(bracket.status)}</span>
+                            <span
+                              className="ml-1 min-w-0 text-left md:max-w-none md:whitespace-normal"
+                              title={rawEntryName}
+                            >
+                              <span className="md:hidden">
+                                {mobileNameLines.map((line, li) => (
+                                  <React.Fragment key={li}>
+                                    {li > 0 ? <br /> : null}
+                                    {line}
+                                  </React.Fragment>
+                                ))}
+                              </span>
+                              <span className="hidden md:inline">{rawEntryName}</span>
+                            </span>
+                          </div>
+                          <div
+                            className="mt-1 pl-3.5 text-[10px] leading-tight text-gray-500 tabular-nums md:pl-0"
+                            data-testid="bracket-row-entry-id"
+                            title={`Bracket ID ${idDisplay}`}
+                          >
+                            ID {idDisplay}
+                          </div>
                         </div>
                           );
                         })()}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-center">
+                      <td className="hidden px-4 py-3 whitespace-nowrap text-center md:table-cell">
                         {(() => {
                           const editDisabled = bracket.status === 'in_progress' && Boolean(getActionDisabledReason('edit'));
                           return (
                         <div 
-                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${editDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${getStatusColor(bracket.status)}`}
-                          onClick={() => !editDisabled && onEditBracket(bracket)}
-                          title={editDisabled ? getActionDisabledReason('edit') || '' : 'Open bracket'}
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${isDeletedRow ? 'cursor-default' : editDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${getStatusColor(bracket.status)}`}
+                          onClick={() => !isDeletedRow && !editDisabled && onEditBracket(bracket)}
+                          title={
+                            isDeletedRow
+                              ? 'Restore or copy this bracket from Actions'
+                              : editDisabled
+                                ? getActionDisabledReason('edit') || ''
+                                : killSwitchForcesViewOnly
+                                  ? 'View bracket'
+                                  : 'Open bracket'
+                          }
                         >
                           <span>{getStatusText(bracket.status)}</span>
                         </div>
                           );
                         })()}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-center">
-                        <div className="text-sm font-medium text-gray-600">
-                          {String(number).padStart(6, '0')}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex flex-col items-center space-y-1 mx-auto" style={{ width: 'fit-content' }}>
-                          <div className="text-xs text-gray-600">
-                            {progress.completed} / {progress.total} picks
+                      <td className="hidden px-4 py-3 text-center align-middle md:table-cell">
+                        {bracket.status === 'submitted' ? (
+                          <div className="flex justify-center" title="Submitted — complete">
+                            <CheckCircle
+                              className="h-6 w-6 text-green-600"
+                              aria-label="Submitted — bracket complete"
+                            />
                           </div>
-                          <div className="bg-gray-200 rounded-full h-2" style={{ width: '60px' }}>
-                            <div 
-                              className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                              style={{ width: `${progress.percentage}%` }}
-                            ></div>
+                        ) : (
+                          <div className="flex flex-col items-center space-y-1 mx-auto" style={{ width: 'fit-content' }}>
+                            <div className="text-xs text-gray-600">
+                              {progress.completed} / {progress.total} picks
+                            </div>
+                            <div className="bg-gray-200 rounded-full h-2" style={{ width: '60px' }}>
+                              <div
+                                className={`${getProgressBarFillClass(bracket.status)} h-2 rounded-full transition-all duration-300`}
+                                style={{ width: `${progress.percentage}%` }}
+                              />
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex justify-center">
-                          <div className="w-12 h-8 flex items-center justify-center rounded border-2 border-gray-300 bg-gray-100 font-medium text-sm text-gray-700">
-                            {bracket.tieBreaker || '?'}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex items-center justify-center space-x-1">
+                      <td className="px-4 py-3 text-center max-md:px-2">
+                        {/*
+                          Desktop: one row TL, BL, TR, BR (unchanged).
+                          Mobile (&lt; md): 2×2 grid TL / TR on top, BL / BR below (order utilities only apply below md).
+                        */}
+                        <div className="mx-auto grid w-max grid-cols-2 place-items-center max-md:gap-1 md:flex md:w-auto md:flex-row md:items-center md:justify-center md:gap-1">
                           {/* Top Left */}
-                          <div className={`w-8 h-8 flex items-center justify-center bg-gray-100 rounded ${
+                          <div
+                            className={`max-md:order-1 md:order-none flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded md:h-8 md:w-8 ${
+                              finalFour.championId &&
+                              finalFour.topLeftId === finalFour.championId
+                                ? 'bg-gray-100 max-md:bg-amber-100'
+                                : 'bg-gray-100'
+                            } ${
                             finalFour.topLeftId && (finalFour.topLeftId === finalFour.finalist1Id || finalFour.topLeftId === finalFour.finalist2Id)
                               ? 'border-2 border-blue-600'
                               : 'border border-gray-300'
-                          }`}>
+                          }`}
+                          >
                             <FinalFourLogo logoPath={finalFour.topLeft} />
                           </div>
                           {/* Bottom Left */}
-                          <div className={`w-8 h-8 flex items-center justify-center bg-gray-100 rounded ${
+                          <div
+                            className={`max-md:order-3 md:order-none flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded ${
+                              finalFour.championId &&
+                              finalFour.bottomLeftId === finalFour.championId
+                                ? 'bg-gray-100 max-md:bg-amber-100'
+                                : 'bg-gray-100'
+                            } ${
                             finalFour.bottomLeftId && (finalFour.bottomLeftId === finalFour.finalist1Id || finalFour.bottomLeftId === finalFour.finalist2Id)
                               ? 'border-2 border-blue-600'
                               : 'border border-gray-300'
-                          }`}>
+                          }`}
+                          >
                             <FinalFourLogo logoPath={finalFour.bottomLeft} />
                           </div>
                           {/* Top Right */}
-                          <div className={`w-8 h-8 flex items-center justify-center bg-gray-100 rounded ${
+                          <div
+                            className={`max-md:order-2 md:order-none flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded ${
+                              finalFour.championId &&
+                              finalFour.topRightId === finalFour.championId
+                                ? 'bg-gray-100 max-md:bg-amber-100'
+                                : 'bg-gray-100'
+                            } ${
                             finalFour.topRightId && (finalFour.topRightId === finalFour.finalist1Id || finalFour.topRightId === finalFour.finalist2Id)
                               ? 'border-2 border-blue-600'
                               : 'border border-gray-300'
-                          }`}>
+                          }`}
+                          >
                             <FinalFourLogo logoPath={finalFour.topRight} />
                           </div>
                           {/* Bottom Right */}
-                          <div className={`w-8 h-8 flex items-center justify-center bg-gray-100 rounded ${
+                          <div
+                            className={`max-md:order-4 md:order-none flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded ${
+                              finalFour.championId &&
+                              finalFour.bottomRightId === finalFour.championId
+                                ? 'bg-gray-100 max-md:bg-amber-100'
+                                : 'bg-gray-100'
+                            } ${
                             finalFour.bottomRightId && (finalFour.bottomRightId === finalFour.finalist1Id || finalFour.bottomRightId === finalFour.finalist2Id)
                               ? 'border-2 border-blue-600'
                               : 'border border-gray-300'
-                          }`}>
+                          }`}
+                          >
                             <FinalFourLogo logoPath={finalFour.bottomRight} />
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="hidden px-4 py-3 text-center md:table-cell">
                         <div className="flex justify-center">
-                          <div className={`w-10 h-10 flex items-center justify-center rounded border-2 ${
+                          <div className={`w-10 h-10 flex items-center justify-center overflow-hidden rounded border-2 ${
                             finalFour.champion
                               ? 'bg-green-50 border-green-600'
                               : 'bg-gray-100 border-gray-300'
@@ -849,15 +1665,20 @@ export default function MyPicksLanding({
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-center text-sm font-medium">
-                        <div className="flex items-center justify-center space-x-2">
-                          {/* Action buttons - icon-only squares with tooltips */}
+                      <td className="px-4 py-3 text-center text-sm font-medium max-md:align-top max-md:px-2">
+                        {/*
+                          In a table row, all cells share the row height (often set by Entry / Final Four).
+                          Grid default align-content: stretch distributes extra height between row tracks,
+                          which blows apart a 2×2 button layout — content-start + items-start keeps rows tight.
+                        */}
+                        <div className="mx-auto grid w-max grid-cols-2 justify-items-center max-md:content-start max-md:items-start max-md:gap-1 md:mx-0 md:flex md:w-auto md:max-w-none md:flex-wrap md:items-center md:justify-center md:gap-2">
+                          {/* Action buttons - icon-only squares with tooltips; 2×2 grid on mobile, row on md+ */}
                           {bracket.status === 'in_progress' ? (
                             <>
                               {pendingDeleteBracketId === bracket.id ? (
                                 <>
                                   {/* Confirmation UI - embedded in the table */}
-                                  <div className="flex items-center space-x-2 bg-red-50 border border-red-200 rounded px-2 py-1" data-testid="delete-confirmation-dialog">
+                                  <div className="col-span-2 flex w-full max-w-xs flex-wrap items-center justify-center gap-2 justify-self-center bg-red-50 border border-red-200 rounded px-2 py-1 md:col-auto md:w-auto" data-testid="delete-confirmation-dialog">
                                     <span className="text-xs text-red-700 font-medium whitespace-nowrap">Delete?</span>
                                     <button
                                       onClick={() => onConfirmDelete && onConfirmDelete(bracket.id)}
@@ -877,7 +1698,7 @@ export default function MyPicksLanding({
                                 </>
                               ) : (
                                 <>
-                                  {/* In Progress: Edit, Copy, Delete */}
+                                  {/* In Progress: Edit, Submit, Copy, Delete */}
                                   <LoggedButton
                                     onClick={() => !getActionDisabledReason('edit') && onEditBracket(bracket)}
                                     logLocation="Edit"
@@ -888,9 +1709,29 @@ export default function MyPicksLanding({
                                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                         : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
                                     }`}
-                                    title={getActionDisabledReason('edit') || 'Edit'}
+                                    title={
+                                      getActionDisabledReason('edit') ||
+                                      (killSwitchForcesViewOnly ? 'View bracket' : 'Edit')
+                                    }
                                   >
                                     <Edit className="h-4 w-4" />
+                                  </LoggedButton>
+                                  <LoggedButton
+                                    onClick={() => {
+                                      if (!submitDisabledReason) void onSubmitBracket(bracket);
+                                    }}
+                                    logLocation="Submit"
+                                    bracketId={number ? String(number).padStart(6, '0') : null}
+                                    disabled={Boolean(submitDisabledReason)}
+                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
+                                      submitDisabledReason
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        : 'bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer'
+                                    }`}
+                                    title={submitDisabledReason || 'Submit'}
+                                    data-testid="submit-bracket-landing-button"
+                                  >
+                                    <Send className="h-4 w-4" aria-hidden />
                                   </LoggedButton>
                                   <LoggedButton
                                     onClick={() => !getActionDisabledReason('copy') && onCopyBracket(bracket)}
@@ -925,65 +1766,322 @@ export default function MyPicksLanding({
                                 </>
                               )}
                             </>
+                          ) : bracket.status === 'deleted' ? (
+                            <>
+                              {pendingPermanentDeleteBracketId === bracket.id ? (
+                                <div
+                                  className="col-span-2 flex w-full max-w-xs flex-col items-stretch gap-2 justify-self-center bg-red-50 border border-red-200 rounded px-2 py-2 mx-auto md:col-auto md:mx-auto"
+                                  data-testid="permanent-delete-confirmation"
+                                >
+                                  <div className="text-xs text-gray-800 text-left">
+                                    {renderMessageWithLineBreaks(
+                                      siteConfig?.permDeleteMessage ||
+                                        'Permanently delete this bracket? This cannot be undone.||Are you sure you want to continue?'
+                                    )}
+                                  </div>
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => onConfirmPermanentDelete && onConfirmPermanentDelete(bracket.id)}
+                                      disabled={deletingBracketId === bracket.id}
+                                      className="bg-red-800 text-white text-xs px-2 py-1 rounded hover:bg-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      Yes
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => onCancelPermanentDelete && onCancelPermanentDelete()}
+                                      disabled={deletingBracketId === bracket.id}
+                                      className="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      No
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <LoggedButton
+                                    onClick={() => !getActionDisabledReason('copy') && onCopyBracket(bracket)}
+                                    logLocation="Copy"
+                                    bracketId={number ? String(number).padStart(6, '0') : null}
+                                    disabled={Boolean(getActionDisabledReason('copy'))}
+                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
+                                      getActionDisabledReason('copy')
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
+                                    }`}
+                                    title={getActionDisabledReason('copy') || 'Copy'}
+                                    data-testid="copy-deleted-bracket-button"
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </LoggedButton>
+                                  <LoggedButton
+                                    onClick={() => {
+                                      if (!getActionDisabledReason('edit') && onRestoreBracket) {
+                                        onRestoreBracket(bracket.id);
+                                      }
+                                    }}
+                                    logLocation="Restore"
+                                    bracketId={number ? String(number).padStart(6, '0') : null}
+                                    disabled={Boolean(getActionDisabledReason('edit'))}
+                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
+                                      getActionDisabledReason('edit')
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        : 'bg-amber-600 text-white hover:bg-amber-700 cursor-pointer'
+                                    }`}
+                                    title={getActionDisabledReason('edit') || 'Restore to In Progress'}
+                                    data-testid="restore-bracket-button"
+                                  >
+                                    <RotateCcw className="h-4 w-4" />
+                                  </LoggedButton>
+                                  <LoggedButton
+                                    onClick={() =>
+                                      !getActionDisabledReason('delete') &&
+                                      onPermanentDeleteClick &&
+                                      onPermanentDeleteClick(bracket.id)
+                                    }
+                                    logLocation="PermanentDelete"
+                                    bracketId={number ? String(number).padStart(6, '0') : null}
+                                    disabled={
+                                      Boolean(getActionDisabledReason('delete')) ||
+                                      deletingBracketId === bracket.id ||
+                                      Boolean(pendingPermanentDeleteBracketId)
+                                    }
+                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
+                                      getActionDisabledReason('delete') ||
+                                      deletingBracketId === bracket.id ||
+                                      pendingPermanentDeleteBracketId
+                                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                        : 'bg-red-900 text-white hover:bg-red-950 cursor-pointer'
+                                    }`}
+                                    title={getActionDisabledReason('delete') || 'Permanently delete'}
+                                    data-testid="permanent-delete-bracket-button"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </LoggedButton>
+                                </>
+                              )}
+                            </>
                           ) : (
                             <>
-                              {/* Submitted: View, Copy, Print, Email */}
-                              <LoggedButton
-                                onClick={() => onEditBracket(bracket)}
-                                logLocation="View"
-                                bracketId={number ? String(number).padStart(6, '0') : null}
-                                className="bg-blue-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-blue-700 cursor-pointer transition-colors"
-                                title="View"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </LoggedButton>
-                              <LoggedButton
-                                onClick={() => !getActionDisabledReason('copy') && onCopyBracket(bracket)}
-                                logLocation="Copy"
-                                bracketId={number ? String(number).padStart(6, '0') : null}
-                                disabled={Boolean(getActionDisabledReason('copy'))}
-                                className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
-                                  getActionDisabledReason('copy')
-                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                    : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
-                                }`}
-                                title={getActionDisabledReason('copy') || 'Copy'}
-                                data-testid="copy-bracket-button"
-                              >
-                                <Copy className="h-4 w-4" />
-                              </LoggedButton>
-                              <LoggedButton
-                                onClick={() => handlePrintBracket(bracket)}
-                                logLocation="Print"
-                                bracketId={number ? String(number).padStart(6, '0') : null}
-                                className="hidden md:flex bg-purple-600 text-white w-8 h-8 rounded items-center justify-center hover:bg-purple-700 cursor-pointer transition-colors"
-                                title="Print"
-                              >
-                                <Printer className="h-4 w-4" />
-                              </LoggedButton>
-                              <LoggedButton
-                                onClick={() => handleEmailBracket(bracket)}
-                                logLocation="Email"
-                                bracketId={number ? String(number).padStart(6, '0') : null}
-                                className="bg-indigo-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-indigo-700 cursor-pointer transition-colors"
-                                title="Email PDF"
-                                data-testid="email-bracket-button"
-                              >
-                                <Mail className="h-4 w-4" />
-                              </LoggedButton>
+                              {/* Submitted: Return, Copy, Print, Email (open picks via entry name or Print) */}
+                              {pendingReturnBracketId === bracket.id ? (
+                                <div
+                                  className="col-span-2 flex w-full max-w-xs flex-col items-stretch gap-2 justify-self-center bg-amber-50 border border-amber-200 rounded px-2 py-2 mx-auto md:col-auto md:mx-auto"
+                                  data-testid="return-bracket-confirmation"
+                                >
+                                  <div className="text-xs text-gray-800 text-left">
+                                    {renderMessageWithLineBreaks(
+                                      siteConfig?.returnActionConfirmMessage?.trim() ||
+                                        siteConfig?.bracketReturnMessage?.trim() ||
+                                        'This bracket will leave the contest pool until you submit again.||Are you sure you want to return it to In Progress?'
+                                    )}
+                                  </div>
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        onConfirmReturnBracket && onConfirmReturnBracket(bracket.id)
+                                      }
+                                      disabled={returningBracketId === bracket.id}
+                                      className="bg-amber-700 text-white text-xs px-2 py-1 rounded hover:bg-amber-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      Yes
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => onCancelReturnBracket && onCancelReturnBracket()}
+                                      disabled={returningBracketId === bracket.id}
+                                      className="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      No
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <LoggedButton
+                                    onClick={() =>
+                                      !getActionDisabledReason('return') &&
+                                      onReturnBracketClick &&
+                                      onReturnBracketClick(bracket.id)
+                                    }
+                                    logLocation="Return"
+                                    bracketId={number ? String(number).padStart(6, '0') : null}
+                                    disabled={
+                                      Boolean(getActionDisabledReason('return')) ||
+                                      Boolean(returningBracketId) ||
+                                      Boolean(pendingReturnBracketId)
+                                    }
+                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
+                                      getActionDisabledReason('return') ||
+                                      returningBracketId ||
+                                      pendingReturnBracketId
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        : 'bg-amber-600 text-white hover:bg-amber-700 cursor-pointer'
+                                    }`}
+                                    title={
+                                      getActionDisabledReason('return') ||
+                                      siteConfig?.returnActionHoverMessage?.trim() ||
+                                      'Return to In Progress (you must submit again to re-enter the pool)'
+                                    }
+                                    data-testid="return-bracket-button"
+                                  >
+                                    <Undo2 className="h-4 w-4" />
+                                  </LoggedButton>
+                                  <LoggedButton
+                                    onClick={() => !getActionDisabledReason('copy') && onCopyBracket(bracket)}
+                                    logLocation="Copy"
+                                    bracketId={number ? String(number).padStart(6, '0') : null}
+                                    disabled={Boolean(getActionDisabledReason('copy'))}
+                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
+                                      getActionDisabledReason('copy')
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
+                                    }`}
+                                    title={getActionDisabledReason('copy') || 'Copy'}
+                                    data-testid="copy-bracket-button"
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </LoggedButton>
+                                  <LoggedButton
+                                    onClick={() => handlePrintBracket(bracket)}
+                                    logLocation="Print"
+                                    bracketId={number ? String(number).padStart(6, '0') : null}
+                                    className="flex w-8 h-8 items-center justify-center rounded bg-purple-600 text-white transition-colors hover:bg-purple-700 cursor-pointer"
+                                    title="View/Print"
+                                    data-testid="print-bracket-button"
+                                  >
+                                    <Printer className="h-4 w-4" />
+                                  </LoggedButton>
+                                  <LoggedButton
+                                    onClick={() => handleEmailBracket(bracket)}
+                                    logLocation="Email"
+                                    bracketId={number ? String(number).padStart(6, '0') : null}
+                                    className="bg-indigo-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-indigo-700 cursor-pointer transition-colors"
+                                    title="Email PDF"
+                                    data-testid="email-bracket-button"
+                                  >
+                                    <Mail className="h-4 w-4" />
+                                  </LoggedButton>
+                                </>
+                              )}
                             </>
                           )}
                         </div>
                       </td>
                     </tr>
+                    </React.Fragment>
                     );
-                  })}
+                  });
+                  })()}
                 </tbody>
               </table>
             </div>
+              )}
+            </>
           )}
         </div>
       </div>
+
+      {/* Edit profile (display name) */}
+      {profileModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="profile-modal-title"
+          data-testid="profile-edit-modal"
+        >
+          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-start justify-between gap-2">
+              <h2 id="profile-modal-title" className="text-lg font-semibold text-gray-900">
+                Edit profile information
+              </h2>
+              <button
+                type="button"
+                onClick={closeProfileModal}
+                className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {profileLoading ? (
+              <p className="text-sm text-gray-600">Loading…</p>
+            ) : profileLoadError ? (
+              <p className="text-sm text-red-600">{profileLoadError}</p>
+            ) : profileDetails ? (
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="profile-display-name" className="block text-sm font-medium text-gray-700">
+                    Display name
+                  </label>
+                  <input
+                    id="profile-display-name"
+                    type="text"
+                    value={profileDisplayName}
+                    onChange={(e) => setProfileDisplayName(e.target.value)}
+                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    data-testid="profile-display-name-input"
+                    autoComplete="name"
+                  />
+                </div>
+
+                <dl className="space-y-3 border-t border-gray-100 pt-4 text-sm">
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-gray-500 shrink-0">Account created</dt>
+                    <dd className="text-right text-gray-900">
+                      {new Date(profileDetails.createdAt).toLocaleDateString(undefined, {
+                        dateStyle: 'long',
+                      })}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-gray-500 shrink-0">Email</dt>
+                    <dd className="text-right break-all text-gray-900">{profileDetails.email}</dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-gray-500 shrink-0">Tournaments played</dt>
+                    <dd className="text-right text-gray-900">{profileDetails.tournamentsPlayed}</dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-gray-500 shrink-0">Brackets entered</dt>
+                    <dd className="text-right text-gray-900">{profileDetails.bracketsEntered}</dd>
+                  </div>
+                </dl>
+
+                {profileSaveError && (
+                  <p className="text-sm text-red-600" data-testid="profile-save-error">
+                    {profileSaveError}
+                  </p>
+                )}
+
+                <div className="flex justify-end gap-2 border-t border-gray-100 pt-4">
+                  <button
+                    type="button"
+                    onClick={closeProfileModal}
+                    disabled={profileSaving}
+                    className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveProfileDisplayName}
+                    disabled={profileSaving || !profileDisplayName.trim()}
+                    data-testid="profile-save-button"
+                    className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {profileSaving ? 'Saving…' : 'Save'}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
 
       {/* Email Confirmation Dialog */}
       {emailDialogOpen && emailBracket && (

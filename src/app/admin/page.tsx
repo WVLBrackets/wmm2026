@@ -1,14 +1,31 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Users, Trophy, LogOut, Link2, Table, Zap, RefreshCw, Home, Info, Award, KeyRound, Power } from 'lucide-react';
+import {
+  Users,
+  LaptopMinimalCheck,
+  LogOut,
+  Link2,
+  Table,
+  Zap,
+  RefreshCw,
+  Home,
+  Info,
+  Award,
+  KeyRound,
+  Power,
+  Pencil,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import { useBracketMode } from '@/contexts/BracketModeContext';
 import UsersTab from '@/components/admin/UsersTab';
 import BracketsTab from '@/components/admin/BracketsTab';
 import UsageMonitoringTab from '@/components/admin/UsageMonitoringTab';
 import TeamDataTab from '@/components/admin/TeamDataTab';
+import TourneyTab from '@/components/admin/TourneyTab';
 import LogsTab from '@/components/admin/LogsTab';
 import LiveResultsTab from '@/components/admin/LiveResultsTab';
 import { getCSRFHeaders } from '@/hooks/useCSRF';
@@ -40,7 +57,10 @@ interface Bracket {
   year?: number;
   createdAt: string;
   updatedAt: string;
+  /** ISO string from `submitted_at`; absent/null until bracket is submitted. */
+  submittedAt?: string | null;
   picks: Record<string, string>;
+  isKey?: boolean;
 }
 
 interface ConfigValidationIssue {
@@ -85,7 +105,7 @@ export default function AdminPage() {
   const [killSwitchError, setKillSwitchError] = useState<string | null>(null);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'brackets' | 'users' | 'live-results' | 'data' | 'logs' | 'usage'>('users');
+  const [activeTab, setActiveTab] = useState<'brackets' | 'users' | 'live-results' | 'data' | 'tourney' | 'logs' | 'usage'>('users');
 
   // Ensure bracket mode is disabled when admin page loads
   useEffect(() => {
@@ -93,16 +113,43 @@ export default function AdminPage() {
   }, [setInBracketMode]);
 
   const loadDataRef = useRef<(() => Promise<void>) | undefined>(undefined);
+  const adminTabsNavRef = useRef<HTMLDivElement>(null);
+  const [adminTabsCanScrollLeft, setAdminTabsCanScrollLeft] = useState(false);
+  const [adminTabsCanScrollRight, setAdminTabsCanScrollRight] = useState(false);
 
-  const loadData = async () => {
+  /** Below Tailwind `lg` (1024px): horizontal tab strip may overflow; update arrow affordances. */
+  const updateAdminTabsScrollState = useCallback(() => {
+    const el = adminTabsNavRef.current;
+    if (!el || typeof window === 'undefined') return;
+    if (window.innerWidth >= 1024) {
+      setAdminTabsCanScrollLeft(false);
+      setAdminTabsCanScrollRight(false);
+      return;
+    }
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    setAdminTabsCanScrollLeft(scrollLeft > 2);
+    setAdminTabsCanScrollRight(scrollLeft < scrollWidth - clientWidth - 2);
+  }, []);
+
+  /** Scroll admin tab strip horizontally (mobile only control; no-op if ref missing). */
+  const scrollAdminTabs = useCallback((direction: -1 | 1) => {
+    const el = adminTabsNavRef.current;
+    if (!el) return;
+    const amount = Math.round(Math.min(240, el.clientWidth * 0.65));
+    el.scrollBy({ left: direction * amount, behavior: 'smooth' });
+  }, []);
+
+  const loadData = async (options?: { silent?: boolean }) => {
     try {
-      setIsLoading(true);
+      if (!options?.silent) {
+        setIsLoading(true);
+      }
       setError('');
       
       const [usersRes, bracketsRes, killSwitchRes] = await Promise.all([
-        fetch('/api/admin/users'),
-        fetch('/api/admin/brackets'),
-        fetch('/api/admin/kill-switch'),
+        fetch('/api/admin/users', { cache: 'no-store' }),
+        fetch('/api/admin/brackets', { cache: 'no-store' }),
+        fetch('/api/admin/kill-switch', { cache: 'no-store' }),
       ]);
       
       const usersData = await usersRes.json();
@@ -130,7 +177,9 @@ export default function AdminPage() {
       console.error('Error loading admin data:', error);
       setError('Failed to load admin data');
     } finally {
-      setIsLoading(false);
+      if (!options?.silent) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -223,7 +272,7 @@ export default function AdminPage() {
   };
 
   // Helper function to update URL with new tab
-  const updateUrlTab = (tab: 'brackets' | 'users' | 'live-results' | 'data' | 'logs' | 'usage', logsTab?: 'summary' | 'usage' | 'error' | 'email', emailView?: 'summary' | 'detail') => {
+  const updateUrlTab = (tab: 'brackets' | 'users' | 'live-results' | 'data' | 'tourney' | 'logs' | 'usage', logsTab?: 'summary' | 'usage' | 'error' | 'email', emailView?: 'summary' | 'detail') => {
     const params = new URLSearchParams(searchParams?.toString() || '');
     params.set('tab', tab);
     
@@ -243,7 +292,7 @@ export default function AdminPage() {
   };
 
   // Wrapper functions that update both state and URL
-  const handleSetActiveTab = (tab: 'brackets' | 'users' | 'live-results' | 'data' | 'logs' | 'usage') => {
+  const handleSetActiveTab = (tab: 'brackets' | 'users' | 'live-results' | 'data' | 'tourney' | 'logs' | 'usage') => {
     setActiveTab(tab);
     // Update URL immediately to reflect the change
     updateUrlTab(tab);
@@ -257,8 +306,8 @@ export default function AdminPage() {
     if (!searchParams) return;
     
     const tabParam = searchParams.get('tab');
-    if (tabParam && ['brackets', 'users', 'live-results', 'data', 'logs', 'usage'].includes(tabParam)) {
-      const newTab = tabParam as 'brackets' | 'users' | 'live-results' | 'data' | 'logs' | 'usage';
+    if (tabParam && ['brackets', 'users', 'live-results', 'data', 'tourney', 'logs', 'usage'].includes(tabParam)) {
+      const newTab = tabParam as 'brackets' | 'users' | 'live-results' | 'data' | 'tourney' | 'logs' | 'usage';
       if (newTab !== activeTab) {
         setActiveTab(newTab);
       }
@@ -277,6 +326,38 @@ export default function AdminPage() {
     
     loadDataRef.current?.();
   }, [status, router]);
+
+  /**
+   * Brackets tab shows DB `updated_at`; if the admin edits picks in `/bracket` in another tab,
+   * refetch when this page becomes visible again so "Updated" is not stuck on the old snapshot.
+   */
+  useEffect(() => {
+    if (activeTab !== 'brackets') return;
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        loadDataRef.current?.({ silent: true });
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [activeTab]);
+
+  /** Mobile admin tab strip: scroll arrows reflect overflow; listen to scroll/resize. */
+  useEffect(() => {
+    if (isLoading) return;
+    const el = adminTabsNavRef.current;
+    updateAdminTabsScrollState();
+    if (!el) return;
+    el.addEventListener('scroll', updateAdminTabsScrollState, { passive: true });
+    window.addEventListener('resize', updateAdminTabsScrollState);
+    const ro = new ResizeObserver(() => updateAdminTabsScrollState());
+    ro.observe(el);
+    return () => {
+      el.removeEventListener('scroll', updateAdminTabsScrollState);
+      window.removeEventListener('resize', updateAdminTabsScrollState);
+      ro.disconnect();
+    };
+  }, [activeTab, isLoading, updateAdminTabsScrollState]);
 
   if (isLoading) {
     return (
@@ -305,98 +386,209 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
+        {/* Header — desktop (lg+): unchanged layout; mobile: compact rebuild row, validate row, icon-only sign-out */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Admin Panel</h1>
-              <p className="text-gray-600 mt-1">Manage users and brackets</p>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start justify-between gap-3 lg:block">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Admin Panel</h1>
+                <p className="mt-1 hidden text-gray-600 lg:block">Manage users and brackets</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => signOut({ callbackUrl: '/' })}
+                className="shrink-0 rounded-lg bg-red-600 p-2 text-white transition-colors hover:bg-red-700 lg:hidden"
+                aria-label="Sign out"
+                title="Sign out"
+                data-testid="admin-sign-out-mobile"
+              >
+                <LogOut className="h-5 w-5" aria-hidden />
+              </button>
             </div>
-            
-            {/* Rebuild Buttons */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs text-gray-500 mr-1">Rebuild:</span>
-              <button
-                onClick={() => handleRevalidate('/', 'Home Page')}
-                disabled={revalidating !== null}
-                className={`flex items-center space-x-1 px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                  revalidating === '/'
-                    ? 'bg-gray-300 text-gray-500 cursor-wait'
-                    : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                }`}
-                title="Rebuild Home Page (announcements)"
-              >
-                {revalidating === '/' ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Home className="h-4 w-4" />
-                )}
-                <span>Home</span>
-              </button>
-              <button
-                onClick={() => handleRevalidate('/info', 'Info Page')}
-                disabled={revalidating !== null}
-                className={`flex items-center space-x-1 px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                  revalidating === '/info'
-                    ? 'bg-gray-300 text-gray-500 cursor-wait'
-                    : 'bg-green-100 text-green-700 hover:bg-green-200'
-                }`}
-                title="Rebuild Info Page (entry, scoring, prizes)"
-              >
-                {revalidating === '/info' ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Info className="h-4 w-4" />
-                )}
-                <span>Info</span>
-              </button>
-              <button
-                onClick={() => handleRevalidate('/hall-of-fame', 'Hall of Fame')}
-                disabled={revalidating !== null}
-                className={`flex items-center space-x-1 px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                  revalidating === '/hall-of-fame'
-                    ? 'bg-gray-300 text-gray-500 cursor-wait'
-                    : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                }`}
-                title="Rebuild Hall of Fame"
-              >
-                {revalidating === '/hall-of-fame' ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Award className="h-4 w-4" />
-                )}
-                <span>Hall of Fame</span>
-              </button>
 
-              <button
-                onClick={handleValidateConfig}
-                disabled={isValidatingConfig || revalidating !== null}
-                className={`flex items-center space-x-1 px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                  isValidatingConfig
-                    ? 'bg-gray-300 text-gray-500 cursor-wait'
-                    : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
-                }`}
-                title="Validate config values, CTA setup, and image references"
-              >
-                {isValidatingConfig ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Info className="h-4 w-4" />
-                )}
-                <span>Validate Config</span>
-              </button>
-              
-              {/* Revalidate message */}
+            {/* Desktop (lg+): two rows — Rebuild: … ; Actions: … — same pattern as mobile */}
+            <div className="hidden flex-col gap-2 lg:flex">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="mr-1 text-xs text-gray-500">Rebuild:</span>
+                <button
+                  type="button"
+                  onClick={() => handleRevalidate('/', 'Home Page')}
+                  disabled={revalidating !== null}
+                  className={`flex items-center space-x-1 rounded-lg px-3 py-1.5 text-sm transition-colors ${
+                    revalidating === '/'
+                      ? 'cursor-wait bg-gray-300 text-gray-500'
+                      : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                  }`}
+                  title="Rebuild Home Page (announcements)"
+                >
+                  {revalidating === '/' ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Home className="h-4 w-4" />
+                  )}
+                  <span>Home</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRevalidate('/info', 'Info Page')}
+                  disabled={revalidating !== null}
+                  className={`flex items-center space-x-1 rounded-lg px-3 py-1.5 text-sm transition-colors ${
+                    revalidating === '/info'
+                      ? 'cursor-wait bg-gray-300 text-gray-500'
+                      : 'bg-green-100 text-green-700 hover:bg-green-200'
+                  }`}
+                  title="Rebuild Info Page (entry, scoring, prizes)"
+                >
+                  {revalidating === '/info' ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Info className="h-4 w-4" />
+                  )}
+                  <span>Info</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRevalidate('/hall-of-fame', 'Hall of Fame')}
+                  disabled={revalidating !== null}
+                  className={`flex items-center space-x-1 rounded-lg px-3 py-1.5 text-sm transition-colors ${
+                    revalidating === '/hall-of-fame'
+                      ? 'cursor-wait bg-gray-300 text-gray-500'
+                      : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                  }`}
+                  title="Rebuild Hall of Fame"
+                >
+                  {revalidating === '/hall-of-fame' ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Award className="h-4 w-4" />
+                  )}
+                  <span>Hall of Fame</span>
+                </button>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="mr-1 text-xs text-gray-500">Actions:</span>
+                <button
+                  type="button"
+                  onClick={handleValidateConfig}
+                  disabled={isValidatingConfig || revalidating !== null}
+                  className={`flex items-center space-x-1 rounded-lg px-3 py-1.5 text-sm transition-colors ${
+                    isValidatingConfig
+                      ? 'cursor-wait bg-gray-300 text-gray-500'
+                      : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+                  }`}
+                  title="Validate config values, CTA setup, and image references"
+                >
+                  {isValidatingConfig ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Info className="h-4 w-4" />
+                  )}
+                  <span>Validate Config</span>
+                </button>
+              </div>
               {revalidateMessage && (
-                <span className={`text-sm ml-2 ${
-                  revalidateMessage.startsWith('✅') ? 'text-green-600' : 'text-red-600'
-                }`}>
+                <span
+                  className={`text-sm ${
+                    revalidateMessage.startsWith('✅') ? 'text-green-600' : 'text-red-600'
+                  }`}
+                >
                   {revalidateMessage}
                 </span>
               )}
             </div>
-            
-            <div className="flex items-center space-x-4">
+
+            {/* Mobile: Rebuild: + icons; Actions: + Validate Config (and future buttons) */}
+            <div className="flex flex-col gap-2 lg:hidden">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="mr-1 text-xs text-gray-500">Rebuild:</span>
+                <button
+                  type="button"
+                  onClick={() => handleRevalidate('/', 'Home Page')}
+                  disabled={revalidating !== null}
+                  className={`flex items-center justify-center rounded-lg p-2 transition-colors ${
+                    revalidating === '/'
+                      ? 'cursor-wait bg-gray-300 text-gray-500'
+                      : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                  }`}
+                  title="Rebuild Home Page (announcements)"
+                  aria-label="Rebuild Home Page"
+                >
+                  {revalidating === '/' ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Home className="h-4 w-4" />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRevalidate('/info', 'Info Page')}
+                  disabled={revalidating !== null}
+                  className={`flex items-center justify-center rounded-lg p-2 transition-colors ${
+                    revalidating === '/info'
+                      ? 'cursor-wait bg-gray-300 text-gray-500'
+                      : 'bg-green-100 text-green-700 hover:bg-green-200'
+                  }`}
+                  title="Rebuild Info Page (entry, scoring, prizes)"
+                  aria-label="Rebuild Info Page"
+                >
+                  {revalidating === '/info' ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Info className="h-4 w-4" />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRevalidate('/hall-of-fame', 'Hall of Fame')}
+                  disabled={revalidating !== null}
+                  className={`flex items-center justify-center rounded-lg p-2 transition-colors ${
+                    revalidating === '/hall-of-fame'
+                      ? 'cursor-wait bg-gray-300 text-gray-500'
+                      : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                  }`}
+                  title="Rebuild Hall of Fame"
+                  aria-label="Rebuild Hall of Fame"
+                >
+                  {revalidating === '/hall-of-fame' ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Award className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="mr-1 text-xs text-gray-500">Actions:</span>
+                <button
+                  type="button"
+                  onClick={handleValidateConfig}
+                  disabled={isValidatingConfig || revalidating !== null}
+                  className={`flex items-center space-x-1 rounded-lg px-3 py-1.5 text-sm transition-colors ${
+                    isValidatingConfig
+                      ? 'cursor-wait bg-gray-300 text-gray-500'
+                      : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+                  }`}
+                  title="Validate config values, CTA setup, and image references"
+                >
+                  {isValidatingConfig ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Info className="h-4 w-4" />
+                  )}
+                  <span>Validate Config</span>
+                </button>
+              </div>
+              {revalidateMessage && (
+                <span
+                  className={`text-sm ${
+                    revalidateMessage.startsWith('✅') ? 'text-green-600' : 'text-red-600'
+                  }`}
+                >
+                  {revalidateMessage}
+                </span>
+              )}
+            </div>
+
+            <div className="hidden items-center space-x-4 lg:flex">
               {session?.user && (
                 <div className="text-right">
                   <p className="text-sm font-medium text-gray-900">{session.user.name || session.user.email}</p>
@@ -404,8 +596,10 @@ export default function AdminPage() {
                 </div>
               )}
               <button
+                type="button"
                 onClick={() => signOut({ callbackUrl: '/' })}
-                className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                className="flex items-center space-x-2 rounded-lg bg-red-600 px-4 py-2 text-white transition-colors hover:bg-red-700"
+                data-testid="admin-sign-out-desktop"
               >
                 <LogOut className="h-5 w-5" />
                 <span>Sign Out</span>
@@ -475,35 +669,53 @@ export default function AdminPage() {
         )}
 
         <div className="bg-white rounded-lg shadow-lg p-4 mb-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                <Power className={`h-4 w-4 ${killSwitchEnabled ? 'text-green-600' : 'text-red-600'}`} />
-                Master Kill Switch
-              </p>
-              <p className="text-xs text-gray-600 mt-1">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between lg:gap-3">
+            <div className="min-w-0 w-full lg:flex-1">
+              <div className="flex flex-row items-center justify-between gap-2 lg:block lg:justify-start">
+                <p className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                  <Power className={`h-4 w-4 shrink-0 ${killSwitchEnabled ? 'text-green-600' : 'text-red-600'}`} />
+                  Master Kill Switch
+                </p>
+                <button
+                  type="button"
+                  onClick={handleToggleKillSwitch}
+                  disabled={killSwitchLoading}
+                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors lg:hidden ${
+                    killSwitchLoading
+                      ? 'cursor-wait bg-gray-300 text-gray-500'
+                      : killSwitchEnabled
+                        ? 'bg-green-600 text-white hover:bg-green-700'
+                        : 'bg-red-600 text-white hover:bg-red-700'
+                  }`}
+                  data-testid="admin-kill-switch-toggle-mobile"
+                >
+                  <Power className="h-3.5 w-3.5" />
+                  {killSwitchLoading ? '…' : killSwitchEnabled ? 'ON' : 'OFF'}
+                </button>
+              </div>
+              <p className="mt-1 hidden text-xs text-gray-600 lg:block">
                 Controls New, Copy, Edit, Delete, Save, and Submit bracket actions.
               </p>
               {!killSwitchEnabled && (
-                <p className="text-xs text-amber-700 mt-1">
+                <p className="mt-1 hidden text-xs text-amber-700 lg:block">
                   Disabled hover message: {killSwitchMessage}
                 </p>
               )}
-              {killSwitchError && (
-                <p className="text-xs text-red-600 mt-1">{killSwitchError}</p>
-              )}
+              {killSwitchError && <p className="mt-1 text-xs text-red-600">{killSwitchError}</p>}
             </div>
 
             <button
+              type="button"
               onClick={handleToggleKillSwitch}
               disabled={killSwitchLoading}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`hidden items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors lg:inline-flex ${
                 killSwitchLoading
-                  ? 'bg-gray-300 text-gray-500 cursor-wait'
+                  ? 'cursor-wait bg-gray-300 text-gray-500'
                   : killSwitchEnabled
                     ? 'bg-green-600 text-white hover:bg-green-700'
                     : 'bg-red-600 text-white hover:bg-red-700'
               }`}
+              data-testid="admin-kill-switch-toggle-desktop"
             >
               <Power className="h-4 w-4" />
               {killSwitchLoading ? 'Updating...' : killSwitchEnabled ? 'ON' : 'OFF'}
@@ -511,76 +723,128 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Navigation Tabs */}
+        {/* Navigation Tabs — mobile: icon-only + edge arrows; lg+: icon + label */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <nav className="flex space-x-4 border-b border-gray-200">
+          <div className="flex items-stretch border-b border-gray-200 lg:border-b-0">
             <button
-              onClick={() => handleSetActiveTab('users')}
-              className={`px-4 py-2 border-b-2 font-medium text-sm ${
-                activeTab === 'users'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              type="button"
+              className="flex w-9 shrink-0 items-center justify-center bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-35 lg:hidden"
+              aria-label="Scroll tabs left"
+              title="More tabs this way"
+              disabled={!adminTabsCanScrollLeft}
+              onClick={() => scrollAdminTabs(-1)}
+              data-testid="admin-tabs-scroll-left"
             >
-              <Users className="inline h-4 w-4 mr-2" />
-              Users
+              <ChevronLeft className="h-5 w-5" aria-hidden />
             </button>
+            <nav
+              ref={adminTabsNavRef}
+              className="flex min-w-0 flex-1 flex-nowrap gap-2 overflow-x-auto border-b-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden lg:min-w-full lg:gap-4 lg:overflow-x-visible lg:border-b lg:border-gray-200"
+            >
+              <button
+                type="button"
+                aria-label="Users"
+                onClick={() => handleSetActiveTab('users')}
+                className={`flex shrink-0 items-center justify-center whitespace-nowrap border-b-2 px-2.5 py-2 text-sm font-medium lg:justify-start lg:px-4 ${
+                  activeTab === 'users'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                }`}
+              >
+                <Users className="inline h-5 w-5 shrink-0 lg:mr-2 lg:h-4 lg:w-4" aria-hidden />
+                <span className="hidden lg:inline">Users</span>
+              </button>
+              <button
+                type="button"
+                aria-label="Brackets"
+                onClick={() => handleSetActiveTab('brackets')}
+                className={`flex shrink-0 items-center justify-center whitespace-nowrap border-b-2 px-2.5 py-2 text-sm font-medium lg:justify-start lg:px-4 ${
+                  activeTab === 'brackets'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                }`}
+              >
+                <LaptopMinimalCheck className="inline h-5 w-5 shrink-0 lg:mr-2 lg:h-4 lg:w-4" aria-hidden />
+                <span className="hidden lg:inline">Brackets</span>
+              </button>
+              <button
+                type="button"
+                aria-label="Live results key"
+                onClick={() => handleSetActiveTab('live-results')}
+                className={`flex shrink-0 items-center justify-center whitespace-nowrap border-b-2 px-2.5 py-2 text-sm font-medium lg:justify-start lg:px-4 ${
+                  activeTab === 'live-results'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                }`}
+              >
+                <KeyRound className="inline h-5 w-5 shrink-0 lg:mr-2 lg:h-4 lg:w-4" aria-hidden />
+                <span className="hidden lg:inline">Key</span>
+              </button>
+              <button
+                type="button"
+                aria-label="Teams"
+                onClick={() => handleSetActiveTab('data')}
+                className={`flex shrink-0 items-center justify-center whitespace-nowrap border-b-2 px-2.5 py-2 text-sm font-medium lg:justify-start lg:px-4 ${
+                  activeTab === 'data'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                }`}
+              >
+                <Table className="inline h-5 w-5 shrink-0 lg:mr-2 lg:h-4 lg:w-4" aria-hidden />
+                <span className="hidden lg:inline">Teams</span>
+              </button>
+              <button
+                type="button"
+                aria-label="Tourney"
+                onClick={() => handleSetActiveTab('tourney')}
+                className={`flex shrink-0 items-center justify-center whitespace-nowrap border-b-2 px-2.5 py-2 text-sm font-medium lg:justify-start lg:px-4 ${
+                  activeTab === 'tourney'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                }`}
+              >
+                <Pencil className="inline h-5 w-5 shrink-0 lg:mr-2 lg:h-4 lg:w-4" aria-hidden />
+                <span className="hidden lg:inline">Tourney</span>
+              </button>
+              <button
+                type="button"
+                aria-label="Logs"
+                onClick={() => handleSetActiveTab('logs')}
+                className={`flex shrink-0 items-center justify-center whitespace-nowrap border-b-2 px-2.5 py-2 text-sm font-medium lg:justify-start lg:px-4 ${
+                  activeTab === 'logs'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                }`}
+              >
+                <Link2 className="inline h-5 w-5 shrink-0 lg:mr-2 lg:h-4 lg:w-4" aria-hidden />
+                <span className="hidden lg:inline">Logs</span>
+              </button>
+              <button
+                type="button"
+                aria-label="Usage"
+                onClick={() => handleSetActiveTab('usage')}
+                className={`flex shrink-0 items-center justify-center whitespace-nowrap border-b-2 px-2.5 py-2 text-sm font-medium lg:justify-start lg:px-4 ${
+                  activeTab === 'usage'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                }`}
+              >
+                <Zap className="inline h-5 w-5 shrink-0 lg:mr-2 lg:h-4 lg:w-4" aria-hidden />
+                <span className="hidden lg:inline">Usage</span>
+              </button>
+            </nav>
             <button
-              onClick={() => handleSetActiveTab('brackets')}
-              className={`px-4 py-2 border-b-2 font-medium text-sm ${
-                activeTab === 'brackets'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              type="button"
+              className="flex w-9 shrink-0 items-center justify-center bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-35 lg:hidden"
+              aria-label="Scroll tabs right"
+              title="More tabs this way"
+              disabled={!adminTabsCanScrollRight}
+              onClick={() => scrollAdminTabs(1)}
+              data-testid="admin-tabs-scroll-right"
             >
-              <Trophy className="inline h-4 w-4 mr-2" />
-              Brackets
+              <ChevronRight className="h-5 w-5" aria-hidden />
             </button>
-            <button
-              onClick={() => handleSetActiveTab('live-results')}
-              className={`px-4 py-2 border-b-2 font-medium text-sm ${
-                activeTab === 'live-results'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <KeyRound className="inline h-4 w-4 mr-2" />
-              Key
-            </button>
-            <button
-              onClick={() => handleSetActiveTab('data')}
-              className={`px-4 py-2 border-b-2 font-medium text-sm ${
-                activeTab === 'data'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <Table className="inline h-4 w-4 mr-2" />
-              Team Data
-            </button>
-            <button
-              onClick={() => handleSetActiveTab('logs')}
-              className={`px-4 py-2 border-b-2 font-medium text-sm ${
-                activeTab === 'logs'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <Link2 className="inline h-4 w-4 mr-2" />
-              Logs
-            </button>
-            <button
-              onClick={() => handleSetActiveTab('usage')}
-              className={`px-4 py-2 border-b-2 font-medium text-sm ${
-                activeTab === 'usage'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <Zap className="inline h-4 w-4 mr-2" />
-              Usage Monitoring
-            </button>
-          </nav>
+          </div>
         </div>
 
         {/* Tab Content */}
@@ -596,9 +860,13 @@ export default function AdminPage() {
           <LiveResultsTab brackets={brackets} />
         )}
 
-        {/* Data Tab */}
+        {/* Teams tab (TeamDataTab) */}
         {activeTab === 'data' && (
           <TeamDataTab />
+        )}
+
+        {activeTab === 'tourney' && (
+          <TourneyTab />
         )}
 
         {/* Logs Tab */}
@@ -606,7 +874,7 @@ export default function AdminPage() {
           <LogsTab />
         )}
 
-        {/* Usage Monitoring Tab */}
+        {/* Usage tab */}
         {activeTab === 'usage' && (
           <UsageMonitoringTab />
         )}

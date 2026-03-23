@@ -4,11 +4,18 @@ import { useState, useEffect } from 'react';
 import { useBracketMode } from '@/contexts/BracketModeContext';
 import { generate64TeamBracket, updateBracketWithPicks } from '@/lib/bracketGenerator';
 import { loadTournamentData } from '@/lib/tournamentLoader';
-import { getTeamInfo } from '@/lib/teamLogos';
+import { getTeamLogoUrl } from '@/lib/teamLogos';
+import {
+  applyDisplayNamesToTournamentData,
+  buildTeamIdToDisplayNameMapFromApi,
+} from '@/lib/teamDisplayName';
 import { SiteConfigData } from '@/lib/siteConfig';
 import { TournamentTeam, TournamentData } from '@/types/tournament';
 import Image from 'next/image';
 // Trophy icon is now a PNG image, no longer using lucide-react Trophy
+
+/** Min canvas width so regions keep desktop-like column sizes; narrow viewports scroll horizontally. */
+const PRINT_BRACKET_MIN_WIDTH_PX = 1200;
 
 export default function PrintBracketPage() {
   const [bracketData, setBracketData] = useState<Record<string, unknown> | null>(null);
@@ -33,7 +40,22 @@ export default function PrintBracketPage() {
         
         // Use tournament year from config (fallback to '2025' if not available)
         const tournamentYear = config?.tournamentYear || '2025';
-        const tournamentData = await loadTournamentData(tournamentYear);
+        const rawTournament = await loadTournamentData(tournamentYear);
+        let tournamentData = rawTournament;
+        try {
+          const refResponse = await fetch('/api/team-data?activeOnly=false', {
+            cache: 'no-store',
+          });
+          const refJson = await refResponse.json();
+          if (refJson.success && Array.isArray(refJson.data) && refJson.data.length > 0) {
+            tournamentData = applyDisplayNamesToTournamentData(
+              rawTournament,
+              buildTeamIdToDisplayNameMapFromApi(refJson.data)
+            );
+          }
+        } catch (refError) {
+          console.warn('[Print Bracket] Could not apply team display names:', refError);
+        }
         setTournamentData(tournamentData as unknown as Record<string, unknown>);
         
         const storedBracketData = sessionStorage.getItem('printBracketData');
@@ -52,8 +74,10 @@ export default function PrintBracketPage() {
             const champion = tournamentData.regions.flatMap(r => r.teams).find(t => t.id === championshipPick);
             if (champion) {
               try {
-                const teamInfo = await getTeamInfo(champion.name);
-                setChampionTeam({ ...champion, ...teamInfo });
+                setChampionTeam({
+                  ...champion,
+                  logo: champion.logo || getTeamLogoUrl(champion.id),
+                });
                 
                 // Fetch mascot from API
                 try {
@@ -737,8 +761,10 @@ export default function PrintBracketPage() {
           )}
           {championTeam && (
             <>
-              <span>{championTeam.name}</span>
-              {championMascot && <span>{championMascot}</span>}
+              <span className="hidden md:inline print:inline">{championTeam.name}</span>
+              {championMascot && (
+                <span className="hidden md:inline print:inline">{championMascot}</span>
+              )}
               {championTeam.logo && (
                 <Image
                   src={championTeam.logo}
@@ -810,13 +836,20 @@ export default function PrintBracketPage() {
         </button>
       </div>
 
-      {/* Bracket Content */}
-      <div style={{ padding: '10px' }}>
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'column',
-          gap: '10px'
-        }}>
+      {/* Bracket canvas: fixed min width (desktop layout); narrow screens pan H + scroll page V */}
+      <div
+        className="print-bracket-scroll w-full overflow-x-auto"
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
+        <div
+          style={{
+            minWidth: PRINT_BRACKET_MIN_WIDTH_PX,
+            padding: '10px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+          }}
+        >
           {/* Helper function to get region name by position */}
           {(() => {
             const tournament = tournamentData as unknown as TournamentData;
@@ -925,6 +958,10 @@ export default function PrintBracketPage() {
           
           .min-h-screen {
             min-height: auto !important;
+          }
+
+          .print-bracket-scroll {
+            overflow: visible !important;
           }
           
           button {

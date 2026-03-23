@@ -45,21 +45,62 @@ export function isProductionEnvironment(): boolean {
 }
 
 /**
+ * Map of Playwright project names to their test user email environment variables.
+ * Each browser project uses a dedicated test user to avoid rate limiting during parallel execution.
+ */
+const PROJECT_USER_MAP: Record<string, string> = {
+  'chromium': 'TEST_USER_EMAIL',           // Primary user (real email for monitoring)
+  'firefox': 'TEST_USER_EMAIL_FIREFOX',
+  'webkit': 'TEST_USER_EMAIL_WEBKIT',
+  'Mobile Chrome': 'TEST_USER_EMAIL_MOBILE_CHROME',
+  'Mobile Safari': 'TEST_USER_EMAIL_MOBILE_SAFARI',
+  'Mobile Safari (Pro)': 'TEST_USER_EMAIL_MOBILE_SAFARI_PRO',
+};
+
+/**
  * Get test user credentials from environment variables.
  * Centralized to ensure consistent credential handling across all tests.
  * 
+ * @param projectName - Optional Playwright project name (e.g., 'chromium', 'firefox', 'Mobile Chrome')
+ *                      When provided, returns credentials for the project-specific test user.
+ *                      This prevents rate limiting when running tests in parallel across browsers.
  * @throws Error if required environment variables are missing
  */
-export function getTestUserCredentials(): { email: string; password: string; name: string } {
+export function getTestUserCredentials(projectName?: string): { email: string; password: string; name: string } {
   const isProduction = isProductionEnvironment();
   
-  const password = isProduction 
-    ? (process.env.TEST_USER_PASSWORD_PRODUCTION || process.env.TEST_USER_PASSWORD)
-    : (process.env.TEST_USER_PASSWORD_STAGING || process.env.TEST_USER_PASSWORD);
+  // Determine which email to use based on project
+  let email: string | undefined;
+  let password: string | undefined;
   
-  if (!process.env.TEST_USER_EMAIL) {
+  if (projectName && PROJECT_USER_MAP[projectName]) {
+    // Use project-specific test user
+    const emailEnvVar = PROJECT_USER_MAP[projectName];
+    email = process.env[emailEnvVar];
+    
+    // Primary user (chromium) uses environment-specific password
+    // Secondary users all share TEST_USER_PASSWORD_SECONDARY
+    if (emailEnvVar === 'TEST_USER_EMAIL') {
+      password = isProduction 
+        ? (process.env.TEST_USER_PASSWORD_PRODUCTION || process.env.TEST_USER_PASSWORD)
+        : (process.env.TEST_USER_PASSWORD_STAGING || process.env.TEST_USER_PASSWORD);
+    } else {
+      password = process.env.TEST_USER_PASSWORD_SECONDARY || process.env.TEST_USER_PASSWORD_STAGING;
+    }
+  } else {
+    // Fallback to primary test user (backward compatibility)
+    email = process.env.TEST_USER_EMAIL;
+    password = isProduction 
+      ? (process.env.TEST_USER_PASSWORD_PRODUCTION || process.env.TEST_USER_PASSWORD)
+      : (process.env.TEST_USER_PASSWORD_STAGING || process.env.TEST_USER_PASSWORD);
+  }
+  
+  if (!email) {
+    const envVar = projectName && PROJECT_USER_MAP[projectName] 
+      ? PROJECT_USER_MAP[projectName] 
+      : 'TEST_USER_EMAIL';
     throw new Error(
-      'TEST_USER_EMAIL environment variable is required. ' +
+      `${envVar} environment variable is required. ` +
       'See tests/AUTHENTICATION_TEST_SETUP.md for setup instructions.'
     );
   }
@@ -73,8 +114,8 @@ export function getTestUserCredentials(): { email: string; password: string; nam
   }
   
   return {
-    email: process.env.TEST_USER_EMAIL,
-    password: password,
+    email,
+    password,
     name: process.env.TEST_USER_NAME || 'Test User',
   };
 }
@@ -413,6 +454,58 @@ export function isCI(): boolean {
 export function getTestDataPrefix(): string {
   const runId = getTestRunId();
   return `test-${runId.substring(5, 13)}`;
+}
+
+// =============================================================================
+// RESPONSIVE LOCATOR HELPERS
+// =============================================================================
+
+/**
+ * Mobile project names in Playwright configuration.
+ * These projects use mobile viewports where responsive components may have
+ * different visibility states than desktop.
+ */
+const MOBILE_PROJECTS = ['Mobile Chrome', 'Mobile Safari', 'Mobile Safari (Pro)'];
+
+/**
+ * Determines if the given project name represents a mobile viewport.
+ * Use this to conditionally select responsive elements.
+ * 
+ * @param projectName - The Playwright project name from testInfo.project.name
+ * @returns true if the project is a mobile viewport
+ */
+export function isMobileProject(projectName?: string): boolean {
+  return projectName ? MOBILE_PROJECTS.includes(projectName) : false;
+}
+
+/**
+ * Returns a locator for the "New Bracket" button appropriate for the current viewport.
+ * Uses the viewport-specific test IDs: new-bracket-button-desktop / new-bracket-button-mobile
+ * 
+ * @param page - Playwright page object
+ * @param projectName - The Playwright project name from testInfo.project.name
+ * @returns Locator for the viewport-appropriate New Bracket button
+ */
+export function getNewBracketButton(page: Page, projectName?: string): Locator {
+  const testId = isMobileProject(projectName) 
+    ? 'new-bracket-button-mobile' 
+    : 'new-bracket-button-desktop';
+  return page.getByTestId(testId);
+}
+
+/**
+ * Returns a locator for the "Logout" button appropriate for the current viewport.
+ * Uses the viewport-specific test IDs: logout-button-desktop / logout-button-mobile
+ * 
+ * @param page - Playwright page object
+ * @param projectName - The Playwright project name from testInfo.project.name
+ * @returns Locator for the viewport-appropriate Logout button
+ */
+export function getLogoutButton(page: Page, projectName?: string): Locator {
+  const testId = isMobileProject(projectName) 
+    ? 'logout-button-mobile' 
+    : 'logout-button-desktop';
+  return page.getByTestId(testId);
 }
 
 // =============================================================================

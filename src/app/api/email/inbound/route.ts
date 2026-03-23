@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendAutoReplyEmail } from '@/lib/autoReplyService';
 import crypto from 'crypto';
+import { getAppEnvironment, isProductionEnvironment } from '@/lib/appEnvironment';
 
 // In-memory cache to track processed email IDs for idempotency
 // Prevents duplicate auto-replies when Resend retries webhooks
@@ -73,15 +74,15 @@ export async function POST(request: NextRequest) {
                      request.headers.get('x-resend-signature') ||
                      request.headers.get('signature');
     const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
-    const vercelEnv = process.env.VERCEL_ENV || 'production';
-    const isProduction = vercelEnv === 'production';
+    const appEnvironment = getAppEnvironment();
+    const isProduction = isProductionEnvironment();
     
     // Log signature verification status for debugging
     console.log('[InboundEmail] Signature verification status:', {
       hasSecret: !!webhookSecret,
       hasSignature: !!signature,
       signatureHeader: signature ? 'present' : 'missing',
-      environment: vercelEnv,
+      environment: appEnvironment,
       isProduction,
     });
     

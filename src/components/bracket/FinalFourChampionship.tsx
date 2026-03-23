@@ -4,7 +4,12 @@ import { useEffect, useRef, RefObject } from 'react';
 import Image from 'next/image';
 import { TournamentGame } from '@/types/tournament';
 import { SiteConfigData } from '@/lib/siteConfig';
-import { CheckCircle, ChevronLeft, ChevronRight, Save, Trophy, KeyRound } from 'lucide-react';
+import { CheckCircle, Save, Trophy, KeyRound, Send, X } from 'lucide-react';
+import {
+  BRACKET_EDITOR_BAR_ACTION_CLASSES,
+  BRACKET_EDITOR_STAGE_MIN_HEIGHT_CLASS,
+} from '@/lib/bracketStepNavMetrics';
+import BracketStepNavBar from './BracketStepNavBar';
 
 interface FinalFourChampionshipProps {
   finalFourGames: TournamentGame[];
@@ -15,19 +20,19 @@ interface FinalFourChampionshipProps {
   onTieBreakerChange: (value: string) => void;
   readOnly?: boolean;
   scrollContainerRef?: RefObject<HTMLDivElement | null>;
-  // Control buttons props
-  onPrevious?: () => void;
   onSave?: () => void;
-  onNext?: () => void;
   onClose?: () => void;
   onCancel?: () => void;
-  canProceed?: boolean;
+  onSubmitBracket?: () => void;
+  submitEnabled?: boolean;
+  submitDisabledMessage?: string;
   currentStep?: number;
   totalSteps?: number;
-  nextButtonText?: string;
-  // Progress dots props
   onStepClick?: (stepIndex: number) => void;
   isStepComplete?: (step: number) => boolean;
+  stepNavLabels?: string[];
+  stepButtonWidthCh?: number;
+  finalFourDisabledMessage?: string;
   // Entry name props
   entryName?: string;
   onEntryNameChange?: (value: string) => void;
@@ -50,17 +55,19 @@ export default function FinalFourChampionship({
   onTieBreakerChange,
   readOnly = false,
   scrollContainerRef,
-  onPrevious,
   onSave,
-  onNext,
   onClose,
   onCancel,
-  canProceed = false,
+  onSubmitBracket,
+  submitEnabled = false,
+  submitDisabledMessage = '',
   currentStep = 4,
   totalSteps = 5,
-  nextButtonText = 'Submit Bracket',
   onStepClick,
   isStepComplete,
+  stepNavLabels = [],
+  stepButtonWidthCh = 12,
+  finalFourDisabledMessage = '',
   entryName,
   onEntryNameChange,
   siteConfig,
@@ -70,7 +77,6 @@ export default function FinalFourChampionship({
   disableSaveSubmit = false,
   disableSaveSubmitMessage = '',
 }: FinalFourChampionshipProps) {
-  
   const handleTeamClick = (game: TournamentGame, team: Record<string, unknown>) => {
     if (game.winner || readOnly) return;
     onPick(game.id, team.id as string);
@@ -367,9 +373,13 @@ export default function FinalFourChampionship({
 
 
   return (
-    <div className="flex flex-col mx-auto border-2 border-gray-300 rounded-lg" style={{ width: 'fit-content' }}>
-      {/* Bracket Content */}
-      <div className="flex items-start">
+    <div
+      className={`mx-auto flex w-max max-w-full flex-col border-2 border-gray-300 rounded-lg ${BRACKET_EDITOR_STAGE_MIN_HEIGHT_CLASS}`}
+      style={{ width: 'fit-content' }}
+    >
+      <div className="flex min-h-0 flex-1 flex-col justify-center">
+        {/* Bracket Content */}
+        <div className="flex items-start">
         {/* First Column - Header Title and Final Four Games */}
         <div className="w-48">
           {/* Header Title - First row, left-justified, can overlap into columns 2 and 3 */}
@@ -493,6 +503,7 @@ export default function FinalFourChampionship({
           </div>
         </div>
       </div>
+      </div>
 
       {/* Message Bar */}
       {!readOnly && (
@@ -505,131 +516,103 @@ export default function FinalFourChampionship({
         </div>
       )}
 
-      {/* Control Buttons at bottom */}
-      <div className="flex items-center justify-between mt-4" style={{ width: '100%', maxWidth: '100%', paddingLeft: '2px', paddingRight: '2px', paddingBottom: '2px' }}>
-        {/* Left: Previous Button */}
-        <div className="flex-shrink-0">
-          {onPrevious && (
-            <button
-              onClick={onPrevious}
-              disabled={currentStep === 0}
-              className={`
-                flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors
-                ${currentStep === 0
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                }
-              `}
-            >
-              <ChevronLeft className="w-4 h-4" />
-              <span>Previous</span>
-            </button>
+      {/* Bottom bar: step nav (left) — Save / Cancel / Submit / Close (right) */}
+      <div
+        className="mt-4 flex w-full max-w-full flex-nowrap items-stretch justify-between gap-4"
+        style={{ paddingLeft: '2px', paddingRight: '2px', paddingBottom: '2px' }}
+      >
+        <div className="flex min-w-0 shrink-0 items-center justify-start overflow-x-auto">
+          {onStepClick && isStepComplete && (
+            <BracketStepNavBar
+              totalSteps={totalSteps}
+              currentStep={currentStep}
+              stepLabels={stepNavLabels}
+              columnWidthCh={stepButtonWidthCh}
+              isStepComplete={isStepComplete}
+              onStepClick={onStepClick}
+              finalFourDisabledMessage={
+                finalFourDisabledMessage.trim() ||
+                siteConfig?.finalFourDisabledMessage?.trim() ||
+                'Complete all four regions before you can work on the Final Four and championship.'
+              }
+            />
           )}
         </div>
 
-        {/* Center: Progress Dots */}
-        {onStepClick && isStepComplete && (
-          <div className="flex items-center space-x-2 flex-1 justify-center">
-            {Array.from({ length: totalSteps }, (_, i) => {
-              const isFinalStep = i === totalSteps - 1;
-              const allRegionsComplete = Array.from({ length: totalSteps - 1 }, (_, j) => isStepComplete(j)).every(Boolean);
-              const isClickable = !isFinalStep || allRegionsComplete;
-
-              return (
-                <div key={i} className="flex items-center">
-                  <button
-                    onClick={() => onStepClick(i)}
-                    disabled={!isClickable}
-                    title={isFinalStep && !allRegionsComplete ? "Complete all four regions first" : ""}
-                    className={`
-                      w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors
-                      ${isClickable ? 'cursor-pointer' : 'cursor-not-allowed'}
-                      ${i === currentStep ? 'bg-blue-600 text-white' :
-                        isStepComplete(i) ? 'bg-green-600 text-white hover:bg-green-700' :
-                        isClickable ? 'bg-gray-300 text-gray-600 hover:bg-gray-400' : 'bg-gray-200 text-gray-400'}
-                    `}
-                  >
-                    {isStepComplete(i) ? <CheckCircle className="w-5 h-5" /> : i + 1}
-                  </button>
-                  {i < totalSteps - 1 && (
-                    <div className={`w-6 h-0.5 ${isStepComplete(i) ? 'bg-green-600' : 'bg-gray-300'} transition-colors`} />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Right: Cancel, Save/Close and Next/Submit Buttons */}
-        <div className="flex items-center space-x-3 flex-shrink-0">
+        <div className="flex shrink-0 items-center justify-end gap-1.5">
           {readOnly ? (
-            <>
-              {/* View mode: Close and Next buttons - Next on far right */}
-              {/* Previous button is shown on the left side, not here */}
-              {onClose && (
-                <button
-                  onClick={onClose}
-                  className="flex items-center space-x-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer"
-                >
-                  <span>Close</span>
-                </button>
-              )}
-              {onNext && (
-                <button
-                  onClick={onNext}
-                  disabled={currentStep === (totalSteps ? totalSteps - 1 : 4)}
-                  className={`
-                    flex items-center space-x-2 px-6 py-2 rounded-lg transition-colors
-                    ${currentStep === (totalSteps ? totalSteps - 1 : 4)
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                    }
-                  `}
-                >
-                  <span>Next</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              )}
-            </>
+            onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                style={{
+                  width: `${stepButtonWidthCh}ch`,
+                  minWidth: `${stepButtonWidthCh}ch`,
+                  maxWidth: `${stepButtonWidthCh}ch`,
+                }}
+                className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} bg-red-500 text-white hover:bg-red-600 cursor-pointer`}
+              >
+                <span>Close</span>
+              </button>
+            )
           ) : (
             <>
               {onSave && (
                 <button
+                  type="button"
                   onClick={() => !disableSaveSubmit && onSave()}
                   disabled={disableSaveSubmit}
                   title={disableSaveSubmit ? disableSaveSubmitMessage : 'Save'}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                  style={{
+                    width: `${stepButtonWidthCh}ch`,
+                    minWidth: `${stepButtonWidthCh}ch`,
+                    maxWidth: `${stepButtonWidthCh}ch`,
+                  }}
+                  className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} ${
                     disableSaveSubmit
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       : 'bg-purple-600 text-white hover:bg-purple-700 cursor-pointer'
                   }`}
                 >
-                  <Save className="h-4 w-4" />
+                  <Save className="h-3.5 w-3.5 shrink-0" />
                   <span>Save</span>
                 </button>
               )}
               {onCancel && (
                 <button
+                  type="button"
                   onClick={onCancel}
-                  className="flex items-center space-x-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer"
+                  style={{
+                    width: `${stepButtonWidthCh}ch`,
+                    minWidth: `${stepButtonWidthCh}ch`,
+                    maxWidth: `${stepButtonWidthCh}ch`,
+                  }}
+                  className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} bg-red-500 text-white hover:bg-red-600 cursor-pointer`}
                 >
+                  <X className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
                   <span>Cancel</span>
                 </button>
               )}
-              {onNext && !isAdminMode && (
+              {onSubmitBracket && !isAdminMode && (
                 <button
-                  onClick={onNext}
-                  disabled={disableSaveSubmit || !canProceed || isDuplicateName() || isSubmissionDisabled()}
-                  title={disableSaveSubmit ? disableSaveSubmitMessage : 'Submit Bracket'}
-                  className={`
-                    flex items-center space-x-2 px-6 py-2 rounded-lg transition-colors
-                    ${!disableSaveSubmit && canProceed && !isDuplicateName() && !isSubmissionDisabled()
-                      ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }
-                  `}
+                  type="button"
+                  data-testid="submit-bracket-editor-button"
+                  onClick={() => submitEnabled && onSubmitBracket()}
+                  disabled={!submitEnabled}
+                  title={submitDisabledMessage || undefined}
+                  style={{
+                    width: `${stepButtonWidthCh}ch`,
+                    minWidth: `${stepButtonWidthCh}ch`,
+                    maxWidth: `${stepButtonWidthCh}ch`,
+                  }}
+                  className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} ${
+                    submitEnabled
+                      ? 'cursor-pointer bg-blue-600 text-white hover:bg-blue-700'
+                      : 'cursor-not-allowed bg-gray-300 text-gray-500'
+                  }`}
                 >
-                  <span>{nextButtonText}</span>
+                  <Send className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  <span>Submit</span>
                 </button>
               )}
             </>

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { signInUser } from '../fixtures/auth-helpers';
+import { getTestUserCredentials, waitForNavigationComplete } from '../fixtures/test-helpers';
 
 /**
  * E2E tests for authentication flow
@@ -13,62 +14,14 @@ import { signInUser } from '../fixtures/auth-helpers';
  */
 
 test.describe('Authentication', () => {
-  /**
-   * Get test user credentials from environment variables
-   * 
-   * REQUIRED environment variables:
-   * - TEST_USER_EMAIL: The email address of the confirmed test user
-   * - TEST_USER_PASSWORD_STAGING: Password for staging environment
-   * - TEST_USER_PASSWORD_PRODUCTION: Password for production environment
-   * 
-   * Optional:
-   * - TEST_USER_NAME: Display name (defaults to "Test User")
-   */
-  const getTestUserCredentials = () => {
-    // Determine which environment we're testing against
-    const isProduction = process.env.TEST_ENV === 'production' || 
-                         process.env.TEST_ENV === 'prod' ||
-                         (process.env.PLAYWRIGHT_TEST_BASE_URL && 
-                          process.env.PLAYWRIGHT_TEST_BASE_URL.includes('warrensmm.com'));
-    
-    // Get password based on environment
-    const password = isProduction 
-      ? (process.env.TEST_USER_PASSWORD_PRODUCTION || process.env.TEST_USER_PASSWORD)
-      : (process.env.TEST_USER_PASSWORD_STAGING || process.env.TEST_USER_PASSWORD);
-    
-    // Validate required environment variables
-    if (!process.env.TEST_USER_EMAIL) {
-      throw new Error(
-        'TEST_USER_EMAIL environment variable is required. ' +
-        'Please set it before running authentication tests. ' +
-        'See tests/AUTHENTICATION_TEST_SETUP.md for setup instructions.'
-      );
-    }
-    
-    if (!password) {
-      const envVar = isProduction ? 'TEST_USER_PASSWORD_PRODUCTION' : 'TEST_USER_PASSWORD_STAGING';
-      throw new Error(
-        `${envVar} or TEST_USER_PASSWORD environment variable is required. ` +
-        `Please set it before running authentication tests. ` +
-        'See tests/AUTHENTICATION_TEST_SETUP.md for setup instructions.'
-      );
-    }
-    
-    return {
-      email: process.env.TEST_USER_EMAIL,
-      password: password,
-      name: process.env.TEST_USER_NAME || 'Test User',
-      useExisting: true, // Always use existing user (no dynamic creation)
-    };
-  };
 
   test.beforeEach(async ({ page }) => {
     // Navigate to home page before each test
     await page.goto('/');
   });
 
-  test('should sign in with valid credentials', async ({ page }) => {
-    const credentials = getTestUserCredentials();
+  test('should sign in with valid credentials', async ({ page }, testInfo) => {
+    const credentials = getTestUserCredentials(testInfo.project.name);
     
     // Sign in with the confirmed test user
     await signInUser(page, credentials.email, credentials.password);
@@ -109,8 +62,8 @@ test.describe('Authentication', () => {
     expect(page.url()).toContain('/auth/signin');
   });
 
-  test('should show error with invalid password', async ({ page }) => {
-    const credentials = getTestUserCredentials();
+  test('should show error with invalid password', async ({ page }, testInfo) => {
+    const credentials = getTestUserCredentials(testInfo.project.name);
     
     await page.goto('/auth/signin');
     
@@ -135,8 +88,8 @@ test.describe('Authentication', () => {
     expect(page.url()).toContain('/auth/signin');
   });
 
-  test('should maintain session after page refresh', async ({ page, browserName }) => {
-    const credentials = getTestUserCredentials();
+  test('should maintain session after page refresh', async ({ page, browserName }, testInfo) => {
+    const credentials = getTestUserCredentials(testInfo.project.name);
     
     // Sign in with the confirmed test user
     await signInUser(page, credentials.email, credentials.password);

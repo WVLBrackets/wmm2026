@@ -1,10 +1,14 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from './auth';
+import { getDevAuthBypassEmailServer, isDevAuthBypassServerEnabled } from './devAuth';
 
 /**
  * Check if an email address matches the admin email from environment variable
  */
 export async function isAdmin(email: string): Promise<boolean> {
+  if (isDevAuthBypassServerEnabled() && email.toLowerCase() === getDevAuthBypassEmailServer()) {
+    return true;
+  }
   const adminEmail = process.env.ADMIN_EMAIL || '';
   return email.toLowerCase() === adminEmail.toLowerCase();
 }

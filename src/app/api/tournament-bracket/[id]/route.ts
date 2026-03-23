@@ -8,6 +8,7 @@ import { getSiteConfigFromGoogleSheetsFresh } from '@/lib/siteConfig';
 import { checkSubmissionAllowed } from '@/lib/bracketSubmissionValidator';
 import { csrfProtection } from '@/lib/csrf';
 import { getKillSwitchDisabledMessage } from '@/lib/killSwitch';
+import { normalizeStoredDisplayName } from '@/lib/stringNormalize';
 
 /**
  * GET /api/tournament-bracket/[id] - Get a specific bracket
@@ -27,13 +28,7 @@ export async function GET(
       );
     }
 
-    const killSwitchMessage = await getKillSwitchDisabledMessage();
-    if (killSwitchMessage) {
-      return NextResponse.json(
-        { success: false, error: killSwitchMessage },
-        { status: 403 }
-      );
-    }
+    // Read-only: allowed when kill switch blocks POST/PUT (view / client flows that only load data).
 
     const bracket = await getBracketById(id);
     
@@ -62,7 +57,11 @@ export async function GET(
         playerEmail: user.email,
         entryName: bracket.entryName,
         tieBreaker: bracket.tieBreaker,
-        submittedAt: bracket.status === 'submitted' ? bracket.updatedAt.toISOString() : undefined,
+        submittedAt:
+          bracket.status === 'submitted' && bracket.submittedAt
+            ? bracket.submittedAt.toISOString()
+            : undefined,
+        updatedAt: bracket.updatedAt.toISOString(),
         lastSaved: bracket.status === 'in_progress' ? bracket.updatedAt.toISOString() : undefined,
         picks: bracket.picks,
         totalPoints: 0,
@@ -143,7 +142,22 @@ export async function PUT(
     }
 
     const body = await request.json();
-    
+
+    // Submitted → in_progress is allowed (My Picks "Return"); picks/entry merge from DB when omitted in body.
+
+    // Deleted brackets may only move back to in_progress (restore), not directly to submitted
+    if (bracket.status === 'deleted' && body.status !== undefined) {
+      if (body.status !== 'in_progress' && body.status !== 'deleted') {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Deleted brackets can only be restored to In Progress. Use Restore from My Picks.',
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     // If changing status to submitted, check if submission is allowed and validate
     if (body.status === 'submitted') {
       // Get fresh site config to check submission rules (bypass cache for real-time validation)
@@ -179,11 +193,13 @@ export async function PUT(
       const { getBracketsByUserId } = await import('@/lib/secureDatabase');
 
       const existingBrackets = await getBracketsByUserId(user.id);
+
+      const normalizedEntryName = normalizeStoredDisplayName(String(body.entryName ?? ''));
       
       // Check if there's already a submitted bracket with this name for the same year (excluding current bracket)
       const duplicateNameExists = existingBrackets.some(
         b => b.id !== id && 
-             b.entryName === body.entryName && 
+             b.entryName === normalizedEntryName && 
              b.status === 'submitted' &&
              b.year === tournamentYear
       );
@@ -192,7 +208,7 @@ export async function PUT(
         return NextResponse.json(
           { 
             success: false, 
-            error: `A submitted bracket with the name "${body.entryName}" already exists for ${tournamentYear}. Please choose a different name.`
+            error: `A submitted bracket with the name "${normalizedEntryName}" already exists for ${tournamentYear}. Please choose a different name.`
           },
           { status: 400 }
         );
@@ -272,13 +288,19 @@ export async function PUT(
         playerEmail: user.email,
         entryName: updatedBracket.entryName,
         tieBreaker: updatedBracket.tieBreaker,
-        submittedAt: updatedBracket.status === 'submitted' ? updatedBracket.updatedAt.toISOString() : undefined,
+        submittedAt:
+          updatedBracket.status === 'submitted' && updatedBracket.submittedAt
+            ? updatedBracket.submittedAt.toISOString()
+            : undefined,
+        updatedAt: updatedBracket.updatedAt.toISOString(),
         lastSaved: updatedBracket.status === 'in_progress' ? updatedBracket.updatedAt.toISOString() : undefined,
         picks: updatedBracket.picks,
         totalPoints: 0,
         isComplete: updatedBracket.status === 'submitted',
         isPublic: updatedBracket.status === 'submitted',
-        status: updatedBracket.status
+        status: updatedBracket.status,
+        bracketNumber: updatedBracket.bracketNumber,
+        year: updatedBracket.year,
       },
       message: 'Bracket updated successfully'
     });
@@ -341,7 +363,18 @@ export async function DELETE(
       );
     }
 
-    // Delete the bracket
+    // In-progress brackets must be soft-deleted (status change), not removed from the database
+    if (bracket.status === 'in_progress') {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'In-progress brackets must be deleted from My Picks (moves to Deleted), not permanently removed.',
+        },
+        { status: 400 }
+      );
+    }
+
+    // Delete the bracket (submitted or already soft-deleted)
     const success = await deleteBracket(id);
 
     if (!success) {

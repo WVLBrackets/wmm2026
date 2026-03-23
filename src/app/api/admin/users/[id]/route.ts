@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/lib/adminAuth';
 import { sql } from '@vercel/postgres';
 import { getCurrentEnvironment } from '@/lib/databaseConfig';
+import { normalizeStoredDisplayName } from '@/lib/stringNormalize';
 
 /**
  * PUT /api/admin/users/[id] - Update user name and/or email (admin only)
@@ -58,19 +59,29 @@ export async function PUT(
       }
     }
 
+    const nameToSave =
+      typeof name === 'string' ? normalizeStoredDisplayName(name) : undefined;
+
+    if (nameToSave !== undefined && nameToSave.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Name cannot be empty' },
+        { status: 400 }
+      );
+    }
+
     // Update user - build query based on what's provided
     let result;
-    if (name && email) {
+    if (nameToSave !== undefined && email) {
       result = await sql`
         UPDATE users 
-        SET name = ${name}, email = ${email}
+        SET name = ${nameToSave}, email = ${email}
         WHERE id = ${id} AND environment = ${environment}
         RETURNING id, email, name, email_confirmed, created_at, last_login, environment
       `;
-    } else if (name) {
+    } else if (nameToSave !== undefined) {
       result = await sql`
         UPDATE users 
-        SET name = ${name}
+        SET name = ${nameToSave}
         WHERE id = ${id} AND environment = ${environment}
         RETURNING id, email, name, email_confirmed, created_at, last_login, environment
       `;

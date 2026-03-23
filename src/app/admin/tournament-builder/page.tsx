@@ -2,15 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { ArrowLeft, Save } from 'lucide-react';
-import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
 import { TournamentRegion } from '@/types/tournament';
+import { getTeamReferenceDisplayName } from '@/lib/teamDisplayName';
+
+/** Admin URL after save/cancel so the Tourney tab stays selected (not Users). */
+const ADMIN_RETURN_URL = '/admin?tab=tourney';
 
 interface Team {
   id: string;
   name: string;
+  displayName?: string;
   mascot?: string;
   logo: string;
 }
@@ -31,6 +35,7 @@ interface Region {
 export default function TournamentBuilderPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
   const [teams, setTeams] = useState<Record<string, Team>>({});
   const [year, setYear] = useState<string>('');
@@ -47,6 +52,7 @@ export default function TournamentBuilderPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [availableTournaments, setAvailableTournaments] = useState<string[]>([]);
   const [selectedTournamentFile, setSelectedTournamentFile] = useState<string>('');
+  const [hasAppliedQueryLoad, setHasAppliedQueryLoad] = useState(false);
 
   const positionOptions = ['Top Left', 'Bottom Left', 'Top Right', 'Bottom Right'];
 
@@ -97,17 +103,19 @@ export default function TournamentBuilderPage() {
           setAvailableTournaments(tournamentFilesData.files);
         }
 
-        // Load config to get default year
-        const config = await getSiteConfigFromGoogleSheets();
-        if (config?.tournamentYear) {
-          setYear(config.tournamentYear);
-        } else {
-          setYear(new Date().getFullYear().toString());
+        // Load config via API (client-safe) to get default year
+        let configuredYear = '';
+        try {
+          const configResponse = await fetch('/api/site-config');
+          const configData = await configResponse.json();
+          configuredYear = String(configData?.data?.tournamentYear || '').trim();
+        } catch (configError) {
+          console.warn('Failed to load site config for tournament year:', configError);
         }
 
-        // Set default start date
-        const currentYear = config?.tournamentYear || new Date().getFullYear().toString();
-        setStartDate(`${currentYear}-03-20`);
+        const resolvedYear = configuredYear || new Date().getFullYear().toString();
+        setYear(resolvedYear);
+        setStartDate(`${resolvedYear}-03-20`);
       } catch (error) {
         console.error('Error loading data:', error);
       } finally {
@@ -132,7 +140,7 @@ export default function TournamentBuilderPage() {
     const updated = [...regions];
     updated[regionIndex].teams[seedIndex] = {
       id: team.id,
-      name: team.name,
+      name: getTeamReferenceDisplayName(team),
       seed: seedIndex + 1,
       logo: team.logo || `/logos/teams/${team.id}.png`,
     };
@@ -218,7 +226,7 @@ export default function TournamentBuilderPage() {
                   const teamData = teams[teamKey];
                   regionTeams[arrayPosition] = {
                     id: teamData.id,
-                    name: teamData.name,
+                    name: getTeamReferenceDisplayName(teamData),
                     seed: team.seed,
                     logo: teamData.logo || `/logos/teams/${team.id}.png`,
                   };
@@ -262,6 +270,27 @@ export default function TournamentBuilderPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (hasAppliedQueryLoad || isLoading) return;
+
+    const queryYear = searchParams?.get('year') ?? '';
+    const queryFile = searchParams?.get('file') ?? '';
+    const fallbackFile = queryYear && /^\d{4}$/.test(queryYear) ? `tournament-${queryYear}.json` : '';
+    const targetFile = queryFile || fallbackFile;
+
+    if (queryYear && /^\d{4}$/.test(queryYear)) {
+      setYear(queryYear);
+      setStartDate((previous) => previous || `${queryYear}-03-20`);
+    }
+
+    if (targetFile && availableTournaments.includes(targetFile)) {
+      setSelectedTournamentFile(targetFile);
+      void handleLoadTournament(targetFile);
+    }
+
+    setHasAppliedQueryLoad(true);
+  }, [availableTournaments, hasAppliedQueryLoad, isLoading, searchParams]);
 
   const validate = (): boolean => {
     const validationErrors: string[] = [];
@@ -367,8 +396,7 @@ export default function TournamentBuilderPage() {
       if (response.ok && data.success) {
         // If file was saved successfully, just redirect
         if (data.filePath) {
-          alert(`Tournament ${year} saved successfully!`);
-          router.push('/admin');
+          router.push(ADMIN_RETURN_URL);
         } else {
           // In Vercel, trigger download of JSON file
           const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
@@ -380,9 +408,8 @@ export default function TournamentBuilderPage() {
           a.click();
           document.body.removeChild(a);
           URL.revokeObjectURL(url);
-          
-          alert(`Tournament ${year} data downloaded. Please commit this file to the repository at public/data/${data.filename}`);
-          router.push('/admin');
+
+          router.push(ADMIN_RETURN_URL);
         }
       } else {
         setErrors([data.error || 'Failed to save tournament']);
@@ -407,8 +434,8 @@ export default function TournamentBuilderPage() {
   }
 
   const teamList = Object.entries(teams).sort((a, b) => {
-    const nameA = a[1].name.toLowerCase();
-    const nameB = b[1].name.toLowerCase();
+    const nameA = getTeamReferenceDisplayName(a[1]).toLowerCase();
+    const nameB = getTeamReferenceDisplayName(b[1]).toLowerCase();
     return nameA.localeCompare(nameB);
   });
 
@@ -418,7 +445,7 @@ export default function TournamentBuilderPage() {
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <button
-            onClick={() => router.push('/admin')}
+            onClick={() => router.push(ADMIN_RETURN_URL)}
             className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -583,7 +610,7 @@ export default function TournamentBuilderPage() {
                             <option value="">Select...</option>
                             {teamList.map(([key, teamData]) => (
                               <option key={key} value={key}>
-                                {teamData.name}
+                                {getTeamReferenceDisplayName(teamData)}
                               </option>
                             ))}
                           </select>
@@ -619,7 +646,7 @@ export default function TournamentBuilderPage() {
                             <option value="">Select...</option>
                             {teamList.map(([key, teamData]) => (
                               <option key={key} value={key}>
-                                {teamData.name}
+                                {getTeamReferenceDisplayName(teamData)}
                               </option>
                             ))}
                           </select>
@@ -645,7 +672,7 @@ export default function TournamentBuilderPage() {
         {/* Save Button */}
         <div className="mt-6 flex justify-end space-x-4">
           <button
-            onClick={() => router.push('/admin')}
+            onClick={() => router.push(ADMIN_RETURN_URL)}
             className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
           >
             Cancel

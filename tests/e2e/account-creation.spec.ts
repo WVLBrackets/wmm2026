@@ -115,12 +115,16 @@ test.describe('Account Creation', () => {
     await expect(page.getByText(/password must be at least 6 characters/i)).toBeVisible({ timeout: 20000 });
   });
 
-  test('should successfully create account with valid data', async ({ page, request }, testInfo) => {
-    // Get site config to retrieve the browser-specific happy_path_email_test
-    const baseURL = process.env.PLAYWRIGHT_TEST_BASE_URL || 
-                    (process.env.TEST_ENV === 'production' || process.env.TEST_ENV === 'prod'
-                      ? (process.env.PRODUCTION_URL || 'https://warrensmm.com')
-                      : (process.env.STAGING_URL || 'https://wmm2026-git-staging-ncaatourney-gmailcoms-projects.vercel.app'));
+  // Note: This test has extended timeout due to external API latency (Google Sheets/email service)
+  test.describe('Account Creation - Happy Path', () => {
+    test.describe.configure({ retries: 2 });
+    
+    test('should successfully create account with valid data', async ({ page, request }, testInfo) => {
+      // Get site config to retrieve the browser-specific happy_path_email_test
+      const baseURL = process.env.PLAYWRIGHT_TEST_BASE_URL || 
+                      (process.env.TEST_ENV === 'production' || process.env.TEST_ENV === 'prod'
+                        ? (process.env.PRODUCTION_URL || 'https://warrensmm.com')
+                        : (process.env.STAGING_URL || 'https://wmm2026-git-staging-ncaatourney-gmailcoms-projects.vercel.app'));
     
     // Determine which browser and device type is running the test
     const projectName = testInfo.project.name; // e.g., 'chromium', 'firefox', 'webkit', 'Mobile Chrome', 'Mobile Safari', 'Mobile Safari (Pro)'
@@ -179,28 +183,56 @@ test.describe('Account Creation', () => {
     }
 
     const password = 'testpassword123';
-
-    await fillInputReliably(page.getByTestId('signup-name-input'), 'Test User');
-    await fillInputReliably(page.getByTestId('signup-email-input'), testEmail);
-    await fillInputReliably(page.getByTestId('signup-password-input'), password);
-    await fillInputReliably(page.getByTestId('signup-confirm-password-input'), password);
-
-    // Set up response listener BEFORE clicking (more reliable)
-    // Increase timeout for WebKit/Safari which can be slower
-    const responsePromise = page.waitForResponse(
-      response => 
-        response.url().includes('/api/auth/register') && response.status() === 200,
-      { timeout: 60000 }
-    );
-
-    // Use helper function for reliable form submission across browsers
-    await submitSignupForm(page);
-
-    // Wait for API response
-    await responsePromise;
-
-    // Wait for success message
-    await expect(page.getByTestId('signup-success-header')).toBeVisible({ timeout: 15000 });
+    const successHeader = page.getByTestId('signup-success-header');
+    const errorMessage = page.getByTestId('signup-error-message');
+    
+    /**
+     * Generates a unique email by prefixing a 6-digit random number
+     */
+    const makeUniqueEmail = (baseEmail: string): string => {
+      const randomPrefix = Math.floor(100000 + Math.random() * 900000);
+      const [localPart, domain] = baseEmail.split('@');
+      return `${randomPrefix}-${localPart}@${domain}`;
+    };
+    
+    /**
+     * Attempts registration with the given email
+     */
+    const attemptRegistration = async (email: string): Promise<boolean> => {
+      await fillInputReliably(page.getByTestId('signup-name-input'), 'Test User');
+      await fillInputReliably(page.getByTestId('signup-email-input'), email);
+      await fillInputReliably(page.getByTestId('signup-password-input'), password);
+      await fillInputReliably(page.getByTestId('signup-confirm-password-input'), password);
+      
+      await submitSignupForm(page);
+      
+      // Wait for either success or error
+      await expect(successHeader.or(errorMessage)).toBeVisible({ timeout: 30000 });
+      
+      return await successHeader.isVisible();
+    };
+    
+    // First attempt with config email
+    let success = await attemptRegistration(testEmail);
+    
+    // If duplicate email error, retry with unique email
+    if (!success) {
+      const errorText = await errorMessage.textContent();
+      if (errorText?.includes('already exists')) {
+        // Navigate back to signup page for retry
+        await page.goto('/auth/signup', { waitUntil: 'domcontentloaded' });
+        await page.waitForLoadState('domcontentloaded');
+        
+        // Generate unique email and retry
+        const uniqueEmail = makeUniqueEmail(testEmail);
+        success = await attemptRegistration(uniqueEmail);
+      }
+    }
+    
+    // Final assertion: must succeed
+    expect(success).toBeTruthy();
+    await expect(successHeader).toContainText(/check your email/i);
+    });
   });
 
   test('should show error for duplicate email', async ({ page, request }) => {

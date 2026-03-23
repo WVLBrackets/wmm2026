@@ -43,7 +43,10 @@ export async function confirmUserEmail(token: string): Promise<ConfirmEmailResul
     
     // Get user email
     const userResult = await sql`
-      SELECT email FROM users WHERE id = ${tokenRow.user_id}
+      SELECT email
+      FROM users
+      WHERE id = ${tokenRow.user_id}
+        AND environment = ${environment}
     `;
     
     if (userResult.rows.length === 0) {
@@ -54,9 +57,10 @@ export async function confirmUserEmail(token: string): Promise<ConfirmEmailResul
     
     // Mark user as confirmed
     await sql`
-      UPDATE users 
+      UPDATE users
       SET email_confirmed = TRUE, confirmation_token = NULL, confirmation_expires = NULL
       WHERE id = ${tokenRow.user_id}
+        AND environment = ${environment}
     `;
     
     // Create auto-signin token (5 minute expiry)
@@ -69,7 +73,11 @@ export async function confirmUserEmail(token: string): Promise<ConfirmEmailResul
     `;
     
     // Remove used confirmation token
-    await sql`DELETE FROM tokens WHERE token = ${token}`;
+    await sql`
+      DELETE FROM tokens
+      WHERE token = ${token}
+        AND environment = ${environment}
+    `;
     
     return { success: true, userEmail, signInToken };
   } catch (error) {
@@ -96,11 +104,12 @@ export async function createPasswordResetToken(email: string): Promise<string | 
   const resetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
   // Update user with reset token
-  await sql`
-    UPDATE users 
-    SET reset_token = ${resetToken}, reset_expires = ${resetExpires.toISOString()}
-    WHERE id = ${user.id}
-  `;
+    await sql`
+      UPDATE users
+      SET reset_token = ${resetToken}, reset_expires = ${resetExpires.toISOString()}
+      WHERE id = ${user.id}
+        AND environment = ${environment}
+    `;
 
   // Store token
   await sql`
@@ -143,7 +152,11 @@ export async function resetPassword(token: string, newPassword: string): Promise
     `;
     
     // Remove used token
-    await sql`DELETE FROM tokens WHERE token = ${token}`;
+    await sql`
+      DELETE FROM tokens
+      WHERE token = ${token}
+        AND environment = ${environment}
+    `;
     
     return true;
   } catch (error) {

@@ -2,6 +2,11 @@ import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { verifyPassword } from './secureDatabase';
 import { checkRateLimit, RATE_LIMITS } from './rateLimit';
+import {
+  DEV_AUTH_BYPASS_PASSWORD,
+  getDevAuthBypassEmailServer,
+  isDevAuthBypassServerEnabled,
+} from './devAuth';
 
 // Validate NEXTAUTH_SECRET at runtime when authOptions is actually used
 // This prevents build-time errors while still ensuring the secret is required
@@ -21,6 +26,11 @@ function getAuthSecret(): string {
       // Return a placeholder during build - NextAuth will use this during build
       // but it will be validated and replaced at runtime when actually needed
       return 'build-placeholder-secret-not-used-for-auth';
+    }
+
+    // Optional local-only bypass secret for UI-only development workflows.
+    if (isDevAuthBypassServerEnabled()) {
+      return 'dev-auth-bypass-secret-not-for-production';
     }
     
     // At runtime (including Vercel production), if secret is missing, throw error
@@ -46,6 +56,22 @@ export const authOptions: NextAuthOptions = {
 
           const email = credentials.email as string;
           const password = credentials.password as string;
+
+          // Development-only admin bypass for local UI iteration.
+          const devBypassEmail = getDevAuthBypassEmailServer();
+          if (
+            isDevAuthBypassServerEnabled() &&
+            password === DEV_AUTH_BYPASS_PASSWORD &&
+            email.toLowerCase() === devBypassEmail
+          ) {
+            const { ensureDevBypassUser } = await import('@/lib/repositories/userRepository');
+            const devUser = await ensureDevBypassUser(devBypassEmail, 'Dev Admin');
+            return {
+              id: devUser.id,
+              email: devUser.email,
+              name: devUser.name,
+            };
+          }
 
           // SECURITY: Rate limiting for login attempts (by email to prevent account lockout attacks)
           const rateLimitResult = checkRateLimit(email.toLowerCase(), 'auth:login', RATE_LIMITS.AUTH_LOGIN);
@@ -102,7 +128,7 @@ export const authOptions: NextAuthOptions = {
                   
                   if (columnCheck.rows.length === 0) {
                     try {
-                      await sql`ALTER TABLE users ADD COLUMN last_login TIMESTAMP`;
+                      await sql`ALTER TABLE users ADD COLUMN last_login TIMESTAMPTZ`;
                     } catch (addError) {
                       // Column might have been created by another request, try the update anyway
                       if (addError instanceof Error && (
@@ -122,7 +148,7 @@ export const authOptions: NextAuthOptions = {
                 // Now try the update
                 await sql`
                   UPDATE users 
-                  SET last_login = CURRENT_TIMESTAMP
+                  SET last_login = ${new Date()}
                   WHERE id = ${row.user_id} AND environment = ${environment}
                 `;
               } catch (updateError) {
@@ -196,15 +222,21 @@ export const authOptions: NextAuthOptions = {
       // Otherwise, redirect to base URL
       return baseUrl;
     },
-        async jwt({ token, user }) {
+        async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id as string;
+        token.name = user.name;
+      }
+      if (trigger === 'update' && session && typeof (session as { name?: string }).name === 'string') {
+        token.name = (session as { name: string }).name;
       }
       return token;
     },
         async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.id as string;
+        session.user.name =
+          typeof token.name === 'string' ? token.name : session.user.name ?? null;
       }
       return session;
     },

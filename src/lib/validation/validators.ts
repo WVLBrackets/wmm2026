@@ -5,6 +5,8 @@
  * Use these instead of duplicating validation logic in each route.
  */
 
+import { normalizeStoredDisplayName } from '../stringNormalize';
+
 /**
  * Validation result
  */
@@ -183,12 +185,13 @@ export function validateRegistration(input: RegistrationInput): ValidationResult
   )(input.email);
   if (!emailResult.valid) return emailResult;
   
-  // Name validation
+  // Name validation (trim first so pasted trailing spaces do not bypass length rules)
+  const nameForValidation = normalizeStoredDisplayName(String(input.name ?? ''));
   const nameResult = combine(
     required('Name'),
     minLength(1, 'Name'),
     maxLength(255, 'Name')
-  )(input.name);
+  )(nameForValidation);
   if (!nameResult.valid) return nameResult;
   
   // Password validation
@@ -219,7 +222,8 @@ export function validateBracketInput(input: BracketInput): ValidationResult {
     return { valid: false, error: 'Player email is required' };
   }
   
-  if (!input.entryName) {
+  const entryName = normalizeStoredDisplayName(String(input.entryName ?? ''));
+  if (!entryName) {
     return { valid: false, error: 'Entry name is required' };
   }
   

@@ -1,5 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 import { signInUser } from '../fixtures/auth-helpers';
+import { getTestUserCredentials, getNewBracketButton } from '../fixtures/test-helpers';
 
 /**
  * Group 6: Full Bracket Workflow Tests
@@ -22,31 +23,6 @@ import { signInUser } from '../fixtures/auth-helpers';
 test.setTimeout(180000); // 3 minutes per test
 
 test.describe('Full Bracket Workflow', () => {
-  /**
-   * Get test user credentials from environment variables
-   */
-  const getTestUserCredentials = () => {
-    const isProduction = process.env.TEST_ENV === 'production' || 
-                         process.env.TEST_ENV === 'prod' ||
-                         (process.env.PLAYWRIGHT_TEST_BASE_URL && 
-                          process.env.PLAYWRIGHT_TEST_BASE_URL.includes('warrensmm.com'));
-    
-    const password = isProduction 
-      ? (process.env.TEST_USER_PASSWORD_PRODUCTION || process.env.TEST_USER_PASSWORD)
-      : (process.env.TEST_USER_PASSWORD_STAGING || process.env.TEST_USER_PASSWORD);
-    
-    if (!process.env.TEST_USER_EMAIL || !password) {
-      throw new Error(
-        'TEST_USER_EMAIL and TEST_USER_PASSWORD_STAGING/PRODUCTION environment variables are required. ' +
-        'See tests/AUTHENTICATION_TEST_SETUP.md for setup instructions.'
-      );
-    }
-    
-    return {
-      email: process.env.TEST_USER_EMAIL,
-      password: password,
-    };
-  };
 
   /**
    * Generate a unique bracket name for testing
@@ -83,24 +59,13 @@ test.describe('Full Bracket Workflow', () => {
   /**
    * Helper to navigate to the next page in the bracket wizard
    */
-  async function navigateToNextPage(page: Page): Promise<boolean> {
-    const nextButton = page.getByRole('button', { name: /next/i });
-    
-    if (await nextButton.isEnabled()) {
-      await nextButton.click();
-      await page.waitForTimeout(500); // Wait for page transition
-      return true;
-    }
-    return false;
-  }
-
   /**
    * Helper to click on a specific step indicator
    */
   async function navigateToStep(page: Page, stepNumber: number): Promise<void> {
-    const stepIndicator = page.locator(`[class*="rounded-full"]`).filter({ hasText: String(stepNumber) });
-    const step = stepIndicator.first();
-    
+    // Step numbers are 1-based in tests; nav buttons use 0-based data-testid
+    const step = page.getByTestId(`bracket-step-nav-${stepNumber - 1}`);
+
     if (await step.isVisible() && await step.isEnabled()) {
       await step.click();
       await page.waitForTimeout(500);
@@ -120,16 +85,16 @@ test.describe('Full Bracket Workflow', () => {
   // FULL BRACKET COMPLETION - HAPPY PATH
   // ==========================================
   test.describe('Happy Path - Complete Bracket', () => {
-    test('should complete and save a full bracket across all regions', async ({ page }) => {
-      const credentials = getTestUserCredentials();
+    test('should complete and save a full bracket across all regions', async ({ page }, testInfo) => {
+      const credentials = getTestUserCredentials(testInfo.project.name);
       await signInUser(page, credentials.email, credentials.password);
       await page.goto('/bracket');
       
       // Wait for landing page
-      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+      await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
       
       // Click New Bracket
-      await page.getByRole('button', { name: /new bracket/i }).first().click();
+      await getNewBracketButton(page, testInfo.project.name).click();
       
       // Wait for wizard to load
       await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
@@ -151,11 +116,10 @@ test.describe('Full Bracket Workflow', () => {
         const morePicks = await completeRegionPicks(page);
         totalPicks += morePicks;
         
-        // Try to navigate to next step if not on last region
         if (step < 4) {
-          const nextButton = page.getByRole('button', { name: /next/i });
-          if (await nextButton.isEnabled()) {
-            await nextButton.click();
+          const nextRegion = page.getByTestId(`bracket-step-nav-${step}`);
+          if (await nextRegion.isEnabled()) {
+            await nextRegion.click();
             await page.waitForTimeout(500);
           }
         }
@@ -169,7 +133,7 @@ test.describe('Full Bracket Workflow', () => {
       await saveButton.click();
       
       // Should return to landing page
-      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+      await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
     });
   });
 
@@ -177,16 +141,16 @@ test.describe('Full Bracket Workflow', () => {
   // PICK INVALIDATION TESTS
   // ==========================================
   test.describe('Pick Invalidation Logic', () => {
-    test('should clear later round picks when changing a Round of 64 pick', async ({ page }) => {
-      const credentials = getTestUserCredentials();
+    test('should clear later round picks when changing a Round of 64 pick', async ({ page }, testInfo) => {
+      const credentials = getTestUserCredentials(testInfo.project.name);
       await signInUser(page, credentials.email, credentials.password);
       await page.goto('/bracket');
       
       // Wait for landing page
-      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+      await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
       
       // Click New Bracket
-      await page.getByRole('button', { name: /new bracket/i }).first().click();
+      await getNewBracketButton(page, testInfo.project.name).click();
       
       // Wait for wizard to load
       await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
@@ -219,19 +183,19 @@ test.describe('Full Bracket Workflow', () => {
       const cancelButton = page.getByRole('button', { name: /cancel/i });
       await cancelButton.click();
       
-      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+      await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
     });
 
-    test('should preserve unaffected picks when changing an early round pick', async ({ page }) => {
-      const credentials = getTestUserCredentials();
+    test('should preserve unaffected picks when changing an early round pick', async ({ page }, testInfo) => {
+      const credentials = getTestUserCredentials(testInfo.project.name);
       await signInUser(page, credentials.email, credentials.password);
       await page.goto('/bracket');
       
       // Wait for landing page
-      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+      await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
       
       // Click New Bracket
-      await page.getByRole('button', { name: /new bracket/i }).first().click();
+      await getNewBracketButton(page, testInfo.project.name).click();
       
       // Wait for wizard to load
       await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
@@ -274,13 +238,13 @@ test.describe('Full Bracket Workflow', () => {
   // TIEBREAKER VALIDATION TESTS
   // ==========================================
   test.describe('Tiebreaker Validation', () => {
-    test('should show tiebreaker input on Final Four page (step 5)', async ({ page }) => {
-      const credentials = getTestUserCredentials();
+    test('should show tiebreaker input on Final Four page (step 5)', async ({ page }, testInfo) => {
+      const credentials = getTestUserCredentials(testInfo.project.name);
       await signInUser(page, credentials.email, credentials.password);
       await page.goto('/bracket');
       
       // Find an existing in-progress bracket with some picks, or create new
-      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+      await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
       
       // Look for an existing in-progress bracket
       const inProgressRow = page.locator('tr').filter({ hasText: /in progress/i }).first();
@@ -302,8 +266,7 @@ test.describe('Full Bracket Workflow', () => {
           const tiebreakerVisible = await tiebreakerLabel.isVisible().catch(() => false);
           
           // If we can't navigate to step 5 (not all regions complete), verify step exists
-          const step5 = page.locator('[class*="rounded-full"]').filter({ hasText: '5' });
-          await expect(step5.first()).toBeVisible();
+          await expect(page.getByTestId('bracket-step-nav-4')).toBeVisible();
         }
       }
       
@@ -314,22 +277,22 @@ test.describe('Full Bracket Workflow', () => {
       }
     });
 
-    test('should require valid tiebreaker value within configured range', async ({ page }) => {
+    test('should require valid tiebreaker value within configured range', async ({ page }, testInfo) => {
       // This test documents the expected behavior
       // The actual validation happens on the Final Four page
       
-      const credentials = getTestUserCredentials();
+      const credentials = getTestUserCredentials(testInfo.project.name);
       await signInUser(page, credentials.email, credentials.password);
       await page.goto('/bracket');
       
-      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+      await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
       
       // Create new bracket
-      await page.getByRole('button', { name: /new bracket/i }).first().click();
+      await getNewBracketButton(page, testInfo.project.name).click();
       await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
       
       // Verify step navigation structure exists
-      const steps = page.locator('[class*="rounded-full"]').filter({ hasText: /\d/ });
+      const steps = page.locator('[data-testid^="bracket-step-nav-"]');
       const stepCount = await steps.count();
       
       // Should have 5 steps (4 regions + Final Four)
@@ -344,19 +307,19 @@ test.describe('Full Bracket Workflow', () => {
   // ENTRY NAME VALIDATION TESTS
   // ==========================================
   test.describe('Entry Name Validation', () => {
-    test('should display entry name field with default value', async ({ page }) => {
-      const credentials = getTestUserCredentials();
+    test('should display entry name field with default value', async ({ page }, testInfo) => {
+      const credentials = getTestUserCredentials(testInfo.project.name);
       await signInUser(page, credentials.email, credentials.password);
       await page.goto('/bracket');
       
-      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+      await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
       
       // Create new bracket
-      await page.getByRole('button', { name: /new bracket/i }).first().click();
+      await getNewBracketButton(page, testInfo.project.name).click();
       await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
       
       // Look for entry name input
-      const entryNameInput = page.locator('input[type="text"]').first();
+      const entryNameInput = page.getByTestId('entry-name-input');
       
       if (await entryNameInput.isVisible()) {
         // Entry name should have a default value (user's name)
@@ -368,19 +331,19 @@ test.describe('Full Bracket Workflow', () => {
       await page.getByRole('button', { name: /cancel/i }).click();
     });
 
-    test('should allow editing entry name', async ({ page }) => {
-      const credentials = getTestUserCredentials();
+    test('should allow editing entry name', async ({ page }, testInfo) => {
+      const credentials = getTestUserCredentials(testInfo.project.name);
       await signInUser(page, credentials.email, credentials.password);
       await page.goto('/bracket');
       
-      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+      await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
       
       // Create new bracket
-      await page.getByRole('button', { name: /new bracket/i }).first().click();
+      await getNewBracketButton(page, testInfo.project.name).click();
       await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
       
       // Find and edit entry name input
-      const entryNameInput = page.locator('input[type="text"]').first();
+      const entryNameInput = page.getByTestId('entry-name-input');
       
       if (await entryNameInput.isVisible()) {
         const testName = generateTestBracketName();
@@ -400,19 +363,19 @@ test.describe('Full Bracket Workflow', () => {
   // COPY BRACKET TESTS
   // ==========================================
   test.describe('Copy Bracket Functionality', () => {
-    test('should have copy button for in-progress brackets', async ({ page }) => {
-      const credentials = getTestUserCredentials();
+    test('should have copy button for in-progress brackets', async ({ page }, testInfo) => {
+      const credentials = getTestUserCredentials(testInfo.project.name);
       await signInUser(page, credentials.email, credentials.password);
       await page.goto('/bracket');
       
-      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+      await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
       
       // Look for in-progress bracket rows
       const inProgressRow = page.locator('tr').filter({ hasText: /in progress/i }).first();
       
       if (await inProgressRow.isVisible()) {
-        // Look for Copy button
-        const copyButton = inProgressRow.locator('button[title="Copy"]');
+        // Look for Copy button - use data-testid for stability
+        const copyButton = inProgressRow.getByTestId('copy-bracket-button');
         
         // Copy button may be hidden if bracket creation is disabled
         const copyVisible = await copyButton.isVisible().catch(() => false);
@@ -422,19 +385,19 @@ test.describe('Full Bracket Workflow', () => {
       }
     });
 
-    test('should have copy button for submitted brackets', async ({ page }) => {
-      const credentials = getTestUserCredentials();
+    test('should have copy button for submitted brackets', async ({ page }, testInfo) => {
+      const credentials = getTestUserCredentials(testInfo.project.name);
       await signInUser(page, credentials.email, credentials.password);
       await page.goto('/bracket');
       
-      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+      await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
       
       // Look for submitted bracket rows
       const submittedRow = page.locator('tr').filter({ hasText: /submitted/i }).first();
       
       if (await submittedRow.isVisible()) {
-        // Look for Copy button
-        const copyButton = submittedRow.locator('button[title="Copy"]');
+        // Look for Copy button - use data-testid for stability
+        const copyButton = submittedRow.getByTestId('copy-bracket-button');
         
         // Copy button visibility depends on whether bracket creation is enabled
         const copyVisible = await copyButton.isVisible().catch(() => false);
@@ -447,12 +410,12 @@ test.describe('Full Bracket Workflow', () => {
       }
     });
 
-    test('should copy bracket with all picks preserved', async ({ page }) => {
-      const credentials = getTestUserCredentials();
+    test('should copy bracket with all picks preserved', async ({ page }, testInfo) => {
+      const credentials = getTestUserCredentials(testInfo.project.name);
       await signInUser(page, credentials.email, credentials.password);
-      await page.goto('/bracket');
+      // Note: signInUser already navigates to /bracket and verifies authentication
       
-      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+      await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
       
       // Count initial brackets
       const initialRows = page.locator('tr').filter({ has: page.locator('td') });
@@ -462,23 +425,27 @@ test.describe('Full Bracket Workflow', () => {
       const bracketRow = page.locator('tr').filter({ hasText: /\d+.*\/.*63/ }).first();
       
       if (await bracketRow.isVisible()) {
-        const copyButton = bracketRow.locator('button[title="Copy"]');
+        const copyButton = bracketRow.getByTestId('copy-bracket-button');
         
         if (await copyButton.isVisible() && await copyButton.isEnabled()) {
           await copyButton.click();
-          
-          // Wait for copy to complete
-          await page.waitForTimeout(2000);
-          
+
+          await expect(page.getByTestId('copy-bracket-name-dialog')).toBeVisible({ timeout: 15000 });
+          await page.getByTestId('copy-bracket-open-bracket').click();
+
+          // Editor opens with Cancel, or we remain on landing
+          const cancelButton = page.getByRole('button', { name: /cancel/i });
+          const entryNameInEditor = page.getByTestId('entry-name-input').first();
+          await expect(cancelButton.or(entryNameInEditor)).toBeVisible({ timeout: 15000 });
+
           // A new bracket should appear (either on landing or in edit mode)
           // If in edit mode, cancel to return
-          const cancelButton = page.getByRole('button', { name: /cancel/i });
           if (await cancelButton.isVisible()) {
             await cancelButton.click();
           }
           
           // Verify we're back on landing
-          await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+          await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
           
           // Count brackets again - should have one more
           const finalRows = page.locator('tr').filter({ has: page.locator('td') });
@@ -496,15 +463,15 @@ test.describe('Full Bracket Workflow', () => {
   // SUBMISSION FLOW TESTS
   // ==========================================
   test.describe('Submission Flow', () => {
-    test('should not allow submission with incomplete bracket', async ({ page }) => {
-      const credentials = getTestUserCredentials();
+    test('should not allow submission with incomplete bracket', async ({ page }, testInfo) => {
+      const credentials = getTestUserCredentials(testInfo.project.name);
       await signInUser(page, credentials.email, credentials.password);
       await page.goto('/bracket');
       
-      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+      await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
       
       // Create new bracket with only a few picks
-      await page.getByRole('button', { name: /new bracket/i }).first().click();
+      await getNewBracketButton(page, testInfo.project.name).click();
       await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
       
       // Make just a couple picks
@@ -516,44 +483,30 @@ test.describe('Full Bracket Workflow', () => {
       
       // Submit button should be disabled or not present on region pages
       // (Submit only appears on Final Four page after all picks are made)
-      const submitButton = page.getByRole('button', { name: /submit/i });
-      const submitVisible = await submitButton.isVisible().catch(() => false);
-      
-      // On region pages, there should be Next, not Submit
-      const nextButton = page.getByRole('button', { name: /next/i });
-      await expect(nextButton).toBeVisible();
-      
-      // Next should be disabled until region is complete
-      // (This depends on how many picks were made)
-      
+      await expect(page.getByTestId('bracket-step-nav-bar')).toBeVisible();
+      await expect(page.getByTestId('bracket-step-nav-0')).toBeVisible();
+
       // Cancel
       await page.getByRole('button', { name: /cancel/i }).click();
     });
 
-    test('should show Submit button on Final Four page when complete', async ({ page }) => {
-      const credentials = getTestUserCredentials();
+    test('should show Submit button on Final Four page when complete', async ({ page }, testInfo) => {
+      const credentials = getTestUserCredentials(testInfo.project.name);
       await signInUser(page, credentials.email, credentials.password);
       await page.goto('/bracket');
       
-      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+      await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
       
       // Create new bracket
-      await page.getByRole('button', { name: /new bracket/i }).first().click();
+      await getNewBracketButton(page, testInfo.project.name).click();
       await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
       
       // Navigate to step 5 to see what's there
       await navigateToStep(page, 5);
       await page.waitForTimeout(500);
       
-      // On Final Four page, there should be a Submit button (even if disabled)
       const submitButton = page.getByRole('button', { name: /submit/i });
-      const nextButton = page.getByRole('button', { name: /next/i });
-      
-      // Either Submit or Next should be visible (Next becomes Submit on last step)
-      const hasSubmit = await submitButton.isVisible().catch(() => false);
-      const hasNext = await nextButton.isVisible().catch(() => false);
-      
-      expect(hasSubmit || hasNext).toBeTruthy();
+      await expect(submitButton).toBeVisible();
       
       // Cancel
       await page.getByRole('button', { name: /cancel/i }).click();
@@ -564,22 +517,21 @@ test.describe('Full Bracket Workflow', () => {
   // READ-ONLY VIEW TESTS
   // ==========================================
   test.describe('Read-Only Submitted Bracket View', () => {
-    test('should display submitted bracket in read-only mode', async ({ page }) => {
-      const credentials = getTestUserCredentials();
+    test('should display submitted bracket in read-only mode', async ({ page }, testInfo) => {
+      const credentials = getTestUserCredentials(testInfo.project.name);
       await signInUser(page, credentials.email, credentials.password);
       await page.goto('/bracket');
       
-      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+      await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
       
       // Find a submitted bracket
       const submittedRow = page.locator('tr').filter({ hasText: /submitted/i }).first();
       
       if (await submittedRow.isVisible()) {
-        // Click View button (eye icon)
-        const viewButton = submittedRow.locator('button[title="View"]');
-        
-        if (await viewButton.isVisible()) {
-          await viewButton.click();
+        // Open read-only bracket from entry name column (View button removed)
+        const entryCell = submittedRow.locator('td').first();
+        if (await entryCell.isVisible()) {
+          await entryCell.click();
           await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
           
           // In read-only mode, team elements should have opacity-50 or cursor-not-allowed
@@ -598,21 +550,20 @@ test.describe('Full Bracket Workflow', () => {
       }
     });
 
-    test('should not allow editing picks in read-only mode', async ({ page }) => {
-      const credentials = getTestUserCredentials();
+    test('should not allow editing picks in read-only mode', async ({ page }, testInfo) => {
+      const credentials = getTestUserCredentials(testInfo.project.name);
       await signInUser(page, credentials.email, credentials.password);
       await page.goto('/bracket');
       
-      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+      await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
       
       // Find a submitted bracket
       const submittedRow = page.locator('tr').filter({ hasText: /submitted/i }).first();
       
       if (await submittedRow.isVisible()) {
-        const viewButton = submittedRow.locator('button[title="View"]');
-        
-        if (await viewButton.isVisible()) {
-          await viewButton.click();
+        const entryCell = submittedRow.locator('td').first();
+        if (await entryCell.isVisible()) {
+          await entryCell.click();
           await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
           
           // Count checkmarks before attempting to click
@@ -641,40 +592,35 @@ test.describe('Full Bracket Workflow', () => {
   // PRINT AND EMAIL TESTS
   // ==========================================
   test.describe('Print and Email Functionality', () => {
-    test('should have Print button for submitted brackets', async ({ page }) => {
-      const credentials = getTestUserCredentials();
+    test('should have Print button for submitted brackets', async ({ page }, testInfo) => {
+      const credentials = getTestUserCredentials(testInfo.project.name);
       await signInUser(page, credentials.email, credentials.password);
       await page.goto('/bracket');
       
-      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+      await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
       
       // Find a submitted bracket
       const submittedRow = page.locator('tr').filter({ hasText: /submitted/i }).first();
       
       if (await submittedRow.isVisible()) {
-        // Look for Print button
-        const printButton = submittedRow.locator('button[title="Print"]');
-        
-        // Print might be hidden on mobile, check desktop
-        const printVisible = await printButton.isVisible().catch(() => false);
-        
-        // Print should exist (may be desktop-only)
+        const printButton = submittedRow.getByTestId('print-bracket-button');
+        await expect(printButton).toBeVisible();
       }
     });
 
-    test('should have Email button for submitted brackets', async ({ page }) => {
-      const credentials = getTestUserCredentials();
+    test('should have Email button for submitted brackets', async ({ page }, testInfo) => {
+      const credentials = getTestUserCredentials(testInfo.project.name);
       await signInUser(page, credentials.email, credentials.password);
       await page.goto('/bracket');
       
-      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+      await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
       
       // Find a submitted bracket
       const submittedRow = page.locator('tr').filter({ hasText: /submitted/i }).first();
       
       if (await submittedRow.isVisible()) {
-        // Look for Email button
-        const emailButton = submittedRow.locator('button[title*="Email"]');
+        // Look for Email button - use data-testid for stability
+        const emailButton = submittedRow.getByTestId('email-bracket-button');
         
         if (await emailButton.isVisible()) {
           // Click to open email dialog
@@ -695,13 +641,13 @@ test.describe('Full Bracket Workflow', () => {
   // FULL E2E SUBMISSION TEST
   // ==========================================
   test.describe('Full E2E Submission', () => {
-    test('should complete and submit a bracket, then verify it appears as Submitted', async ({ page }) => {
-      const credentials = getTestUserCredentials();
+    test('should complete and submit a bracket, then verify it appears as Submitted', async ({ page }, testInfo) => {
+      const credentials = getTestUserCredentials(testInfo.project.name);
       await signInUser(page, credentials.email, credentials.password);
       await page.goto('/bracket');
       
       // Wait for landing page
-      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+      await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
       
       // Count initial submitted brackets
       const initialSubmittedCount = await page.locator('tr').filter({ hasText: /submitted/i }).count();
@@ -710,11 +656,11 @@ test.describe('Full Bracket Workflow', () => {
       const testBracketName = `Submit-Test-${Date.now()}`;
       
       // Click New Bracket
-      await page.getByRole('button', { name: /new bracket/i }).first().click();
+      await getNewBracketButton(page, testInfo.project.name).click();
       await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
       
       // Set the entry name
-      const entryNameInput = page.locator('input[type="text"]').first();
+      const entryNameInput = page.getByTestId('entry-name-input');
       if (await entryNameInput.isVisible()) {
         await entryNameInput.clear();
         await entryNameInput.fill(testBracketName);
@@ -729,23 +675,30 @@ test.describe('Full Bracket Workflow', () => {
           await page.waitForTimeout(500);
         }
         
-        // Navigate to next step
-        const nextButton = page.getByRole('button', { name: /next/i });
-        if (await nextButton.isEnabled()) {
-          await nextButton.click();
-          await page.waitForTimeout(500);
+        if (step < 4) {
+          const nextRegion = page.getByTestId(`bracket-step-nav-${step}`);
+          if (await nextRegion.isEnabled()) {
+            await nextRegion.click();
+            await page.waitForTimeout(500);
+          }
         }
       }
-      
-      // Now on step 5 (Final Four) - complete Final Four picks
+
+      const finalFourNav = page.getByTestId('bracket-step-nav-4');
+      if (await finalFourNav.isEnabled()) {
+        await finalFourNav.click();
+        await page.waitForTimeout(500);
+      }
+
+      // Final Four — complete picks
       for (let round = 0; round < 3; round++) {
         const picksMade = await completeRegionPicks(page);
         if (picksMade === 0) break;
         await page.waitForTimeout(500);
       }
       
-      // Fill in tiebreaker if present
-      const tiebreakerInput = page.locator('input[type="number"]');
+      // Fill in tiebreaker if present - use data-testid for stability
+      const tiebreakerInput = page.getByTestId('tiebreaker-input');
       if (await tiebreakerInput.isVisible()) {
         await tiebreakerInput.fill('150');
       }
@@ -766,7 +719,7 @@ test.describe('Full Bracket Workflow', () => {
         }
         
         // Should return to landing page
-        await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+        await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
         
         // Count submitted brackets - should have one more
         const finalSubmittedCount = await page.locator('tr').filter({ hasText: /submitted/i }).count();
@@ -782,7 +735,7 @@ test.describe('Full Bracket Workflow', () => {
         // If Submit not available, save instead
         const saveButton = page.getByRole('button', { name: /save/i });
         await saveButton.click();
-        await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+        await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
       }
     });
   });
@@ -791,22 +744,22 @@ test.describe('Full Bracket Workflow', () => {
   // DELETE BRACKET TESTS
   // ==========================================
   test.describe('Delete Bracket', () => {
-    test('should delete an in-progress bracket and verify it is removed', async ({ page }) => {
-      const credentials = getTestUserCredentials();
+    test('should delete an in-progress bracket and verify it is removed', async ({ page }, testInfo) => {
+      const credentials = getTestUserCredentials(testInfo.project.name);
       await signInUser(page, credentials.email, credentials.password);
       await page.goto('/bracket');
       
       // Wait for landing page
-      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+      await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
       
       // First, create a bracket to delete
       const testBracketName = `Delete-Test-${Date.now()}`;
       
-      await page.getByRole('button', { name: /new bracket/i }).first().click();
+      await getNewBracketButton(page, testInfo.project.name).click();
       await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
       
       // Set unique name
-      const entryNameInput = page.locator('input[type="text"]').first();
+      const entryNameInput = page.getByTestId('entry-name-input');
       if (await entryNameInput.isVisible()) {
         await entryNameInput.clear();
         await entryNameInput.fill(testBracketName);
@@ -824,17 +777,14 @@ test.describe('Full Bracket Workflow', () => {
       await saveButton.click();
       
       // Wait to return to landing
-      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
-      
-      // Count brackets before delete
-      const rowsBefore = await page.locator('tr').filter({ has: page.locator('td') }).count();
+      await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
       
       // Find the bracket we just created (should be in-progress)
       const bracketRow = page.locator('tr').filter({ hasText: testBracketName }).first();
       
       if (await bracketRow.isVisible()) {
-        // Click Delete button (trash icon)
-        const deleteButton = bracketRow.locator('button[title="Delete"]');
+        // Click Delete button - use data-testid for stability
+        const deleteButton = bracketRow.getByTestId('delete-bracket-button');
         
         if (await deleteButton.isVisible()) {
           await deleteButton.click();
@@ -855,33 +805,30 @@ test.describe('Full Bracket Workflow', () => {
             
             // Refresh the page to ensure we see the latest state
             await page.reload();
-            await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+            await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
             
-            // Verify bracket is removed
+            // Verify bracket is removed - this is the definitive assertion
+            // Note: We don't check row count because parallel tests may create brackets concurrently
             const bracketStillExists = await page.locator('tr').filter({ hasText: testBracketName }).isVisible().catch(() => false);
             expect(bracketStillExists).toBeFalsy();
-            
-            // Row count should be less than before
-            const rowsAfter = await page.locator('tr').filter({ has: page.locator('td') }).count();
-            expect(rowsAfter).toBeLessThan(rowsBefore);
           }
         }
       }
     });
 
-    test('should show confirmation dialog before deleting', async ({ page }) => {
-      const credentials = getTestUserCredentials();
+    test('should show confirmation dialog before deleting', async ({ page }, testInfo) => {
+      const credentials = getTestUserCredentials(testInfo.project.name);
       await signInUser(page, credentials.email, credentials.password);
       await page.goto('/bracket');
       
       // Wait for landing page
-      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+      await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
       
       // Find any in-progress bracket
       const inProgressRow = page.locator('tr').filter({ hasText: /in progress/i }).first();
       
       if (await inProgressRow.isVisible()) {
-        const deleteButton = inProgressRow.locator('button[title="Delete"]');
+        const deleteButton = inProgressRow.getByTestId('delete-bracket-button');
         
         if (await deleteButton.isVisible()) {
           await deleteButton.click();
@@ -914,13 +861,13 @@ test.describe('Full Bracket Workflow', () => {
   // COPY CREATES NEW BRACKET TEST
   // ==========================================
   test.describe('Copy Creates New Entry', () => {
-    test('should create a distinct new bracket when copying', async ({ page }) => {
-      const credentials = getTestUserCredentials();
+    test('should create a distinct new bracket when copying', async ({ page }, testInfo) => {
+      const credentials = getTestUserCredentials(testInfo.project.name);
       await signInUser(page, credentials.email, credentials.password);
       await page.goto('/bracket');
       
       // Wait for landing page
-      await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+      await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
       
       // Count initial bracket rows
       const initialRowCount = await page.locator('tr').filter({ has: page.locator('td') }).count();
@@ -937,15 +884,17 @@ test.describe('Full Bracket Workflow', () => {
         
         if (await copyButton.isVisible() && await copyButton.isEnabled()) {
           await copyButton.click();
-          
-          // Should enter edit mode for the copied bracket
+
+          await expect(page.getByTestId('copy-bracket-name-dialog')).toBeVisible({ timeout: 15000 });
+          await page.getByTestId('copy-bracket-open-bracket').click();
+
           await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
-          
+
           // In edit mode, the entry name should be visible
-          const entryNameInput = page.locator('input[type="text"]').first();
-          
+          const entryNameInput = page.getByTestId('entry-name-input');
+
           if (await entryNameInput.isVisible()) {
-            // The copied bracket should have a new name (often "Copy of X" or similar)
+            // Microsoft-style default: original name + " - Copy"
             const copiedName = await entryNameInput.inputValue();
             
             // Save the copied bracket
@@ -953,7 +902,7 @@ test.describe('Full Bracket Workflow', () => {
             await saveButton.click();
             
             // Wait to return to landing
-            await expect(page.getByRole('button', { name: /new bracket/i }).first()).toBeVisible({ timeout: 15000 });
+            await expect(getNewBracketButton(page, testInfo.project.name)).toBeVisible({ timeout: 15000 });
             
             // Count brackets now - should have more than before
             // (Using >= instead of exact +1 because other tests may run in parallel)

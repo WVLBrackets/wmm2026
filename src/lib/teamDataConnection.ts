@@ -1,4 +1,5 @@
 import type { QueryResult, Pool } from 'pg';
+import { withPostgresSessionTimezoneUtc } from './databaseConfig';
 
 /**
  * SQL function type for team data operations
@@ -19,15 +20,17 @@ async function getTeamDataSqlAdapter(): Promise<SqlFunction> {
     // In staging, POSTGRES_URL_PROD points to prod DB
     // In production, POSTGRES_URL_PROD should equal POSTGRES_URL (or we use POSTGRES_URL)
     const postgresUrl = process.env.POSTGRES_URL_PROD || process.env.POSTGRES_URL;
-    
+
     if (!postgresUrl) {
       throw new Error('POSTGRES_URL_PROD or POSTGRES_URL environment variable is not set for team data');
     }
-    
+
+    const connectionString = withPostgresSessionTimezoneUtc(postgresUrl);
+
     // Use pg Pool for cross-environment connection (works for Neon/Vercel Postgres)
     const { Pool } = await import('pg');
     teamDataPool = new Pool({
-      connectionString: postgresUrl,
+      connectionString,
       ssl: { rejectUnauthorized: false }, // Required for Neon/Vercel Postgres
       max: 5, // Limit connection pool size
     });
@@ -60,3 +63,13 @@ export const teamDataSql = async (strings: TemplateStringsArray, ...values: unkn
   return sqlAdapter(strings, ...values);
 };
 
+/**
+ * Pool for advanced queries (e.g. batched writes). Initializes the same connection as {@link teamDataSql}.
+ */
+export async function getTeamDataPool(): Promise<Pool> {
+  await getTeamDataSqlAdapter();
+  if (!teamDataPool) {
+    throw new Error('Team data pool not initialized');
+  }
+  return teamDataPool;
+}

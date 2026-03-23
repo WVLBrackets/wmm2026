@@ -96,8 +96,8 @@ async function analyzeTestAccounts(startTime?: string, endTime?: string) {
         environment
       FROM users
       WHERE environment = ${dbEnvironment}
-        AND created_at >= ${startTime}::timestamp
-        AND created_at <= ${endTime}::timestamp
+        AND created_at >= ${startTime}::timestamptz
+        AND created_at <= ${endTime}::timestamptz
       ORDER BY created_at ASC
     `;
 

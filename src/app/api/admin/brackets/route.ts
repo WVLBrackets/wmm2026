@@ -13,11 +13,18 @@ export async function GET() {
     // Get all brackets with user information
     const brackets = await getAllBrackets();
     
-    return NextResponse.json({
-      success: true,
-      data: brackets,
-      count: brackets.length
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        data: brackets,
+        count: brackets.length,
+      },
+      {
+        headers: {
+          'Cache-Control': 'private, no-store, max-age=0',
+        },
+      }
+    );
   } catch (error) {
     console.error('Admin brackets error:', error);
     

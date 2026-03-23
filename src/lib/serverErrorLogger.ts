@@ -34,7 +34,7 @@ export async function logServerError(entry: ServerErrorLogEntry): Promise<void> 
       ) VALUES (
         ${id},
         ${environment},
-        CURRENT_TIMESTAMP,
+        ${new Date()},
         ${entry.isLoggedIn ?? false},
         ${entry.username || null},
         ${entry.errorMessage},

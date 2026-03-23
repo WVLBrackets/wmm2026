@@ -1,0 +1,146 @@
+name: PR Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+      - staging
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke-test:
+    name: PR Smoke Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      
+      - name: Run Smoke Test
+        env:
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD_STAGING: ${{ secrets.TEST_USER_PASSWORD_STAGING }}
+          TEST_ENV: staging
+          SUPPRESS_TEST_EMAILS: 'true'
+          PLAYWRIGHT_WORKERS: '2'
+        run: |
+          npx playwright test tests/e2e/smoke-test.spec.ts --project=chromium
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-smoke-test-report
+          path: playwright-report/
+          retention-days: 7
+      
+      - name: Upload traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-smoke-test-traces
+          path: test-results/
+          retention-days: 7
+
+  api-tests:
+    name: PR API Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install Playwright (no browsers needed for API tests)
+        run: npx playwright install
+      
+      - name: Run API Tests
+        env:
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD_STAGING: ${{ secrets.TEST_USER_PASSWORD_STAGING }}
+          TEST_ENV: staging
+          SUPPRESS_TEST_EMAILS: 'true'
+          PLAYWRIGHT_WORKERS: '4'
+        run: |
+          npx playwright test tests/api/ --project=chromium
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-api-test-report
+          path: playwright-report/
+          retention-days: 7
+
+  security-tests:
+    name: PR Security Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install Playwright (no browsers needed for API tests)
+        run: npx playwright install
+      
+      - name: Run Security Tests
+        env:
+          TEST_ENV: staging
+          SUPPRESS_TEST_EMAILS: 'true'
+          PLAYWRIGHT_WORKERS: '4'
+        run: |
+          npx playwright test tests/api/security.spec.ts --project=chromium
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-security-test-report
+          path: playwright-report/
+          retention-days: 7

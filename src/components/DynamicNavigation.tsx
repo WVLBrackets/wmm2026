@@ -64,6 +64,9 @@ export default function DynamicNavigation({ hideInBracketMode = false }: Dynamic
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
+  /** Standings section includes daily (`/standings`) and live (`/standings/live`) from the in-page toggle. */
+  const isStandingsNavActive = pathname === '/standings' || pathname === '/standings/live';
+
   // Determine if My Picks should be shown based on environment and feature flags
   const shouldShowMyPicks = () => {
     if (!siteConfig) return false;
@@ -159,8 +162,9 @@ export default function DynamicNavigation({ hideInBracketMode = false }: Dynamic
           <div className="hidden lg:flex items-center space-x-8">
             {navigationItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href;
-              
+              const isActive =
+                item.href === '/standings' ? isStandingsNavActive : pathname === item.href;
+
               return (
                 <Link
                   key={item.name}
@@ -212,8 +216,9 @@ export default function DynamicNavigation({ hideInBracketMode = false }: Dynamic
           <div className="lg:hidden flex items-center space-x-2">
             {navigationItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href;
-              
+              const isActive =
+                item.href === '/standings' ? isStandingsNavActive : pathname === item.href;
+
               return (
                 <Link
                   key={item.name}
@@ -271,8 +276,9 @@ export default function DynamicNavigation({ hideInBracketMode = false }: Dynamic
               <div className="space-y-1">
                 {navigationItems.map((item) => {
                   const Icon = item.icon;
-                  const isActive = pathname === item.href;
-                  
+                  const isActive =
+                    item.href === '/standings' ? isStandingsNavActive : pathname === item.href;
+
                   return (
                     <Link
                       key={item.name}

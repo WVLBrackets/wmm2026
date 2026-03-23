@@ -47,8 +47,8 @@ export async function sendSubmissionConfirmationEmail(
   
   try {
     // Load tournament data
-    const { loadTournamentData } = await import('@/lib/tournamentLoader');
-    const tournamentData = await loadTournamentData(tournamentYear);
+    const { loadTournamentWithDisplayNames } = await import('@/lib/loadTournamentWithDisplayNames');
+    const tournamentData = await loadTournamentWithDisplayNames(tournamentYear);
     
     // Generate bracket structure
     const { generate64TeamBracket, updateBracketWithPicks } = await import('@/lib/bracketGenerator');
@@ -189,8 +189,8 @@ export async function sendOnDemandPdfEmail(
     // Load tournament data
     const tournamentYear = siteConfig?.tournamentYear || bracket.year?.toString() || new Date().getFullYear().toString();
     
-    const { loadTournamentData } = await import('@/lib/tournamentLoader');
-    const tournamentData = await loadTournamentData(tournamentYear);
+    const { loadTournamentWithDisplayNames } = await import('@/lib/loadTournamentWithDisplayNames');
+    const tournamentData = await loadTournamentWithDisplayNames(tournamentYear);
     
     // Generate bracket structure
     const { generate64TeamBracket, updateBracketWithPicks } = await import('@/lib/bracketGenerator');

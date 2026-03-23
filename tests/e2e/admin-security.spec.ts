@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { signInUser } from '../fixtures/auth-helpers';
+import { getBaseURL, getTestUserCredentials } from '../fixtures/test-helpers';
 
 /**
  * Admin Security Tests
@@ -16,30 +17,6 @@ import { signInUser } from '../fixtures/auth-helpers';
  */
 
 test.describe('Admin Security - Access Control', () => {
-  /**
-   * Get test user credentials (regular user, NOT admin)
-   */
-  const getTestUserCredentials = () => {
-    const isProduction = process.env.TEST_ENV === 'production' || 
-                         process.env.TEST_ENV === 'prod' ||
-                         (process.env.PLAYWRIGHT_TEST_BASE_URL && 
-                          process.env.PLAYWRIGHT_TEST_BASE_URL.includes('warrensmm.com'));
-    
-    const password = isProduction 
-      ? (process.env.TEST_USER_PASSWORD_PRODUCTION || process.env.TEST_USER_PASSWORD)
-      : (process.env.TEST_USER_PASSWORD_STAGING || process.env.TEST_USER_PASSWORD);
-    
-    if (!process.env.TEST_USER_EMAIL || !password) {
-      throw new Error(
-        'TEST_USER_EMAIL and TEST_USER_PASSWORD_STAGING/PRODUCTION environment variables are required.'
-      );
-    }
-    
-    return {
-      email: process.env.TEST_USER_EMAIL,
-      password: password,
-    };
-  };
 
   test.describe('Unauthenticated Access', () => {
     test('should redirect unauthenticated user from /admin to sign-in', async ({ page }) => {
@@ -72,8 +49,8 @@ test.describe('Admin Security - Access Control', () => {
   });
 
   test.describe('Non-Admin Authenticated Access', () => {
-    test('should block non-admin user from /admin', async ({ page }) => {
-      const credentials = getTestUserCredentials();
+    test('should block non-admin user from /admin', async ({ page }, testInfo) => {
+      const credentials = getTestUserCredentials(testInfo.project.name);
       await signInUser(page, credentials.email, credentials.password);
       
       // Try to access admin page
@@ -87,8 +64,8 @@ test.describe('Admin Security - Access Control', () => {
       expect(isRedirected || hasUnauthorized).toBeTruthy();
     });
 
-    test('should block non-admin user from /admin/users-across-environments', async ({ page }) => {
-      const credentials = getTestUserCredentials();
+    test('should block non-admin user from /admin/users-across-environments', async ({ page }, testInfo) => {
+      const credentials = getTestUserCredentials(testInfo.project.name);
       await signInUser(page, credentials.email, credentials.password);
       
       // Try to access admin page
@@ -102,8 +79,8 @@ test.describe('Admin Security - Access Control', () => {
       expect(isRedirected || hasUnauthorized).toBeTruthy();
     });
 
-    test('should block non-admin user from /admin/reset-password', async ({ page }) => {
-      const credentials = getTestUserCredentials();
+    test('should block non-admin user from /admin/reset-password', async ({ page }, testInfo) => {
+      const credentials = getTestUserCredentials(testInfo.project.name);
       await signInUser(page, credentials.email, credentials.password);
       
       // Try to access admin page
@@ -117,8 +94,8 @@ test.describe('Admin Security - Access Control', () => {
       expect(isRedirected || hasUnauthorized).toBeTruthy();
     });
 
-    test('should block non-admin user from /admin/tournament-builder', async ({ page }) => {
-      const credentials = getTestUserCredentials();
+    test('should block non-admin user from /admin/tournament-builder', async ({ page }, testInfo) => {
+      const credentials = getTestUserCredentials(testInfo.project.name);
       await signInUser(page, credentials.email, credentials.password);
       
       // Try to access admin page
@@ -135,22 +112,15 @@ test.describe('Admin Security - Access Control', () => {
 
   test.describe('Admin API Security', () => {
     test('should return 401/403 for unauthenticated admin API request', async ({ request }) => {
-      // Get baseURL
-      const baseURL = process.env.PLAYWRIGHT_TEST_BASE_URL || 
-                      process.env.STAGING_URL || 
-                      'https://wmm2026-git-staging-ncaatourney-gmailcoms-projects.vercel.app';
+      const baseURL = getBaseURL();
       
-      // Try to access admin users API without authentication
       const response = await request.get(`${baseURL}/api/admin/users`);
       
-      // Should be 401 (unauthorized) or 403 (forbidden)
       expect([401, 403]).toContain(response.status());
     });
 
     test('should return 401/403 for unauthenticated admin brackets API', async ({ request }) => {
-      const baseURL = process.env.PLAYWRIGHT_TEST_BASE_URL || 
-                      process.env.STAGING_URL || 
-                      'https://wmm2026-git-staging-ncaatourney-gmailcoms-projects.vercel.app';
+      const baseURL = getBaseURL();
       
       const response = await request.get(`${baseURL}/api/admin/brackets`);
       
@@ -158,9 +128,7 @@ test.describe('Admin Security - Access Control', () => {
     });
 
     test('should return 401/403 for unauthenticated admin reset-password API', async ({ request }) => {
-      const baseURL = process.env.PLAYWRIGHT_TEST_BASE_URL || 
-                      process.env.STAGING_URL || 
-                      'https://wmm2026-git-staging-ncaatourney-gmailcoms-projects.vercel.app';
+      const baseURL = getBaseURL();
       
       const response = await request.post(`${baseURL}/api/admin/reset-password`, {
         data: { email: 'test@example.com', newPassword: 'test123' }

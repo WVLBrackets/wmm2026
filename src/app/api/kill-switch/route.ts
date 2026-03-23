@@ -1,24 +1,20 @@
 import { NextResponse } from 'next/server';
-import { getMasterKillSwitchEnabled } from '@/lib/repositories/featureFlagRepository';
-import { getSiteConfigFromGoogleSheetsFresh } from '@/lib/siteConfig';
+import { getKillSwitchState } from '@/lib/killSwitch';
 import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 
 /**
  * GET /api/kill-switch - Public kill switch state and user-facing message.
+ * Uses {@link getKillSwitchState} (no Google Sheets round-trip when the switch is ON).
  */
 export async function GET() {
   try {
-    const [enabled, config] = await Promise.all([
-      getMasterKillSwitchEnabled(),
-      getSiteConfigFromGoogleSheetsFresh().catch(() => null),
-    ]);
-
+    const state = await getKillSwitchState();
     return NextResponse.json(
       {
         success: true,
         data: {
-          enabled,
-          message: config?.killSwitchOn || FALLBACK_CONFIG.killSwitchOn,
+          enabled: state.enabled,
+          message: state.message,
         },
       },
       { headers: { 'Cache-Control': 'no-store' } }

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { KeyRound, Play, Loader2, Eye } from 'lucide-react';
+import { KeyRound, Loader2, Pencil } from 'lucide-react';
 import KeyBracketPreviewModal from '@/components/admin/KeyBracketPreviewModal';
 
 interface BracketSummary {
@@ -130,11 +130,11 @@ export default function LiveResultsTab({ brackets }: LiveResultsTabProps) {
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               opening || !selectedYear
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700'
             }`}
           >
-            {opening ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-            {opening ? 'Opening...' : 'Open Key'}
+            {opening ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
+            {opening ? 'Opening...' : 'Key Regions'}
           </button>
 
           <button
@@ -146,8 +146,8 @@ export default function LiveResultsTab({ brackets }: LiveResultsTabProps) {
                 : 'bg-indigo-600 text-white hover:bg-indigo-700'
             }`}
           >
-            <Eye className="h-4 w-4" />
-            Show Bracket
+            <Pencil className="h-4 w-4" />
+            Key Full
           </button>
         </div>
       </div>
@@ -156,6 +156,16 @@ export default function LiveResultsTab({ brackets }: LiveResultsTabProps) {
         <div className="mt-4 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-700">
           {error}
         </div>
+      )}
+
+      {selectedYear && (
+        <KeyBracketPreviewModal
+          isOpen={true}
+          year={selectedYear}
+          onClose={() => {}}
+          embedded
+          readOnly
+        />
       )}
 
       <KeyBracketPreviewModal

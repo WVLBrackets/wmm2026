@@ -21,6 +21,12 @@ export interface SiteConfigData {
   oldSiteUrl: string;
   standingsTabs: number;
   standingsYear: string;
+  /** Sheet `show_live_standings`: when `YES`, logged-in users see Daily/Live toggle and can persist `live` vs `daily`. */
+  showLiveStandings?: string;
+  /** Logged-in Live standings: disclaimer before first visit (`||` = line breaks). Sheet: `live_standings_warning` */
+  liveStandingsWarning?: string;
+  /** Two button labels separated by `|` (left = accept Live, right = stay on daily). Sheet: `live_standings_buttons` */
+  liveStandingsButtons?: string;
   footerText: string;
   contactMe: string;
   prizesActiveForecast: string;
@@ -53,6 +59,8 @@ export interface SiteConfigData {
   finalMessageDuplicateName?: string;
   finalMessageReadyToSubmit?: string;
   finalFourHeaderMessage?: string;
+  /** Bracket editor: hover on disabled Final Four nav until all regions are complete. Sheet: `final_four_disabled_message` */
+  finalFourDisabledMessage?: string;
   // WMM logo used on brackets page, print bracket, and emailed PDF
   wmmLogo?: string;
   // Email PDF template content
@@ -108,11 +116,38 @@ export interface SiteConfigData {
   // Submission deadline and toggle
   stopSubmitDateTime?: string;
   showCountdownTimer?: string;
+  countdownTimerMessage?: string;
+  /** Sheet: `countdown_timer_message_mobile` — short “X Days …” template for My Picks countdown on small screens; falls back to `countdownTimerMessage`. */
+  countdownTimerMessageMobile?: string;
   stopSubmitToggle?: string;
   finalMessageTooLate?: string;
   finalMessageSubmitOff?: string;
   // Global kill switch hover/help message
   killSwitchOn?: string;
+  /** My Picks: permanent-delete confirmation (`perm_delete_message` in Sheets; `||` = line breaks). */
+  permDeleteMessage?: string;
+  /** My Picks: in-pool section — bold title (before em dash). Sheet: `in_the_pool_header` */
+  inThePoolHeader?: string;
+  /**
+   * My Picks: in-pool section — text after em dash. Sheet: `in_the_pool_message`.
+   * Optional `{X}` is replaced with `"{n} submitted entry"` or `"{n} submitted entries"` for the signed-in user’s submitted count (current tournament year).
+   */
+  inThePoolMessage?: string;
+  /** My Picks: out-of-pool section — bold title. Sheet: `not_in_the_pool_header` */
+  notInThePoolHeader?: string;
+  /** My Picks: out-of-pool section — text after em dash. Sheet: `not_in_the_pool_message` */
+  notInThePoolMessage?: string;
+  /** My Picks: `desktopPx|mobilePx` — single `|`; first = header + icon + message on `md+`; second = same on smaller screens. Sheet: `pool_header_font_size` */
+  poolHeaderFontSize?: string;
+  /**
+   * My Picks: Return (submitted → in progress) inline confirmation — `||` = line breaks.
+   * Sheet: `return_action_confirm_message`
+   */
+  returnActionConfirmMessage?: string;
+  /** My Picks: Return button tooltip when enabled. Sheet: `return_action_hover_message` */
+  returnActionHoverMessage?: string;
+  /** @deprecated Sheet `bracket_return_message` — use `return_action_confirm_message`; still used as fallback if new key is empty */
+  bracketReturnMessage?: string;
   // Test configuration (browser-specific to avoid duplication)
   happy_path_email_test_chrome?: string;
   happy_path_email_test_firefox?: string;
@@ -195,10 +230,6 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
     // Parse the CSV data
     const config: Partial<SiteConfigData> = {};
     
-    // Debug: Track all parameters for debugging
-    const allParameters: string[] = [];
-    const matchingParameters: Array<{raw: string, normalized: string, value: string}> = [];
-    
     // Process ALL rows - continue until we encounter two consecutive blank rows
     let consecutiveBlanks = 0;
     for (let i = 1; i < lines.length; i++) { // Skip header row
@@ -223,15 +254,6 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
         // Normalize: lowercase, replace spaces with underscores, replace hyphens with underscores
         const parameter = parameterRaw.toLowerCase().replace(/\s+/g, '_').replace(/-/g, '_');
         const value = fields[1].trim();
-        
-        // Track all parameters for debugging
-        allParameters.push(parameterRaw);
-        
-        // Debug: Log parameters that might match
-        if (parameter.includes('happy') || (parameter.includes('test') && parameter.includes('email'))) {
-          matchingParameters.push({raw: parameterRaw, normalized: parameter, value});
-          console.log(`[SiteConfig] Found matching parameter: "${parameterRaw}" (normalized: "${parameter}") = "${value}"`);
-        }
         
         // Map parameters to config properties (case-insensitive matching)
         switch (parameter) {
@@ -270,6 +292,15 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
             break;
           case 'standings_year':
             config.standingsYear = value;
+            break;
+          case 'show_live_standings':
+            config.showLiveStandings = value;
+            break;
+          case 'live_standings_warning':
+            config.liveStandingsWarning = value;
+            break;
+          case 'live_standings_buttons':
+            config.liveStandingsButtons = value;
             break;
           case 'footer_text':
             config.footerText = value;
@@ -358,6 +389,12 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
           case 'show_countdown_timer':
             config.showCountdownTimer = value;
             break;
+          case 'countdown_timer_message':
+            config.countdownTimerMessage = value;
+            break;
+          case 'countdown_timer_message_mobile':
+            config.countdownTimerMessageMobile = value;
+            break;
           case 'stop_submit_toggle':
             config.stopSubmitToggle = value;
             break;
@@ -370,6 +407,33 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
           case 'kill_switch_on':
             config.killSwitchOn = value;
             break;
+          case 'perm_delete_message':
+            config.permDeleteMessage = value;
+            break;
+          case 'in_the_pool_header':
+            config.inThePoolHeader = value;
+            break;
+          case 'in_the_pool_message':
+            config.inThePoolMessage = value;
+            break;
+          case 'not_in_the_pool_header':
+            config.notInThePoolHeader = value;
+            break;
+          case 'not_in_the_pool_message':
+            config.notInThePoolMessage = value;
+            break;
+          case 'pool_header_font_size':
+            config.poolHeaderFontSize = value;
+            break;
+          case 'return_action_confirm_message':
+            config.returnActionConfirmMessage = value;
+            break;
+          case 'return_action_hover_message':
+            config.returnActionHoverMessage = value;
+            break;
+          case 'bracket_return_message':
+            config.bracketReturnMessage = value;
+            break;
           case 'final_message_duplicate_name':
             config.finalMessageDuplicateName = value;
             break;
@@ -378,6 +442,9 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
             break;
           case 'final_four_header_message':
             config.finalFourHeaderMessage = value;
+            break;
+          case 'final_four_disabled_message':
+            config.finalFourDisabledMessage = value;
             break;
           case 'wmm_logo':
             config.wmmLogo = value;

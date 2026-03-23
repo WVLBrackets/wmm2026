@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     handleTestEmailSuppression(request);
     
     // Send confirmation email
-    const emailSent = await sendConfirmationEmail(email, name, confirmationLink, token, siteConfig);
+    const emailSent = await sendConfirmationEmail(email, user.name, confirmationLink, token, siteConfig);
     if (!emailSent) {
       return ApiErrors.internalError('Failed to send confirmation email. Please try again or contact support.');
     }

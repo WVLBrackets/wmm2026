@@ -1,74 +1,80 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllTeamReferenceData } from '@/lib/repositories/teamDataRepository';
 import { initializeTeamDataTable } from '@/lib/database/migrations';
-import { TeamRefData } from '@/lib/teamRefData';
-
-// Cache team data in memory to avoid repeated database queries
-let cachedTeamData: { data: TeamRefData[]; timestamp: number } | null = null;
-const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes - shorter cache for faster new team visibility
+import { getTeamReferenceDisplayName } from '@/lib/teamDisplayName';
+import {
+  getCachedPublicTeamData,
+  setCachedPublicTeamData,
+  TEAM_DATA_PUBLIC_CACHE_MS,
+  type PublicTeamDataRow,
+} from '@/lib/teamDataPublicCache';
 
 /**
  * GET /api/team-data - Get all team reference data (public read-only endpoint)
  * Query params: activeOnly (boolean) - if true, only return active teams
- * 
- * Performance: Uses in-memory cache + Next.js route caching for optimal performance
+ *
+ * Performance: In-memory cache (see teamDataPublicCache); invalidated on any team DB write.
  */
 export async function GET(request: NextRequest) {
-  // Check in-memory cache first
   const now = Date.now();
-  if (cachedTeamData && (now - cachedTeamData.timestamp) < CACHE_DURATION) {
-    return NextResponse.json({
-      success: true,
-      data: cachedTeamData.data,
-    }, {
-      headers: {
-        'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=240', // 2 min CDN cache, 4 min stale
+  const cached = getCachedPublicTeamData(now);
+  if (cached) {
+    return NextResponse.json(
+      {
+        success: true,
+        data: cached,
       },
-    });
+      {
+        headers: {
+          'Cache-Control': `public, s-maxage=${Math.floor(TEAM_DATA_PUBLIC_CACHE_MS / 1000)}, stale-while-revalidate=${Math.floor((TEAM_DATA_PUBLIC_CACHE_MS * 2) / 1000)}`,
+        },
+      }
+    );
   }
   try {
-    // Ensure team_reference_data table exists
     await initializeTeamDataTable();
 
-    // Check for activeOnly query parameter
     const { searchParams } = new URL(request.url);
     const activeOnly = searchParams.get('activeOnly') === 'true';
 
-    // Read from database
     const teamData = await getAllTeamReferenceData(activeOnly);
 
-    // Transform to the format expected by client-side code
-    const teamRefData = Object.entries(teamData)
+    const teamRefData: PublicTeamDataRow[] = Object.entries(teamData)
       .filter(([, teamInfo]) => teamInfo.active !== false)
-      .map(([abbr, teamInfo]) => ({
-        abbr,
-        id: teamInfo.id,
-        name: teamInfo.name
-      }));
+      .map(([abbr, teamInfo]) => {
+        const customRaw = teamInfo.displayName?.trim();
+        const customDisplayName =
+          customRaw && customRaw.length > 0 ? customRaw : null;
+        return {
+          abbr,
+          id: teamInfo.id,
+          name: teamInfo.name,
+          displayName: getTeamReferenceDisplayName(teamInfo),
+          customDisplayName,
+        };
+      });
 
-    // Update in-memory cache
-    cachedTeamData = {
-      data: teamRefData,
-      timestamp: now,
-    };
+    setCachedPublicTeamData(teamRefData, now);
 
-    return NextResponse.json({
-      success: true,
-      data: teamRefData,
-    }, {
-      headers: {
-        'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=240', // 2 min CDN cache, 4 min stale
+    return NextResponse.json(
+      {
+        success: true,
+        data: teamRefData,
       },
-    });
+      {
+        headers: {
+          'Cache-Control': `public, s-maxage=${Math.floor(TEAM_DATA_PUBLIC_CACHE_MS / 1000)}, stale-while-revalidate=${Math.floor((TEAM_DATA_PUBLIC_CACHE_MS * 2) / 1000)}`,
+        },
+      }
+    );
   } catch (error) {
     console.error('Error reading team data:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to read team data' 
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to read team data',
       },
       { status: 500 }
     );
   }
 }
-

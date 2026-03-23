@@ -1,8 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Trash2, Edit, Save, X, Edit3, Download, RefreshCw, Search } from 'lucide-react';
+import {
+  Trash2,
+  Download,
+  RefreshCw,
+  Search,
+  LayoutGrid,
+  CheckCircle,
+  Clock,
+  FunnelX,
+  X,
+} from 'lucide-react';
+import { useBracketFilters } from '@/hooks/useBracketFilters';
+import BracketTableRow from '@/components/admin/BracketTableRow';
+import UserFilterCombobox from '@/components/admin/UserFilterCombobox';
+import {
+  BracketImportProvider,
+  BracketImportSummary,
+  BracketImportToolbarButton,
+} from '@/components/admin/BracketImportPanel';
 
 interface User {
   id: string;
@@ -18,17 +36,21 @@ interface Bracket {
   entryName: string;
   tieBreaker?: number;
   status: string;
+  source?: string;
   bracketNumber?: number;
   year?: number;
   createdAt: string;
   updatedAt: string;
+  submittedAt?: string | null;
   picks: Record<string, string>;
+  /** When true, row is the KEY bracket (excluded from normal admin list unless includeKey). */
+  isKey?: boolean;
 }
 
 interface BracketsTabProps {
   users: User[];
   brackets: Bracket[];
-  onReload: () => Promise<void>;
+  onReload: (options?: { silent?: boolean }) => Promise<void>;
 }
 
 interface EditForm {
@@ -36,6 +58,12 @@ interface EditForm {
   tieBreaker?: number;
   status?: string;
   userId?: string;
+}
+
+interface EditFeedback {
+  bracketId: string;
+  type: 'success' | 'error';
+  message: string;
 }
 
 export default function BracketsTab({ users, brackets, onReload }: BracketsTabProps) {
@@ -46,14 +74,34 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
   const [filterCreatedDate, setFilterCreatedDate] = useState<string>('');
   const [filterUpdatedDate, setFilterUpdatedDate] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [filteredBrackets, setFilteredBrackets] = useState<Bracket[]>([]);
   const [editingBracket, setEditingBracket] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditForm>({});
+  const [editFeedback, setEditFeedback] = useState<EditFeedback | null>(null);
+  const [optimisticBracketUpdates, setOptimisticBracketUpdates] = useState<Record<string, Partial<Bracket>>>({});
+  const [syncingBracketIds, setSyncingBracketIds] = useState<Record<string, boolean>>({});
   const [isExporting, setIsExporting] = useState(false);
   const [protectSubmitted, setProtectSubmitted] = useState<boolean>(true);
   const [pendingDeleteBracketId, setPendingDeleteBracketId] = useState<string | null>(null);
   const [deletingBracketId, setDeletingBracketId] = useState<string | null>(null);
   const [tournamentYear, setTournamentYear] = useState<string>('');
+  const [permDeleteMessage, setPermDeleteMessage] = useState<string>(
+    'Permanently delete this bracket? This cannot be undone.||Are you sure you want to continue?'
+  );
+
+  /** Bulk permanent delete: staged IDs after filters + optional protected submitted count */
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState<{
+    bracketIds: string[];
+    protectedSkipped: number;
+  } | null>(null);
+  const [bulkDeleteRunning, setBulkDeleteRunning] = useState(false);
+
+  /** KEY scoring detail modal */
+  const [liveScoreOpenForId, setLiveScoreOpenForId] = useState<string | null>(null);
+  const [liveScoreLoading, setLiveScoreLoading] = useState(false);
+  const [liveScoreError, setLiveScoreError] = useState<string | null>(null);
+  const [liveScoreLines, setLiveScoreLines] = useState<string[]>([]);
+  const [liveScoreTotal, setLiveScoreTotal] = useState<number | null>(null);
+  const [liveScoreTitle, setLiveScoreTitle] = useState<string>('');
 
   // Calculate totals
   const totalBrackets = brackets.length;
@@ -72,13 +120,17 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
       try {
         const response = await fetch('/api/site-config');
         const data = await response.json();
-        if (data.success && data.data?.tournamentYear) {
+        if (data.success && data.data) {
           const year = data.data.tournamentYear;
-          setTournamentYear(year);
-          // Set default filter year to tournament year if available in brackets
-          const yearNum = parseInt(year);
-          if (availableYears.includes(yearNum)) {
-            setFilterYear(year);
+          if (year) {
+            setTournamentYear(year);
+            const yearNum = parseInt(year);
+            if (availableYears.includes(yearNum)) {
+              setFilterYear(year);
+            }
+          }
+          if (typeof data.data.permDeleteMessage === 'string' && data.data.permDeleteMessage.trim()) {
+            setPermDeleteMessage(data.data.permDeleteMessage.trim());
           }
         }
       } catch (error) {
@@ -89,77 +141,41 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Filter brackets when filters or brackets change
+  const filteredBrackets = useBracketFilters({
+    brackets,
+    optimisticUpdates: optimisticBracketUpdates,
+    filterUser,
+    filterStatus,
+    filterYear,
+    filterCreatedDate,
+    filterUpdatedDate,
+    searchQuery,
+  });
+
+  // Clear optimistic patches once server data catches up.
   useEffect(() => {
-    let filtered = brackets;
-    
-    if (filterUser !== 'all') {
-      filtered = filtered.filter(b => b.userId === filterUser);
-    }
-    
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter(b => b.status === filterStatus);
-    }
-    
-    if (filterYear !== 'all') {
-      const yearNum = parseInt(filterYear);
-      filtered = filtered.filter(b => b.year === yearNum);
-    }
-    
-    // Filter by entry name search
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(b => 
-        b.entryName.toLowerCase().includes(query)
-      );
-    }
-    
-    // Filter by created date (match date only, ignore time)
-    if (filterCreatedDate) {
-      const [year, month, day] = filterCreatedDate.split('-').map(Number);
-      const filterDateStart = new Date(year, month - 1, day, 0, 0, 0, 0);
-      
-      filtered = filtered.filter(b => {
-        const createdDate = new Date(b.createdAt);
-        const createdDateStr = createdDate.toLocaleDateString('en-US', { 
-          year: 'numeric', 
-          month: '2-digit', 
-          day: '2-digit' 
+    setOptimisticBracketUpdates((previous) => {
+      let changed = false;
+      const next = { ...previous };
+
+      Object.entries(previous).forEach(([bracketId, patch]) => {
+        const serverBracket = brackets.find((bracket) => bracket.id === bracketId);
+        if (!serverBracket) return;
+        const isSynced = Object.entries(patch).every(([key, value]) => {
+          return (serverBracket as unknown as Record<string, unknown>)[key] === value;
         });
-        const filterDateStr = filterDateStart.toLocaleDateString('en-US', { 
-          year: 'numeric', 
-          month: '2-digit', 
-          day: '2-digit' 
-        });
-        return createdDateStr === filterDateStr;
+        if (isSynced) {
+          delete next[bracketId];
+          changed = true;
+        }
       });
-    }
-    
-    // Filter by updated date (match date only, ignore time)
-    if (filterUpdatedDate) {
-      const [year, month, day] = filterUpdatedDate.split('-').map(Number);
-      const filterDateStart = new Date(year, month - 1, day, 0, 0, 0, 0);
-      
-      filtered = filtered.filter(b => {
-        const updatedDate = new Date(b.updatedAt);
-        const updatedDateStr = updatedDate.toLocaleDateString('en-US', { 
-          year: 'numeric', 
-          month: '2-digit', 
-          day: '2-digit' 
-        });
-        const filterDateStr = filterDateStart.toLocaleDateString('en-US', { 
-          year: 'numeric', 
-          month: '2-digit', 
-          day: '2-digit' 
-        });
-        return updatedDateStr === filterDateStr;
-      });
-    }
-    
-    setFilteredBrackets(filtered);
-  }, [brackets, filterUser, filterStatus, filterYear, filterCreatedDate, filterUpdatedDate, searchQuery]);
+
+      return changed ? next : previous;
+    });
+  }, [brackets]);
 
   const handleEdit = (bracket: Bracket) => {
+    setEditFeedback(null);
     setEditingBracket(bracket.id);
     setEditForm({
       entryName: bracket.entryName,
@@ -173,12 +189,49 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
     router.push(`/bracket?edit=${bracketId}&admin=true`);
   };
 
+  const handleOpenLiveScore = async (bracket: Bracket) => {
+    if (bracket.isKey) return;
+    setLiveScoreOpenForId(bracket.id);
+    setLiveScoreTitle(bracket.entryName || 'Bracket');
+    setLiveScoreLoading(true);
+    setLiveScoreError(null);
+    setLiveScoreLines([]);
+    setLiveScoreTotal(null);
+    try {
+      const response = await fetch(`/api/admin/brackets/${bracket.id}/live-score-detail`, {
+        cache: 'no-store',
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        setLiveScoreError(data.error || 'Failed to load live score detail.');
+        return;
+      }
+      setLiveScoreLines(data.data?.lines ?? []);
+      setLiveScoreTotal(typeof data.data?.total === 'number' ? data.data.total : 0);
+    } catch (e) {
+      console.error('Live score detail fetch failed:', e);
+      setLiveScoreError('Failed to load live score detail.');
+    } finally {
+      setLiveScoreLoading(false);
+    }
+  };
+
+  const handleCloseLiveScore = () => {
+    setLiveScoreOpenForId(null);
+    setLiveScoreError(null);
+    setLiveScoreLines([]);
+    setLiveScoreTotal(null);
+    setLiveScoreTitle('');
+  };
+
   const handleCancelEdit = () => {
+    setEditFeedback(null);
     setEditingBracket(null);
     setEditForm({});
   };
 
   const handleSaveEdit = async (bracketId: string) => {
+    const originalBracket = brackets.find((bracket) => bracket.id === bracketId);
     try {
       const response = await fetch(`/api/admin/brackets/${bracketId}`, {
         method: 'PUT',
@@ -191,15 +244,76 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
       const data = await response.json();
       
       if (data.success) {
-        await onReload();
+        const optimisticUpdate: Partial<Bracket> = {};
+        if (typeof editForm.entryName === 'string') optimisticUpdate.entryName = editForm.entryName.trim();
+        if (typeof editForm.status === 'string') optimisticUpdate.status = editForm.status;
+        if (typeof editForm.userId === 'string') optimisticUpdate.userId = editForm.userId;
+        if (typeof editForm.tieBreaker === 'number') optimisticUpdate.tieBreaker = editForm.tieBreaker;
+        setOptimisticBracketUpdates((previous) => ({
+          ...previous,
+          [bracketId]: {
+            ...(previous[bracketId] || {}),
+            ...optimisticUpdate,
+          },
+        }));
+        setSyncingBracketIds((previous) => ({ ...previous, [bracketId]: true }));
+
+        // Exit edit mode immediately so row returns to normal action buttons.
         setEditingBracket(null);
         setEditForm({});
+        setEditFeedback({
+          bracketId,
+          type: 'success',
+          message: 'Entry updated successfully.',
+        });
+        await onReload({ silent: true });
+        setSyncingBracketIds((previous) => {
+          const next = { ...previous };
+          delete next[bracketId];
+          return next;
+        });
+        setEditFeedback((previous) => (
+          previous?.type === 'success' && previous.bracketId === bracketId ? null : previous
+        ));
       } else {
-        alert(`Error: ${data.error}`);
+        setSyncingBracketIds((previous) => {
+          const next = { ...previous };
+          delete next[bracketId];
+          return next;
+        });
+        // Keep user in edit mode and restore original entry name after failed save.
+        setEditingBracket(bracketId);
+        if (originalBracket) {
+          setEditForm((previous) => ({
+            ...previous,
+            entryName: originalBracket.entryName,
+          }));
+        }
+        setEditFeedback({
+          bracketId,
+          type: 'error',
+          message: data.error || 'Failed to update entry.',
+        });
       }
     } catch (error) {
       console.error('Error updating bracket:', error);
-      alert('Failed to update bracket');
+      setSyncingBracketIds((previous) => {
+        const next = { ...previous };
+        delete next[bracketId];
+        return next;
+      });
+      setEditingBracket(bracketId);
+      if (originalBracket) {
+        setEditForm((previous) => ({
+          ...previous,
+          entryName: originalBracket.entryName,
+        }));
+      }
+      setEditFeedback({
+        bracketId,
+        type: 'error',
+        message: 'Failed to update bracket.',
+      });
     }
   };
 
@@ -213,24 +327,48 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
   };
 
   const handleConfirmDelete = async (bracketId: string) => {
+    const target = brackets.find((b) => b.id === bracketId);
+    const isPermanentRemove = target?.status === 'deleted';
+
     setDeletingBracketId(bracketId);
     setPendingDeleteBracketId(null);
-    
-    try {
-      const response = await fetch(`/api/admin/brackets/${bracketId}`, {
-        method: 'DELETE',
-      });
 
-      const data = await response.json();
-      
-      if (data.success) {
-        await onReload();
+    try {
+      if (isPermanentRemove) {
+        const response = await fetch(`/api/admin/brackets/${bracketId}`, {
+          method: 'DELETE',
+        });
+        const data = await response.json();
+        if (data.success) {
+          await onReload();
+        } else {
+          alert(`Error: ${data.error}`);
+        }
       } else {
-        alert(`Error: ${data.error}`);
+        const response = await fetch(`/api/admin/brackets/${bracketId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ status: 'deleted' }),
+        });
+        const data = await response.json();
+        if (data.success) {
+          setOptimisticBracketUpdates((previous) => ({
+            ...previous,
+            [bracketId]: {
+              ...(previous[bracketId] || {}),
+              status: 'deleted',
+            },
+          }));
+          await onReload({ silent: true });
+        } else {
+          alert(`Error: ${data.error}`);
+        }
       }
     } catch (error) {
       console.error('Error deleting bracket:', error);
-      alert('Failed to delete bracket');
+      alert(isPermanentRemove ? 'Failed to permanently delete bracket' : 'Failed to update bracket');
     } finally {
       setDeletingBracketId(null);
     }
@@ -257,8 +395,9 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
         throw new Error(data.error || 'Failed to export brackets');
       }
       
-      const csvContent = await response.text();
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      // Preserve UTF-8 BOM: response.text() strips U+FEFF per fetch spec, which breaks Excel encoding.
+      const buffer = await response.arrayBuffer();
+      const blob = new Blob([buffer], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -285,87 +424,128 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
     }
   };
 
-  const handleDeleteAllFiltered = async () => {
+  /**
+   * Compute which filtered brackets would be permanently removed and show inline confirmation.
+   */
+  const requestBulkDelete = () => {
     if (filteredBrackets.length === 0) {
       return;
     }
 
-    // Filter out submitted brackets if protection is enabled
     let bracketsToDelete = filteredBrackets;
     let protectedCount = 0;
-    
+
     if (protectSubmitted) {
-      const submittedBrackets = bracketsToDelete.filter(b => b.status === 'submitted');
+      const submittedBrackets = bracketsToDelete.filter((b) => b.status === 'submitted');
       protectedCount = submittedBrackets.length;
-      bracketsToDelete = bracketsToDelete.filter(b => b.status !== 'submitted');
+      bracketsToDelete = bracketsToDelete.filter((b) => b.status !== 'submitted');
     }
 
     if (bracketsToDelete.length === 0) {
       if (protectedCount > 0) {
-        alert(`Cannot delete brackets: ${protectedCount} submitted bracket(s) are protected. Turn off "Protect Submitted" to delete them.`);
+        alert(
+          `Cannot delete brackets: ${protectedCount} submitted bracket(s) are protected. Turn off "Protect Submitted" to delete them.`
+        );
       } else {
         alert('No brackets to delete.');
       }
       return;
     }
 
-    const protectedMessage = protectedCount > 0 
-      ? `\n\nNote: ${protectedCount} submitted bracket(s) will be protected and not deleted.`
-      : '';
-    
-    const confirmMessage = `Are you sure you want to delete ${bracketsToDelete.length} bracket(s)?${protectedMessage}\n\nThis action cannot be undone.`;
-    
-    if (!confirm(confirmMessage)) {
-      return;
-    }
+    setBulkDeleteConfirm({
+      bracketIds: bracketsToDelete.map((b) => b.id),
+      protectedSkipped: protectedCount,
+    });
+  };
 
+  const cancelBulkDelete = () => {
+    if (bulkDeleteRunning) return;
+    setBulkDeleteConfirm(null);
+  };
+
+  /**
+   * Permanently delete all staged bracket IDs (same as row-level permanent delete).
+   */
+  const executeBulkDelete = async () => {
+    if (!bulkDeleteConfirm) return;
+    const { bracketIds, protectedSkipped } = bulkDeleteConfirm;
+    setBulkDeleteRunning(true);
     try {
-      const deletePromises = bracketsToDelete.map(bracket => 
-        fetch(`/api/admin/brackets/${bracket.id}`, {
+      const deletePromises = bracketIds.map((id) =>
+        fetch(`/api/admin/brackets/${id}`, {
           method: 'DELETE',
         })
       );
 
       const results = await Promise.all(deletePromises);
-      const dataResults = await Promise.all(results.map(r => r.json()));
-      
-      const failures = dataResults.filter(d => !d.success);
-      
-      if (failures.length > 0) {
-        alert(`Failed to delete ${failures.length} bracket(s). ${dataResults.length - failures.length} bracket(s) deleted successfully.${protectedCount > 0 ? ` ${protectedCount} submitted bracket(s) were protected.` : ''}`);
-      }
+      const dataResults = await Promise.all(results.map((r) => r.json()));
+
+      const failures = dataResults.filter((d) => !d.success);
 
       await onReload();
-      
-      if (failures.length === 0) {
-        const successMessage = protectedCount > 0
-          ? `Successfully deleted ${bracketsToDelete.length} bracket(s). ${protectedCount} submitted bracket(s) were protected.`
-          : `Successfully deleted ${bracketsToDelete.length} bracket(s).`;
+      setBulkDeleteConfirm(null);
+
+      if (failures.length > 0) {
+        alert(
+          `Failed to delete ${failures.length} bracket(s). ${dataResults.length - failures.length} bracket(s) deleted successfully.${protectedSkipped > 0 ? ` ${protectedSkipped} submitted bracket(s) were protected.` : ''}`
+        );
+      } else {
+        const successMessage =
+          protectedSkipped > 0
+            ? `Successfully deleted ${bracketIds.length} bracket(s). ${protectedSkipped} submitted bracket(s) were protected.`
+            : `Successfully deleted ${bracketIds.length} bracket(s).`;
         alert(successMessage);
       }
     } catch (error) {
       console.error('Error deleting filtered brackets:', error);
       alert('Failed to delete brackets. Please try again.');
+    } finally {
+      setBulkDeleteRunning(false);
     }
   };
 
   return (
+    <BracketImportProvider tournamentYear={tournamentYear} onReload={onReload}>
     <div className="bg-white rounded-lg shadow-lg p-6">
-      {/* Totals at the top */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      {/* Totals — mobile: icon + count only */}
+      <div className="mb-4 grid grid-cols-4 gap-2 lg:hidden">
+        <div className="flex flex-col items-center justify-center rounded-lg border border-blue-200 bg-blue-50 py-3">
+          <LayoutGrid className="mb-1 h-6 w-6 text-blue-600" aria-hidden />
+          <span className="sr-only">Total</span>
+          <div className="text-xl font-bold text-blue-900">{totalBrackets}</div>
+        </div>
+        <div className="flex flex-col items-center justify-center rounded-lg border border-green-200 bg-green-50 py-3">
+          <CheckCircle className="mb-1 h-6 w-6 text-green-600" aria-hidden />
+          <span className="sr-only">Submitted</span>
+          <div className="text-xl font-bold text-green-900">{totalSubmitted}</div>
+        </div>
+        <div className="flex flex-col items-center justify-center rounded-lg border border-yellow-200 bg-yellow-50 py-3">
+          <Clock className="mb-1 h-6 w-6 text-yellow-600" aria-hidden />
+          <span className="sr-only">In progress</span>
+          <div className="text-xl font-bold text-yellow-900">{totalInProgress}</div>
+        </div>
+        <div className="flex flex-col items-center justify-center rounded-lg border border-red-200 bg-red-50 py-3">
+          <Trash2 className="mb-1 h-6 w-6 text-red-600" aria-hidden />
+          <span className="sr-only">Deleted</span>
+          <div className="text-xl font-bold text-red-900">{totalDeleted}</div>
+        </div>
+      </div>
+
+      {/* Totals — desktop */}
+      <div className="mb-6 hidden grid-cols-4 gap-4 lg:grid">
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
           <div className="text-sm font-medium text-blue-600">Total Brackets</div>
           <div className="text-2xl font-bold text-blue-900">{totalBrackets}</div>
         </div>
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div className="rounded-lg border border-green-200 bg-green-50 p-4">
           <div className="text-sm font-medium text-green-600">Total Submitted</div>
           <div className="text-2xl font-bold text-green-900">{totalSubmitted}</div>
         </div>
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
           <div className="text-sm font-medium text-yellow-600">Total In Progress</div>
           <div className="text-2xl font-bold text-yellow-900">{totalInProgress}</div>
         </div>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
           <div className="text-sm font-medium text-red-600">Total Deleted</div>
           <div className="text-2xl font-bold text-red-900">{totalDeleted}</div>
         </div>
@@ -373,7 +553,7 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
 
       {/* Filters - Second row */}
       <div className="mb-6">
-        <div className="flex items-center space-x-4 mb-3">
+        <div className="mb-3 flex flex-wrap items-end gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Filter by Year
@@ -408,51 +588,46 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
             </select>
           </div>
           
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="min-w-[12rem] max-w-[40ch]">
+            <label htmlFor="filter-by-user-combobox" className="block text-sm font-medium text-gray-700 mb-1">
               Filter by User
             </label>
-            <select
+            <UserFilterCombobox
+              id="filter-by-user-combobox"
+              users={users}
               value={filterUser}
-              onChange={(e) => setFilterUser(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
-              style={{ width: '40ch' }}
-            >
-              <option value="all">All Users</option>
-              {users.map(user => (
-                <option key={user.id} value={user.id}>
-                  {user.name} ({user.email})
-                </option>
-              ))}
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Filter by Created Date
-            </label>
-            <input
-              type="date"
-              value={filterCreatedDate}
-              onChange={(e) => setFilterCreatedDate(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
+              onChange={setFilterUser}
             />
           </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Filter by Updated Date
-            </label>
-            <input
-              type="date"
-              value={filterUpdatedDate}
-              onChange={(e) => setFilterUpdatedDate(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
-            />
+
+          <div className="hidden items-end gap-4 lg:flex">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Filter by Created Date
+              </label>
+              <input
+                type="date"
+                value={filterCreatedDate}
+                onChange={(e) => setFilterCreatedDate(e.target.value)}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Filter by Updated Date
+              </label>
+              <input
+                type="date"
+                value={filterUpdatedDate}
+                onChange={(e) => setFilterUpdatedDate(e.target.value)}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
+              />
+            </div>
           </div>
-          
-          <div className="ml-auto">
+
+          <div className="ml-auto flex items-center">
             <button
+              type="button"
               onClick={() => {
                 setFilterUser('all');
                 setFilterStatus('all');
@@ -461,268 +636,357 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
                 setFilterUpdatedDate('');
                 setSearchQuery('');
               }}
-              className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-600 text-white hover:bg-gray-700"
+              className="flex items-center justify-center rounded-lg bg-gray-600 p-2 text-sm font-medium text-white hover:bg-gray-700 lg:gap-2 lg:px-4 lg:py-2"
               title="Clear all filters"
             >
-              Clear Filters
+              <FunnelX className="h-5 w-5 shrink-0 lg:h-4 lg:w-4" aria-hidden />
+              <span className="hidden lg:inline">Clear Filters</span>
+              <span className="sr-only lg:hidden">Clear filters</span>
             </button>
           </div>
         </div>
       </div>
-        
+
       {/* Action buttons - Third row */}
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
               id="protectSubmitted"
               checked={protectSubmitted}
               onChange={(e) => setProtectSubmitted(e.target.checked)}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
             <label htmlFor="protectSubmitted" className="text-sm font-medium text-gray-700">
               Protect Submitted
             </label>
           </div>
-          <div className="flex-1 max-w-md">
+          <div className="min-w-0 max-w-md flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search by Entry Name"
+                placeholder="Search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={onReload}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors flex items-center gap-2"
+            type="button"
+            onClick={() => void onReload()}
+            className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 p-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 lg:px-4 lg:py-2"
             title="Refresh bracket list"
           >
-            <RefreshCw className="h-4 w-4" />
-            Refresh
+            <RefreshCw className="h-4 w-4 shrink-0" />
+            <span className="hidden lg:inline">Refresh</span>
+            <span className="sr-only lg:hidden">Refresh</span>
           </button>
+          <div className="hidden lg:contents">
+            <button
+              type="button"
+              onClick={handleExportBrackets}
+              disabled={brackets.length === 0 || isExporting}
+              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium ${
+                brackets.length === 0 || isExporting
+                  ? 'cursor-not-allowed bg-gray-300 text-gray-500'
+                  : 'bg-green-600 text-white hover:bg-green-700'
+              }`}
+              title={
+                brackets.length === 0
+                  ? 'No brackets to export'
+                  : 'Export all brackets to CSV (sorted by status: Submitted, In Progress, Deleted)'
+              }
+            >
+              {isExporting ? (
+                <>
+                  <span className="inline-block animate-spin">⏳</span>
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4" />
+                  Export All
+                </>
+              )}
+            </button>
+            <BracketImportToolbarButton />
+          </div>
           <button
-            onClick={handleExportBrackets}
-            disabled={brackets.length === 0 || isExporting}
-            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-              brackets.length === 0 || isExporting
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-green-600 text-white hover:bg-green-700'
-            }`}
-            title={brackets.length === 0 ? 'No brackets to export' : 'Export all brackets to CSV (sorted by status: Submitted, In Progress, Deleted)'}
-          >
-            {isExporting ? (
-              <>
-                <span className="animate-spin inline-block">⏳</span>
-                Exporting...
-              </>
-            ) : (
-              <>
-                <Download className="w-4 h-4" />
-                Export All
-              </>
-            )}
-          </button>
-          <button
-            onClick={handleDeleteAllFiltered}
+            type="button"
+            onClick={requestBulkDelete}
             disabled={filteredBrackets.length === 0}
-            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
+            className={`flex items-center justify-center gap-2 rounded-lg p-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-800 lg:px-4 lg:py-2 ${
               filteredBrackets.length === 0
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-red-600 text-white hover:bg-red-700'
+                ? 'cursor-not-allowed bg-gray-300 text-gray-500'
+                : 'bg-red-900 text-white hover:bg-red-950'
             }`}
-            title={filteredBrackets.length === 0 ? 'No brackets to delete' : `Delete ${filteredBrackets.length} filtered bracket(s)`}
+            title={
+              filteredBrackets.length === 0
+                ? 'No brackets to delete'
+                : `Bulk delete ${filteredBrackets.length} filtered bracket(s) (permanent)`
+            }
+            data-testid="admin-bulk-delete-button"
           >
-            <Trash2 className="w-4 h-4" />
-            Bulk Delete ({filteredBrackets.length})
+            <Trash2 className="h-4 w-4 shrink-0" />
+            <span className="hidden lg:inline">Bulk Delete ({filteredBrackets.length})</span>
+            <span className="sr-only lg:hidden">Bulk delete {filteredBrackets.length}</span>
           </button>
         </div>
       </div>
 
-      {/* Brackets Table */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+      {bulkDeleteConfirm && (
+        <div
+          className="mb-6 rounded-lg border border-red-800 bg-red-50 p-4 text-sm text-gray-900 shadow-sm"
+          role="alert"
+          data-testid="admin-bulk-delete-confirm"
+        >
+          <div className="mb-3 text-gray-800">
+            {permDeleteMessage.split('||').map((part, index, parts) => (
+              <Fragment key={index}>
+                {part.trim()}
+                {index < parts.length - 1 ? <br /> : null}
+              </Fragment>
+            ))}
+          </div>
+          <p className="mb-3 font-semibold text-red-950">
+            {bulkDeleteConfirm.bracketIds.length === 1
+              ? '1 Bracket Selected'
+              : `${bulkDeleteConfirm.bracketIds.length} Brackets Selected`}
+          </p>
+          {bulkDeleteConfirm.protectedSkipped > 0 && (
+            <p className="mb-3 text-amber-900">
+              Note: {bulkDeleteConfirm.protectedSkipped} submitted bracket(s) are protected and will not be deleted.
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void executeBulkDelete()}
+              disabled={bulkDeleteRunning}
+              className="rounded-lg bg-red-900 px-4 py-2 text-sm font-medium text-white hover:bg-red-950 focus:outline-none focus:ring-2 focus:ring-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+              data-testid="admin-bulk-delete-confirm-yes"
+            >
+              {bulkDeleteRunning ? 'Deleting…' : 'Yes, delete permanently'}
+            </button>
+            <button
+              type="button"
+              onClick={cancelBulkDelete}
+              disabled={bulkDeleteRunning}
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:cursor-not-allowed disabled:opacity-50"
+              data-testid="admin-bulk-delete-confirm-cancel"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      <BracketImportSummary />
+
+      {/* Mobile brackets table */}
+      <div className="max-w-full overflow-x-auto lg:hidden">
+        <table className="w-full min-w-0 divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Bracket ID
+              <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                Entry / User
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                User
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Entry Name
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Created
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Updated
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ minWidth: '180px', width: '180px' }}>
+              <th className="w-[96px] min-w-[96px] px-2 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-200 bg-white">
             {filteredBrackets.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                <td colSpan={2} className="px-4 py-4 text-center text-gray-500">
                   No brackets found
                 </td>
               </tr>
             ) : (
               filteredBrackets.map((bracket) => (
-                <tr key={bracket.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-600">
-                      {bracket.year || new Date().getFullYear()}-{String(bracket.bracketNumber || '?').padStart(6, '0')}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {editingBracket === bracket.id ? (
-                      <select
-                        value={editForm.userId || ''}
-                        onChange={(e) => setEditForm({ ...editForm, userId: e.target.value })}
-                        className="border border-gray-300 rounded px-2 py-1 text-sm w-full text-gray-900"
-                      >
-                        {users.map((user) => (
-                          <option key={user.id} value={user.id}>
-                            {user.name} ({user.email})
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <>
-                        <div className="text-sm font-medium text-gray-900">{bracket.userName}</div>
-                        <div className="text-sm text-gray-500">{bracket.userEmail}</div>
-                      </>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {editingBracket === bracket.id ? (
-                      <input
-                        type="text"
-                        value={editForm.entryName || ''}
-                        onChange={(e) => setEditForm({ ...editForm, entryName: e.target.value })}
-                        className="border border-gray-300 rounded px-2 py-1 text-sm w-full text-gray-900"
-                      />
-                    ) : (
-                      <div className="text-sm text-gray-900">{bracket.entryName}</div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {editingBracket === bracket.id ? (
-                      <select
-                        value={editForm.status || ''}
-                        onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                        className="border border-gray-300 rounded px-2 py-1 text-sm text-gray-900"
-                      >
-                        <option value="in_progress">In Progress</option>
-                        <option value="submitted">Submitted</option>
-                        <option value="deleted">Deleted</option>
-                      </select>
-                    ) : (
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        bracket.status === 'submitted'
-                          ? 'bg-green-100 text-green-800'
-                          : bracket.status === 'in_progress'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : bracket.status === 'deleted'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {bracket.status}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(bracket.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(bracket.updatedAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 text-right text-sm font-medium" style={{ overflow: 'visible', minWidth: '180px', width: '180px' }}>
-                    {editingBracket === bracket.id ? (
-                      <div className="flex items-center justify-end space-x-2">
-                        <button
-                          onClick={() => handleSaveEdit(bracket.id)}
-                          className="text-green-600 hover:text-green-900"
-                          title="Save"
-                        >
-                          <Save className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={handleCancelEdit}
-                          className="text-gray-600 hover:text-gray-900"
-                          title="Cancel"
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
-                      </div>
-                    ) : pendingDeleteBracketId === bracket.id ? (
-                      <div className="flex items-center justify-end w-full">
-                        <div className="flex items-center space-x-2 bg-red-50 border border-red-200 rounded px-2 py-1 whitespace-nowrap flex-shrink-0">
-                          <span className="text-xs text-red-700 font-medium">Delete?</span>
-                          <button
-                            onClick={() => handleConfirmDelete(bracket.id)}
-                            disabled={deletingBracketId === bracket.id}
-                            className="bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-                          >
-                            Yes
-                          </button>
-                          <button
-                            onClick={handleCancelDelete}
-                            disabled={deletingBracketId === bracket.id}
-                            className="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-                          >
-                            No
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-end space-x-2">
-                        <button
-                          onClick={() => handleEditPicks(bracket.id)}
-                          className="text-purple-600 hover:text-purple-900"
-                          title="Edit Picks"
-                        >
-                          <Edit3 className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => handleEdit(bracket)}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="Edit Details"
-                        >
-                          <Edit className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(bracket.id)}
-                          disabled={deletingBracketId === bracket.id}
-                          className="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
+                <BracketTableRow
+                  key={bracket.id}
+                  bracket={bracket}
+                  users={users}
+                  isMobileLayout
+                  isEditing={editingBracket === bracket.id}
+                  editForm={editForm}
+                  onEditFormChange={(updates) => setEditForm((previous) => ({ ...previous, ...updates }))}
+                  onSave={() => handleSaveEdit(bracket.id)}
+                  onCancel={handleCancelEdit}
+                  onEditPicks={() => handleEditPicks(bracket.id)}
+                  onEditDetails={() => handleEdit(bracket)}
+                  onLiveScore={() => handleOpenLiveScore(bracket)}
+                  showLiveScoreButton={!bracket.isKey}
+                  onDelete={() => handleDelete(bracket.id)}
+                  pendingDelete={pendingDeleteBracketId === bracket.id}
+                  deleting={deletingBracketId === bracket.id}
+                  onConfirmDelete={() => handleConfirmDelete(bracket.id)}
+                  onCancelDelete={handleCancelDelete}
+                  feedback={editFeedback && editFeedback.bracketId === bracket.id ? editFeedback : null}
+                  isSyncing={Boolean(syncingBracketIds[bracket.id])}
+                  permanentDeleteMessage={permDeleteMessage}
+                />
               ))
             )}
           </tbody>
         </table>
       </div>
+
+      {/* Desktop brackets table — table-fixed + colgroup keeps width stable in edit mode */}
+      <div className="hidden max-w-full overflow-x-auto lg:block">
+        <table className="w-full table-fixed divide-y divide-gray-200">
+          <colgroup>
+            <col style={{ width: '18%' }} />
+            <col style={{ width: '22%' }} />
+            <col style={{ width: '7.5rem' }} />
+            <col style={{ width: '6.5rem' }} />
+            <col style={{ width: '6.25rem' }} />
+            <col style={{ width: '6.25rem' }} />
+            <col style={{ width: '6.25rem' }} />
+            <col style={{ width: '7.75rem' }} />
+          </colgroup>
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="min-w-0 px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                Entry Name
+              </th>
+              <th className="min-w-0 px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                User
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                Bracket ID
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                Status
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                Created
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                Updated
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                Submitted
+              </th>
+              <th className="sticky right-0 z-20 border-l border-gray-200 bg-gray-50 px-2 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 shadow-[-6px_0_12px_-8px_rgba(0,0,0,0.15)]">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 bg-white">
+            {filteredBrackets.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="px-4 py-4 text-center text-gray-500">
+                  No brackets found
+                </td>
+              </tr>
+            ) : (
+              filteredBrackets.map((bracket) => (
+                <BracketTableRow
+                  key={bracket.id}
+                  bracket={bracket}
+                  users={users}
+                  isEditing={editingBracket === bracket.id}
+                  editForm={editForm}
+                  onEditFormChange={(updates) => setEditForm((previous) => ({ ...previous, ...updates }))}
+                  onSave={() => handleSaveEdit(bracket.id)}
+                  onCancel={handleCancelEdit}
+                  onEditPicks={() => handleEditPicks(bracket.id)}
+                  onEditDetails={() => handleEdit(bracket)}
+                  onLiveScore={() => handleOpenLiveScore(bracket)}
+                  showLiveScoreButton={!bracket.isKey}
+                  onDelete={() => handleDelete(bracket.id)}
+                  pendingDelete={pendingDeleteBracketId === bracket.id}
+                  deleting={deletingBracketId === bracket.id}
+                  onConfirmDelete={() => handleConfirmDelete(bracket.id)}
+                  onCancelDelete={handleCancelDelete}
+                  feedback={editFeedback && editFeedback.bracketId === bracket.id ? editFeedback : null}
+                  isSyncing={Boolean(syncingBracketIds[bracket.id])}
+                  permanentDeleteMessage={permDeleteMessage}
+                />
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {liveScoreOpenForId && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="live-score-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleCloseLiveScore();
+          }}
+        >
+          <div
+            className="flex max-h-[min(85vh,720px)] w-[min(96vw,72rem)] max-w-none flex-col rounded-lg bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-gray-200 px-4 py-2.5">
+              <div className="min-w-0">
+                <h2 id="live-score-modal-title" className="text-base font-semibold text-gray-900">
+                  KEY scoring
+                </h2>
+                <p className="mt-0.5 truncate text-xs text-gray-600" title={liveScoreTitle}>
+                  {liveScoreTitle}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseLiveScore}
+                className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" aria-hidden />
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto px-3 py-2">
+              {liveScoreLoading && (
+                <p className="text-xs text-gray-600">Loading…</p>
+              )}
+              {!liveScoreLoading && liveScoreError && (
+                <p className="text-xs text-red-600">{liveScoreError}</p>
+              )}
+              {!liveScoreLoading && !liveScoreError && liveScoreLines.length === 0 && (
+                <p className="text-xs text-gray-600">
+                  No KEY results yet. Rows show when KEY marks winners.
+                </p>
+              )}
+              {!liveScoreLoading && !liveScoreError && liveScoreLines.length > 0 && (
+                <ul className="list-none space-y-1 text-xs leading-tight text-gray-800">
+                  {liveScoreLines.map((line, index) => (
+                    <li
+                      key={index}
+                      className="whitespace-nowrap border-b border-gray-100 pb-1 font-mono last:border-0"
+                      title={line}
+                    >
+                      {line}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            {!liveScoreLoading && !liveScoreError && liveScoreTotal !== null && liveScoreLines.length > 0 && (
+              <div className="border-t border-gray-200 bg-gray-50 px-3 py-2">
+                <p className="text-sm font-semibold text-gray-900">
+                  Total {liveScoreTotal} pts
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
+    </BracketImportProvider>
   );
 }
 

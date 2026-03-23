@@ -365,12 +365,16 @@ function isValidTeamPage(html: string, statusCode: number): boolean {
  * Get direct database connection for team data (uses POSTGRES_URL_PROD)
  */
 function getTeamDataConnection(): Pool {
-  const connectionString = process.env.POSTGRES_URL_PROD || process.env.POSTGRES_URL;
-  
-  if (!connectionString) {
+  const raw = process.env.POSTGRES_URL_PROD || process.env.POSTGRES_URL;
+
+  if (!raw) {
     throw new Error('POSTGRES_URL_PROD or POSTGRES_URL environment variable is required');
   }
-  
+
+  const connectionString = raw.includes('options=')
+    ? raw
+    : `${raw}${raw.includes('?') ? '&' : '?'}options=-c%20TimeZone%3DUTC`;
+
   return new Pool({
     connectionString,
     ssl: { rejectUnauthorized: false },
@@ -393,8 +397,8 @@ async function getAllTeamsFromDB(): Promise<Record<string, TeamRecord>> {
         name VARCHAR(255) NOT NULL,
         mascot VARCHAR(255),
         logo VARCHAR(500),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMPTZ DEFAULT now(),
+        updated_at TIMESTAMPTZ DEFAULT now()
       )
     `);
     
@@ -434,16 +438,17 @@ async function updateTeamsInDB(teams: Record<string, TeamRecord>): Promise<void>
     const entries = Object.entries(teams);
     if (entries.length > 0) {
       for (const [key, team] of entries) {
+        const touchNow = new Date();
         await pool.query(
           `INSERT INTO team_reference_data (key, id, name, mascot, logo, updated_at)
-           VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+           VALUES ($1, $2, $3, $4, $5, $6)
            ON CONFLICT (key) DO UPDATE
            SET id = EXCLUDED.id,
                name = EXCLUDED.name,
                mascot = EXCLUDED.mascot,
                logo = EXCLUDED.logo,
-               updated_at = CURRENT_TIMESTAMP`,
-          [key, team.id, team.name, team.mascot || null, team.logo || null]
+               updated_at = EXCLUDED.updated_at`,
+          [key, team.id, team.name, team.mascot || null, team.logo || null, touchNow]
         );
       }
     }

@@ -53,12 +53,15 @@ export interface BracketSubmission {
   playerEmail: string;
   entryName: string;
   tieBreaker?: string;
+  /** ISO time of last bracket row change (any field); use for "Last updated" for all statuses. */
+  updatedAt?: string;
   submittedAt?: string;
+  /** @deprecated Prefer `updatedAt` for "last modified"; this is only set for `in_progress` (alias of updatedAt). */
   lastSaved?: string;
   picks: {
     [gameId: string]: string; // teamId of picked winner
   };
   totalPoints?: number;
-  status: 'in_progress' | 'submitted';
+  status: 'in_progress' | 'submitted' | 'deleted';
   year?: number;
 }

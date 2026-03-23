@@ -4,7 +4,12 @@
 export interface TeamRefData {
   abbr: string;
   id: string;
+  /** Official school name (reference data). */
   name: string;
+  /** Resolved UI label (defaults to `name`). */
+  displayName: string;
+  /** DB override when set; `null` = use `name`. Omitted in older payloads. */
+  customDisplayName?: string | null;
 }
 
 // Cache for team reference data
@@ -14,6 +19,15 @@ const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes - shorter cache for faster ne
 
 // Request deduplication: track in-flight requests to prevent duplicate API calls
 let inFlightRequest: Promise<TeamRefData[]> | null = null;
+
+/**
+ * Drop client-side team ref cache (e.g. after admin saves) so the next fetch is fresh.
+ */
+export function clearTeamRefDataClientCache(): void {
+  cachedTeamData = null;
+  lastFetchTime = 0;
+  inFlightRequest = null;
+}
 
 /**
  * Fetch team reference data (from database first, then JSON file fallback)
@@ -40,17 +54,23 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
       if (typeof window === 'undefined') {
         try {
           const { getAllTeamReferenceData } = await import('@/lib/secureDatabase');
+          const { getTeamReferenceDisplayName } = await import('@/lib/teamDisplayName');
           // Only get active teams for public-facing calls
           const dbTeams = await getAllTeamReferenceData(true);
           
           if (Object.keys(dbTeams).length > 0) {
             const teamData: TeamRefData[] = Object.entries(dbTeams)
               .filter(([, teamInfo]) => teamInfo.active !== false)
-              .map(([abbr, teamInfo]) => ({
-                abbr,
-                id: teamInfo.id,
-                name: teamInfo.name
-              }));
+              .map(([abbr, teamInfo]) => {
+                const raw = teamInfo.displayName?.trim();
+                return {
+                  abbr,
+                  id: teamInfo.id,
+                  name: teamInfo.name,
+                  displayName: getTeamReferenceDisplayName(teamInfo),
+                  customDisplayName: raw && raw.length > 0 ? raw : null,
+                };
+              });
             
             cachedTeamData = teamData;
             lastFetchTime = Date.now();
@@ -87,7 +107,9 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
       
       // Client-side: fetch from API route which accesses the database
       try {
-        const response = await fetch('/api/team-data?activeOnly=true');
+        const response = await fetch('/api/team-data?activeOnly=true', {
+          cache: 'no-store',
+        });
         
         if (!response.ok) {
           throw new Error(`API returned ${response.status}: ${response.statusText}`);
@@ -500,44 +522,44 @@ export async function getTeamIdByName(teamName: string): Promise<string | null> 
 function getFallbackTeamData(): TeamRefData[] {
   return [
     // Common tournament teams
-    { abbr: 'UConn', id: '41', name: 'Connecticut' },      // Connecticut Huskies
-    { abbr: 'UNC', id: '153', name: 'North Carolina' },       // North Carolina Tar Heels  
-    { abbr: 'UK', id: '96', name: 'Kentucky' },         // Kentucky Wildcats
-    { abbr: 'KU', id: '2305', name: 'Kansas' },       // Kansas Jayhawks
-    { abbr: 'Tenn', id: '2633', name: 'Tennessee' },     // Tennessee Volunteers
-    { abbr: 'Duke', id: '150', name: 'Duke' },      // Duke Blue Devils
-    { abbr: 'Purd', id: '2509', name: 'Purdue' },     // Purdue Boilermakers
-    { abbr: 'Hou', id: '248', name: 'Houston' },       // Houston Cougars
-    { abbr: 'Cre', id: '156', name: 'Creighton' },       // Creighton Bluejays
-    { abbr: 'IoSt', id: '66', name: 'Iowa State' },       // Iowa State Cyclones
-    { abbr: 'Zona', id: '12', name: 'Arizona' },       // Arizona Wildcats
-    { abbr: 'MicSt', id: '127', name: 'Michigan State' },     // Michigan State Spartans
-    { abbr: 'Flo', id: '57', name: 'Florida' },        // Florida Gators
-    { abbr: 'Bama', id: '333', name: 'Alabama' },      // Alabama Crimson Tide
-    { abbr: 'Aub', id: '2', name: 'Auburn' },        // Auburn Tigers (ESPN ID: 2)
-    { abbr: 'NCSt', id: '152', name: 'NC State' },      // NC State Wolfpack
-    { abbr: 'Gonz', id: '2250', name: 'Gonzaga' },     // Gonzaga Bulldogs
-    { abbr: 'Marq', id: '269', name: 'Marquette' },      // Marquette Golden Eagles
-    { abbr: 'Bylr', id: '239', name: 'Baylor' },      // Baylor Bears
-    { abbr: 'Ill', id: '356', name: 'Illinois' },       // Illinois Fighting Illini
-    { abbr: 'Clem', id: '228', name: 'Clemson' },      // Clemson Tigers
-    { abbr: 'Wisc', id: '275', name: 'Wisconsin' },      // Wisconsin Badgers
-    { abbr: 'SoCar', id: '2579', name: 'South Carolina' },    // South Carolina Gamecocks
-    { abbr: 'Ore', id: '2483', name: 'Oregon' },      // Oregon Ducks
-    { abbr: 'Neb', id: '158', name: 'Nebraska' },       // Nebraska Cornhuskers
-    { abbr: 'WaSt', id: '265', name: 'Washington State' },      // Washington State Cougars
-    { abbr: 'StMary', id: '2608', name: 'Saint Mary\'s' },   // Saint Mary's Gaels
-    { abbr: 'Mary', id: '120', name: 'Maryland' },     // Maryland Terrapins
-    { abbr: 'StJ', id: '2599', name: 'St. John\'s' },      // St. John's Red Storm
-    { abbr: 'MeM', id: '235', name: 'Memphis' },       // Memphis Tigers
+    { abbr: 'UConn', id: '41', name: 'Connecticut', displayName: 'Connecticut' },      // Connecticut Huskies
+    { abbr: 'UNC', id: '153', name: 'North Carolina', displayName: 'North Carolina' },       // North Carolina Tar Heels  
+    { abbr: 'UK', id: '96', name: 'Kentucky', displayName: 'Kentucky' },         // Kentucky Wildcats
+    { abbr: 'KU', id: '2305', name: 'Kansas', displayName: 'Kansas' },       // Kansas Jayhawks
+    { abbr: 'Tenn', id: '2633', name: 'Tennessee', displayName: 'Tennessee' },     // Tennessee Volunteers
+    { abbr: 'Duke', id: '150', name: 'Duke', displayName: 'Duke' },      // Duke Blue Devils
+    { abbr: 'Purd', id: '2509', name: 'Purdue', displayName: 'Purdue' },     // Purdue Boilermakers
+    { abbr: 'Hou', id: '248', name: 'Houston', displayName: 'Houston' },       // Houston Cougars
+    { abbr: 'Cre', id: '156', name: 'Creighton', displayName: 'Creighton' },       // Creighton Bluejays
+    { abbr: 'IoSt', id: '66', name: 'Iowa State', displayName: 'Iowa State' },       // Iowa State Cyclones
+    { abbr: 'Zona', id: '12', name: 'Arizona', displayName: 'Arizona' },       // Arizona Wildcats
+    { abbr: 'MicSt', id: '127', name: 'Michigan State', displayName: 'Michigan State' },     // Michigan State Spartans
+    { abbr: 'Flo', id: '57', name: 'Florida', displayName: 'Florida' },        // Florida Gators
+    { abbr: 'Bama', id: '333', name: 'Alabama', displayName: 'Alabama' },      // Alabama Crimson Tide
+    { abbr: 'Aub', id: '2', name: 'Auburn', displayName: 'Auburn' },        // Auburn Tigers (ESPN ID: 2)
+    { abbr: 'NCSt', id: '152', name: 'NC State', displayName: 'NC State' },      // NC State Wolfpack
+    { abbr: 'Gonz', id: '2250', name: 'Gonzaga', displayName: 'Gonzaga' },     // Gonzaga Bulldogs
+    { abbr: 'Marq', id: '269', name: 'Marquette', displayName: 'Marquette' },      // Marquette Golden Eagles
+    { abbr: 'Bylr', id: '239', name: 'Baylor', displayName: 'Baylor' },      // Baylor Bears
+    { abbr: 'Ill', id: '356', name: 'Illinois', displayName: 'Illinois' },       // Illinois Fighting Illini
+    { abbr: 'Clem', id: '228', name: 'Clemson', displayName: 'Clemson' },      // Clemson Tigers
+    { abbr: 'Wisc', id: '275', name: 'Wisconsin', displayName: 'Wisconsin' },      // Wisconsin Badgers
+    { abbr: 'SoCar', id: '2579', name: 'South Carolina', displayName: 'South Carolina' },    // South Carolina Gamecocks
+    { abbr: 'Ore', id: '2483', name: 'Oregon', displayName: 'Oregon' },      // Oregon Ducks
+    { abbr: 'Neb', id: '158', name: 'Nebraska', displayName: 'Nebraska' },       // Nebraska Cornhuskers
+    { abbr: 'WaSt', id: '265', name: 'Washington State', displayName: 'Washington State' },      // Washington State Cougars
+    { abbr: 'StMary', id: '2608', name: 'Saint Mary\'s', displayName: 'Saint Mary\'s' },   // Saint Mary's Gaels
+    { abbr: 'Mary', id: '120', name: 'Maryland', displayName: 'Maryland' },     // Maryland Terrapins
+    { abbr: 'StJ', id: '2599', name: 'St. John\'s', displayName: 'St. John\'s' },      // St. John's Red Storm
+    { abbr: 'MeM', id: '235', name: 'Memphis', displayName: 'Memphis' },       // Memphis Tigers
     
     // Missing abbreviations from standings data
-    { abbr: 'JM', id: '256', name: 'James Madison' },        // James Madison Dukes
-    { abbr: 'TA&M', id: '245', name: 'Texas A&M' },      // Texas A&M Aggies
-    { abbr: 'Drk', id: '2181', name: 'Drake' },      // Drake Bulldogs
-    { abbr: 'FLO', id: '57', name: 'Florida' },        // Florida Gators
-    { abbr: 'Texas', id: '251', name: 'Texas' },     // Texas Longhorns
-    { abbr: 'TTech', id: '2641', name: 'Texas Tech' },    // Texas Tech Red Raiders
-    { abbr: 'FAU', id: '2226', name: 'Florida Atlantic' },      // Florida Atlantic Owls
+    { abbr: 'JM', id: '256', name: 'James Madison', displayName: 'James Madison' },        // James Madison Dukes
+    { abbr: 'TA&M', id: '245', name: 'Texas A&M', displayName: 'Texas A&M' },      // Texas A&M Aggies
+    { abbr: 'Drk', id: '2181', name: 'Drake', displayName: 'Drake' },      // Drake Bulldogs
+    { abbr: 'FLO', id: '57', name: 'Florida', displayName: 'Florida' },        // Florida Gators
+    { abbr: 'Texas', id: '251', name: 'Texas', displayName: 'Texas' },     // Texas Longhorns
+    { abbr: 'TTech', id: '2641', name: 'Texas Tech', displayName: 'Texas Tech' },    // Texas Tech Red Raiders
+    { abbr: 'FAU', id: '2226', name: 'Florida Atlantic', displayName: 'Florida Atlantic' },      // Florida Atlantic Owls
   ];
 }

@@ -49,8 +49,14 @@ export default defineConfig({
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
   
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
+  /* 
+   * Worker configuration for CI and local execution.
+   * CI: Use 4 workers for faster parallel execution (can be overridden with PLAYWRIGHT_WORKERS env var)
+   * Local: Use default (CPU cores / 2)
+   */
+  workers: process.env.CI 
+    ? parseInt(process.env.PLAYWRIGHT_WORKERS || '4', 10) 
+    : undefined,
   
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
@@ -66,13 +72,24 @@ export default defineConfig({
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
     
-    /* Set headers to suppress test emails when SUPPRESS_TEST_EMAILS is enabled */
-    extraHTTPHeaders: process.env.SUPPRESS_TEST_EMAILS === 'true' 
-      ? { 
-          'X-Suppress-Test-Emails': 'true',
-          'X-Test-User-Email': process.env.TEST_USER_EMAIL || '',
-        }
-      : {},
+    /* 
+     * Extra HTTP headers sent with every request.
+     * - x-vercel-protection-bypass: Bypasses Vercel Deployment Protection for staging
+     * - X-Suppress-Test-Emails: Prevents test emails from being sent (when enabled)
+     */
+    extraHTTPHeaders: {
+      // Vercel Deployment Protection bypass (required for staging)
+      ...(process.env.VERCEL_AUTOMATION_BYPASS_SECRET 
+        ? { 'x-vercel-protection-bypass': process.env.VERCEL_AUTOMATION_BYPASS_SECRET }
+        : {}),
+      // Test email suppression (optional)
+      ...(process.env.SUPPRESS_TEST_EMAILS === 'true' 
+        ? { 
+            'X-Suppress-Test-Emails': 'true',
+            'X-Test-User-Email': process.env.TEST_USER_EMAIL || '',
+          }
+        : {}),
+    },
     
     /* Handle Vercel authentication if needed */
     /* If your staging requires Vercel login, you can set these headers */

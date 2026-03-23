@@ -1,10 +1,14 @@
 'use client';
 
-import { useState, useEffect, useRef, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense, Fragment } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { TournamentData, TournamentBracket, BracketSubmission } from '@/types/tournament';
 import { loadTournamentData } from '@/lib/tournamentLoader';
+import {
+  applyDisplayNamesToTournamentData,
+  buildTeamIdToDisplayNameMapFromApi,
+} from '@/lib/teamDisplayName';
 import { generate64TeamBracket } from '@/lib/bracketGenerator';
 import { SiteConfigData } from '@/lib/siteConfig';
 import StepByStepBracket from '@/components/bracket/StepByStepBracket';
@@ -14,6 +18,51 @@ import { Trophy } from 'lucide-react';
 import { LoggedButton } from '@/components/LoggedButton';
 import { useUsageLogger } from '@/hooks/useUsageLogger';
 import { useCSRF } from '@/hooks/useCSRF';
+
+/**
+ * Normalize save/update API payloads into the bracket list row shape.
+ * `bracketNumber` is included when the API sends it (user routes); preserved from prior row on merge when missing.
+ */
+function bracketFromSaveApiResponse(
+  raw: Record<string, unknown>,
+  sessionUser: { name?: string | null; email?: string | null }
+): BracketSubmission & { bracketNumber?: number } {
+  const tie = raw.tieBreaker;
+  const picks =
+    typeof raw.picks === 'object' && raw.picks !== null && !Array.isArray(raw.picks)
+      ? (raw.picks as Record<string, string>)
+      : {};
+  const status = raw.status;
+  const safeStatus: BracketSubmission['status'] =
+    status === 'submitted' || status === 'deleted' || status === 'in_progress' ? status : 'in_progress';
+
+  const row: BracketSubmission & { bracketNumber?: number } = {
+    id: String(raw.id),
+    playerName: String(raw.playerName ?? sessionUser.name ?? ''),
+    playerEmail: String(raw.playerEmail ?? sessionUser.email ?? ''),
+    entryName: String(raw.entryName ?? ''),
+    tieBreaker: tie !== undefined && tie !== null ? String(tie) : undefined,
+    updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : undefined,
+    submittedAt: typeof raw.submittedAt === 'string' ? raw.submittedAt : undefined,
+    lastSaved: typeof raw.lastSaved === 'string' ? raw.lastSaved : undefined,
+    picks,
+    totalPoints: typeof raw.totalPoints === 'number' ? raw.totalPoints : 0,
+    status: safeStatus,
+    year: typeof raw.year === 'number' ? raw.year : undefined,
+  };
+  if (typeof raw.bracketNumber === 'number') {
+    row.bracketNumber = raw.bracketNumber;
+  }
+  return row;
+}
+
+/**
+ * Default entry name for a copied bracket (Microsoft-style: append `" - Copy"`).
+ */
+function defaultBracketCopyEntryName(sourceEntryName: string): string {
+  const t = sourceEntryName.trim();
+  return t ? `${t} - Copy` : 'Bracket - Copy';
+}
 
 function BracketContent() {
   const { data: session, status } = useSession();
@@ -39,6 +88,9 @@ function BracketContent() {
   const [bracketResetKey, setBracketResetKey] = useState(0);
   const [deletingBracketId, setDeletingBracketId] = useState<string | null>(null);
   const [pendingDeleteBracketId, setPendingDeleteBracketId] = useState<string | null>(null);
+  const [pendingPermanentDeleteBracketId, setPendingPermanentDeleteBracketId] = useState<string | null>(null);
+  const [pendingReturnBracketId, setPendingReturnBracketId] = useState<string | null>(null);
+  const [returningBracketId, setReturningBracketId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string>('');
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [isLiveResultsMode, setIsLiveResultsMode] = useState(false);
@@ -46,6 +98,13 @@ function BracketContent() {
   const [pendingBracketData, setPendingBracketData] = useState<Record<string, unknown> | null>(null);
   const [killSwitchEnabled, setKillSwitchEnabled] = useState<boolean>(true);
   const [killSwitchMessage, setKillSwitchMessage] = useState<string>('Bracket actions are temporarily disabled by the administrator.');
+  const [submittingBracketId, setSubmittingBracketId] = useState<string | null>(null);
+  /** After a successful Copy API call: confirm name before opening the bracket editor. */
+  const [copyNameDialog, setCopyNameDialog] = useState<{
+    newBracket: Record<string, unknown>;
+    draftEntryName: string;
+  } | null>(null);
+  const [copyNameDialogBusy, setCopyNameDialogBusy] = useState(false);
 
   const loadTournamentRef = useRef<(() => Promise<void>) | undefined>(undefined);
   const hasRestoredState = useRef(false);
@@ -294,7 +353,8 @@ function BracketContent() {
   };
 
   /**
-   * Ensure kill switch is enabled before starting a mutating/editing action.
+   * Ensure bracket mutations are allowed (master kill switch).
+   * Opening a bracket for **view** uses {@link handleEditBracket} instead (read-only when the switch is off).
    */
   const ensureKillSwitchEnabledForAction = async (): Promise<boolean> => {
     if (isAdminMode) return true;
@@ -321,9 +381,24 @@ function BracketContent() {
       // Use tournament year from config (fallback to '2025' if not available)
       const tournamentYear = config?.tournamentYear || '2025';
       const data = await loadTournamentData(tournamentYear);
-      setTournamentData(data);
+      let enriched = data;
+      try {
+        const refResponse = await fetch('/api/team-data?activeOnly=false', {
+          cache: 'no-store',
+        });
+        const refJson = await refResponse.json();
+        if (refJson.success && Array.isArray(refJson.data) && refJson.data.length > 0) {
+          enriched = applyDisplayNamesToTournamentData(
+            data,
+            buildTeamIdToDisplayNameMapFromApi(refJson.data)
+          );
+        }
+      } catch (refError) {
+        console.warn('[Bracket] Could not apply team display names:', refError);
+      }
+      setTournamentData(enriched);
       
-      const bracketData = generate64TeamBracket(data);
+      const bracketData = generate64TeamBracket(enriched);
       setBracket(bracketData);
       
       // Load user's submitted brackets
@@ -368,7 +443,7 @@ function BracketContent() {
 
   const loadSubmittedBrackets = async () => {
     try {
-      const response = await fetch('/api/tournament-bracket');
+      const response = await fetch('/api/tournament-bracket', { cache: 'no-store' });
       const data = await response.json();
       
       if (data.success) {
@@ -401,7 +476,22 @@ function BracketContent() {
         
         // Use tournament year from config (fallback to '2025' if not available)
         const tournamentYear = config?.tournamentYear || '2025';
-        const tournamentDataLoaded = await loadTournamentData(tournamentYear);
+        const rawTournament = await loadTournamentData(tournamentYear);
+        let tournamentDataLoaded = rawTournament;
+        try {
+          const refResponse = await fetch('/api/team-data?activeOnly=false', {
+          cache: 'no-store',
+        });
+          const refJson = await refResponse.json();
+          if (refJson.success && Array.isArray(refJson.data) && refJson.data.length > 0) {
+            tournamentDataLoaded = applyDisplayNamesToTournamentData(
+              rawTournament,
+              buildTeamIdToDisplayNameMapFromApi(refJson.data)
+            );
+          }
+        } catch (refError) {
+          console.warn('[Bracket] Could not apply team display names:', refError);
+        }
         setTournamentData(tournamentDataLoaded);
         
         const bracketDataStructure = generate64TeamBracket(tournamentDataLoaded);
@@ -601,8 +691,8 @@ function BracketContent() {
         const { usageLogger } = await import('@/lib/usageLogger');
         usageLogger.log('Click', 'Submit', bracketNumber ? String(bracketNumber).padStart(6, '0') : null);
         
-        // Return to landing page without popup
-        handleBackToLanding();
+        // Return to landing page without popup (await so bracket list reload finishes)
+        await handleBackToLanding();
       } else {
         // Show error message that fades after 10 seconds
         setSubmitError(data.error || 'Failed to submit bracket');
@@ -612,6 +702,62 @@ function BracketContent() {
       console.error('Error submitting bracket:', error);
       setSubmitError('Failed to submit bracket. Please try again.');
       setTimeout(() => setSubmitError(''), 10000);
+    }
+  };
+
+  /**
+   * Submit an in-progress bracket from My Picks (same payload as in-editor submit).
+   */
+  const handleSubmitFromLanding = async (row: BracketSubmission) => {
+    if (!(await ensureKillSwitchEnabledForAction())) {
+      return;
+    }
+
+    if (!session?.user?.name || !session?.user?.email) {
+      alert('User information not available');
+      return;
+    }
+
+    setSubmittingBracketId(row.id);
+    try {
+      const submission = {
+        playerName: session.user.name,
+        playerEmail: session.user.email,
+        entryName: row.entryName || '',
+        tieBreaker: row.tieBreaker || '',
+        picks: row.picks,
+        status: 'submitted' as const,
+      };
+
+      let response: Response;
+      if (isAdminMode) {
+        response = await fetch(`/api/admin/brackets/${row.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(submission),
+        });
+      } else {
+        response = await fetchWithCSRF(`/api/tournament-bracket/${row.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(submission),
+        });
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        const rowRecord = row as Record<string, unknown>;
+        const bracketNumber = rowRecord.bracketNumber as number | undefined;
+        const { usageLogger } = await import('@/lib/usageLogger');
+        usageLogger.log('Click', 'Submit', bracketNumber ? String(bracketNumber).padStart(6, '0') : null);
+        await loadSubmittedBrackets();
+      } else {
+        alert(data.error || 'Failed to submit bracket');
+      }
+    } catch (error) {
+      console.error('Error submitting bracket from My Picks:', error);
+      alert('Failed to submit bracket. Please try again.');
+    } finally {
+      setSubmittingBracketId(null);
     }
   };
 
@@ -656,18 +802,25 @@ function BracketContent() {
   };
 
   const handleEditBracket = async (bracketToEdit: unknown) => {
-    if (!(await ensureKillSwitchEnabledForAction())) {
+    const bracketData = bracketToEdit as Record<string, unknown>;
+
+    if (bracketData.status === 'deleted') {
       return;
     }
 
-    const bracketData = bracketToEdit as Record<string, unknown>;
+    const state = isAdminMode ? { enabled: true } : await getLatestKillSwitchState();
+    const bracketMutationsAllowed = isAdminMode || state.enabled;
 
     setEditingBracket(bracketToEdit);
     const bracketPicks = (bracketData.picks as Record<string, string>) || {};
     setPicks(bracketPicks);
     setEntryName((bracketData.entryName as string) || session?.user?.name || '');
     setTieBreaker((bracketData.tieBreaker as string) || '');
-    setIsReadOnly(bracketData.status === 'submitted');
+    /** Submitted brackets are always view-only; in-progress brackets become view-only when the kill switch blocks saves/submits. */
+    setIsReadOnly(
+      bracketData.status === 'submitted' ||
+        (bracketData.status === 'in_progress' && !bracketMutationsAllowed)
+    );
     
     // Calculate first incomplete step for in-progress brackets
     if (bracketData.status === 'in_progress' && bracket && tournamentData) {
@@ -709,7 +862,7 @@ function BracketContent() {
     setBracketResetKey(prev => prev + 1);
   };
 
-  const handleBackToLanding = async () => {
+  const handleBackToLanding = async (options?: { skipBracketListReload?: boolean }) => {
     // Clear sessionStorage when leaving bracket view
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('bracketState');
@@ -726,7 +879,9 @@ function BracketContent() {
     setEditingBracket(null);
     setPicks({});
     setIsReadOnly(false);
-    await loadSubmittedBrackets(); // Reload brackets to show the newly submitted one
+    if (!options?.skipBracketListReload) {
+      await loadSubmittedBrackets();
+    }
   };
 
   const handleCloseBracket = async () => {
@@ -768,15 +923,15 @@ function BracketContent() {
     }
 
     try {
-      // Create a copy with the same entry name (allowed for in-progress brackets)
       const bracket = bracketToCopy as Record<string, unknown>;
+      const copyEntryName = defaultBracketCopyEntryName(String(bracket.entryName ?? ''));
       const copiedBracket = {
         playerName: session.user.name,
         playerEmail: session.user.email,
-        entryName: bracket.entryName,
+        entryName: copyEntryName,
         tieBreaker: bracket.tieBreaker || '',
         picks: bracket.picks || {},
-        status: 'in_progress'
+        status: 'in_progress',
       };
 
       const response = await fetchWithCSRF('/api/tournament-bracket', {
@@ -786,13 +941,14 @@ function BracketContent() {
 
       const data = await response.json();
 
-      if (data.success) {
-        // Reload brackets to show the new copy
+      if (data.success && data.data) {
         await loadSubmittedBrackets();
-        // Navigate to edit the copied bracket
-        handleEditBracket(data.data);
+        const created = data.data as Record<string, unknown>;
+        setCopyNameDialog({
+          newBracket: created,
+          draftEntryName: String(created.entryName ?? copyEntryName),
+        });
       } else {
-        // Show validation error from server
         alert(data.error || 'Failed to copy bracket. Bracket creation may be disabled.');
       }
     } catch (error) {
@@ -801,10 +957,177 @@ function BracketContent() {
     }
   };
 
-  const handleSaveBracket = async () => {
+  const handleCopyNameDialogStayOnMyPicks = () => {
+    setCopyNameDialog(null);
+  };
+
+  const handleCopyNameDialogOpenBracket = async () => {
+    if (!copyNameDialog || !session?.user?.name || !session?.user?.email) return;
+
+    const trimmed = copyNameDialog.draftEntryName.trim();
+    if (!trimmed) {
+      alert('Please enter a name for the copied bracket.');
+      return;
+    }
+
+    const b = copyNameDialog.newBracket;
+    const id = String(b.id ?? '');
+    if (!id) {
+      alert('Invalid bracket copy.');
+      setCopyNameDialog(null);
+      return;
+    }
+
+    const currentName = String(b.entryName ?? '').trim();
+    if (trimmed === currentName) {
+      setCopyNameDialog(null);
+      await handleEditBracket(b);
+      return;
+    }
+
+    setCopyNameDialogBusy(true);
+    try {
+      const payload = {
+        playerName: session.user.name,
+        playerEmail: session.user.email,
+        entryName: trimmed,
+        tieBreaker: String(b.tieBreaker ?? ''),
+        picks: (b.picks as Record<string, string>) || {},
+      };
+      const response = await fetchWithCSRF(`/api/tournament-bracket/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      if (data.success && data.data) {
+        await loadSubmittedBrackets();
+        setCopyNameDialog(null);
+        await handleEditBracket(data.data);
+      } else {
+        alert(data.error || 'Could not update the bracket name.');
+      }
+    } catch (error) {
+      console.error('Error updating copied bracket name:', error);
+      alert('Could not update the bracket name. Please try again.');
+    } finally {
+      setCopyNameDialogBusy(false);
+    }
+  };
+
+  /**
+   * Restore a soft-deleted bracket to in-progress so the user can edit or submit again.
+   */
+  const handleRestoreBracket = async (bracketId: string) => {
     if (!(await ensureKillSwitchEnabledForAction())) {
       return;
     }
+
+    try {
+      const response = await fetchWithCSRF(`/api/tournament-bracket/${bracketId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: 'in_progress' }),
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        await loadSubmittedBrackets();
+      } else {
+        alert(data.error || 'Failed to restore bracket.');
+      }
+    } catch (error) {
+      console.error('Error restoring bracket:', error);
+      alert('Failed to restore bracket. Please try again.');
+    }
+  };
+
+  /**
+   * Show inline permanent-delete confirmation for a deleted bracket.
+   */
+  const handlePermanentDeleteClick = async (bracketId: string) => {
+    if (!(await ensureKillSwitchEnabledForAction())) {
+      return;
+    }
+    setPendingPermanentDeleteBracketId(bracketId);
+  };
+
+  const handleCancelPermanentDelete = () => {
+    setPendingPermanentDeleteBracketId(null);
+  };
+
+  /**
+   * Hard-delete a bracket after the user confirms in the inline dialog.
+   */
+  const handleConfirmPermanentDelete = async (bracketId: string) => {
+    if (!(await ensureKillSwitchEnabledForAction())) {
+      setPendingPermanentDeleteBracketId(null);
+      return;
+    }
+
+    setDeletingBracketId(bracketId);
+    try {
+      const response = await fetchWithCSRF(`/api/tournament-bracket/${bracketId}`, {
+        method: 'DELETE',
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        setPendingPermanentDeleteBracketId(null);
+        await loadSubmittedBrackets();
+      } else {
+        alert(data.error || 'Failed to permanently delete bracket.');
+      }
+    } catch (error) {
+      console.error('Error permanently deleting bracket:', error);
+      alert('Failed to permanently delete bracket. Please try again.');
+    } finally {
+      setDeletingBracketId(null);
+    }
+  };
+
+  /**
+   * Submitted bracket: show inline confirmation, then move back to In Progress (out of pool until resubmitted).
+   */
+  const handleReturnBracketClick = async (bracketId: string) => {
+    if (!(await ensureKillSwitchEnabledForAction())) {
+      return;
+    }
+    setPendingReturnBracketId(bracketId);
+  };
+
+  const handleCancelReturnBracket = () => {
+    setPendingReturnBracketId(null);
+  };
+
+  const handleConfirmReturnBracket = async (bracketId: string) => {
+    if (!(await ensureKillSwitchEnabledForAction())) {
+      setPendingReturnBracketId(null);
+      return;
+    }
+
+    setReturningBracketId(bracketId);
+    try {
+      const response = await fetchWithCSRF(`/api/tournament-bracket/${bracketId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: 'in_progress' }),
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        setPendingReturnBracketId(null);
+        await loadSubmittedBrackets();
+      } else {
+        alert(data.error || 'Failed to return bracket to In Progress.');
+      }
+    } catch (error) {
+      console.error('Error returning bracket:', error);
+      alert('Failed to return bracket. Please try again.');
+    } finally {
+      setReturningBracketId(null);
+    }
+  };
+
+  const handleSaveBracket = async () => {
+    // Kill switch is enforced on the server (fast DB check). Skip extra /api/kill-switch round-trip before Save.
 
     if (!session?.user?.name || !session?.user?.email) {
       alert('User information not available');
@@ -872,16 +1195,36 @@ function BracketContent() {
         const { usageLogger } = await import('@/lib/usageLogger');
         usageLogger.log('Click', 'Save', bracketNumber ? String(bracketNumber).padStart(6, '0') : null);
         
-        // Reload brackets to show the updated bracket
-        await loadSubmittedBrackets();
-        
         // If in admin mode, redirect back to admin brackets tab
         if (isAdminMode) {
           router.push(isLiveResultsMode ? '/admin?tab=live-results' : '/admin?tab=brackets');
           return;
         }
-        
-        handleBackToLanding();
+
+        // Merge API row into list — avoids slow GET /api/tournament-bracket (Sheets + DB) after every Save
+        if (data.data && session?.user) {
+          const payload = data.data as Record<string, unknown>;
+          const updated = bracketFromSaveApiResponse(payload, session.user);
+          setSubmittedBrackets((prev) => {
+            const idx = prev.findIndex((b) => b.id === updated.id);
+            if (idx >= 0) {
+              const prevRow = prev[idx] as BracketSubmission & { bracketNumber?: number };
+              const merged: BracketSubmission & { bracketNumber?: number } = {
+                ...prevRow,
+                ...updated,
+                year: updated.year ?? prevRow.year,
+                bracketNumber: updated.bracketNumber ?? prevRow.bracketNumber,
+              };
+              const copy = [...prev];
+              copy[idx] = merged as BracketSubmission;
+              return copy;
+            }
+            return [...prev, updated as BracketSubmission];
+          });
+          await handleBackToLanding({ skipBracketListReload: true });
+        } else {
+          await handleBackToLanding();
+        }
       } else {
         // Show validation error from server
         alert(data.error || 'Failed to save bracket. Bracket creation may be disabled.');
@@ -901,6 +1244,9 @@ function BracketContent() {
     // For in_progress brackets, show embedded confirmation
     // For submitted brackets, still use popup (hard delete is more serious)
     const bracketToDelete = submittedBrackets.find(b => b.id === bracketId);
+    if (bracketToDelete && 'status' in bracketToDelete && bracketToDelete.status === 'deleted') {
+      return;
+    }
     const isInProgress = bracketToDelete && 'status' in bracketToDelete && bracketToDelete.status === 'in_progress';
     
     if (isInProgress) {
@@ -916,9 +1262,13 @@ function BracketContent() {
   };
 
   const confirmDeleteBracket = async (bracketId: string) => {
-    // Find the bracket to check its status
     const bracketToDelete = submittedBrackets.find(b => b.id === bracketId);
-    
+
+    if (bracketToDelete && 'status' in bracketToDelete && bracketToDelete.status === 'deleted') {
+      setPendingDeleteBracketId(null);
+      return;
+    }
+
     // For in_progress brackets, soft delete (change status to 'deleted')
     // For submitted brackets, hard delete (actual removal)
     const isInProgress = bracketToDelete && 'status' in bracketToDelete && bracketToDelete.status === 'in_progress';
@@ -1033,24 +1383,93 @@ function BracketContent() {
 
   // Show landing page by default
   if (currentView === 'landing') {
-        return (
-          <MyPicksLanding
-            brackets={submittedBrackets}
-            onCreateNew={handleCreateNew}
-            onEditBracket={handleEditBracket}
-              onDeleteBracket={handleDeleteBracket}
-              pendingDeleteBracketId={pendingDeleteBracketId}
-              onConfirmDelete={confirmDeleteBracket}
-              onCancelDelete={() => setPendingDeleteBracketId(null)}
-            onCopyBracket={handleCopyBracket}
-            deletingBracketId={deletingBracketId}
-            tournamentData={tournamentData}
-            bracket={bracket}
-            siteConfig={siteConfig}
-            killSwitchEnabled={killSwitchEnabled}
-            killSwitchMessage={killSwitchMessage}
-          />
-        );
+    return (
+      <Fragment>
+        <MyPicksLanding
+          brackets={submittedBrackets}
+          onCreateNew={handleCreateNew}
+          onEditBracket={handleEditBracket}
+          onDeleteBracket={handleDeleteBracket}
+          pendingDeleteBracketId={pendingDeleteBracketId}
+          onConfirmDelete={confirmDeleteBracket}
+          onCancelDelete={() => setPendingDeleteBracketId(null)}
+          onCopyBracket={handleCopyBracket}
+          onSubmitBracket={handleSubmitFromLanding}
+          submittingBracketId={submittingBracketId}
+          onRestoreBracket={handleRestoreBracket}
+          onPermanentDeleteClick={handlePermanentDeleteClick}
+          pendingPermanentDeleteBracketId={pendingPermanentDeleteBracketId}
+          onConfirmPermanentDelete={handleConfirmPermanentDelete}
+          onCancelPermanentDelete={handleCancelPermanentDelete}
+          pendingReturnBracketId={pendingReturnBracketId}
+          onReturnBracketClick={handleReturnBracketClick}
+          onConfirmReturnBracket={handleConfirmReturnBracket}
+          onCancelReturnBracket={handleCancelReturnBracket}
+          returningBracketId={returningBracketId}
+          deletingBracketId={deletingBracketId}
+          tournamentData={tournamentData}
+          bracket={bracket}
+          siteConfig={siteConfig}
+          killSwitchEnabled={killSwitchEnabled}
+          killSwitchMessage={killSwitchMessage}
+        />
+        {copyNameDialog && (
+          <div
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="copy-bracket-name-title"
+            data-testid="copy-bracket-name-dialog"
+          >
+            <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+              <h2 id="copy-bracket-name-title" className="text-lg font-semibold text-gray-900">
+                Bracket copied
+              </h2>
+              <p className="mt-2 text-sm text-gray-600">
+                Your bracket was copied successfully. You can change the entry name before opening it.
+              </p>
+              <label htmlFor="copy-bracket-entry-name" className="mt-4 block text-sm font-medium text-gray-700">
+                Entry name
+              </label>
+              <input
+                id="copy-bracket-entry-name"
+                type="text"
+                value={copyNameDialog.draftEntryName}
+                onChange={(e) =>
+                  setCopyNameDialog((prev) =>
+                    prev ? { ...prev, draftEntryName: e.target.value } : null
+                  )
+                }
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                disabled={copyNameDialogBusy}
+                autoComplete="off"
+                data-testid="copy-bracket-entry-name-input"
+              />
+              <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={handleCopyNameDialogStayOnMyPicks}
+                  disabled={copyNameDialogBusy}
+                  className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  data-testid="copy-bracket-stay-on-my-picks"
+                >
+                  Stay on My Picks
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleCopyNameDialogOpenBracket()}
+                  disabled={copyNameDialogBusy}
+                  className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                  data-testid="copy-bracket-open-bracket"
+                >
+                  {copyNameDialogBusy ? 'Saving…' : 'Open bracket'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </Fragment>
+    );
   }
 
   if (!tournamentData || !bracket) {

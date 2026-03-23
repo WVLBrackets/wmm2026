@@ -7,6 +7,18 @@
 
 import type { TeamReferenceData } from '../types/database';
 
+/** Public GET /api/team-data cache must drop when reference rows change. */
+async function invalidatePublicTeamDataCache(): Promise<void> {
+  const { invalidateTeamDataPublicCache } = await import('../teamDataPublicCache');
+  invalidateTeamDataPublicCache();
+}
+
+function parseDisplayNameColumn(value: unknown): string | undefined {
+  if (value == null) return undefined;
+  const s = String(value).trim();
+  return s.length > 0 ? s : undefined;
+}
+
 /**
  * Get all team reference data
  * 
@@ -22,14 +34,14 @@ export async function getAllTeamReferenceData(
     
     if (activeOnly) {
       result = await teamDataSql`
-        SELECT key, id, name, mascot, logo, COALESCE(active, false) as active
+        SELECT key, id, name, display_name, mascot, logo, COALESCE(active, false) as active
         FROM team_reference_data
         WHERE COALESCE(active, false) = true
         ORDER BY CAST(id AS INTEGER)
       `;
     } else {
       result = await teamDataSql`
-        SELECT key, id, name, mascot, logo, active
+        SELECT key, id, name, display_name, mascot, logo, active
         FROM team_reference_data
         ORDER BY CAST(id AS INTEGER)
       `;
@@ -38,19 +50,30 @@ export async function getAllTeamReferenceData(
     const teams: Record<string, TeamReferenceData> = {};
     
     for (const row of result.rows) {
+      const r = row as {
+        key: string;
+        id: string;
+        name: string;
+        display_name: string | null;
+        mascot: string | null;
+        logo: string | null;
+        active: boolean | null;
+      };
+
       // Normalize boolean from database
       let activeBoolean: boolean;
-      if (row.active === null || row.active === undefined) {
+      if (r.active === null || r.active === undefined) {
         activeBoolean = false;
       } else {
-        activeBoolean = Boolean(row.active);
+        activeBoolean = Boolean(r.active);
       }
-      
-      teams[row.key as string] = {
-        id: row.id as string,
-        name: row.name as string,
-        mascot: (row.mascot as string) || undefined,
-        logo: (row.logo as string) || '',
+
+      teams[r.key] = {
+        id: r.id,
+        name: r.name,
+        displayName: parseDisplayNameColumn(r.display_name),
+        mascot: r.mascot || undefined,
+        logo: r.logo || '',
         active: activeBoolean,
       };
     }
@@ -71,42 +94,66 @@ export async function getAllTeamReferenceData(
 }
 
 /**
- * Update all team reference data (replaces existing)
- * 
+ * Update all team reference data (replaces existing).
+ * Uses batched INSERT in a transaction so saves stay fast (hundreds of teams).
+ *
  * @param teams - Record of team key to team data
  */
 export async function updateTeamReferenceData(
   teams: Record<string, TeamReferenceData>
 ): Promise<void> {
+  const { getTeamDataPool } = await import('../teamDataConnection');
+  const pool = await getTeamDataPool();
+  const entries = Object.entries(teams);
+  const client = await pool.connect();
+
   try {
-    const { teamDataSql } = await import('../teamDataConnection');
-    
-    // Delete all existing teams
-    await teamDataSql`DELETE FROM team_reference_data`;
-    
-    // Insert all teams
-    const entries = Object.entries(teams);
-    if (entries.length > 0) {
-      for (const [key, team] of entries) {
-        // Default active status based on key format
-        const isActive = team.active ?? (!/^[0-9]+$/.test(key));
-        
-        await teamDataSql`
-          INSERT INTO team_reference_data (key, id, name, mascot, logo, active, updated_at)
-          VALUES (${key}, ${team.id}, ${team.name}, ${team.mascot || null}, ${team.logo || null}, ${isActive}, CURRENT_TIMESTAMP)
-          ON CONFLICT (key) DO UPDATE
-          SET id = EXCLUDED.id,
-              name = EXCLUDED.name,
-              mascot = EXCLUDED.mascot,
-              logo = EXCLUDED.logo,
-              active = EXCLUDED.active,
-              updated_at = CURRENT_TIMESTAMP
-        `;
-      }
+    await client.query('BEGIN');
+    await client.query('DELETE FROM team_reference_data');
+
+    const BATCH_SIZE = 80;
+    const COLS_PER_ROW = 8;
+
+    for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+      const batch = entries.slice(i, i + BATCH_SIZE);
+      const params: unknown[] = [];
+      const valueSql = batch
+        .map(([key, team], rowIdx) => {
+          const isActive = team.active ?? (!/^[0-9]+$/.test(key));
+          const displayNameForDb = team.displayName?.trim()
+            ? team.displayName.trim()
+            : null;
+          const base = rowIdx * COLS_PER_ROW;
+          const touchNow = new Date();
+          params.push(
+            key,
+            team.id,
+            team.name,
+            displayNameForDb,
+            team.mascot ?? null,
+            team.logo ?? null,
+            isActive,
+            touchNow
+          );
+          return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}, $${base + 8})`;
+        })
+        .join(', ');
+
+      await client.query(
+        `INSERT INTO team_reference_data (key, id, name, display_name, mascot, logo, active, updated_at)
+         VALUES ${valueSql}`,
+        params
+      );
     }
+
+    await client.query('COMMIT');
+    await invalidatePublicTeamDataCache();
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Error updating team reference data:', error);
     throw error;
+  } finally {
+    client.release();
   }
 }
 
@@ -122,9 +169,10 @@ export async function updateTeamActiveStatus(key: string, active: boolean): Prom
     
     await teamDataSql`
       UPDATE team_reference_data
-      SET active = ${active}, updated_at = CURRENT_TIMESTAMP
+      SET active = ${active}, updated_at = ${new Date()}
       WHERE key = ${key}
     `;
+    await invalidatePublicTeamDataCache();
   } catch (error) {
     console.error('Error updating team active status:', error);
     throw error;
@@ -144,6 +192,7 @@ export async function deleteTeamReferenceData(key: string): Promise<void> {
       DELETE FROM team_reference_data
       WHERE key = ${key}
     `;
+    await invalidatePublicTeamDataCache();
   } catch (error) {
     console.error('Error deleting team reference data:', error);
     throw error;

@@ -13,9 +13,13 @@ export const metadata: Metadata = {
   description: siteConfig.siteDescription,
   keywords: ["March Madness", "Basketball", "Tournament", "Bracket", "NCAA"],
   authors: [{ name: "Warren" }],
+  // Prefer PNG first so tabs use the basketball even when /favicon.ico is a legacy/default asset.
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon.ico',
+    icon: [
+      { url: '/basketball-favicon.png', type: 'image/png' },
+      { url: '/favicon.ico', sizes: 'any' },
+    ],
+    shortcut: '/basketball-favicon.png',
     apple: '/basketball-favicon.png',
   },
   openGraph: {
@@ -44,9 +48,9 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <meta name="format-detection" content="telephone=no" />
-        <link rel="icon" href="/favicon.ico" />
         <link rel="icon" href="/basketball-favicon.png" type="image/png" />
-        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="shortcut icon" href="/basketball-favicon.png" type="image/png" />
         <link rel="apple-touch-icon" href="/basketball-favicon.png" />
       </head>
       <body

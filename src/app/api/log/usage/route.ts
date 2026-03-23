@@ -63,10 +63,11 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error logging usage:', error);
-    // Don't fail the request - logging should be fire-and-forget
+    // Don't fail the request - logging should be fire-and-forget.
+    // Returning 200 prevents noisy client-side console errors in local/dev
+    // when logging infrastructure is intentionally not configured.
     return NextResponse.json(
-      { success: false, error: 'Failed to log usage' },
-      { status: 500 }
+      { success: false, error: 'Failed to log usage' }
     );
   }
 }
