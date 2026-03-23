@@ -112,7 +112,7 @@ export default function AdminPage() {
     setInBracketMode(false);
   }, [setInBracketMode]);
 
-  const loadDataRef = useRef<(() => Promise<void>) | undefined>(undefined);
+  const loadDataRef = useRef<((options?: { silent?: boolean }) => Promise<void>) | undefined>(undefined);
   const adminTabsNavRef = useRef<HTMLDivElement>(null);
   const [adminTabsCanScrollLeft, setAdminTabsCanScrollLeft] = useState(false);
   const [adminTabsCanScrollRight, setAdminTabsCanScrollRight] = useState(false);

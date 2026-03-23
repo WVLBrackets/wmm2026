@@ -1,0 +1,15 @@
+---
+description: Run production build before staging push
+alwaysApply: true
+---
+
+# Staging Build Guardrail
+
+Before any commit/push intended for the `staging` branch:
+
+- Run `npm run build` locally.
+- If build fails, fix compile/type errors before staging push.
+- Mention this guardrail explicitly in the assistant reply before staging check-in steps.
+
+Example reminder:
+"Before pushing to `staging`, run `npm run build` so CI/Vercel catches no new compile/type issues."

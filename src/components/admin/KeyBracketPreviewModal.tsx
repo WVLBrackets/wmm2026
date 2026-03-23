@@ -488,16 +488,19 @@ function RoundColumn({
 }) {
   return (
     <div className="min-w-0 relative" style={{ width: `${settings.columnWidthPx}px`, height: `${columnHeight}px` }}>
-      {slots.map((slot, index) => (
+      {slots.map((slot, index) => {
+        const pickedTeamId = slot.team?.id;
+        return (
         <div key={slot.id} className="absolute left-0 right-0" style={{ top: `${topOffsets[index] ?? 0}px` }}>
           <TeamRow
             team={slot.team}
             isWinner={slot.isWinner}
             heightPx={settings.slotHeightPx}
-            onClick={slot.team?.id && onSelectTeam ? () => onSelectTeam(slot.gameId, slot.team.id) : undefined}
+            onClick={pickedTeamId && onSelectTeam ? () => onSelectTeam(slot.gameId, pickedTeamId) : undefined}
           />
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

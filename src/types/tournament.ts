@@ -64,4 +64,6 @@ export interface BracketSubmission {
   totalPoints?: number;
   status: 'in_progress' | 'submitted' | 'deleted';
   year?: number;
+  /** Friendly numeric id for display / usage logging when the API provides it. */
+  bracketNumber?: number;
 }

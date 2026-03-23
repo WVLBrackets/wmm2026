@@ -207,13 +207,14 @@ export async function GET(request: NextRequest) {
       ...rows.map(row => row.join(','))
     ];
     const csvText = csvLines.join('\n');
-    const body = encodeCsvUtf8WithBom(csvText);
+    const bytes = encodeCsvUtf8WithBom(csvText);
 
     // Generate filename with timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
     const filename = `brackets-export-${timestamp}.csv`;
 
-    return new NextResponse(body, {
+    // Copy into Buffer so BodyInit / BlobPart typing matches (Uint8Array<ArrayBufferLike> can fail strict checks).
+    return new NextResponse(Buffer.from(bytes), {
       status: 200,
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',

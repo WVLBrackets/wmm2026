@@ -207,7 +207,7 @@ export async function POST(request: NextRequest) {
 
     // Check if this is a reply to a do-not-reply address
     // Only check addresses for the current environment to prevent duplicate replies
-    // (vercelEnv and isProduction are already defined above)
+    // (appEnvironment and isProduction are already defined above)
     
     // Environment-specific do-not-reply addresses
     // Production should only respond to production addresses
@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
           'donotreply.wmm.stage@gmail.com',
         ];
 
-    console.log(`[InboundEmail] Environment: ${vercelEnv} (${isProduction ? 'production' : 'staging/preview'})`);
+    console.log(`[InboundEmail] Environment: ${appEnvironment} (${isProduction ? 'production' : 'staging/preview'})`);
     console.log(`[InboundEmail] Checking against addresses: ${doNotReplyAddresses.join(', ')}`);
     console.log(`[InboundEmail] Email sent to: ${toEmail}`);
     console.log(`[InboundEmail] Raw toEmail type: ${typeof toEmail}, value: ${JSON.stringify(toEmail)}`);

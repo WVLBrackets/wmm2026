@@ -20,6 +20,11 @@ import { useUsageLogger } from '@/hooks/useUsageLogger';
 import { useCSRF } from '@/hooks/useCSRF';
 
 /**
+ * My Picks table row for submit-from-landing (`entryName` may be unset until the user fills it).
+ */
+type MyPicksSubmitRow = Omit<BracketSubmission, 'entryName'> & { entryName?: string };
+
+/**
  * Normalize save/update API payloads into the bracket list row shape.
  * `bracketNumber` is included when the API sends it (user routes); preserved from prior row on merge when missing.
  */
@@ -708,7 +713,7 @@ function BracketContent() {
   /**
    * Submit an in-progress bracket from My Picks (same payload as in-editor submit).
    */
-  const handleSubmitFromLanding = async (row: BracketSubmission) => {
+  const handleSubmitFromLanding = async (row: MyPicksSubmitRow) => {
     if (!(await ensureKillSwitchEnabledForAction())) {
       return;
     }
@@ -745,8 +750,7 @@ function BracketContent() {
 
       const data = await response.json();
       if (data.success) {
-        const rowRecord = row as Record<string, unknown>;
-        const bracketNumber = rowRecord.bracketNumber as number | undefined;
+        const bracketNumber = row.bracketNumber;
         const { usageLogger } = await import('@/lib/usageLogger');
         usageLogger.log('Click', 'Submit', bracketNumber ? String(bracketNumber).padStart(6, '0') : null);
         await loadSubmittedBrackets();

@@ -128,6 +128,9 @@ interface BracketTableRowProps {
   onCancel: () => void;
   onEditPicks: () => void;
   onEditDetails: () => void;
+  /** Open live standings / scoring for this bracket (hidden for KEY brackets when caller sets `showLiveScoreButton`). */
+  onLiveScore?: () => void;
+  showLiveScoreButton?: boolean;
   onDelete: () => void;
   pendingDelete: boolean;
   deleting: boolean;
