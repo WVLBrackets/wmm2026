@@ -1,7 +1,6 @@
 import { Fragment } from 'react';
 import StandingsShell from '@/components/StandingsShell';
 import { PageLogger } from '@/components/PageLogger';
-import { getAppEnvironment } from '@/lib/appEnvironment';
 import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
 
 function LiveStandingsDisclaimerBanner({ text }: { text: string }) {
@@ -25,7 +24,7 @@ function LiveStandingsDisclaimerBanner({ text }: { text: string }) {
       className="w-full bg-red-600 px-4 py-3 text-center text-sm font-medium text-white shadow-md"
       role="status"
       aria-live="polite"
-      data-testid="live-standings-local-disclaimer-banner"
+      data-testid="live-standings-disclaimer-banner"
     >
       {body}
     </div>
@@ -33,12 +32,8 @@ function LiveStandingsDisclaimerBanner({ text }: { text: string }) {
 }
 
 export default async function LiveStandingsPage() {
-  const isLocal = getAppEnvironment() === 'local';
-  let disclaimerText = '';
-  if (isLocal) {
-    const config = await getSiteConfigFromGoogleSheets();
-    disclaimerText = config?.liveStandingsDisclaimer?.trim() ?? '';
-  }
+  const config = await getSiteConfigFromGoogleSheets();
+  const disclaimerText = config?.liveStandingsDisclaimer?.trim() ?? '';
 
   return (
     <>

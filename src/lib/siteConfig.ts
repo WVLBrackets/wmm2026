@@ -27,7 +27,7 @@ export interface SiteConfigData {
   liveStandingsWarning?: string;
   /** Two button labels separated by `|` (left = accept Live, right = stay on daily). Sheet: `live_standings_buttons` */
   liveStandingsButtons?: string;
-  /** Local-dev only: banner on `/standings/live` (`||` = line breaks). Sheet: `live_standings_disclaimer` */
+  /** Optional red banner atop `/standings/live` when non-empty (`||` = line breaks). Sheet: `live_standings_disclaimer` */
   liveStandingsDisclaimer?: string;
   footerText: string;
   contactMe: string;
