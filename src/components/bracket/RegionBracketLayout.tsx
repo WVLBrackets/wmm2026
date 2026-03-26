@@ -3,13 +3,10 @@
 import { useEffect, useRef, RefObject } from 'react';
 import Image from 'next/image';
 import { TournamentGame } from '@/types/tournament';
-import { CheckCircle, Save, KeyRound, ArrowRight, Send, X } from 'lucide-react';
-import {
-  BRACKET_EDITOR_BAR_ACTION_CLASSES,
-  BRACKET_EDITOR_STAGE_MIN_HEIGHT_CLASS,
-} from '@/lib/bracketStepNavMetrics';
+import { CheckCircle, Save, KeyRound, ArrowRight, X } from 'lucide-react';
+import { BRACKET_EDITOR_BAR_ACTION_CLASSES } from '@/lib/bracketStepNavMetrics';
+import BracketEditorTopMessage from './BracketEditorTopMessage';
 import BracketStepNavBar from './BracketStepNavBar';
-
 interface RegionBracketLayoutProps {
   regionName: string;
   games: TournamentGame[];
@@ -44,12 +41,14 @@ interface RegionBracketLayoutProps {
   isLiveResultsMode?: boolean;
   disableSave?: boolean;
   disableSaveMessage?: string;
+  /** Site config `bracket_regional_message` — banner above the bracket on regional steps */
+  bracketRegionalMessage?: string;
 }
 
-export default function RegionBracketLayout({ 
-  regionName, 
-  games, 
-  picks, 
+export default function RegionBracketLayout({
+  regionName,
+  games,
+  picks,
   onPick,
   readOnly = false,
   scrollContainerRef,
@@ -58,10 +57,6 @@ export default function RegionBracketLayout({
   onCancel,
   onNext,
   canProceed = false,
-  onSubmitBracket,
-  submitEnabled = false,
-  submitDisabledMessage = '',
-  isAdminMode = false,
   currentStep = 0,
   totalSteps = 5,
   onStepClick,
@@ -73,12 +68,13 @@ export default function RegionBracketLayout({
   onEntryNameChange,
   isLiveResultsMode = false,
   disableSave = false,
-  disableSaveMessage = ''
+  disableSaveMessage = '',
+  bracketRegionalMessage = '',
 }: RegionBracketLayoutProps) {
   const hasScrolledRoundOf64Ref = useRef(false);
   const hasScrolledRoundOf32Ref = useRef(false);
   const hasScrolledSweet16Ref = useRef(false);
-  
+
   const handleTeamClick = (game: TournamentGame, team: Record<string, unknown>) => {
     if (game.winner || readOnly) return;
     onPick(game.id, team.id as string);
@@ -93,13 +89,13 @@ export default function RegionBracketLayout({
         </div>
       );
     }
-    
+
     const isSelected = picks[game.id] === (team.id as string);
     const isClickable = !game.winner && !readOnly;
-    
+
     // All rounds use same height
     const teamHeight = 'h-6';
-    
+
     return (
       <div
         className={`
@@ -124,7 +120,10 @@ export default function RegionBracketLayout({
   const renderGame = (game: TournamentGame) => {
     // Always render both team slots, even if teams are not yet determined
     return (
-      <div key={game.id} className="border border-gray-300 rounded p-1 space-y-0.5 mb-1 w-full">
+      <div
+        key={game.id}
+        className="border border-gray-300 rounded p-1 space-y-0.5 mb-1 w-full"
+      >
         {renderTeam(game.team1 as unknown as Record<string, unknown> | undefined, game)}
         {renderTeam(game.team2 as unknown as Record<string, unknown> | undefined, game)}
       </div>
@@ -140,13 +139,13 @@ export default function RegionBracketLayout({
   // Reset scroll position and tracking refs when region changes (tracked by regionName or currentStep)
   useEffect(() => {
     if (!scrollContainerRef?.current || readOnly) return;
-    
+
     // Scroll to the left to show first round games
     scrollContainerRef.current.scrollTo({
       left: 0,
       behavior: 'smooth'
     });
-    
+
     // Reset all scroll tracking refs for the new region
     hasScrolledRoundOf64Ref.current = false;
     hasScrolledRoundOf32Ref.current = false;
@@ -156,14 +155,11 @@ export default function RegionBracketLayout({
   // Auto-scroll when Round of 64 is complete
   useEffect(() => {
     if (!scrollContainerRef?.current || readOnly || hasScrolledRoundOf64Ref.current) return;
-    
+
     // Check if all Round of 64 games have picks (8 games)
     const roundOf64Complete = roundOf64.length > 0 && roundOf64.every(game => picks[game.id]);
-    
+
     if (roundOf64Complete) {
-      // Scroll horizontally to bring Round of 32 into view
-      // Round of 64 column (w-48 = 192px) + spacer (w-8 = 32px) = 224px
-      // Scroll by ~150px to bring Round of 32 into view while keeping some of Round of 64 visible
       const scrollAmount = 150;
       scrollContainerRef.current.scrollBy({
         left: scrollAmount,
@@ -176,14 +172,11 @@ export default function RegionBracketLayout({
   // Auto-scroll when Round of 32 is complete
   useEffect(() => {
     if (!scrollContainerRef?.current || readOnly || hasScrolledRoundOf32Ref.current) return;
-    
+
     // Check if all Round of 32 games have picks (4 games)
     const roundOf32Complete = roundOf32.length > 0 && roundOf32.every(game => picks[game.id]);
-    
+
     if (roundOf32Complete) {
-      // Scroll horizontally to bring Sweet 16 into view
-      // Round of 32 column (w-48 = 192px) + spacer (w-6 = 24px) = 216px
-      // Scroll by ~150px to bring Sweet 16 into view while keeping some of Round of 32 visible
       const scrollAmount = 150;
       scrollContainerRef.current.scrollBy({
         left: scrollAmount,
@@ -196,12 +189,11 @@ export default function RegionBracketLayout({
   // Auto-scroll when Sweet 16 is complete
   useEffect(() => {
     if (!scrollContainerRef?.current || readOnly || hasScrolledSweet16Ref.current) return;
-    
+
     // Check if all Sweet 16 games have picks (2 games)
     const sweet16Complete = sweet16.length > 0 && sweet16.every(game => picks[game.id]);
-    
+
     if (sweet16Complete) {
-      // Scroll all the way to the right end of the container to fully show Elite 8
       scrollContainerRef.current.scrollTo({
         left: scrollContainerRef.current.scrollWidth,
         behavior: 'smooth'
@@ -217,14 +209,14 @@ export default function RegionBracketLayout({
 
   const getRegionalChampion = () => {
     if (!isRegionComplete()) return null;
-    
+
     // Find the Elite 8 game (regional final)
     const regionalFinal = elite8[0];
     if (!regionalFinal) return null;
-    
+
     const championId = picks[regionalFinal.id];
     if (!championId) return null;
-    
+
     // Find the champion team
     const champion = regionalFinal.team1?.id === championId ? regionalFinal.team1 : regionalFinal.team2;
     return champion;
@@ -233,136 +225,27 @@ export default function RegionBracketLayout({
   const regionalChampion = getRegionalChampion();
   const isComplete = isRegionComplete();
 
-  // Extract region letters for vertical display (split by character, filter spaces, uppercase)
-  const regionLetters = regionName.toUpperCase().split('').filter(char => char.trim() !== '');
-
   return (
-    <div
-      className={`mx-auto flex w-max max-w-full flex-col ${BRACKET_EDITOR_STAGE_MIN_HEIGHT_CLASS}`}
-    >
-      <div className="flex min-h-0 flex-1 flex-col justify-center">
-        <div className="flex items-center" style={{ width: 'fit-content' }}>
-          {/* Region Name - Vertical Letters in separate container to the left */}
-          <div className="flex flex-col items-center justify-center pr-4" style={{ height: '100%', minWidth: '2rem' }}>
-            {regionLetters.map((letter, index) => (
-              <div
-                key={index}
-                className="text-2xl font-bold text-gray-700"
-                style={{
-                  lineHeight: '1.2',
-                  marginBottom: index < regionLetters.length - 1 ? '0.25rem' : '0',
-                }}
-              >
-                {letter}
-              </div>
-            ))}
-          </div>
-
-          {/* Bracket Container */}
-          <div className="flex flex-col border-2 border-gray-300 rounded-lg" style={{ width: 'fit-content' }}>
-            {/* Bracket Columns */}
-            <div className="flex items-start">
-          {/* Round of 64 */}
-          <div className="w-48">
-            {roundOf64.map(game => renderGame(game))}
-          </div>
-
-          {/* Spacer */}
-          <div className="w-8"></div>
-
-          {/* Round of 32 */}
-          <div className="w-48">
-            {roundOf32.map((game, index) => (
-              <div key={game.id} style={{ marginTop: index === 0 ? '2rem' : '4.25rem' }}>
-                {renderGame(game)}
-              </div>
-            ))}
-          </div>
-
-          {/* Spacer */}
-          <div className="w-6"></div>
-
-          {/* Sweet 16 */}
-          <div className="w-48">
-            {sweet16.map((game, index) => (
-              <div key={game.id} style={{ marginTop: index === 0 ? '6rem' : '12.25rem' }}>
-                {renderGame(game)}
-              </div>
-            ))}
-          </div>
-
-          {/* Spacer */}
-          <div className="w-4"></div>
-
-          {/* Elite 8 (fourth column - same size as first three) */}
-          <div className="w-48 flex-shrink-0">
-            {/* Elite 8 Games */}
-            <div>
-              {elite8.map((game, index) => (
-                <div key={game.id} style={{ marginTop: index === 0 ? '14rem' : '0' }}>
-                  {renderGame(game)}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Fifth Column - large Next control (flow), aligned with Elite 8 */}
-          <div className="w-24 flex-shrink-0 relative">
-            {onNext && !readOnly && (
-              <div
-                className="absolute"
-                style={{
-                  top: 'calc(14rem - 3px)',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  width: '76.5%',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
-              >
-                <button
-                  type="button"
-                  aria-label="Next region"
-                  data-testid="bracket-region-next-arrow"
-                  onClick={isComplete ? onNext : undefined}
-                  disabled={!isComplete || !canProceed}
-                  className={`
-                    flex aspect-square w-full max-w-[76.5%] items-center justify-center rounded-full transition-all
-                    ${isComplete && canProceed
-                      ? 'cursor-pointer bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-lg hover:from-blue-700 hover:to-blue-800 hover:shadow-xl active:shadow-md'
-                      : 'cursor-not-allowed bg-gradient-to-br from-gray-300 to-gray-400 text-gray-500 shadow'
-                    }
-                  `}
-                  style={{
-                    boxShadow:
-                      isComplete && canProceed
-                        ? '0 4px 6px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -1px 0 rgba(0, 0, 0, 0.2)'
-                        : '0 2px 4px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
-                  }}
-                >
-                  <ArrowRight
-                    className="h-7 w-7"
-                    style={{
-                      filter: isComplete && canProceed ? 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3))' : 'none',
-                    }}
-                  />
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Sixth Column - Summary Panel (half width, right-aligned, can overlap) */}
-          <div className="w-24 flex-shrink-0 relative">
-            {/* Summary Panel: Entry Name, Region Name, Champion Info - right-aligned, top aligned with Game 1 */}
-            <div className="absolute right-0" style={{ minWidth: 'max-content' }}>
-              {/* Row 1: Entry Name - label and field on same row */}
-              <div className="mb-4 flex items-center space-x-2 justify-end" style={{ paddingTop: '2px', paddingRight: '2px' }}>
+    <div className="mx-auto flex w-fit max-w-full min-w-0 flex-col">
+      <div
+        className="mx-auto flex w-full min-w-0 max-w-full flex-col items-center gap-2"
+        style={{ paddingLeft: '2px', paddingRight: '2px', paddingBottom: '2px' }}
+      >
+        <div className="inline-flex w-max max-w-full flex-col">
+          <div className="min-w-0 overflow-hidden rounded-lg border-2 border-gray-300 bg-white shadow-sm">
+            {/* Title bar: entry (left) · region (center) · champion (right) */}
+            <div
+              className={`grid w-full grid-cols-1 gap-2 border-b px-2 py-2 sm:grid-cols-3 sm:items-center ${
+                isComplete ? 'border-green-200/90 bg-green-50' : 'border-gray-200'
+              }`}
+              data-testid="bracket-region-title-bar"
+            >
+              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 justify-self-start">
                 <label htmlFor="entryName" className="text-xs font-medium text-gray-700 whitespace-nowrap">
                   Entry Name:
                 </label>
                 {isLiveResultsMode ? (
-                  <div className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-800 font-bold flex items-center space-x-2 min-w-[200px] justify-center">
+                  <div className="flex min-w-[200px] items-center justify-center space-x-2 rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm font-bold text-gray-800">
                     <KeyRound className="h-4 w-4 text-amber-600" />
                     <span>KEY</span>
                   </div>
@@ -373,71 +256,156 @@ export default function RegionBracketLayout({
                     value={entryName}
                     onChange={(e) => onEntryNameChange?.(e.target.value)}
                     disabled={readOnly}
-                    className={`px-3 py-2 border border-gray-300 rounded-lg text-sm ${
-                      readOnly 
-                        ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
-                        : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black'
+                    className={`min-w-[180px] max-w-full flex-1 px-3 py-2 text-sm text-black sm:max-w-[20rem] ${
+                      readOnly
+                        ? 'cursor-not-allowed rounded-lg border border-gray-300 bg-gray-100 text-gray-500'
+                        : 'rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500'
                     }`}
-                    style={{ width: 'max-content', minWidth: '200px' }}
                     placeholder="Enter your bracket name"
                     data-testid="entry-name-input"
                   />
                 )}
               </div>
-
-              {/* Row 2: Region Name with checkmark on left (only when complete) */}
-              <div className="mb-4">
-                <div className="text-lg font-bold text-gray-800 flex items-center space-x-2 justify-end" style={{ paddingRight: '5px' }}>
-                  {isComplete && (
-                    <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-                  )}
-                  <span>{regionName} Region</span>
-                </div>
+              <div className="flex items-center justify-center gap-2 text-center text-lg font-bold text-gray-800">
+                <span>{regionName} Region</span>
               </div>
+              <div className="flex min-w-0 items-center justify-end gap-2 justify-self-end text-right">
+                {regionalChampion ? (
+                  <>
+                    <span className="text-lg font-bold text-gray-600">#{regionalChampion.seed}</span>
+                    {regionalChampion.logo && (
+                      <Image
+                        src={regionalChampion.logo}
+                        alt={regionalChampion.name}
+                        width={32}
+                        height={32}
+                        className="h-8 w-8 flex-shrink-0 object-contain"
+                        unoptimized
+                      />
+                    )}
+                    <span className="max-w-[10rem] truncate text-lg font-semibold text-gray-800 sm:max-w-none">
+                      {regionalChampion.name}
+                    </span>
+                  </>
+                ) : null}
+              </div>
+            </div>
 
-              {/* Row 3: Regional Champion (only when complete) - seed, name, and logo on same line */}
-              {isComplete && regionalChampion && (
-                <div className="flex items-center space-x-2 justify-end" style={{ paddingRight: '5px' }}>
-                  <span className="text-lg font-bold text-gray-600">#{regionalChampion.seed}</span>
-                  <span className="text-lg font-semibold text-gray-800">{regionalChampion.name}</span>
-                  {regionalChampion.logo && (
-                    <Image src={regionalChampion.logo} alt={regionalChampion.name} width={32} height={32} className="w-8 h-8 object-contain flex-shrink-0" unoptimized />
-                  )}
+            {bracketRegionalMessage.trim() ? (
+              <div className="min-w-0 border-b border-gray-200">
+                <BracketEditorTopMessage
+                  message={bracketRegionalMessage}
+                  variant="regional"
+                  embeddedInCard
+                  data-testid="bracket-editor-regional-message"
+                />
+              </div>
+            ) : null}
+
+            {/* Bracket card: games only — round columns do not overlap horizontally */}
+            <div
+              className="min-w-0 overflow-x-auto px-1 py-1"
+              data-testid="bracket-region-bracket-card"
+            >
+              <div className="flex min-w-max w-full shrink-0 items-stretch">
+                <div className="relative z-10 w-48 shrink-0">
+                  {roundOf64.map((game) => renderGame(game))}
                 </div>
-              )}
+
+                <div className="relative z-20 w-48 shrink-0">
+                  {roundOf32.map((game, index) => (
+                    <div key={game.id} style={{ marginTop: index === 0 ? '2rem' : '4.25rem' }}>
+                      {renderGame(game)}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="relative z-30 w-48 shrink-0">
+                  {sweet16.map((game, index) => (
+                    <div key={game.id} style={{ marginTop: index === 0 ? '6rem' : '12.25rem' }}>
+                      {renderGame(game)}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="relative z-40 flex w-48 shrink-0 flex-col items-stretch">
+                  <div>
+                    {elite8.map((game, index) => (
+                      <div key={game.id} style={{ marginTop: index === 0 ? '14rem' : '0' }}>
+                        {renderGame(game)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Fifth column: absorbs remaining bracket-card width; Next centered in this lane */}
+                {onNext && !readOnly ? (
+                  <div className="relative z-[45] flex min-w-[3rem] flex-1 shrink-0 flex-col items-center justify-center py-2">
+                    <button
+                      type="button"
+                      aria-label="Next region"
+                      data-testid="bracket-region-next-arrow"
+                      onClick={isComplete ? onNext : undefined}
+                      disabled={!isComplete || !canProceed}
+                      className={`
+                        flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-all
+                        ${
+                          isComplete && canProceed
+                            ? 'cursor-pointer bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-lg hover:from-blue-700 hover:to-blue-800 hover:shadow-xl active:shadow-md'
+                            : 'cursor-not-allowed bg-gradient-to-br from-gray-300 to-gray-400 text-gray-500 shadow'
+                        }
+                      `}
+                      style={{
+                        boxShadow:
+                          isComplete && canProceed
+                            ? '0 4px 6px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -1px 0 rgba(0, 0, 0, 0.2)'
+                            : '0 2px 4px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                      }}
+                    >
+                      <ArrowRight
+                        className="h-7 w-7"
+                        style={{
+                          filter:
+                            isComplete && canProceed ? 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3))' : 'none',
+                        }}
+                      />
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="w-full min-w-0 border-t border-gray-200 px-2 pb-1.5 pt-2">
+              <div className="flex min-w-0 w-full justify-center overflow-x-auto">
+                {onStepClick && isStepComplete && (
+                  <BracketStepNavBar
+                    totalSteps={totalSteps}
+                    currentStep={currentStep}
+                    stepLabels={stepNavLabels}
+                    columnWidthCh={stepButtonWidthCh}
+                    isStepComplete={isStepComplete}
+                    onStepClick={onStepClick}
+                    finalFourDisabledMessage={
+                      finalFourDisabledMessage.trim() ||
+                      'Complete all four regions before you can work on the Final Four and championship.'
+                    }
+                  />
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Bottom bar: step nav grouped left — Save / Cancel / Close (right) */}
-        <div
-          className="mt-4 flex w-full max-w-full flex-nowrap items-stretch justify-between gap-4"
-          style={{ paddingLeft: '2px', paddingRight: '2px', paddingBottom: '2px' }}
-        >
-          <div className="flex min-w-0 shrink-0 items-center justify-start overflow-x-auto">
-            {onStepClick && isStepComplete && (
-              <BracketStepNavBar
-                totalSteps={totalSteps}
-                currentStep={currentStep}
-                stepLabels={stepNavLabels}
-                columnWidthCh={stepButtonWidthCh}
-                isStepComplete={isStepComplete}
-                onStepClick={onStepClick}
-                finalFourDisabledMessage={
-                  finalFourDisabledMessage.trim() ||
-                  'Complete all four regions before you can work on the Final Four and championship.'
-                }
-              />
-            )}
-          </div>
-
-          <div className="flex shrink-0 items-center justify-end gap-1.5">
+          <div className="mt-1 flex w-full flex-wrap items-center justify-center gap-1.5 rounded-lg border-2 border-gray-300 bg-white px-2 py-2 shadow-sm">
             {readOnly ? (
               onClose && (
                 <button
                   type="button"
                   onClick={onClose}
-                  style={{ width: `${stepButtonWidthCh}ch`, minWidth: `${stepButtonWidthCh}ch`, maxWidth: `${stepButtonWidthCh}ch` }}
+                  style={{
+                    width: `${stepButtonWidthCh}ch`,
+                    minWidth: `${stepButtonWidthCh}ch`,
+                    maxWidth: `${stepButtonWidthCh}ch`,
+                  }}
                   className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} bg-red-500 text-white hover:bg-red-600 cursor-pointer`}
                 >
                   <span>Close</span>
@@ -451,7 +419,11 @@ export default function RegionBracketLayout({
                     onClick={() => !disableSave && onSave()}
                     disabled={disableSave}
                     title={disableSave ? disableSaveMessage : 'Save'}
-                    style={{ width: `${stepButtonWidthCh}ch`, minWidth: `${stepButtonWidthCh}ch`, maxWidth: `${stepButtonWidthCh}ch` }}
+                    style={{
+                      width: `${stepButtonWidthCh}ch`,
+                      minWidth: `${stepButtonWidthCh}ch`,
+                      maxWidth: `${stepButtonWidthCh}ch`,
+                    }}
                     className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} ${
                       disableSave
                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -466,35 +438,19 @@ export default function RegionBracketLayout({
                   <button
                     type="button"
                     onClick={onCancel}
-                    style={{ width: `${stepButtonWidthCh}ch`, minWidth: `${stepButtonWidthCh}ch`, maxWidth: `${stepButtonWidthCh}ch` }}
+                    style={{
+                      width: `${stepButtonWidthCh}ch`,
+                      minWidth: `${stepButtonWidthCh}ch`,
+                      maxWidth: `${stepButtonWidthCh}ch`,
+                    }}
                     className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} bg-red-500 text-white hover:bg-red-600 cursor-pointer`}
                   >
                     <X className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
                     <span>Cancel</span>
                   </button>
                 )}
-                {onSubmitBracket && !isAdminMode && (
-                  <button
-                    type="button"
-                    data-testid="submit-bracket-editor-button"
-                    onClick={() => submitEnabled && onSubmitBracket()}
-                    disabled={!submitEnabled}
-                    title={submitDisabledMessage || undefined}
-                    style={{ width: `${stepButtonWidthCh}ch`, minWidth: `${stepButtonWidthCh}ch`, maxWidth: `${stepButtonWidthCh}ch` }}
-                    className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} ${
-                      submitEnabled
-                        ? 'cursor-pointer bg-blue-600 text-white hover:bg-blue-700'
-                        : 'cursor-not-allowed bg-gray-300 text-gray-500'
-                    }`}
-                  >
-                    <Send className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                    <span>Submit</span>
-                  </button>
-                )}
               </>
             )}
-          </div>
-        </div>
           </div>
         </div>
       </div>

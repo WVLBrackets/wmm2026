@@ -21,6 +21,14 @@ export interface HallOfFameEntry {
 // Google Sheet ID from your URL: 1qFjvpimsmilkuJT_zOn3IhidkqLpzbX8MRn1cQxjuHw
 const GOOGLE_SHEET_ID = '1qFjvpimsmilkuJT_zOn3IhidkqLpzbX8MRn1cQxjuHw';
 
+/** Verbose retry/success logs for Hall of Fame CSV fetch. Default off so `npm run build` stays quiet. */
+function shouldLogGoogleSheetsVerbose(): boolean {
+  return (
+    process.env.GOOGLE_SHEETS_DEBUG === 'true' ||
+    process.env.GOOGLE_SHEETS_DEBUG === '1'
+  );
+}
+
 // Function to fetch data from Google Sheets
 export const getHallOfFameData = async (): Promise<HallOfFameEntry[]> => {
   const csvUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/export?format=csv&gid=0`;
@@ -28,7 +36,9 @@ export const getHallOfFameData = async (): Promise<HallOfFameEntry[]> => {
   // Retry logic with exponential backoff
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      console.log(`Attempting to fetch Google Sheets data (attempt ${attempt}/3)...`);
+      if (shouldLogGoogleSheetsVerbose()) {
+        console.log(`Attempting to fetch Google Sheets data (attempt ${attempt}/3)...`);
+      }
       
       // Add timeout and retry logic
       const controller = new AbortController();
@@ -81,7 +91,9 @@ export const getHallOfFameData = async (): Promise<HallOfFameEntry[]> => {
       }
     }
     
-      console.log('Successfully fetched Google Sheets data');
+      if (shouldLogGoogleSheetsVerbose()) {
+        console.log('Successfully fetched Google Sheets data');
+      }
       return data;
       
     } catch (error) {

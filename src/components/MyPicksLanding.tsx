@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import { Press_Start_2P } from 'next/font/google';
-import { Trophy, Plus, Edit, Clock, CheckCircle, LogOut, Trash2, Copy, Printer, Info, X, Mail, RotateCcw, Undo2, Search, Pencil, Send } from 'lucide-react';
+import { Trophy, Plus, Edit, Clock, CheckCircle, LogOut, Trash2, Copy, Eye, Info, X, Mail, RotateCcw, Undo2, Search, Pencil, Send } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { useCSRF } from '@/hooks/useCSRF';
 import { TournamentData, TournamentBracket } from '@/types/tournament';
@@ -239,6 +239,30 @@ interface MyPicksLandingProps {
   killSwitchMessage?: string;
 }
 
+/**
+ * Small team logo for My Picks Final Four / Champ cells.
+ * Module-scoped so parent re-renders (e.g. per-second countdown) do not remount {@link Image} and flash on mobile.
+ */
+const FinalFourLogo = React.memo(function FinalFourLogo({ logoPath }: { logoPath: string | null }) {
+  const [imageError, setImageError] = React.useState(false);
+
+  if (!logoPath || imageError) {
+    return <span className="text-gray-400 text-xs">?</span>;
+  }
+
+  return (
+    <Image
+      src={logoPath}
+      alt="Team logo"
+      width={24}
+      height={24}
+      className="max-h-[22px] max-w-[22px] object-contain"
+      onError={() => setImageError(true)}
+      unoptimized
+    />
+  );
+});
+
 export default function MyPicksLanding({
   brackets = [],
   onCreateNew,
@@ -412,28 +436,6 @@ export default function MyPicksLanding({
 
     return finalFour;
   };
-
-  // Component to render a Final Four team logo with error handling
-  const FinalFourLogo = ({ logoPath }: { logoPath: string | null }) => {
-    const [imageError, setImageError] = React.useState(false);
-    
-    if (!logoPath || imageError) {
-      return <span className="text-gray-400 text-xs">?</span>;
-    }
-    
-    return (
-      <Image 
-        src={logoPath} 
-        alt="Team logo"
-        width={24}
-        height={24}
-        className="max-h-[22px] max-w-[22px] object-contain"
-        onError={() => setImageError(true)}
-        unoptimized
-      />
-    );
-  };
-
 
   const handlePrintBracket = (bracket: Bracket) => {
     // Store bracket data in session storage for security
@@ -1351,6 +1353,9 @@ export default function MyPicksLanding({
                       Entry Name
                     </th>
                     <th className="hidden px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider md:table-cell">
+                      ID
+                    </th>
+                    <th className="hidden px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider md:table-cell">
                       Status
                     </th>
                     <th className="hidden px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider md:table-cell">
@@ -1497,7 +1502,6 @@ export default function MyPicksLanding({
                       <td className="px-4 py-3 text-left align-top max-md:max-w-[7.25rem] max-md:min-w-0 max-md:pr-2">
                         {(() => {
                           const editDisabled = bracket.status === 'in_progress' && Boolean(getActionDisabledReason('edit'));
-                          const idDisplay = String(number).padStart(6, '0');
                           const rawEntryName = bracket.entryName || `Bracket #${index + 1}`;
                           const mobileNameLines = computeMyPicksEntryNameMobileLines(rawEntryName);
                           return (
@@ -1531,16 +1535,14 @@ export default function MyPicksLanding({
                               <span className="hidden md:inline">{rawEntryName}</span>
                             </span>
                           </div>
-                          <div
-                            className="mt-1 pl-3.5 text-[10px] leading-tight text-gray-500 tabular-nums md:pl-0"
-                            data-testid="bracket-row-entry-id"
-                            title={`Bracket ID ${idDisplay}`}
-                          >
-                            ID {idDisplay}
-                          </div>
                         </div>
                           );
                         })()}
+                      </td>
+                      <td className="hidden px-4 py-3 whitespace-nowrap text-center text-xs font-medium tabular-nums text-gray-500 md:table-cell">
+                        <span data-testid="bracket-row-entry-id" title={`Bracket ID ${String(number).padStart(6, '0')}`}>
+                          {String(number).padStart(6, '0')}
+                        </span>
                       </td>
                       <td className="hidden px-4 py-3 whitespace-nowrap text-center md:table-cell">
                         {(() => {
@@ -1864,7 +1866,7 @@ export default function MyPicksLanding({
                             </>
                           ) : (
                             <>
-                              {/* Submitted: Return, Copy, Print, Email (open picks via entry name or Print) */}
+                              {/* Submitted: View/Print, Return, Copy, Email (open picks via entry name or View/Print) */}
                               {pendingReturnBracketId === bracket.id ? (
                                 <div
                                   className="col-span-2 flex w-full max-w-xs flex-col items-stretch gap-2 justify-self-center bg-amber-50 border border-amber-200 rounded px-2 py-2 mx-auto md:col-auto md:mx-auto"
@@ -1900,6 +1902,16 @@ export default function MyPicksLanding({
                                 </div>
                               ) : (
                                 <>
+                                  <LoggedButton
+                                    onClick={() => handlePrintBracket(bracket)}
+                                    logLocation="Print"
+                                    bracketId={number ? String(number).padStart(6, '0') : null}
+                                    className="flex w-8 h-8 items-center justify-center rounded bg-blue-600 text-white transition-colors hover:bg-blue-700 cursor-pointer"
+                                    title="View/Print"
+                                    data-testid="print-bracket-button"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </LoggedButton>
                                   <LoggedButton
                                     onClick={() =>
                                       !getActionDisabledReason('return') &&
@@ -1943,16 +1955,6 @@ export default function MyPicksLanding({
                                     data-testid="copy-bracket-button"
                                   >
                                     <Copy className="h-4 w-4" />
-                                  </LoggedButton>
-                                  <LoggedButton
-                                    onClick={() => handlePrintBracket(bracket)}
-                                    logLocation="Print"
-                                    bracketId={number ? String(number).padStart(6, '0') : null}
-                                    className="flex w-8 h-8 items-center justify-center rounded bg-purple-600 text-white transition-colors hover:bg-purple-700 cursor-pointer"
-                                    title="View/Print"
-                                    data-testid="print-bracket-button"
-                                  >
-                                    <Printer className="h-4 w-4" />
                                   </LoggedButton>
                                   <LoggedButton
                                     onClick={() => handleEmailBracket(bracket)}

@@ -56,6 +56,7 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   finalFourHeaderMessage: 'Final Four & Championship',
   finalFourDisabledMessage:
     'Complete all four regions before you can work on the Final Four and championship.',
+  bracketRegionalMessage: '',
   // Email PDF template defaults
   emailPdfSubject: 'Your Bracket - Warren\'s March Madness',
   emailPdfHeading: 'Your Bracket is Attached!',
@@ -106,6 +107,8 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   // Tie breaker validation
   tieBreakerLow: 50,
   tieBreakerHigh: 500,
+  tieBreakerHint:
+    'Enter your prediction for the total points scored by both teams in the championship game.||Closest guess wins tie-breaks.',
   // Submission deadline and toggle
   stopSubmitDateTime: '',
   showCountdownTimer: 'No',

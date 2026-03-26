@@ -1,7 +1,31 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import { CheckCircle } from 'lucide-react';
+
+const MQ_MAX_SM = '(max-width: 639px)';
+
+function subscribeMaxSm(callback: () => void) {
+  const mq = window.matchMedia(MQ_MAX_SM);
+  mq.addEventListener('change', callback);
+  return () => mq.removeEventListener('change', callback);
+}
+
+function getMaxSmSnapshot() {
+  return window.matchMedia(MQ_MAX_SM).matches;
+}
+
+/** First grapheme (handles basic Unicode); uppercased for nav initials. */
+function stepLabelInitial(label: string): string {
+  const t = label.trim();
+  if (!t) return '?';
+  const first = [...t][0];
+  return first ? first.toUpperCase() : '?';
+}
+
+function useBracketStepNavCompact(): boolean {
+  return useSyncExternalStore(subscribeMaxSm, getMaxSmSnapshot, () => false);
+}
 export interface BracketStepNavBarProps {
   totalSteps: number;
   currentStep: number;
@@ -35,6 +59,8 @@ export default function BracketStepNavBar({
   onStepClick,
   finalFourDisabledMessage,
 }: BracketStepNavBarProps) {
+  const compactNav = useBracketStepNavCompact();
+
   const allRegionsComplete = Array.from({ length: Math.max(0, totalSteps - 1) }, (_, j) =>
     isStepComplete(j),
   ).every(Boolean);
@@ -45,12 +71,16 @@ export default function BracketStepNavBar({
     [totalSteps, stepLabels],
   );
 
+  const gridTemplateColumns = compactNav
+    ? `repeat(${totalSteps}, minmax(0, 1fr))`
+    : `repeat(${totalSteps}, ${columnWidthCh}ch)`;
+
   return (
     <div
-      className="grid w-max max-w-full shrink-0 gap-1.5 overflow-x-auto px-1 pb-0.5"
-      style={{
-        gridTemplateColumns: `repeat(${totalSteps}, ${columnWidthCh}ch)`,
-      }}
+      className={`mx-auto grid max-w-full shrink-0 gap-1.5 px-1 pb-0.5 ${
+        compactNav ? 'w-full overflow-x-visible' : 'w-max overflow-x-auto'
+      }`}
+      style={{ gridTemplateColumns }}
       data-testid="bracket-step-nav-bar"
       role="navigation"
       aria-label="Bracket sections"
@@ -62,22 +92,18 @@ export default function BracketStepNavBar({
         const isCurrent = i === currentStep;
         const label = resolvedLabels[i];
 
-        const activeRing =
-          ' ring-4 ring-amber-400 ring-offset-2 shadow-md border-2 border-amber-300 font-bold';
         let btnClass =
-          'flex h-full min-h-[2rem] w-full items-center justify-center gap-0.5 rounded-md px-1.5 py-1 text-center text-xs font-semibold leading-tight shadow-sm transition-colors';
+          'flex h-full min-h-[2rem] w-full items-center justify-center gap-0.5 whitespace-nowrap rounded-md px-1.5 py-1 text-center text-xs font-semibold leading-tight shadow-sm transition-colors';
         if (disabled) {
           btnClass += ' bg-gray-200 text-gray-500 cursor-not-allowed';
         } else if (complete && isCurrent) {
           btnClass +=
-            ' bg-green-600 text-white hover:bg-green-700 cursor-pointer ring-1 ring-green-800/30' +
-            activeRing;
+            ' bg-green-600 text-white hover:bg-green-700 cursor-pointer ring-1 ring-green-800/30 font-bold';
         } else if (complete) {
           btnClass +=
             ' bg-green-600 text-white hover:bg-green-700 cursor-pointer ring-1 ring-green-800/30';
         } else if (isCurrent) {
-          btnClass +=
-            ' bg-blue-600 text-white cursor-pointer hover:bg-blue-700' + activeRing;
+          btnClass += ' bg-blue-600 text-white cursor-pointer hover:bg-blue-700 font-bold';
         } else {
           btnClass += ' bg-blue-600 text-white hover:bg-blue-700 cursor-pointer';
         }
@@ -85,22 +111,42 @@ export default function BracketStepNavBar({
         const ariaLabel = complete ? `${label}, complete` : `${label}, not complete`;
 
         return (
-          <button
-            key={i}
-            type="button"
-            data-testid={`bracket-step-nav-${i}`}
-            onClick={() => !disabled && onStepClick(i)}
-            disabled={disabled}
-            title={disabled ? finalFourDisabledMessage : undefined}
-            aria-label={ariaLabel}
-            aria-current={isCurrent ? 'step' : undefined}
-            className={btnClass}
-          >
-            {complete && (
-              <CheckCircle className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
-            )}
-            <span className="max-w-full break-words text-center">{label}</span>
-          </button>
+          <div key={i} className="flex min-w-0 items-center justify-center">
+            <button
+              type="button"
+              data-testid={`bracket-step-nav-${i}`}
+              onClick={() => !disabled && onStepClick(i)}
+              disabled={disabled}
+              title={disabled ? finalFourDisabledMessage : undefined}
+              aria-label={ariaLabel}
+              aria-current={isCurrent ? 'step' : undefined}
+              className={btnClass}
+            >
+              {isCurrent && !disabled ? (
+                <span className="shrink-0 text-base font-bold leading-none text-amber-500" aria-hidden>
+                  (
+                </span>
+              ) : null}
+              {complete && (
+                <CheckCircle
+                  className={`shrink-0 ${compactNav ? 'h-3 w-3' : 'h-3.5 w-3.5'}`}
+                  strokeWidth={2.5}
+                  aria-hidden
+                />
+              )}
+              <span
+                className="shrink-0 text-center"
+                data-testid={compactNav ? `bracket-step-nav-${i}-initial` : `bracket-step-nav-${i}-label`}
+              >
+                {compactNav ? (isFinalStep ? 'FF' : stepLabelInitial(label)) : label}
+              </span>
+              {isCurrent && !disabled ? (
+                <span className="shrink-0 text-base font-bold leading-none text-amber-500" aria-hidden>
+                  )
+                </span>
+              ) : null}
+            </button>
+          </div>
         );
       })}
     </div>

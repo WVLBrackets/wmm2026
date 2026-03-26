@@ -712,38 +712,41 @@ function RegionBoard({
   const semifinalGameId: 'final-four-1' | 'final-four-2' =
     regionPosition === 'Top Left' || regionPosition === 'Bottom Left' ? 'final-four-1' : 'final-four-2';
 
-  const columns: Array<{ id: string; roundLevel: number; slots: RoundSlot[]; settings: RoundLayoutSettings }> = [
-    {
-      id: 'r64',
-      roundLevel: 0,
-      slots: buildRoundSlots(round64, picks),
-      settings: layout.rounds.r64,
-    },
-    {
-      id: 'r32',
-      roundLevel: 1,
-      slots: buildRoundSlots(round32, picks),
-      settings: layout.rounds.r32,
-    },
-    {
-      id: 's16',
-      roundLevel: 2,
-      slots: buildRoundSlots(sweet16, picks),
-      settings: layout.rounds.s16,
-    },
-    {
-      id: 'e8',
-      roundLevel: 3,
-      slots: buildRoundSlots(elite8, picks),
-      settings: layout.rounds.e8,
-    },
-    {
-      id: 'r5',
-      roundLevel: 4,
-      slots: buildRegionalChampionSlots(elite8, picks, semifinalGameId),
-      settings: layout.rounds.r5,
-    },
-  ];
+  const columns = useMemo(
+    (): Array<{ id: string; roundLevel: number; slots: RoundSlot[]; settings: RoundLayoutSettings }> => [
+      {
+        id: 'r64',
+        roundLevel: 0,
+        slots: buildRoundSlots(round64, picks),
+        settings: layout.rounds.r64,
+      },
+      {
+        id: 'r32',
+        roundLevel: 1,
+        slots: buildRoundSlots(round32, picks),
+        settings: layout.rounds.r32,
+      },
+      {
+        id: 's16',
+        roundLevel: 2,
+        slots: buildRoundSlots(sweet16, picks),
+        settings: layout.rounds.s16,
+      },
+      {
+        id: 'e8',
+        roundLevel: 3,
+        slots: buildRoundSlots(elite8, picks),
+        settings: layout.rounds.e8,
+      },
+      {
+        id: 'r5',
+        roundLevel: 4,
+        slots: buildRegionalChampionSlots(elite8, picks, semifinalGameId),
+        settings: layout.rounds.r5,
+      },
+    ],
+    [elite8, layout.rounds, picks, round32, round64, semifinalGameId, sweet16]
+  );
 
   const geometry = useMemo(
     () =>

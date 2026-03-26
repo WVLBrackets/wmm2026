@@ -61,6 +61,8 @@ export interface SiteConfigData {
   finalFourHeaderMessage?: string;
   /** Bracket editor: hover on disabled Final Four nav until all regions are complete. Sheet: `final_four_disabled_message` */
   finalFourDisabledMessage?: string;
+  /** Bracket editor: banner atop each regional step (`||` = line break). Sheet: `bracket_regional_message` */
+  bracketRegionalMessage?: string;
   // WMM logo used on brackets page, print bracket, and emailed PDF
   wmmLogo?: string;
   // Email PDF template content
@@ -113,6 +115,8 @@ export interface SiteConfigData {
   // Tie breaker validation
   tieBreakerLow?: number;
   tieBreakerHigh?: number;
+  /** Bracket editor Final Four: inline help for tie breaker (`||` = paragraph break). Sheet: `tie_breaker_hint` */
+  tieBreakerHint?: string;
   // Submission deadline and toggle
   stopSubmitDateTime?: string;
   showCountdownTimer?: string;
@@ -383,6 +387,9 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
           case 'tie_breaker_high':
             config.tieBreakerHigh = parseInt(value, 10) || undefined;
             break;
+          case 'tie_breaker_hint':
+            config.tieBreakerHint = value;
+            break;
           case 'stop_submit_date_time':
             config.stopSubmitDateTime = value;
             break;
@@ -445,6 +452,9 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
             break;
           case 'final_four_disabled_message':
             config.finalFourDisabledMessage = value;
+            break;
+          case 'bracket_regional_message':
+            config.bracketRegionalMessage = value;
             break;
           case 'wmm_logo':
             config.wmmLogo = value;

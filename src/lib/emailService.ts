@@ -4,6 +4,17 @@ import type { SiteConfigData } from '@/lib/siteConfig';
 import { isTestUserEmail, getTestUserReason } from '@/lib/testUserDetection';
 import { getAppEnvironment, isProductionEnvironment } from '@/lib/appEnvironment';
 
+/**
+ * Logs Gmail/Resend credential *hints* at `EmailService` construction.
+ * Default off so `next build` and server boot stay quiet; set `EMAIL_SERVICE_DEBUG=1` when debugging SMTP.
+ */
+function shouldLogEmailServiceInit(): boolean {
+  return (
+    process.env.EMAIL_SERVICE_DEBUG === 'true' ||
+    process.env.EMAIL_SERVICE_DEBUG === '1'
+  );
+}
+
 export interface EmailServiceConfig {
   provider: 'gmail' | 'sendgrid' | 'resend' | 'console' | 'disabled';
   user?: string;
@@ -65,28 +76,29 @@ class EmailService {
                (process.env.EMAIL_USER ? 'EMAIL_USER (fallback)' : 'none');
     }
     
-    // Log which account is being used (for debugging)
-    console.log(`[EmailService] Environment: ${appEnvironment} (${isProduction ? 'production' : 'non-production'})`);
-    
-    // Log Gmail configuration
-    if (emailUser && emailPass) {
-      console.log(`[EmailService] Using Gmail account: ${emailUser.substring(0, emailUser.indexOf('@')) + '@...'} (source: ${source})`);
-      console.log(`[EmailService] EMAIL_USER_STAGING: ${process.env.EMAIL_USER_STAGING ? 'set' : 'not set'}`);
-      console.log(`[EmailService] EMAIL_PASS_STAGING: ${process.env.EMAIL_PASS_STAGING ? 'set' : 'not set'}`);
-      console.log(`[EmailService] EMAIL_USER_PRODUCTION: ${process.env.EMAIL_USER_PRODUCTION ? 'set' : 'not set'}`);
-      console.log(`[EmailService] EMAIL_PASS_PRODUCTION: ${process.env.EMAIL_PASS_PRODUCTION ? 'set' : 'not set'}`);
-      console.log(`[EmailService] EMAIL_USER (fallback): ${process.env.EMAIL_USER ? 'set' : 'not set'}`);
-    }
-    
-    // Log Resend configuration
-    if (process.env.RESEND_API_KEY) {
-      const fromEmail = isProduction
-        ? (process.env.FROM_EMAIL_PRODUCTION || process.env.FROM_EMAIL || 'not set')
-        : (process.env.FROM_EMAIL_STAGING || process.env.FROM_EMAIL || 'not set');
-      console.log(`[EmailService] RESEND_API_KEY: set`);
-      console.log(`[EmailService] FROM_EMAIL: ${fromEmail}`);
-      console.log(`[EmailService] FROM_EMAIL_STAGING: ${process.env.FROM_EMAIL_STAGING ? 'set' : 'not set'}`);
-      console.log(`[EmailService] FROM_EMAIL_PRODUCTION: ${process.env.FROM_EMAIL_PRODUCTION ? 'set' : 'not set'}`);
+    if (shouldLogEmailServiceInit()) {
+      console.log(`[EmailService] Environment: ${appEnvironment} (${isProduction ? 'production' : 'non-production'})`);
+
+      if (emailUser && emailPass) {
+        console.log(
+          `[EmailService] Using Gmail account: ${emailUser.substring(0, emailUser.indexOf('@')) + '@...'} (source: ${source})`
+        );
+        console.log(`[EmailService] EMAIL_USER_STAGING: ${process.env.EMAIL_USER_STAGING ? 'set' : 'not set'}`);
+        console.log(`[EmailService] EMAIL_PASS_STAGING: ${process.env.EMAIL_PASS_STAGING ? 'set' : 'not set'}`);
+        console.log(`[EmailService] EMAIL_USER_PRODUCTION: ${process.env.EMAIL_USER_PRODUCTION ? 'set' : 'not set'}`);
+        console.log(`[EmailService] EMAIL_PASS_PRODUCTION: ${process.env.EMAIL_PASS_PRODUCTION ? 'set' : 'not set'}`);
+        console.log(`[EmailService] EMAIL_USER (fallback): ${process.env.EMAIL_USER ? 'set' : 'not set'}`);
+      }
+
+      if (process.env.RESEND_API_KEY) {
+        const fromEmail = isProduction
+          ? process.env.FROM_EMAIL_PRODUCTION || process.env.FROM_EMAIL || 'not set'
+          : process.env.FROM_EMAIL_STAGING || process.env.FROM_EMAIL || 'not set';
+        console.log(`[EmailService] RESEND_API_KEY: set`);
+        console.log(`[EmailService] FROM_EMAIL: ${fromEmail}`);
+        console.log(`[EmailService] FROM_EMAIL_STAGING: ${process.env.FROM_EMAIL_STAGING ? 'set' : 'not set'}`);
+        console.log(`[EmailService] FROM_EMAIL_PRODUCTION: ${process.env.FROM_EMAIL_PRODUCTION ? 'set' : 'not set'}`);
+      }
     }
     
     // Check for SendGrid configuration

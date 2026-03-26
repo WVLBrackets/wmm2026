@@ -273,8 +273,7 @@ function drawJersey(
   width: number,
   height: number,
   config: UniformConfig,
-  number: number,
-  _variation: PlayerVariation
+  number: number
 ): void {
   const torsoWidth = width * 0.4;
   const torsoHeight = height * 0.25;
@@ -430,8 +429,7 @@ function drawCleats(
   y: number,
   width: number,
   height: number,
-  config: UniformConfig,
-  _variation: PlayerVariation
+  config: UniformConfig
 ): void {
   const legWidth = width * 0.15;
   const cleatHeight = height * 0.05;
@@ -587,16 +585,7 @@ export async function generatePlayerImage(
   drawHelmet(ctx, centerX, startY, width, config, config.logoPath);
 
   // Draw jersey (with purple collar/trim, numbers)
-  drawJersey(
-    ctx,
-    centerX,
-    startY,
-    width,
-    height,
-    config,
-    variation.uniformNumber,
-    variation
-  );
+  drawJersey(ctx, centerX, startY, width, height, config, variation.uniformNumber);
 
   // Draw pants (with gold stripe)
   drawPants(ctx, centerX, startY, width, height, config);
@@ -605,7 +594,7 @@ export async function generatePlayerImage(
   drawSocks(ctx, centerX, startY, width, height, config);
 
   // Draw cleats
-  drawCleats(ctx, centerX, startY, width, height, config, variation);
+  drawCleats(ctx, centerX, startY, width, height, config);
 
   // Draw gloves (for pass catchers)
   drawGloves(ctx, centerX, startY, width, height, config, variation.position);

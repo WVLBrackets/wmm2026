@@ -103,11 +103,11 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
   const [liveScoreTotal, setLiveScoreTotal] = useState<number | null>(null);
   const [liveScoreTitle, setLiveScoreTitle] = useState<string>('');
 
-  // Calculate totals
-  const totalBrackets = brackets.length;
-  const totalSubmitted = brackets.filter(b => b.status === 'submitted').length;
-  const totalInProgress = brackets.filter(b => b.status === 'in_progress').length;
-  const totalDeleted = brackets.filter(b => b.status === 'deleted').length;
+  // DB-level totals (all loaded brackets, ignoring UI filters)
+  const dbTotalBrackets = brackets.length;
+  const dbTotalSubmitted = brackets.filter((b) => b.status === 'submitted').length;
+  const dbTotalInProgress = brackets.filter((b) => b.status === 'in_progress').length;
+  const dbTotalDeleted = brackets.filter((b) => b.status === 'deleted').length;
 
   // Get available years from bracket data
   const availableYears = Array.from(
@@ -151,6 +151,12 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
     filterUpdatedDate,
     searchQuery,
   });
+
+  /** Totals matching current filters (first number in each summary card). */
+  const filteredTotalBrackets = filteredBrackets.length;
+  const filteredSubmitted = filteredBrackets.filter((b) => b.status === 'submitted').length;
+  const filteredInProgress = filteredBrackets.filter((b) => b.status === 'in_progress').length;
+  const filteredDeleted = filteredBrackets.filter((b) => b.status === 'deleted').length;
 
   // Clear optimistic patches once server data catches up.
   useEffect(() => {
@@ -511,43 +517,91 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
       <div className="mb-4 grid grid-cols-4 gap-2 lg:hidden">
         <div className="flex flex-col items-center justify-center rounded-lg border border-blue-200 bg-blue-50 py-3">
           <LayoutGrid className="mb-1 h-6 w-6 text-blue-600" aria-hidden />
-          <span className="sr-only">Total</span>
-          <div className="text-xl font-bold text-blue-900">{totalBrackets}</div>
+          <span className="sr-only">
+            Total brackets: {filteredTotalBrackets} matching filters, {dbTotalBrackets} in database
+          </span>
+          <div
+            className="text-xl font-bold text-blue-900"
+            title={`${filteredTotalBrackets} matching current filters / ${dbTotalBrackets} in database`}
+          >
+            {filteredTotalBrackets} / {dbTotalBrackets}
+          </div>
         </div>
         <div className="flex flex-col items-center justify-center rounded-lg border border-green-200 bg-green-50 py-3">
           <CheckCircle className="mb-1 h-6 w-6 text-green-600" aria-hidden />
-          <span className="sr-only">Submitted</span>
-          <div className="text-xl font-bold text-green-900">{totalSubmitted}</div>
+          <span className="sr-only">
+            Submitted: {filteredSubmitted} matching filters, {dbTotalSubmitted} in database
+          </span>
+          <div
+            className="text-xl font-bold text-green-900"
+            title={`${filteredSubmitted} matching current filters / ${dbTotalSubmitted} in database`}
+          >
+            {filteredSubmitted} / {dbTotalSubmitted}
+          </div>
         </div>
         <div className="flex flex-col items-center justify-center rounded-lg border border-yellow-200 bg-yellow-50 py-3">
           <Clock className="mb-1 h-6 w-6 text-yellow-600" aria-hidden />
-          <span className="sr-only">In progress</span>
-          <div className="text-xl font-bold text-yellow-900">{totalInProgress}</div>
+          <span className="sr-only">
+            In progress: {filteredInProgress} matching filters, {dbTotalInProgress} in database
+          </span>
+          <div
+            className="text-xl font-bold text-yellow-900"
+            title={`${filteredInProgress} matching current filters / ${dbTotalInProgress} in database`}
+          >
+            {filteredInProgress} / {dbTotalInProgress}
+          </div>
         </div>
         <div className="flex flex-col items-center justify-center rounded-lg border border-red-200 bg-red-50 py-3">
           <Trash2 className="mb-1 h-6 w-6 text-red-600" aria-hidden />
-          <span className="sr-only">Deleted</span>
-          <div className="text-xl font-bold text-red-900">{totalDeleted}</div>
+          <span className="sr-only">
+            Deleted: {filteredDeleted} matching filters, {dbTotalDeleted} in database
+          </span>
+          <div
+            className="text-xl font-bold text-red-900"
+            title={`${filteredDeleted} matching current filters / ${dbTotalDeleted} in database`}
+          >
+            {filteredDeleted} / {dbTotalDeleted}
+          </div>
         </div>
       </div>
 
       {/* Totals — desktop */}
       <div className="mb-6 hidden grid-cols-4 gap-4 lg:grid">
-        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+        <div
+          className="rounded-lg border border-blue-200 bg-blue-50 p-4"
+          title={`${filteredTotalBrackets} matching current filters / ${dbTotalBrackets} in database`}
+        >
           <div className="text-sm font-medium text-blue-600">Total Brackets</div>
-          <div className="text-2xl font-bold text-blue-900">{totalBrackets}</div>
+          <div className="text-2xl font-bold text-blue-900" aria-label={`${filteredTotalBrackets} matching filters, ${dbTotalBrackets} in database`}>
+            {filteredTotalBrackets} / {dbTotalBrackets}
+          </div>
         </div>
-        <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+        <div
+          className="rounded-lg border border-green-200 bg-green-50 p-4"
+          title={`${filteredSubmitted} matching current filters / ${dbTotalSubmitted} in database`}
+        >
           <div className="text-sm font-medium text-green-600">Total Submitted</div>
-          <div className="text-2xl font-bold text-green-900">{totalSubmitted}</div>
+          <div className="text-2xl font-bold text-green-900" aria-label={`${filteredSubmitted} matching filters, ${dbTotalSubmitted} in database`}>
+            {filteredSubmitted} / {dbTotalSubmitted}
+          </div>
         </div>
-        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+        <div
+          className="rounded-lg border border-yellow-200 bg-yellow-50 p-4"
+          title={`${filteredInProgress} matching current filters / ${dbTotalInProgress} in database`}
+        >
           <div className="text-sm font-medium text-yellow-600">Total In Progress</div>
-          <div className="text-2xl font-bold text-yellow-900">{totalInProgress}</div>
+          <div className="text-2xl font-bold text-yellow-900" aria-label={`${filteredInProgress} matching filters, ${dbTotalInProgress} in database`}>
+            {filteredInProgress} / {dbTotalInProgress}
+          </div>
         </div>
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+        <div
+          className="rounded-lg border border-red-200 bg-red-50 p-4"
+          title={`${filteredDeleted} matching current filters / ${dbTotalDeleted} in database`}
+        >
           <div className="text-sm font-medium text-red-600">Total Deleted</div>
-          <div className="text-2xl font-bold text-red-900">{totalDeleted}</div>
+          <div className="text-2xl font-bold text-red-900" aria-label={`${filteredDeleted} matching filters, ${dbTotalDeleted} in database`}>
+            {filteredDeleted} / {dbTotalDeleted}
+          </div>
         </div>
       </div>
 

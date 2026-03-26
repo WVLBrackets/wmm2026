@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, Suspense, Fragment } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense, Fragment } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { TournamentData, TournamentBracket, BracketSubmission } from '@/types/tournament';
@@ -320,8 +320,7 @@ function BracketContent() {
     }
   }, [session?.user?.name, entryName]);
 
-  // Assign function to ref after it's declared
-  const loadKillSwitchState = async () => {
+  const loadKillSwitchState = useCallback(async () => {
     try {
       const response = await fetch('/api/kill-switch', { cache: 'no-store' });
       const result = await response.json();
@@ -334,7 +333,7 @@ function BracketContent() {
     } catch (error) {
       console.error('Error loading kill switch state:', error);
     }
-  };
+  }, []);
 
   /**
    * Fetch latest kill switch state from server to avoid stale client state.
@@ -443,8 +442,7 @@ function BracketContent() {
     }, 15000);
 
     return () => window.clearInterval(intervalId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentView]);
+  }, [currentView, loadKillSwitchState]);
 
   const loadSubmittedBrackets = async () => {
     try {

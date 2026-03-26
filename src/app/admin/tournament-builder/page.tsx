@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
@@ -10,6 +10,8 @@ import { getTeamReferenceDisplayName } from '@/lib/teamDisplayName';
 
 /** Admin URL after save/cancel so the Tourney tab stays selected (not Users). */
 const ADMIN_RETURN_URL = '/admin?tab=tourney';
+
+const TOURNAMENT_BUILDER_POSITION_OPTIONS = ['Top Left', 'Bottom Left', 'Top Right', 'Bottom Right'];
 
 interface Team {
   id: string;
@@ -53,8 +55,6 @@ export default function TournamentBuilderPage() {
   const [availableTournaments, setAvailableTournaments] = useState<string[]>([]);
   const [selectedTournamentFile, setSelectedTournamentFile] = useState<string>('');
   const [hasAppliedQueryLoad, setHasAppliedQueryLoad] = useState(false);
-
-  const positionOptions = ['Top Left', 'Bottom Left', 'Top Right', 'Bottom Right'];
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -158,7 +158,7 @@ export default function TournamentBuilderPage() {
     setRegions(updated);
   };
 
-  const handleLoadTournament = async (filename: string) => {
+  const handleLoadTournament = useCallback(async (filename: string) => {
     if (!filename) {
       return;
     }
@@ -254,7 +254,7 @@ export default function TournamentBuilderPage() {
         while (mappedRegions.length < 4) {
           mappedRegions.push({
             name: '',
-            position: positionOptions[mappedRegions.length] || 'Top Left',
+            position: TOURNAMENT_BUILDER_POSITION_OPTIONS[mappedRegions.length] || 'Top Left',
             teams: Array(16).fill(null).map((_, i) => ({ id: '', name: '', seed: i + 1, logo: '' })),
           });
         }
@@ -269,7 +269,7 @@ export default function TournamentBuilderPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [teams]);
 
   useEffect(() => {
     if (hasAppliedQueryLoad || isLoading) return;
@@ -290,7 +290,7 @@ export default function TournamentBuilderPage() {
     }
 
     setHasAppliedQueryLoad(true);
-  }, [availableTournaments, hasAppliedQueryLoad, isLoading, searchParams]);
+  }, [availableTournaments, handleLoadTournament, hasAppliedQueryLoad, isLoading, searchParams]);
 
   const validate = (): boolean => {
     const validationErrors: string[] = [];

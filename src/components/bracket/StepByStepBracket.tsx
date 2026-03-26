@@ -295,6 +295,11 @@ export default function StepByStepBracket({
           isLiveResultsMode={isLiveResultsMode}
           disableSave={disableSaveSubmit}
           disableSaveMessage={disableMessage}
+          bracketRegionalMessage={
+            siteConfig?.bracketRegionalMessage?.trim() ??
+            FALLBACK_CONFIG.bracketRegionalMessage?.trim() ??
+            ''
+          }
         />
       );
     } else {
@@ -337,8 +342,8 @@ export default function StepByStepBracket({
 
   return (
     <div className="w-full relative overflow-x-auto bg-gray-200 min-h-screen" ref={scrollContainerRef}>
-      {/* Current Step Content */}
-      <div className="bg-white rounded-lg shadow-lg p-4 min-w-max">
+      {/* Current Step Content — w-fit avoids extra horizontal whitespace wider than the bracket row */}
+      <div className="mx-auto w-fit max-w-full rounded-lg bg-white px-4 pb-3 pt-2 shadow-lg">
         {renderCurrentStep()}
       </div>
 

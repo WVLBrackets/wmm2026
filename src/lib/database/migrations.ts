@@ -228,10 +228,10 @@ export async function initializeTeamDataTable(): Promise<void> {
     await teamDataSql`CREATE INDEX IF NOT EXISTS idx_team_ref_id ON team_reference_data(id)`;
     
     // Add mascot column if missing
-    await addTeamDataColumnIfNotExists('mascot', 'VARCHAR(255)');
+    await addTeamDataColumnIfNotExists('mascot');
     
     // Add active column if missing
-    const activeAdded = await addTeamDataColumnIfNotExists('active', 'BOOLEAN DEFAULT false');
+    const activeAdded = await addTeamDataColumnIfNotExists('active');
     
     if (activeAdded) {
       // Set initial active status based on abbreviation
@@ -243,7 +243,7 @@ export async function initializeTeamDataTable(): Promise<void> {
     }
 
     // Short label for UI; official school name remains in `name`
-    await addTeamDataColumnIfNotExists('display_name', 'VARCHAR(255)');
+    await addTeamDataColumnIfNotExists('display_name');
     await teamDataSql`
       UPDATE team_reference_data
       SET display_name = name
@@ -395,10 +395,7 @@ async function addSubmittedEntryNameUniqueIndex(): Promise<void> {
 /**
  * Helper to add a column to team_reference_data table
  */
-async function addTeamDataColumnIfNotExists(
-  column: string, 
-  definition: string
-): Promise<boolean> {
+async function addTeamDataColumnIfNotExists(column: string): Promise<boolean> {
   try {
     const { teamDataSql } = await import('../teamDataConnection');
     

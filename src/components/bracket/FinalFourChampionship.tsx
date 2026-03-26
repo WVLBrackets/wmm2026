@@ -1,15 +1,18 @@
 'use client';
 
-import { useEffect, useRef, RefObject } from 'react';
+import { useEffect, useRef, useState, RefObject } from 'react';
 import Image from 'next/image';
 import { TournamentGame } from '@/types/tournament';
 import { SiteConfigData } from '@/lib/siteConfig';
-import { CheckCircle, Save, Trophy, KeyRound, Send, X } from 'lucide-react';
+import { CheckCircle, Save, KeyRound, Send, Info, X } from 'lucide-react';
 import {
   BRACKET_EDITOR_BAR_ACTION_CLASSES,
-  BRACKET_EDITOR_STAGE_MIN_HEIGHT_CLASS,
+  BRACKET_EDITOR_GAMES_ROW_MIN_HEIGHT_REM,
 } from '@/lib/bracketStepNavMetrics';
+import BracketEditorTopMessage from './BracketEditorTopMessage';
 import BracketStepNavBar from './BracketStepNavBar';
+import { getFinalFourGamesRowMinHeightRem, loadFinalFourGamesRowLayout } from './finalFourGamesRowLayoutStorage';
+import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 
 interface FinalFourChampionshipProps {
   finalFourGames: TournamentGame[];
@@ -46,12 +49,12 @@ interface FinalFourChampionshipProps {
   disableSaveSubmitMessage?: string;
 }
 
-export default function FinalFourChampionship({ 
-  finalFourGames, 
-  championshipGame, 
-  picks, 
-  onPick, 
-  tieBreaker, 
+export default function FinalFourChampionship({
+  finalFourGames,
+  championshipGame,
+  picks,
+  onPick,
+  tieBreaker,
   onTieBreakerChange,
   readOnly = false,
   scrollContainerRef,
@@ -77,121 +80,110 @@ export default function FinalFourChampionship({
   disableSaveSubmit = false,
   disableSaveSubmitMessage = '',
 }: FinalFourChampionshipProps) {
+  const [tieBreakerHintOpen, setTieBreakerHintOpen] = useState(false);
+  /** Games-row min height (rem); after mount matches persisted Final Four layout (no UI — see `finalFourGamesRowLayoutStorage`). */
+  const [gamesRowMinHeightRem, setGamesRowMinHeightRem] = useState(BRACKET_EDITOR_GAMES_ROW_MIN_HEIGHT_REM);
+
+  useEffect(() => {
+    const { adjustRem } = loadFinalFourGamesRowLayout();
+    setGamesRowMinHeightRem(getFinalFourGamesRowMinHeightRem(adjustRem));
+  }, []);
+
   const handleTeamClick = (game: TournamentGame, team: Record<string, unknown>) => {
     if (game.winner || readOnly) return;
     onPick(game.id, team.id as string);
   };
 
   const renderTeam = (team: Record<string, unknown> | undefined, game: TournamentGame) => {
-    // Always render a slot, even if no team is assigned yet
     if (!team) {
       return (
-        <div className="w-full h-6 bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
+        <div className="flex h-6 w-full items-center justify-center rounded border border-gray-200 bg-gray-100">
           <span className="text-xs text-gray-400">-</span>
         </div>
       );
     }
-    
+
     const isSelected = picks[game.id] === (team.id as string);
     const isClickable = !game.winner && !readOnly;
 
     return (
       <div
         className={`
-          flex items-center justify-between px-2 py-1 rounded border transition-all text-xs
-          ${isSelected ? 'bg-blue-100 border-blue-500' : 'bg-white border-gray-300'}
+          flex h-6 items-center justify-between rounded border px-2 py-1 text-xs transition-all
+          ${isSelected ? 'border-blue-500 bg-blue-100' : 'border-gray-300 bg-white'}
           ${isClickable ? 'cursor-pointer hover:border-gray-400 hover:bg-gray-50' : 'cursor-not-allowed opacity-50'}
         `}
         onClick={() => isClickable && handleTeamClick(game, team)}
       >
-            <div className="flex items-center space-x-1 flex-1 min-w-0">
-              <span className="text-xs font-bold text-gray-600">#{team.seed as number}</span>
-              <Image src={team.logo as string} alt={team.name as string} width={12} height={12} className="w-3 h-3 flex-shrink-0" unoptimized />
-              <span className="text-xs font-medium truncate text-black">{team.name as string}</span>
-            </div>
+        <div className="flex min-w-0 flex-1 items-center space-x-1">
+          <span className="text-xs font-bold text-gray-600">#{team.seed as number}</span>
+          <Image src={team.logo as string} alt={team.name as string} width={12} height={12} className="h-3 w-3 flex-shrink-0" unoptimized />
+          <span className="truncate text-xs font-medium text-black">{team.name as string}</span>
+        </div>
         {isSelected && (
-          <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+          <CheckCircle className="h-4 w-4 flex-shrink-0 text-green-600" />
         )}
       </div>
     );
   };
 
-      const renderGame = (game: TournamentGame, title: string) => {
-        // Always render both team slots, even if teams are not yet determined
-        return (
-          <div className="border-2 border-gray-300 rounded-lg p-1 space-y-0.5 w-full">
-            <div className="text-xs font-semibold text-gray-700 text-center mb-1">
-              {title}
-            </div>
-            {renderTeam(game.team1 as unknown as Record<string, unknown> | undefined, game)}
-            {renderTeam(game.team2 as unknown as Record<string, unknown> | undefined, game)}
-          </div>
-        );
-      };
+  const renderGame = (game: TournamentGame) => (
+    <div key={game.id} className="mb-1 w-full space-y-0.5 rounded border border-gray-300 p-1">
+      {renderTeam(game.team1 as unknown as Record<string, unknown> | undefined, game)}
+      {renderTeam(game.team2 as unknown as Record<string, unknown> | undefined, game)}
+    </div>
+  );
 
-      const getSemifinalTitle = (game: TournamentGame, index: number) => {
-        if (game.team1 && game.team2) {
-          const region1 = game.team1.region;
-          const region2 = game.team2.region;
-          return `${region1} vs. ${region2}`;
-        }
-        return `Semifinal ${index + 1}`;
-      };
+  /** Invisible slot matching one game card so column 1 reserves the same space as a real matchup. */
+  const ghostGameSlot = (
+    <div
+      className="mb-1 w-full space-y-0.5 rounded border border-transparent p-1 select-none"
+      aria-hidden
+    >
+      <div className="h-6 w-full rounded border border-transparent bg-transparent" />
+      <div className="h-6 w-full rounded border border-transparent bg-transparent" />
+    </div>
+  );
 
-  // Check if championship is complete and find the champion
-  const isChampionshipComplete = () => {
-    return picks[championshipGame.id];
-  };
+  const isChampionshipComplete = () => Boolean(picks[championshipGame.id]);
 
   const getChampion = () => {
     if (!isChampionshipComplete()) return null;
-    
+
     const championId = picks[championshipGame.id];
     if (!championId) return null;
-    
-    // Verify that the selected champion ID actually matches one of the current teams in the championship game
-    // This handles the case where semifinals change and invalidate a previously selected champion
+
     const team1Id = championshipGame.team1?.id;
     const team2Id = championshipGame.team2?.id;
-    
+
     if (championId !== team1Id && championId !== team2Id) {
-      // The selected champion is no longer valid (not in current championship teams)
       return null;
     }
-    
-    // Find the champion team
-    const champion = championshipGame.team1?.id === championId ? championshipGame.team1 : championshipGame.team2;
-    return champion;
+
+    return championshipGame.team1?.id === championId ? championshipGame.team1 : championshipGame.team2;
   };
 
   const champion = getChampion();
-  
-  // Check if all three winners are selected (both semifinals + championship)
-  // AND that the championship winner is valid (exists in current championship teams)
+
   const allWinnersSelected = () => {
     const allFinalFourSelected = finalFourGames.every(game => picks[game.id]);
     const championshipSelected = picks[championshipGame.id];
-    
+
     if (!allFinalFourSelected || !championshipSelected) {
       return false;
     }
-    
-    // Verify that the selected champion ID actually matches one of the current teams in the championship game
-    // This handles the case where semifinals change and invalidate a previously selected champion
+
     const championId = picks[championshipGame.id];
     const team1Id = championshipGame.team1?.id;
     const team2Id = championshipGame.team2?.id;
-    
-    // If the champion ID doesn't match either team, the selection is invalid
+
     if (championId !== team1Id && championId !== team2Id) {
       return false;
     }
-    
+
     return true;
   };
   const isComplete = allWinnersSelected();
-
-  // Validation logic for message bar
 
   const tieBreakerValid = () => {
     if (!tieBreaker) return false;
@@ -208,43 +200,14 @@ export default function FinalFourChampionship({
   const isDuplicateName = () => {
     if (!entryNameValid() || !siteConfig?.tournamentYear) return false;
     const trimmedName = entryName?.trim() || '';
-    // Check if name exists in submitted brackets (only submitted brackets count for duplicates)
-    // Note: We're checking all submitted brackets, but should exclude current bracket if editing
-    // For now, we check against all names - the API will handle the exclusion properly
     return existingBracketNames.some(name => name === trimmedName);
   };
 
-  // Check if submission is disabled due to deadline or toggle
-  const isSubmissionDisabled = () => {
-    // Check stop_submit_toggle first
-    if (siteConfig?.stopSubmitToggle === 'Yes') {
-      return true;
-    }
-    
-    // Check stop_submit_date_time
-    if (siteConfig?.stopSubmitDateTime) {
-      try {
-        const deadline = new Date(siteConfig.stopSubmitDateTime);
-        const now = new Date();
-        if (now >= deadline) {
-          return true;
-        }
-      } catch {
-        // Invalid date format - ignore
-      }
-    }
-    
-    return false;
-  };
-
-  // Get the reason submission is disabled
   const getSubmissionDisabledReason = () => {
-    // Check stop_submit_toggle first
     if (siteConfig?.stopSubmitToggle === 'Yes') {
       return siteConfig?.finalMessageSubmitOff || 'Bracket submissions are currently disabled.';
     }
-    
-    // Check stop_submit_date_time
+
     if (siteConfig?.stopSubmitDateTime) {
       try {
         const deadline = new Date(siteConfig.stopSubmitDateTime);
@@ -253,38 +216,36 @@ export default function FinalFourChampionship({
           return siteConfig?.finalMessageTooLate || 'Bracket submissions are closed. The deadline has passed.';
         }
       } catch {
-        // Invalid date format - ignore
+        /* ignore */
       }
     }
-    
+
     return null;
   };
 
-  // Determine message state
   const getMessageState = () => {
-    // Check submission disabled first (highest priority)
     const disabledReason = getSubmissionDisabledReason();
     if (disabledReason) {
       return {
-        color: 'yellow',
+        color: 'yellow' as const,
         message: disabledReason
       };
     }
-    
+
     if (!allWinnersSelected()) {
       return {
-        color: 'yellow',
+        color: 'yellow' as const,
         message: siteConfig?.finalMessageTeamsMissing || 'Please select winners for all Final Four and Championship games.'
       };
     }
-    
+
     if (!tieBreaker) {
       return {
-        color: 'yellow',
+        color: 'yellow' as const,
         message: siteConfig?.finalMessageTieBreakerMissing || 'Please enter a tie breaker value.'
       };
     }
-    
+
     if (!tieBreakerValid()) {
       const low = siteConfig?.tieBreakerLow ?? 50;
       const high = siteConfig?.tieBreakerHigh ?? 500;
@@ -292,62 +253,63 @@ export default function FinalFourChampionship({
         .replace(/{low}/g, String(low))
         .replace(/{high}/g, String(high));
       return {
-        color: 'yellow',
+        color: 'yellow' as const,
         message
       };
     }
-    
+
     if (isDuplicateName()) {
       return {
-        color: 'yellow',
+        color: 'yellow' as const,
         message: siteConfig?.finalMessageDuplicateName || 'An entry with this name already exists for this year. Please choose a different name.'
       };
     }
-    
+
     return {
-      color: 'green',
+      color: 'green' as const,
       message: siteConfig?.finalMessageReadyToSubmit || 'Your bracket is complete and ready to submit!'
     };
   };
 
   const messageState = getMessageState();
+  const tieBreakerNeedsAttention = !tieBreaker || !tieBreakerValid();
 
-  // Track scroll states to prevent repeated scrolling
+  const tieBreakerHintSource = (
+    siteConfig?.tieBreakerHint?.trim() ||
+    FALLBACK_CONFIG.tieBreakerHint ||
+    ''
+  ).trim();
+  const tieBreakerHintParagraphs = tieBreakerHintSource
+    ? tieBreakerHintSource.split(/\|\|/).map((p) => p.trim()).filter(Boolean)
+    : [];
+
   const hasScrolledToStartRef = useRef(false);
   const hasScrolledToChampionshipRef = useRef(false);
   const hasScrolledToEndRef = useRef(false);
-  
-  // Scroll to left when component mounts or step changes to Final Four
+
   useEffect(() => {
     if (!scrollContainerRef?.current || readOnly) return;
-    
-    // Reset scroll tracking when step changes
+
     hasScrolledToStartRef.current = false;
     hasScrolledToChampionshipRef.current = false;
     hasScrolledToEndRef.current = false;
-    
-    // Scroll to the left to show Final Four games
+
     scrollContainerRef.current.scrollTo({
       left: 0,
       behavior: 'smooth'
     });
-    
+
     hasScrolledToStartRef.current = true;
   }, [currentStep, scrollContainerRef, readOnly]);
-  
-  // Auto-scroll when both semifinals are complete (scroll right to show championship)
+
   useEffect(() => {
     if (!scrollContainerRef?.current || readOnly || hasScrolledToChampionshipRef.current) return;
-    
-    // Check if both semifinal games have picks
-    const bothSemifinalsComplete = finalFourGames.length === 2 && 
+
+    const bothSemifinalsComplete = finalFourGames.length === 2 &&
       finalFourGames.every(game => picks[game.id]);
-    
+
     if (bothSemifinalsComplete) {
-      // Scroll horizontally to bring championship into view
-      // Final Four column (w-48 = 192px) + spacer (w-8 = 32px) = 224px
-      // Scroll by ~200px to bring championship into view while keeping some of Final Four visible
-      const scrollAmount = 200;
+      const scrollAmount = 150;
       scrollContainerRef.current.scrollBy({
         left: scrollAmount,
         behavior: 'smooth'
@@ -355,14 +317,12 @@ export default function FinalFourChampionship({
       hasScrolledToChampionshipRef.current = true;
     }
   }, [finalFourGames, picks, scrollContainerRef, readOnly]);
-  
-  // Auto-scroll when championship winner is selected (scroll all the way right to show Tie Breaker and Submit)
+
   useEffect(() => {
     if (!scrollContainerRef?.current || readOnly || hasScrolledToEndRef.current) return;
-    
+
     const championshipPick = picks[championshipGame.id];
     if (championshipPick) {
-      // Scroll all the way to the right to show Tie Breaker and Submit button
       scrollContainerRef.current.scrollTo({
         left: scrollContainerRef.current.scrollWidth,
         behavior: 'smooth'
@@ -371,252 +331,310 @@ export default function FinalFourChampionship({
     }
   }, [championshipGame.id, picks, scrollContainerRef, readOnly]);
 
+  const semi1 = finalFourGames[0];
+  const semi2 = finalFourGames[1];
+  const showCircleSubmit = Boolean(onSubmitBracket && !readOnly && !isAdminMode);
 
   return (
-    <div
-      className={`mx-auto flex w-max max-w-full flex-col border-2 border-gray-300 rounded-lg ${BRACKET_EDITOR_STAGE_MIN_HEIGHT_CLASS}`}
-      style={{ width: 'fit-content' }}
-    >
-      <div className="flex min-h-0 flex-1 flex-col justify-center">
-        {/* Bracket Content */}
-        <div className="flex items-start">
-        {/* First Column - Header Title and Final Four Games */}
-        <div className="w-48">
-          {/* Header Title - First row, left-justified, can overlap into columns 2 and 3 */}
-          <div className="flex-shrink-0" style={{ minWidth: '12rem', maxWidth: 'none', paddingTop: '2px', paddingLeft: 'calc(2px + 5px)', marginBottom: '1rem' }}>
-            <h2 className="text-lg font-bold text-gray-800 whitespace-nowrap">
-              {siteConfig?.finalFourHeaderMessage || ''}
-            </h2>
-          </div>
-          {/* Final Four Games - stacked vertically */}
-          {finalFourGames.map((game, index) => (
-            <div key={game.id} style={{ marginTop: index === 0 ? '0' : '1rem' }}>
-              {renderGame(game, getSemifinalTitle(game, index))}
-            </div>
-          ))}
-        </div>
-
-        {/* Spacer */}
-        <div className="w-8"></div>
-
-        {/* Second Column - Championship Game */}
-        <div className="w-48">
-          <div style={{ marginTop: 'calc(4rem + 8px)' }}>
-            {renderGame(championshipGame, 'Championship')}
-          </div>
-        </div>
-
-        {/* Spacer */}
-        <div className="w-6"></div>
-
-        {/* Third Column - Empty (for spacing) */}
-        <div className="w-48"></div>
-
-        {/* Spacer */}
-        <div className="w-4"></div>
-
-        {/* Fourth Column - Empty (for spacing) */}
-        <div className="w-48 flex-shrink-0"></div>
-
-        {/* Fifth Column - Summary Panel (half width, right-aligned, same as region pages) */}
-        <div className="w-24 flex-shrink-0 relative">
-          {/* Summary Panel: Entry Name, Champion Info, Tie Breaker - right-aligned, top aligned */}
-          <div className="absolute right-0" style={{ minWidth: 'max-content' }}>
-            {/* Row 1: Entry Name - label and field on same row */}
-            <div className="mb-4 flex items-center space-x-2 justify-end" style={{ paddingTop: '2px', paddingRight: '2px' }}>
-              <label htmlFor="entryName" className="text-xs font-medium text-gray-700 whitespace-nowrap">
-                Entry Name:
-              </label>
-              {isLiveResultsMode ? (
-                <div className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-800 font-bold flex items-center space-x-2 min-w-[200px] justify-center">
-                  <KeyRound className="h-4 w-4 text-amber-600" />
-                  <span>KEY</span>
-                </div>
-              ) : (
-                <input
-                  type="text"
-                  id="entryName"
-                  value={entryName}
-                  onChange={(e) => onEntryNameChange?.(e.target.value)}
-                  disabled={readOnly}
-                  className={`px-3 py-2 border border-gray-300 rounded-lg text-sm ${
-                    readOnly 
-                      ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
-                      : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black'
-                  }`}
-                  style={{ width: 'max-content', minWidth: '200px' }}
-                  placeholder="Enter your bracket name"
-                  data-testid="entry-name-input"
-                />
-              )}
-            </div>
-
-            {/* Row 2: Final Four & Championship Title */}
-            <div className="mb-4">
-              <div className="text-lg font-bold text-gray-800 flex items-center space-x-2 justify-end" style={{ paddingRight: '5px' }}>
-                {isComplete && (
-                  <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+    <div className="mx-auto flex w-fit max-w-full min-w-0 flex-col">
+      <div
+        className="mx-auto flex w-full min-w-0 max-w-full flex-col items-center gap-2"
+        style={{ paddingLeft: '2px', paddingRight: '2px', paddingBottom: '2px' }}
+      >
+        <div className="inline-flex w-max max-w-full flex-col">
+          <div className="min-w-0 overflow-hidden rounded-lg border-2 border-gray-300 bg-white shadow-sm">
+            <div
+              className={`grid w-full grid-cols-1 gap-2 border-b px-2 py-2 sm:grid-cols-3 sm:items-center ${
+                isComplete ? 'border-green-200/90 bg-green-50' : 'border-gray-200'
+              }`}
+              data-testid="bracket-final-four-title-bar"
+            >
+              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 justify-self-start">
+                <label htmlFor="entryName" className="whitespace-nowrap text-xs font-medium text-gray-700">
+                  Entry Name:
+                </label>
+                {isLiveResultsMode ? (
+                  <div className="flex min-w-[200px] items-center justify-center space-x-2 rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm font-bold text-gray-800">
+                    <KeyRound className="h-4 w-4 text-amber-600" />
+                    <span>KEY</span>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    id="entryName"
+                    value={entryName}
+                    onChange={(e) => onEntryNameChange?.(e.target.value)}
+                    disabled={readOnly}
+                    className={`min-w-[180px] max-w-full flex-1 px-3 py-2 text-sm text-black sm:max-w-[20rem] ${
+                      readOnly
+                        ? 'cursor-not-allowed rounded-lg border border-gray-300 bg-gray-100 text-gray-500'
+                        : 'rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500'
+                    }`}
+                    placeholder="Enter your bracket name"
+                    data-testid="entry-name-input"
+                  />
                 )}
-                <span>Final Four & Champ</span>
+              </div>
+              <div className="flex items-center justify-center gap-2 text-center text-lg font-bold text-gray-800">
+                <span>Final Four</span>
+              </div>
+              <div className="flex min-w-0 items-center justify-end gap-2 justify-self-end text-right">
+                {champion ? (
+                  <>
+                    <span className="text-lg font-bold text-gray-600">#{champion.seed}</span>
+                    {champion.logo && (
+                      <Image
+                        src={champion.logo}
+                        alt={champion.name}
+                        width={32}
+                        height={32}
+                        className="h-8 w-8 flex-shrink-0 object-contain"
+                        unoptimized
+                      />
+                    )}
+                    <span className="max-w-[10rem] truncate text-lg font-semibold text-gray-800 sm:max-w-none">
+                      {champion.name}
+                    </span>
+                  </>
+                ) : null}
               </div>
             </div>
 
-            {/* Row 3: Champion (always show, empty if not complete) */}
-            <div className="flex items-center space-x-2 justify-end mb-4" style={{ paddingRight: '5px', minHeight: '2rem' }}>
-              {isComplete && champion ? (
-                <>
-                  <Trophy className="w-5 h-5 text-yellow-500 flex-shrink-0" />
-                  <span className="text-lg font-bold text-gray-600">#{champion.seed}</span>
-                  <span className="text-lg font-semibold text-gray-800">{champion.name}</span>
-                  {champion.logo && (
-                    <Image src={champion.logo} alt={champion.name} width={32} height={32} className="w-8 h-8 object-contain flex-shrink-0" unoptimized />
-                  )}
-                </>
-              ) : (
-                <div style={{ height: '2rem' }}></div>
-              )}
+            {!readOnly && (
+              <div className="min-w-0 border-b border-gray-200">
+                <BracketEditorTopMessage
+                  message={messageState.message}
+                  variant={messageState.color === 'yellow' ? 'validation-yellow' : 'validation-green'}
+                  embeddedInCard
+                  data-testid="bracket-editor-final-validation-message"
+                />
+              </div>
+            )}
+
+            <div
+              className="min-w-0 overflow-x-auto px-1 py-1"
+              data-testid="bracket-final-four-bracket-card"
+            >
+              <div
+                className="flex min-w-max w-full shrink-0 items-stretch"
+                style={{ minHeight: `${gamesRowMinHeightRem}rem` }}
+              >
+                <div
+                  className="grid grid-cols-[12rem_12rem_12rem_12rem] grid-rows-[1fr_4.25rem_6rem]"
+                  style={{ width: '48rem' }}
+                >
+                  {/* Row 1: games */}
+                  <div className="relative z-10 row-start-1 col-start-1 flex justify-center" data-testid="bracket-final-four-col-placeholder">
+                    {ghostGameSlot}
+                  </div>
+                  <div
+                    className="relative z-20 row-start-1 col-start-2 flex flex-col justify-center"
+                    data-testid="bracket-final-four-col-semis"
+                  >
+                    <div className="w-full">
+                      {semi1 ? renderGame(semi1) : null}
+                      {semi2 ? <div className="mt-4">{renderGame(semi2)}</div> : null}
+                    </div>
+                  </div>
+                  <div
+                    className="relative z-30 row-start-1 col-start-3 flex flex-col justify-center"
+                    data-testid="bracket-final-four-col-championship"
+                  >
+                    {renderGame(championshipGame)}
+                  </div>
+                  <div
+                    className="relative z-40 row-start-1 col-start-4"
+                    data-testid="bracket-final-four-col-right-spacer"
+                  >
+                    {ghostGameSlot}
+                  </div>
+
+                  {/* Row 2: tie breaker label + input */}
+                  <div className="row-start-2 col-start-1" aria-hidden />
+                  <div className="row-start-2 col-start-2 flex h-full items-center px-2">
+                    <div className="flex items-center justify-end gap-1.5">
+                      {tieBreakerHintParagraphs.length > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => setTieBreakerHintOpen((o) => !o)}
+                          className="inline-flex rounded-full p-0.5 text-gray-500 transition-colors hover:bg-gray-200/80 hover:text-gray-800"
+                          aria-expanded={tieBreakerHintOpen}
+                          aria-controls="tie-breaker-hint-panel"
+                          title="About the tie breaker"
+                          data-testid="bracket-final-four-tiebreaker-hint-toggle"
+                        >
+                          <span className="sr-only">Tie breaker help</span>
+                          <Info className="h-4 w-4" strokeWidth={2} aria-hidden />
+                        </button>
+                      ) : null}
+                      <label htmlFor="tieBreaker" className="text-right text-xs font-medium text-gray-700">
+                        Tie Breaker:
+                      </label>
+                    </div>
+                  </div>
+                  <div className="row-start-2 col-start-3 flex h-full items-center px-2">
+                    <input
+                      type="number"
+                      id="tieBreaker"
+                      value={tieBreaker}
+                      onChange={(e) => onTieBreakerChange(e.target.value)}
+                      min="50"
+                      max="500"
+                      disabled={readOnly}
+                      className={`w-full min-w-0 rounded-lg border px-3 py-2 text-sm ${
+                        readOnly
+                          ? 'cursor-not-allowed border-gray-300 bg-gray-100 text-gray-500'
+                          : tieBreakerNeedsAttention
+                            ? 'border-yellow-300 bg-yellow-50 text-black placeholder:text-gray-300 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-300'
+                            : 'border-gray-300 text-black placeholder:text-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500'
+                      }`}
+                      placeholder="###"
+                      title="Total combined points scored in the championship game"
+                      data-testid="tiebreaker-input"
+                    />
+                  </div>
+                  <div className="row-start-2 col-start-4" aria-hidden />
+
+                  {/* Row 3: reserved hint row (always consumes space) */}
+                  <div className="row-start-3 col-start-1" aria-hidden />
+                  <div
+                    id="tie-breaker-hint-panel"
+                    className="row-start-3 col-start-2 col-end-4 p-1.5"
+                    role="region"
+                    data-testid="bracket-final-four-tiebreaker-hint-text"
+                    aria-hidden={!tieBreakerHintOpen || tieBreakerHintParagraphs.length === 0}
+                  >
+                    <div
+                      className={`h-full overflow-y-auto rounded border border-gray-200 bg-gray-50/90 p-2 text-xs leading-snug text-gray-700 ${
+                        tieBreakerHintOpen && tieBreakerHintParagraphs.length > 0 ? '' : 'opacity-0'
+                      }`}
+                    >
+                      {tieBreakerHintOpen && tieBreakerHintParagraphs.length > 0
+                        ? tieBreakerHintParagraphs.map((para, i) => (
+                            <p key={i} className="m-0 mb-1.5 last:mb-0">
+                              {para}
+                            </p>
+                          ))
+                        : null}
+                    </div>
+                  </div>
+                  <div className="row-start-3 col-start-4" aria-hidden />
+                </div>
+
+                {showCircleSubmit ? (
+                  <div className="relative z-[45] flex min-w-[3rem] flex-1 shrink-0 flex-col items-center justify-center py-2">
+                    <button
+                      type="button"
+                      aria-label="Submit bracket"
+                      data-testid="submit-bracket-editor-button"
+                      onClick={() => submitEnabled && onSubmitBracket?.()}
+                      disabled={!submitEnabled}
+                      title={submitDisabledMessage || undefined}
+                      className={`
+                        flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-all
+                        ${
+                          submitEnabled
+                            ? 'cursor-pointer bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-lg hover:from-blue-700 hover:to-blue-800 hover:shadow-xl active:shadow-md'
+                            : 'cursor-not-allowed bg-gradient-to-br from-gray-300 to-gray-400 text-gray-500 shadow'
+                        }
+                      `}
+                      style={{
+                        boxShadow: submitEnabled
+                          ? '0 4px 6px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -1px 0 rgba(0, 0, 0, 0.2)'
+                          : '0 2px 4px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                      }}
+                    >
+                      <Send
+                        className="h-7 w-7"
+                        aria-hidden
+                        style={{
+                          filter: submitEnabled ? 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3))' : 'none',
+                        }}
+                      />
+                    </button>
+                  </div>
+                ) : null}
+              </div>
             </div>
 
-            {/* Row 4: Tie Breaker Input */}
-            <div className="flex items-center space-x-2 justify-end" style={{ paddingRight: '2px' }}>
-              <label htmlFor="tieBreaker" className="text-xs font-medium text-gray-700 whitespace-nowrap">
-                Tie Breaker:
-              </label>
-              <input
-                type="number"
-                id="tieBreaker"
-                value={tieBreaker}
-                onChange={(e) => onTieBreakerChange(e.target.value)}
-                min="50"
-                max="500"
-                disabled={readOnly}
-                className={`w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm ${
-                  readOnly 
-                    ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
-                    : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black placeholder:text-gray-200'
-                }`}
-                placeholder="###"
-                title="Total combined points scored in the championship game"
-                data-testid="tiebreaker-input"
-              />
+            <div className="w-full min-w-0 border-t border-gray-200 px-2 pb-1.5 pt-2">
+              <div className="flex min-w-0 w-full justify-center overflow-x-auto">
+                {onStepClick && isStepComplete && (
+                  <BracketStepNavBar
+                    totalSteps={totalSteps}
+                    currentStep={currentStep}
+                    stepLabels={stepNavLabels}
+                    columnWidthCh={stepButtonWidthCh}
+                    isStepComplete={isStepComplete}
+                    onStepClick={onStepClick}
+                    finalFourDisabledMessage={
+                      finalFourDisabledMessage.trim() ||
+                      siteConfig?.finalFourDisabledMessage?.trim() ||
+                      'Complete all four regions before you can work on the Final Four and championship.'
+                    }
+                  />
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-      </div>
 
-      {/* Message Bar */}
-      {!readOnly && (
-        <div className={`mt-4 rounded-lg border-2 ${
-          messageState.color === 'yellow' 
-            ? 'bg-yellow-50 border-yellow-400 text-yellow-800' 
-            : 'bg-green-50 border-green-400 text-green-800'
-        }`} style={{ width: 'calc(100% - 4px)', marginLeft: '2px', marginRight: '2px', paddingTop: '12px', paddingBottom: '12px', paddingLeft: '12px', paddingRight: '10px' }}>
-          <p className="text-sm font-medium text-right">{messageState.message}</p>
-        </div>
-      )}
-
-      {/* Bottom bar: step nav (left) — Save / Cancel / Submit / Close (right) */}
-      <div
-        className="mt-4 flex w-full max-w-full flex-nowrap items-stretch justify-between gap-4"
-        style={{ paddingLeft: '2px', paddingRight: '2px', paddingBottom: '2px' }}
-      >
-        <div className="flex min-w-0 shrink-0 items-center justify-start overflow-x-auto">
-          {onStepClick && isStepComplete && (
-            <BracketStepNavBar
-              totalSteps={totalSteps}
-              currentStep={currentStep}
-              stepLabels={stepNavLabels}
-              columnWidthCh={stepButtonWidthCh}
-              isStepComplete={isStepComplete}
-              onStepClick={onStepClick}
-              finalFourDisabledMessage={
-                finalFourDisabledMessage.trim() ||
-                siteConfig?.finalFourDisabledMessage?.trim() ||
-                'Complete all four regions before you can work on the Final Four and championship.'
-              }
-            />
-          )}
-        </div>
-
-        <div className="flex shrink-0 items-center justify-end gap-1.5">
-          {readOnly ? (
-            onClose && (
-              <button
-                type="button"
-                onClick={onClose}
-                style={{
-                  width: `${stepButtonWidthCh}ch`,
-                  minWidth: `${stepButtonWidthCh}ch`,
-                  maxWidth: `${stepButtonWidthCh}ch`,
-                }}
-                className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} bg-red-500 text-white hover:bg-red-600 cursor-pointer`}
-              >
-                <span>Close</span>
-              </button>
-            )
-          ) : (
-            <>
-              {onSave && (
+          <div className="mt-1 flex w-full flex-wrap items-center justify-center gap-1.5 rounded-lg border-2 border-gray-300 bg-white px-2 py-2 shadow-sm">
+            {readOnly ? (
+              onClose && (
                 <button
                   type="button"
-                  onClick={() => !disableSaveSubmit && onSave()}
-                  disabled={disableSaveSubmit}
-                  title={disableSaveSubmit ? disableSaveSubmitMessage : 'Save'}
+                  onClick={onClose}
                   style={{
                     width: `${stepButtonWidthCh}ch`,
                     minWidth: `${stepButtonWidthCh}ch`,
                     maxWidth: `${stepButtonWidthCh}ch`,
                   }}
-                  className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} ${
-                    disableSaveSubmit
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-purple-600 text-white hover:bg-purple-700 cursor-pointer'
-                  }`}
+                  className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} cursor-pointer bg-red-500 text-white hover:bg-red-600`}
                 >
-                  <Save className="h-3.5 w-3.5 shrink-0" />
-                  <span>Save</span>
+                  <span>Close</span>
                 </button>
-              )}
-              {onCancel && (
-                <button
-                  type="button"
-                  onClick={onCancel}
-                  style={{
-                    width: `${stepButtonWidthCh}ch`,
-                    minWidth: `${stepButtonWidthCh}ch`,
-                    maxWidth: `${stepButtonWidthCh}ch`,
-                  }}
-                  className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} bg-red-500 text-white hover:bg-red-600 cursor-pointer`}
-                >
-                  <X className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
-                  <span>Cancel</span>
-                </button>
-              )}
-              {onSubmitBracket && !isAdminMode && (
-                <button
-                  type="button"
-                  data-testid="submit-bracket-editor-button"
-                  onClick={() => submitEnabled && onSubmitBracket()}
-                  disabled={!submitEnabled}
-                  title={submitDisabledMessage || undefined}
-                  style={{
-                    width: `${stepButtonWidthCh}ch`,
-                    minWidth: `${stepButtonWidthCh}ch`,
-                    maxWidth: `${stepButtonWidthCh}ch`,
-                  }}
-                  className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} ${
-                    submitEnabled
-                      ? 'cursor-pointer bg-blue-600 text-white hover:bg-blue-700'
-                      : 'cursor-not-allowed bg-gray-300 text-gray-500'
-                  }`}
-                >
-                  <Send className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                  <span>Submit</span>
-                </button>
-              )}
-            </>
-          )}
+              )
+            ) : (
+              <>
+                {onSave && (
+                  <button
+                    type="button"
+                    onClick={() => !disableSaveSubmit && onSave()}
+                    disabled={disableSaveSubmit}
+                    title={disableSaveSubmit ? disableSaveSubmitMessage : 'Save'}
+                    style={{
+                      width: `${stepButtonWidthCh}ch`,
+                      minWidth: `${stepButtonWidthCh}ch`,
+                      maxWidth: `${stepButtonWidthCh}ch`,
+                    }}
+                    className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} ${
+                      disableSaveSubmit
+                        ? 'cursor-not-allowed bg-gray-300 text-gray-500'
+                        : 'cursor-pointer bg-purple-600 text-white hover:bg-purple-700'
+                    }`}
+                  >
+                    <Save className="h-3.5 w-3.5 shrink-0" />
+                    <span>Save</span>
+                  </button>
+                )}
+                {onCancel && (
+                  <button
+                    type="button"
+                    onClick={onCancel}
+                    style={{
+                      width: `${stepButtonWidthCh}ch`,
+                      minWidth: `${stepButtonWidthCh}ch`,
+                      maxWidth: `${stepButtonWidthCh}ch`,
+                    }}
+                    className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} cursor-pointer bg-red-500 text-white hover:bg-red-600`}
+                  >
+                    <X className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
+                    <span>Cancel</span>
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>

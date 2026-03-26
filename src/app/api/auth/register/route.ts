@@ -12,7 +12,6 @@ import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
 import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rateLimit';
 import { successResponse, ApiErrors } from '@/lib/api/responses';
 import { validateRegistration } from '@/lib/validation/validators';
-import { ErrorCode } from '@/lib/constants';
 
 export async function POST(request: NextRequest) {
   // Rate limiting to prevent registration abuse
