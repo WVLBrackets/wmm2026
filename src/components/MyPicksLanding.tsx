@@ -705,8 +705,11 @@ export default function MyPicksLanding({
 
   /**
    * Get tooltip/disable reason for user actions.
+   * `edit` is excluded from the kill-switch gate so in-progress rows can still open the bracket read-only via the entry name / status chip.
    */
-  const getActionDisabledReason = (action: 'new' | 'copy' | 'edit' | 'delete' | 'return') => {
+  const getActionDisabledReason = (
+    action: 'new' | 'copy' | 'edit' | 'delete' | 'return' | 'restore',
+  ) => {
     if ((action === 'new' || action === 'copy') && isBracketCreationDisabled()) {
       return getBracketCreationDisabledReason();
     }
@@ -715,6 +718,14 @@ export default function MyPicksLanding({
       return killSwitchDisabledReason;
     }
     return null;
+  };
+
+  /**
+   * Disable reason for the in-progress **Edit** control in Actions only (does not apply to row click “view read-only”).
+   */
+  const getInProgressEditButtonDisabledReason = (): string | null => {
+    if (isKillSwitchDisabled()) return killSwitchDisabledReason;
+    return getActionDisabledReason('edit');
   };
 
   const submittedEntryNamesForDuplicateCheck = useMemo(
@@ -1702,17 +1713,19 @@ export default function MyPicksLanding({
                                 <>
                                   {/* In Progress: Edit, Submit, Copy, Delete */}
                                   <LoggedButton
-                                    onClick={() => !getActionDisabledReason('edit') && onEditBracket(bracket)}
+                                    onClick={() =>
+                                      !getInProgressEditButtonDisabledReason() && onEditBracket(bracket)
+                                    }
                                     logLocation="Edit"
                                     bracketId={number ? String(number).padStart(6, '0') : null}
-                                    disabled={Boolean(getActionDisabledReason('edit'))}
+                                    disabled={Boolean(getInProgressEditButtonDisabledReason())}
                                     className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
-                                      getActionDisabledReason('edit')
+                                      getInProgressEditButtonDisabledReason()
                                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                         : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
                                     }`}
                                     title={
-                                      getActionDisabledReason('edit') ||
+                                      getInProgressEditButtonDisabledReason() ||
                                       (killSwitchForcesViewOnly ? 'View bracket' : 'Edit')
                                     }
                                   >
@@ -1757,7 +1770,7 @@ export default function MyPicksLanding({
                                     disabled={Boolean(getActionDisabledReason('delete')) || deletingBracketId === bracket.id || pendingDeleteBracketId === bracket.id}
                                     className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
                                       getActionDisabledReason('delete') || deletingBracketId === bracket.id || pendingDeleteBracketId === bracket.id
-                                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                         : 'bg-red-600 text-white hover:bg-red-700 cursor-pointer'
                                     }`}
                                     title={getActionDisabledReason('delete') || (deletingBracketId === bracket.id ? 'Deleting...' : 'Delete')}
@@ -1819,19 +1832,19 @@ export default function MyPicksLanding({
                                   </LoggedButton>
                                   <LoggedButton
                                     onClick={() => {
-                                      if (!getActionDisabledReason('edit') && onRestoreBracket) {
+                                      if (!getActionDisabledReason('restore') && onRestoreBracket) {
                                         onRestoreBracket(bracket.id);
                                       }
                                     }}
                                     logLocation="Restore"
                                     bracketId={number ? String(number).padStart(6, '0') : null}
-                                    disabled={Boolean(getActionDisabledReason('edit'))}
+                                    disabled={Boolean(getActionDisabledReason('restore'))}
                                     className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
-                                      getActionDisabledReason('edit')
+                                      getActionDisabledReason('restore')
                                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                         : 'bg-amber-600 text-white hover:bg-amber-700 cursor-pointer'
                                     }`}
-                                    title={getActionDisabledReason('edit') || 'Restore to In Progress'}
+                                    title={getActionDisabledReason('restore') || 'Restore to In Progress'}
                                     data-testid="restore-bracket-button"
                                   >
                                     <RotateCcw className="h-4 w-4" />
@@ -1853,7 +1866,7 @@ export default function MyPicksLanding({
                                       getActionDisabledReason('delete') ||
                                       deletingBracketId === bracket.id ||
                                       pendingPermanentDeleteBracketId
-                                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                         : 'bg-red-900 text-white hover:bg-red-950 cursor-pointer'
                                     }`}
                                     title={getActionDisabledReason('delete') || 'Permanently delete'}

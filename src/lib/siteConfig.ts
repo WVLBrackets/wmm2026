@@ -27,6 +27,8 @@ export interface SiteConfigData {
   liveStandingsWarning?: string;
   /** Two button labels separated by `|` (left = accept Live, right = stay on daily). Sheet: `live_standings_buttons` */
   liveStandingsButtons?: string;
+  /** Local-dev only: banner on `/standings/live` (`||` = line breaks). Sheet: `live_standings_disclaimer` */
+  liveStandingsDisclaimer?: string;
   footerText: string;
   contactMe: string;
   prizesActiveForecast: string;
@@ -305,6 +307,9 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
             break;
           case 'live_standings_buttons':
             config.liveStandingsButtons = value;
+            break;
+          case 'live_standings_disclaimer':
+            config.liveStandingsDisclaimer = value;
             break;
           case 'footer_text':
             config.footerText = value;

@@ -22,6 +22,7 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   liveStandingsWarning:
     'Live standings compare submitted picks to the official KEY bracket. Rankings can change as games complete.||If you continue, your preference will be saved as Live standings.',
   liveStandingsButtons: 'Continue to live standings|Back to daily standings',
+  liveStandingsDisclaimer: '',
   footerText: '© 2001 Warren\'s March Madness | All rights reserved',
   contactMe: 'warren@example.com',
   prizesActiveForecast: 'Forecast',
