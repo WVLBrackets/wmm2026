@@ -5,13 +5,10 @@ import Image from 'next/image';
 import { TournamentGame } from '@/types/tournament';
 import { SiteConfigData } from '@/lib/siteConfig';
 import { CheckCircle, Save, KeyRound, Send, Info, X } from 'lucide-react';
-import {
-  BRACKET_EDITOR_BAR_ACTION_CLASSES,
-  BRACKET_EDITOR_GAMES_ROW_MIN_HEIGHT_REM,
-} from '@/lib/bracketStepNavMetrics';
+import { BRACKET_EDITOR_BAR_ACTION_CLASSES } from '@/lib/bracketStepNavMetrics';
 import BracketEditorTopMessage from './BracketEditorTopMessage';
 import BracketStepNavBar from './BracketStepNavBar';
-import { getFinalFourGamesRowMinHeightRem, loadFinalFourGamesRowLayout } from './finalFourGamesRowLayoutStorage';
+import { FINAL_FOUR_GAMES_ROW_SHIPPED_MIN_HEIGHT_REM } from './finalFourGamesRowLayoutStorage';
 import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 
 interface FinalFourChampionshipProps {
@@ -81,13 +78,8 @@ export default function FinalFourChampionship({
   disableSaveSubmitMessage = '',
 }: FinalFourChampionshipProps) {
   const [tieBreakerHintOpen, setTieBreakerHintOpen] = useState(false);
-  /** Games-row min height (rem); after mount matches persisted Final Four layout (no UI — see `finalFourGamesRowLayoutStorage`). */
-  const [gamesRowMinHeightRem, setGamesRowMinHeightRem] = useState(BRACKET_EDITOR_GAMES_ROW_MIN_HEIGHT_REM);
-
-  useEffect(() => {
-    const { adjustRem } = loadFinalFourGamesRowLayout();
-    setGamesRowMinHeightRem(getFinalFourGamesRowMinHeightRem(adjustRem));
-  }, []);
+  /** Games-row min height (rem); shipped constant — see `finalFourGamesRowLayoutStorage`. */
+  const gamesRowMinHeightRem = FINAL_FOUR_GAMES_ROW_SHIPPED_MIN_HEIGHT_REM;
 
   const handleTeamClick = (game: TournamentGame, team: Record<string, unknown>) => {
     if (game.winner || readOnly) return;
