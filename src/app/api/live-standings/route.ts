@@ -40,23 +40,29 @@ export async function GET(request: NextRequest) {
     }
 
     if (!snapshot) {
-      return NextResponse.json({
-        success: true,
-        available: false,
-        year: yearNum,
-        message: 'Live Standings Not Available',
-      });
+      return NextResponse.json(
+        {
+          success: true,
+          available: false,
+          year: yearNum,
+          message: 'Live Standings Not Available',
+        },
+        { headers: { 'Cache-Control': 'private, no-store, max-age=0' } }
+      );
     }
 
-    return NextResponse.json({
-      success: true,
-      available: true,
-      year: snapshot.year,
-      keyBracketId: snapshot.keyBracketId,
-      keyUpdatedAt: snapshot.keyUpdatedAt.toISOString(),
-      computedAt: snapshot.computedAt.toISOString(),
-      entries: snapshot.entries,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        available: true,
+        year: snapshot.year,
+        keyBracketId: snapshot.keyBracketId,
+        keyUpdatedAt: snapshot.keyUpdatedAt.toISOString(),
+        computedAt: snapshot.computedAt.toISOString(),
+        entries: snapshot.entries,
+      },
+      { headers: { 'Cache-Control': 'private, no-store, max-age=0' } }
+    );
   } catch (error) {
     console.error('[GET /api/live-standings]', error);
     return NextResponse.json(

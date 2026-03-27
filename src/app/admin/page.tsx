@@ -19,6 +19,7 @@ import {
   Pencil,
   ChevronLeft,
   ChevronRight,
+  Database,
 } from 'lucide-react';
 import { useBracketMode } from '@/contexts/BracketModeContext';
 import UsersTab from '@/components/admin/UsersTab';
@@ -220,18 +221,19 @@ export default function AdminPage() {
   const handleRevalidate = async (path: string, pageName: string) => {
     setRevalidating(path);
     setRevalidateMessage(null);
-    
+
     try {
+      const csrfHeaders = await getCSRFHeaders();
       const response = await fetch('/api/admin/revalidate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path })
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders },
+        body: JSON.stringify({ path }),
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
-        setRevalidateMessage(`✅ ${pageName} rebuilt successfully`);
+        setRevalidateMessage(`✅ ${result.message || `${pageName} rebuilt successfully`}`);
       } else {
         setRevalidateMessage(`❌ Failed to rebuild ${pageName}: ${result.error}`);
       }
@@ -239,8 +241,37 @@ export default function AdminPage() {
       setRevalidateMessage(`❌ Failed to rebuild ${pageName}`);
     } finally {
       setRevalidating(null);
-      // Clear message after 3 seconds
-      setTimeout(() => setRevalidateMessage(null), 3000);
+      setTimeout(() => setRevalidateMessage(null), 5000);
+    }
+  };
+
+  /**
+   * Invalidate Next `site-config` tag + {@link invalidateSiteConfigModuleCache} only (no full page rebuild).
+   */
+  const handleFlushSiteConfigCache = async () => {
+    setRevalidating('__site_config__');
+    setRevalidateMessage(null);
+
+    try {
+      const csrfHeaders = await getCSRFHeaders();
+      const response = await fetch('/api/admin/revalidate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders },
+        body: JSON.stringify({ action: 'flush-site-config' }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setRevalidateMessage(`✅ ${result.message || 'Site config server caches cleared'}`);
+      } else {
+        setRevalidateMessage(`❌ ${result.error || 'Failed to flush site config cache'}`);
+      }
+    } catch {
+      setRevalidateMessage('❌ Failed to flush site config cache');
+    } finally {
+      setRevalidating(null);
+      setTimeout(() => setRevalidateMessage(null), 8000);
     }
   };
 
@@ -464,6 +495,25 @@ export default function AdminPage() {
                   )}
                   <span>Hall of Fame</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => handleRevalidate('/standings', 'Standings')}
+                  disabled={revalidating !== null}
+                  className={`flex items-center space-x-1 rounded-lg px-3 py-1.5 text-sm transition-colors ${
+                    revalidating === '/standings'
+                      ? 'cursor-wait bg-gray-300 text-gray-500'
+                      : 'bg-violet-100 text-violet-800 hover:bg-violet-200'
+                  }`}
+                  title="Rebuild Daily + Live standings pages; clears server standings sheet cache (2 min)"
+                  data-testid="admin-rebuild-standings-button-desktop"
+                >
+                  {revalidating === '/standings' ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Table className="h-4 w-4" />
+                  )}
+                  <span>Standings</span>
+                </button>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="mr-1 text-xs text-gray-500">Actions:</span>
@@ -484,6 +534,25 @@ export default function AdminPage() {
                     <Info className="h-4 w-4" />
                   )}
                   <span>Validate Config</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleFlushSiteConfigCache}
+                  disabled={revalidating !== null}
+                  className={`flex items-center space-x-1 rounded-lg px-3 py-1.5 text-sm transition-colors ${
+                    revalidating === '__site_config__'
+                      ? 'cursor-wait bg-gray-300 text-gray-500'
+                      : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
+                  }`}
+                  title="Clears Next.js site-config cache; /api/site-config may still be CDN-cached up to ~5 min without ?fresh=true"
+                  data-testid="admin-flush-site-config-button-desktop"
+                >
+                  {revalidating === '__site_config__' ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Database className="h-4 w-4" />
+                  )}
+                  <span>Site config cache</span>
                 </button>
               </div>
               {revalidateMessage && (
@@ -555,6 +624,25 @@ export default function AdminPage() {
                     <Award className="h-4 w-4" />
                   )}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => handleRevalidate('/standings', 'Standings')}
+                  disabled={revalidating !== null}
+                  className={`flex items-center justify-center rounded-lg p-2 transition-colors ${
+                    revalidating === '/standings'
+                      ? 'cursor-wait bg-gray-300 text-gray-500'
+                      : 'bg-violet-100 text-violet-800 hover:bg-violet-200'
+                  }`}
+                  title="Rebuild Daily + Live standings pages; clears server standings cache"
+                  aria-label="Rebuild Standings"
+                  data-testid="admin-rebuild-standings-button-mobile"
+                >
+                  {revalidating === '/standings' ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Table className="h-4 w-4" />
+                  )}
+                </button>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="mr-1 text-xs text-gray-500">Actions:</span>
@@ -575,6 +663,25 @@ export default function AdminPage() {
                     <Info className="h-4 w-4" />
                   )}
                   <span>Validate Config</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleFlushSiteConfigCache}
+                  disabled={revalidating !== null}
+                  className={`flex items-center space-x-1 rounded-lg px-3 py-1.5 text-sm transition-colors ${
+                    revalidating === '__site_config__'
+                      ? 'cursor-wait bg-gray-300 text-gray-500'
+                      : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
+                  }`}
+                  title="Clears server site-config cache; edge may cache API ~5 min"
+                  data-testid="admin-flush-site-config-button-mobile"
+                >
+                  {revalidating === '__site_config__' ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Database className="h-4 w-4" />
+                  )}
+                  <span>Site config</span>
                 </button>
               </div>
               {revalidateMessage && (
