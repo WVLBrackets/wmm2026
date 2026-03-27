@@ -12,6 +12,15 @@ let lastFetchTime = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 /**
+ * Drop the in-memory module cache so the next {@link getSiteConfig} call refetches.
+ * Next.js `revalidateTag('site-config')` invalidates `unstable_cache` only; this covers getSiteConfig's own TTL layer.
+ */
+export function invalidateSiteConfigModuleCache(): void {
+  cachedConfig = null;
+  lastFetchTime = 0;
+}
+
+/**
  * Get site configuration with caching and fallback
  * Tries Google Sheets first, falls back to environment variables
  * Works in both server and client contexts
