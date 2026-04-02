@@ -58,6 +58,7 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   finalFourDisabledMessage:
     'Complete all four regions before you can work on the Final Four and championship.',
   bracketRegionalMessage: '',
+  bracketRegionalMessageDone: '',
   // Email PDF template defaults
   emailPdfSubject: 'Your Bracket - Warren\'s March Madness',
   emailPdfHeading: 'Your Bracket is Attached!',

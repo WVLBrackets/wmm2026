@@ -19,6 +19,26 @@ export async function GET(
 ) {
   const { id } = await params;
   try {
+    const poolRead = request.nextUrl.searchParams.get('pool') === '1';
+
+    if (poolRead) {
+      const bracket = await getBracketById(id);
+      if (!bracket || bracket.status !== 'submitted' || bracket.isKey) {
+        return NextResponse.json({ success: false, error: 'Bracket not found' }, { status: 404 });
+      }
+      return NextResponse.json({
+        success: true,
+        data: {
+          id: bracket.id,
+          entryName: bracket.entryName,
+          tieBreaker: bracket.tieBreaker,
+          picks: bracket.picks,
+          year: bracket.year,
+          status: bracket.status,
+        },
+      });
+    }
+
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {

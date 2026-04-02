@@ -3,7 +3,7 @@
 import { useEffect, useRef, RefObject } from 'react';
 import Image from 'next/image';
 import { TournamentGame } from '@/types/tournament';
-import { CheckCircle, Save, KeyRound, ArrowRight, X } from 'lucide-react';
+import { CheckCircle, Save, KeyRound, ArrowRight, Send, X } from 'lucide-react';
 import { BRACKET_EDITOR_BAR_ACTION_CLASSES } from '@/lib/bracketStepNavMetrics';
 import BracketEditorTopMessage from './BracketEditorTopMessage';
 import BracketStepNavBar from './BracketStepNavBar';
@@ -41,8 +41,12 @@ interface RegionBracketLayoutProps {
   isLiveResultsMode?: boolean;
   disableSave?: boolean;
   disableSaveMessage?: string;
-  /** Site config `bracket_regional_message` — banner above the bracket on regional steps */
+  /** Site config `bracket_regional_message` — banner above the bracket on regional steps (incomplete region). */
   bracketRegionalMessage?: string;
+  /** Site config `bracket_regional_message_done` — same bar when the region is complete (green styling). */
+  bracketRegionalMessageDone?: string;
+  /** True when entry name matches another submitted bracket (yellow field, same tone as validation warnings). */
+  entryNameDuplicate?: boolean;
 }
 
 export default function RegionBracketLayout({
@@ -57,6 +61,10 @@ export default function RegionBracketLayout({
   onCancel,
   onNext,
   canProceed = false,
+  onSubmitBracket,
+  submitEnabled = false,
+  submitDisabledMessage = '',
+  isAdminMode = false,
   currentStep = 0,
   totalSteps = 5,
   onStepClick,
@@ -70,6 +78,8 @@ export default function RegionBracketLayout({
   disableSave = false,
   disableSaveMessage = '',
   bracketRegionalMessage = '',
+  bracketRegionalMessageDone = '',
+  entryNameDuplicate = false,
 }: RegionBracketLayoutProps) {
   const hasScrolledRoundOf64Ref = useRef(false);
   const hasScrolledRoundOf32Ref = useRef(false);
@@ -225,6 +235,13 @@ export default function RegionBracketLayout({
   const regionalChampion = getRegionalChampion();
   const isComplete = isRegionComplete();
 
+  const regionalBannerMessage = isComplete
+    ? bracketRegionalMessageDone.trim()
+    : bracketRegionalMessage.trim();
+  const regionalBannerVariant = isComplete ? ('validation-green' as const) : ('regional' as const);
+
+  const showBarSubmit = Boolean(onSubmitBracket && !readOnly && !isAdminMode);
+
   return (
     <div className="mx-auto flex w-fit max-w-full min-w-0 flex-col">
       <div
@@ -233,20 +250,26 @@ export default function RegionBracketLayout({
       >
         <div className="inline-flex w-max max-w-full flex-col">
           <div className="min-w-0 overflow-hidden rounded-lg border-2 border-gray-300 bg-white shadow-sm">
-            {/* Title bar: entry (left) · region (center) · champion (right) */}
+            {/* Title bar: entry (left) · region (center) · champion (right); single row on mobile with condensed copy */}
             <div
-              className={`grid w-full grid-cols-1 gap-2 border-b px-2 py-2 sm:grid-cols-3 sm:items-center ${
+              className={`grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-1 gap-y-0 border-b px-2 py-2 sm:gap-x-2 ${
                 isComplete ? 'border-green-200/90 bg-green-50' : 'border-gray-200'
               }`}
               data-testid="bracket-region-title-bar"
             >
-              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 justify-self-start">
-                <label htmlFor="entryName" className="text-xs font-medium text-gray-700 whitespace-nowrap">
+              <div className="flex min-w-0 flex-nowrap items-center gap-x-1 justify-self-start sm:gap-x-2">
+                <label htmlFor="entryName" className="sr-only">
                   Entry Name:
                 </label>
+                <span
+                  className="hidden shrink-0 text-xs font-medium whitespace-nowrap text-gray-700 sm:inline"
+                  aria-hidden="true"
+                >
+                  Entry Name:
+                </span>
                 {isLiveResultsMode ? (
-                  <div className="flex min-w-[200px] items-center justify-center space-x-2 rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm font-bold text-gray-800">
-                    <KeyRound className="h-4 w-4 text-amber-600" />
+                  <div className="flex min-w-0 max-w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-gray-100 px-2 py-1.5 text-xs font-bold text-gray-800 sm:min-w-[200px] sm:px-3 sm:py-2 sm:text-sm">
+                    <KeyRound className="h-4 w-4 shrink-0 text-amber-600" />
                     <span>KEY</span>
                   </div>
                 ) : (
@@ -256,34 +279,37 @@ export default function RegionBracketLayout({
                     value={entryName}
                     onChange={(e) => onEntryNameChange?.(e.target.value)}
                     disabled={readOnly}
-                    className={`min-w-[180px] max-w-full flex-1 px-3 py-2 text-sm text-black sm:max-w-[20rem] ${
+                    className={`min-w-0 w-full max-w-full flex-1 px-2 py-1.5 text-xs sm:min-w-[180px] sm:max-w-[20rem] sm:px-3 sm:py-2 sm:text-sm ${
                       readOnly
                         ? 'cursor-not-allowed rounded-lg border border-gray-300 bg-gray-100 text-gray-500'
-                        : 'rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500'
+                        : entryNameDuplicate
+                          ? 'rounded-lg border-2 border-yellow-400 bg-yellow-50 text-yellow-800 shadow-sm focus:border-yellow-500 focus:ring-2 focus:ring-yellow-300'
+                          : 'rounded-lg border border-gray-300 !bg-white text-gray-900 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500'
                     }`}
                     placeholder="Enter your bracket name"
                     data-testid="entry-name-input"
                   />
                 )}
               </div>
-              <div className="flex items-center justify-center gap-2 text-center text-lg font-bold text-gray-800">
-                <span>{regionName} Region</span>
+              <div className="flex items-center justify-center px-0.5 text-center text-sm font-bold leading-tight text-gray-800 sm:text-lg">
+                <span className="sm:hidden">{regionName}</span>
+                <span className="hidden sm:inline">{regionName} Region</span>
               </div>
-              <div className="flex min-w-0 items-center justify-end gap-2 justify-self-end text-right">
+              <div className="flex min-w-0 shrink-0 items-center justify-end gap-1 justify-self-end text-right sm:gap-2">
                 {regionalChampion ? (
                   <>
-                    <span className="text-lg font-bold text-gray-600">#{regionalChampion.seed}</span>
+                    <span className="text-sm font-bold text-gray-600 sm:text-lg">#{regionalChampion.seed}</span>
                     {regionalChampion.logo && (
                       <Image
                         src={regionalChampion.logo}
                         alt={regionalChampion.name}
                         width={32}
                         height={32}
-                        className="h-8 w-8 flex-shrink-0 object-contain"
+                        className="h-6 w-6 shrink-0 object-contain sm:h-8 sm:w-8"
                         unoptimized
                       />
                     )}
-                    <span className="max-w-[10rem] truncate text-lg font-semibold text-gray-800 sm:max-w-none">
+                    <span className="hidden max-w-[10rem] truncate text-lg font-semibold text-gray-800 sm:inline sm:max-w-none">
                       {regionalChampion.name}
                     </span>
                   </>
@@ -291,11 +317,11 @@ export default function RegionBracketLayout({
               </div>
             </div>
 
-            {bracketRegionalMessage.trim() ? (
+            {regionalBannerMessage ? (
               <div className="min-w-0 border-b border-gray-200">
                 <BracketEditorTopMessage
-                  message={bracketRegionalMessage}
-                  variant="regional"
+                  message={regionalBannerMessage}
+                  variant={regionalBannerVariant}
                   embeddedInCard
                   data-testid="bracket-editor-regional-message"
                 />
@@ -430,10 +456,32 @@ export default function RegionBracketLayout({
                         : 'bg-purple-600 text-white hover:bg-purple-700 cursor-pointer'
                     }`}
                   >
-                    <Save className="h-3.5 w-3.5 shrink-0" />
+                    <Save className="h-3.5 w-3.5 shrink-0" aria-hidden />
                     <span>Save</span>
                   </button>
                 )}
+                {showBarSubmit ? (
+                  <button
+                    type="button"
+                    onClick={() => submitEnabled && onSubmitBracket?.()}
+                    disabled={!submitEnabled}
+                    title={submitDisabledMessage || undefined}
+                    style={{
+                      width: `${stepButtonWidthCh}ch`,
+                      minWidth: `${stepButtonWidthCh}ch`,
+                      maxWidth: `${stepButtonWidthCh}ch`,
+                    }}
+                    className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} ${
+                      submitEnabled
+                        ? 'cursor-pointer bg-blue-600 text-white hover:bg-blue-700'
+                        : 'cursor-not-allowed bg-gray-300 text-gray-500'
+                    }`}
+                    data-testid="submit-bracket-editor-button"
+                  >
+                    <Send className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <span>Submit</span>
+                  </button>
+                ) : null}
                 {onCancel && (
                   <button
                     type="button"

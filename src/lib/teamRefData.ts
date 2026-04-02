@@ -506,7 +506,19 @@ export async function getTeamIdByName(teamName: string): Promise<string | null> 
         return team.id;
       }
     }
-    
+
+    // Match official school / display labels from DB (e.g. tournament JSON uses `name`: "Connecticut", ref abbr is "UConn")
+    const q = teamName.trim().toLowerCase();
+    if (q.length > 0) {
+      team = teamData.find(
+        (t) =>
+          t.name.trim().toLowerCase() === q || t.displayName.trim().toLowerCase() === q
+      );
+      if (team) {
+        return team.id;
+      }
+    }
+
     // Team not found - return null (not an error, just not found)
     return null;
   } catch (error) {

@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
         keyBracketId: snapshot.keyBracketId,
         keyUpdatedAt: snapshot.keyUpdatedAt.toISOString(),
         computedAt: snapshot.computedAt.toISOString(),
-        entries: snapshot.entries,
+        standingsData: snapshot.standingsData,
       },
       { headers: { 'Cache-Control': 'private, no-store, max-age=0' } }
     );

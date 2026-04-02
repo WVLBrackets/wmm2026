@@ -192,6 +192,37 @@ export async function getBracketById(bracketId: string): Promise<Bracket | null>
 }
 
 /**
+ * Resolve a single submitted pool bracket id from a standings row label (entry name or display name).
+ * Returns null if zero or ambiguous matches.
+ */
+export async function findSubmittedPoolBracketIdByLabel(year: number, label: string): Promise<string | null> {
+  const environment = getCurrentEnvironment();
+  const t = label.trim();
+  if (!t) return null;
+
+  const result = await sql`
+    SELECT b.id
+    FROM brackets b
+    INNER JOIN users u ON u.id = b.user_id
+    WHERE b.year = ${year}
+      AND b.environment = ${environment}
+      AND b.status = 'submitted'
+      AND COALESCE(b.is_key, FALSE) = FALSE
+      AND (
+        LOWER(TRIM(b.entry_name)) = LOWER(${t})
+        OR LOWER(TRIM(COALESCE(u.name, ''))) = LOWER(${t})
+      )
+    LIMIT 2
+  `;
+
+  if (result.rows.length !== 1) {
+    return null;
+  }
+
+  return String((result.rows[0] as { id: string }).id);
+}
+
+/**
  * Update a bracket
  * 
  * @param bracketId - Bracket ID to update

@@ -5,7 +5,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { CalendarDays, Radio } from 'lucide-react';
 import StandingsTable from '@/components/StandingsTable';
-import LiveStandingsPanel from '@/components/LiveStandingsPanel';
 import { useCSRF } from '@/hooks/useCSRF';
 import { isShowLiveStandingsEnabled } from '@/lib/standingsLiveFeature';
 import type { StandingsViewPreference } from '@/lib/types/database';
@@ -281,28 +280,24 @@ export default function StandingsShell() {
       <button
         type="button"
         onClick={() => void handleSelectMode('daily')}
-        className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors sm:gap-2 sm:px-3 ${
+        className={`inline-flex items-center justify-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium transition-colors md:px-3 ${
           !liveToggleActive ? 'bg-white text-blue-700 shadow' : 'text-gray-600 hover:text-gray-900'
         }`}
       >
         <CalendarDays className="h-4 w-4 shrink-0" aria-hidden />
-        <span className="whitespace-nowrap">
-          <span className="sm:hidden">Daily</span>
-          <span className="hidden sm:inline">Daily standings</span>
-        </span>
+        <span className="hidden md:inline">Daily</span>
+        <span className="sr-only md:hidden">Daily</span>
       </button>
       <button
         type="button"
         onClick={() => void handleSelectMode('live')}
-        className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors sm:gap-2 sm:px-3 ${
+        className={`inline-flex items-center justify-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium transition-colors md:px-3 ${
           liveToggleActive ? 'bg-white text-blue-700 shadow' : 'text-gray-600 hover:text-gray-900'
         }`}
       >
         <Radio className="h-4 w-4 shrink-0" aria-hidden />
-        <span className="whitespace-nowrap">
-          <span className="sm:hidden">Live</span>
-          <span className="hidden sm:inline">Live standings</span>
-        </span>
+        <span className="hidden md:inline">Live</span>
+        <span className="sr-only md:hidden">Live</span>
       </button>
     </div>
   ) : undefined;
@@ -357,15 +352,7 @@ export default function StandingsShell() {
         </div>
       ) : displayMode === 'live' ? (
         <div className="rounded-lg bg-white shadow-lg">
-          <div className="border-b border-gray-200 p-6">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex flex-wrap items-center gap-3">
-                <h2 className="text-2xl font-bold text-gray-900">Live standings</h2>
-                {viewModeToggle ? <div className="flex shrink-0 items-center">{viewModeToggle}</div> : null}
-              </div>
-            </div>
-          </div>
-          <LiveStandingsPanel standingsYear={standingsYearNum} />
+          <StandingsTable variant="live" viewModeToggle={viewModeToggle} />
         </div>
       ) : (
         <StandingsTable viewModeToggle={viewModeToggle} />

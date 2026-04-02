@@ -1,29 +1,42 @@
 'use client';
 
-import { useState, useEffect, type ReactNode } from 'react';
-import { StandingsEntry, StandingsData, getQuarterfinalColor, getSemifinalColor, getFinalColor } from '@/lib/standingsData';
+import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+import {
+  StandingsEntry,
+  StandingsData,
+  formatStandingsTieBreakerDisplay,
+  getRegionalChampionSquareShade,
+  getFinalistBorderTone,
+  getChampionDisplayColors,
+  type RegionalChampionKeyRow,
+} from '@/lib/standingsData';
 import { getTeamInfo, getLogoUrlSync } from '@/lib/teamLogos';
 import { getTeamRefData } from '@/lib/teamRefData';
 import { getSiteConfig } from '@/config/site';
-import { Trophy, Medal, Search, RefreshCw } from 'lucide-react';
+import { Trophy, Medal, Search, RefreshCw, ChevronDown } from 'lucide-react';
 import Image from 'next/image';
+import BracketViewerModal from '@/components/bracket/BracketViewerModal';
 
 // TeamLogo component to handle async team info loading with fallback
-function TeamLogo({ 
-  teamName, 
-  size, 
-  className, 
+function TeamLogo({
+  teamName,
+  size,
+  className,
   teamCache,
   backgroundColor,
   borderColor,
-  teamIndex
-}: { 
-  teamName: string; 
-  size: number; 
+  heavyRing = false,
+  teamIndex,
+}: {
+  teamName: string;
+  size: number;
   className?: string;
   teamCache?: Map<string, { id: string; name: string }>;
   backgroundColor?: 'correct' | 'incorrect' | 'neutral';
   borderColor?: 'correct' | 'incorrect' | 'neutral' | undefined;
+  /** Emphasized ring (ring-2) for finalist / champ picks. */
+  heavyRing?: boolean;
   teamIndex?: number;
 }) {
   const [teamInfo, setTeamInfo] = useState<{ id: string; name: string; logoUrl: string | null } | null>(null);
@@ -79,16 +92,15 @@ function TeamLogo({
     } else if (backgroundColor === 'incorrect') {
       bgClass = 'bg-gradient-to-br from-red-100 to-red-200 shadow-sm';
     } else {
-      bgClass = 'bg-gradient-to-br from-gray-50 to-gray-100';
+      bgClass = 'bg-white';
     }
-    
-           // Border color logic - only apply if borderColor is defined
-           if (borderColor === 'correct') borderClass = 'ring-2 ring-green-500';
-           else if (borderColor === 'incorrect') borderClass = 'ring-2 ring-red-500';
-           else if (borderColor === 'neutral') borderClass = 'ring-1 ring-black';
-           // If borderColor is undefined, no border class is applied
-    
-    return `${bgClass} ${borderClass}`;
+
+    if (borderColor === 'correct') borderClass = 'ring-2 ring-green-600';
+    else if (borderColor === 'incorrect') borderClass = 'ring-2 ring-red-600';
+    else if (borderColor === 'neutral' && heavyRing) borderClass = 'ring-2 ring-gray-900';
+    else if (borderColor === 'neutral' && !heavyRing) borderClass = 'ring-1 ring-gray-900';
+
+    return `${bgClass} ${borderClass}`.trim();
   };
 
   // Show error if team not found in database
@@ -185,12 +197,144 @@ function TeamLogo({
 // Global team cache that persists across day changes
 const globalTeamCache = new Map<string, { id: string; name: string }>();
 
+/** Human-readable label for sheet day keys (e.g. Day8 → Day 8). */
+function formatStandingsDayLabel(day: string): string {
+  return day === 'Final' ? 'Final' : day.replace(/^Day(\d+)$/, 'Day $1');
+}
+
+/**
+ * Dropdown for standings day; uses an anchored panel instead of a native select so the list
+ * stays aligned with the control (native popups can render in the wrong place with grid/layout + Chromium).
+ */
+function StandingsDayPicker({
+  value,
+  days,
+  onChange,
+  disabled,
+  buttonClassName,
+  'data-testid': testId,
+}: {
+  value: string;
+  days: string[];
+  onChange: (day: string) => void;
+  disabled?: boolean;
+  buttonClassName?: string;
+  'data-testid'?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLUListElement>(null);
+  const [menuRect, setMenuRect] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  const updateMenuRect = useCallback(() => {
+    const btn = buttonRef.current;
+    if (!btn) return;
+    const r = btn.getBoundingClientRect();
+    const gap = 4;
+    setMenuRect({ top: r.bottom + gap, left: r.left, width: r.width });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setMenuRect(null);
+      return;
+    }
+    updateMenuRect();
+    const onScrollOrResize = () => updateMenuRect();
+    window.addEventListener('scroll', onScrollOrResize, true);
+    window.addEventListener('resize', onScrollOrResize);
+    return () => {
+      window.removeEventListener('scroll', onScrollOrResize, true);
+      window.removeEventListener('resize', onScrollOrResize);
+    };
+  }, [open, updateMenuRect]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocMouse = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (wrapRef.current?.contains(t) || menuRef.current?.contains(t)) return;
+      setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onDocMouse);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDocMouse);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const label = value ? formatStandingsDayLabel(value) : 'Select day';
+
+  const menuList =
+    open && days.length > 0 && menuRect ? (
+      <ul
+        ref={menuRef}
+        className="fixed z-[200] max-h-60 overflow-auto rounded-md border border-gray-200 bg-white py-1 shadow-lg"
+        style={{ top: menuRect.top, left: menuRect.left, width: menuRect.width }}
+        role="listbox"
+      >
+        {days.map((day) => {
+          const itemLabel = formatStandingsDayLabel(day);
+          const selected = day === value;
+          return (
+            <li key={day} role="none">
+              <button
+                type="button"
+                role="option"
+                aria-selected={selected}
+                className={`w-full px-3 py-2 text-left text-sm ${
+                  selected ? 'bg-blue-100 font-medium text-blue-900' : 'text-gray-900 hover:bg-gray-50'
+                }`}
+                onClick={() => {
+                  onChange(day);
+                  setOpen(false);
+                }}
+              >
+                {itemLabel}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    ) : null;
+
+  return (
+    <div className="relative inline-block text-left" ref={wrapRef}>
+      <button
+        ref={buttonRef}
+        type="button"
+        disabled={disabled || days.length === 0}
+        onClick={() => setOpen((o) => !o)}
+        className={`inline-flex w-full min-w-[7rem] items-center justify-between gap-1 rounded-md border border-gray-300 bg-white px-2 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 ${buttonClassName ?? ''}`}
+        aria-label="Standings day"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        data-testid={testId}
+      >
+        <span className="truncate tabular-nums">{label}</span>
+        <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
+      </button>
+      {menuList ? createPortal(menuList, document.body) : null}
+    </div>
+  );
+}
+
 interface StandingsTableProps {
   /** Daily/Live mode control rendered in the header row with the title and day selector. */
   viewModeToggle?: ReactNode;
+  /**
+   * `daily` — Google Sheet tabs + CSV (`/api/standings`).
+   * `live` — same table UI; KEY-sourced metadata + scoring (`/api/live-standings`).
+   */
+  variant?: 'daily' | 'live';
 }
 
-export default function StandingsTable({ viewModeToggle }: StandingsTableProps) {
+export default function StandingsTable({ viewModeToggle, variant = 'daily' }: StandingsTableProps) {
   const [standingsData, setStandingsData] = useState<StandingsData | null>(null);
   const [availableDays, setAvailableDays] = useState<string[]>([]);
   const [selectedDay, setSelectedDay] = useState<string>('');
@@ -200,18 +344,23 @@ export default function StandingsTable({ viewModeToggle }: StandingsTableProps) 
   const [error, setError] = useState<string | null>(null);
   const [standingsYear, setStandingsYear] = useState<string>('2026'); // Default fallback
   const [teamCache, setTeamCache] = useState<Map<string, { id: string; name: string }>>(globalTeamCache);
+  const [bracketViewerOpen, setBracketViewerOpen] = useState(false);
+  const [bracketViewerId, setBracketViewerId] = useState<string | null>(null);
+  const [bracketViewerTitle, setBracketViewerTitle] = useState('');
+  const [resolvingBracketFor, setResolvingBracketFor] = useState<string | null>(null);
+  const [liveAvailable, setLiveAvailable] = useState(true);
 
-  // Function to calculate points back
+  const standingsYearNum = useMemo(() => {
+    const n = parseInt(standingsYear, 10);
+    return Number.isFinite(n) && n >= 2000 && n <= 2100 ? n : 2026;
+  }, [standingsYear]);
+
+  /** Pts behind the leader (all entries tied on max points show "-"). */
   const calculatePointsBack = (entry: StandingsEntry, allEntries: StandingsEntry[]): string => {
-    if (entry.rank === 1) {
-      return '-';
-    }
-    
-    // Find the highest points (first place)
-    const firstPlacePoints = allEntries.find(e => e.rank === 1)?.points || 0;
-    const pointsBack = firstPlacePoints - entry.points;
-    
-    return `-${pointsBack}`;
+    if (allEntries.length === 0) return '-';
+    const maxPoints = Math.max(...allEntries.map((e) => e.points));
+    if (entry.points >= maxPoints) return '-';
+    return `-${maxPoints - entry.points}`;
   };
 
   // Initialize logo cache on component mount
@@ -235,8 +384,9 @@ export default function StandingsTable({ viewModeToggle }: StandingsTableProps) 
     loadStandingsYear();
   }, []);
 
-  // Load available days on component mount
+  // Load available days on component mount (daily only)
   useEffect(() => {
+    if (variant !== 'daily') return;
     const loadDays = async () => {
       try {
         const response = await fetch('/api/standings/days', { cache: 'no-store' });
@@ -258,7 +408,7 @@ export default function StandingsTable({ viewModeToggle }: StandingsTableProps) 
       }
     };
     loadDays();
-  }, [selectedDay]);
+  }, [variant, selectedDay]);
 
   // Handle day selection with immediate UI update
   const handleDayChange = (day: string) => {
@@ -271,10 +421,10 @@ export default function StandingsTable({ viewModeToggle }: StandingsTableProps) 
     setStandingsData(null);
   };
 
-  // Load standings data when selectedDay changes
+  // Load standings data when selectedDay changes (daily only)
   useEffect(() => {
-    if (!selectedDay) return; // Don't load if no day is selected
-    
+    if (variant !== 'daily' || !selectedDay) return;
+
     const loadStandings = async () => {
       const pageLoadStart = performance.now();
       setLoading(true);
@@ -325,7 +475,7 @@ export default function StandingsTable({ viewModeToggle }: StandingsTableProps) 
       }
     };
     loadStandings();
-  }, [selectedDay]); // Run whenever selectedDay changes
+  }, [variant, selectedDay]); // Run whenever selectedDay changes
 
   // Optimized preload function that uses pre-fetched team reference data
   const preloadTeamDataWithRef = (data: StandingsData, teamRefData: { abbr: string; id: string }[]) => {
@@ -369,7 +519,53 @@ export default function StandingsTable({ viewModeToggle }: StandingsTableProps) 
     setTeamCache(new Map(globalTeamCache));
   };
 
-  // Legacy preload function (kept for compatibility)
+  // Live standings: full StandingsData from KEY snapshot (live only)
+  useEffect(() => {
+    if (variant !== 'live') return;
+    let cancelled = false;
+    const loadLive = async () => {
+      setLoading(true);
+      setError(null);
+      setLiveAvailable(true);
+      setStandingsData(null);
+      try {
+        let teamRefData: { abbr: string; id: string }[] = [];
+        try {
+          teamRefData = await getTeamRefData();
+        } catch {
+          /* non-fatal */
+        }
+        const response = await fetch(`/api/live-standings?year=${standingsYearNum}`, { cache: 'no-store' });
+        const result = await response.json();
+        if (cancelled) return;
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || 'Failed to load live standings');
+        }
+        if (!result.available) {
+          setLiveAvailable(false);
+          setStandingsData(null);
+          setLoading(false);
+          return;
+        }
+        const data = result.standingsData as StandingsData;
+        if (teamRefData.length > 0) {
+          preloadTeamDataWithRef(data, teamRefData);
+        }
+        setStandingsData(data);
+        setLoading(false);
+      } catch {
+        if (!cancelled) {
+          setError('Failed to load live standings');
+          setStandingsData(null);
+          setLoading(false);
+        }
+      }
+    };
+    void loadLive();
+    return () => {
+      cancelled = true;
+    };
+  }, [variant, standingsYearNum]);
 
   // Filter and search standings
   const filteredEntries = standingsData?.entries.filter(entry => {
@@ -385,37 +581,54 @@ export default function StandingsTable({ viewModeToggle }: StandingsTableProps) 
     return <span className="text-gray-600 font-medium text-xs">{rank}</span>;
   };
 
+  /** Sheet columns E–H = TL, BL, TR, BR; grid reads TL, TR / BL, BR. */
+  const FINAL_FOUR_GRID_SHEET_INDICES = [0, 2, 1, 3] as const;
+
   const renderFinalFour = (finalFour: string[], finals: string[], standingsData: StandingsData) => {
+    const keyRow: RegionalChampionKeyRow = standingsData.regionalChampionKey ?? ['', '', '', ''];
+    const eliminated = standingsData.eliminatedTeams || [];
+    const iKey = standingsData.semifinalKey?.[0]?.trim() ?? '';
+    const jKey = standingsData.semifinalKey?.[1]?.trim() ?? '';
+    const finalsLeft = finals[0]?.trim() ?? '';
+    const finalsRight = finals[1]?.trim() ?? '';
+
     return (
-      <div className="grid grid-cols-2 gap-1 p-1 bg-gray-50 rounded border border-gray-200 w-fit">
-        {finalFour.map((team, index) => {
-          const isFinalsTeam = finals.includes(team);
-          
-          // Quarterfinals color for background
-          const quarterfinalColor = getQuarterfinalColor(
-            team, 
-            standingsData.quarterfinalWinners || [], 
-            standingsData.eliminatedTeams || []
-          );
-          
-          // Semifinals color for border - ONLY for finalist teams
-          const semifinalColor = isFinalsTeam ? getSemifinalColor(
-            team, 
-            standingsData.semifinalWinners || [], 
-            standingsData.semifinalKey || [],
-            standingsData.eliminatedTeams || []
-          ) : undefined;
-          
+      <div
+        className="grid w-fit grid-cols-2 gap-1 rounded border border-gray-200 bg-gray-50 p-1"
+        data-testid={variant === 'live' ? 'standings-live-final-four-grid' : 'standings-daily-final-four-grid'}
+      >
+        {FINAL_FOUR_GRID_SHEET_INDICES.map((sheetIndex, displayIndex) => {
+          const team = finalFour[sheetIndex]?.trim() ?? '';
+          const actualRegional = keyRow[sheetIndex] ?? '';
+          const shade = getRegionalChampionSquareShade(team, actualRegional, eliminated);
+          const isFinalistPick =
+            team !== '' && (team === finalsLeft || team === finalsRight);
+          const keyCellForFinalist = team === finalsLeft ? iKey : jKey;
+          const borderTone = isFinalistPick
+            ? getFinalistBorderTone(team, keyCellForFinalist, eliminated)
+            : undefined;
+
+          if (!team) {
+            return (
+              <div
+                key={`ff-empty-${displayIndex}`}
+                className="flex h-6 w-6 items-center justify-center rounded border border-dashed border-gray-200 bg-white"
+                aria-hidden
+              />
+            );
+          }
+
           return (
-            <div key={index} title={team} className="cursor-help">
+            <div key={`${team}-${sheetIndex}`} title={team} className="cursor-help">
               <TeamLogo
                 teamName={team}
                 size={24}
                 teamCache={teamCache}
-                backgroundColor={quarterfinalColor}
-                borderColor={semifinalColor}
+                backgroundColor={shade}
+                borderColor={isFinalistPick ? borderTone : undefined}
+                heavyRing={isFinalistPick}
                 className="relative"
-                teamIndex={index + 1}
+                teamIndex={sheetIndex + 1}
               />
             </div>
           );
@@ -425,29 +638,26 @@ export default function StandingsTable({ viewModeToggle }: StandingsTableProps) 
   };
 
 
-  const renderChampion = (champion: string, tb: number, standingsData: StandingsData) => {
-    // Finals color for both background and border
-    const finalColor = getFinalColor(
-      champion, 
-      standingsData.finalWinner || '', 
+  const renderChampion = (champion: string, standingsData: StandingsData) => {
+    const { shade, borderTone } = getChampionDisplayColors(
+      champion,
+      standingsData.finalWinner || '',
       standingsData.eliminatedTeams || []
     );
-    
+
     return (
-      <div className="flex flex-col items-center gap-0.5">
-        <div title={champion} className="cursor-help">
+      <div className="flex flex-col items-center" title={champion}>
+        <div className="cursor-help">
           <TeamLogo
             teamName={champion}
             size={60}
             teamCache={teamCache}
-            backgroundColor={finalColor}
-            borderColor={finalColor}
+            backgroundColor={shade}
+            borderColor={borderTone}
+            heavyRing={borderTone !== undefined}
             className="rounded"
             teamIndex={undefined}
           />
-        </div>
-        <div className="text-xs text-gray-600 font-medium">
-          TB: {tb}
         </div>
       </div>
     );
@@ -458,6 +668,41 @@ export default function StandingsTable({ viewModeToggle }: StandingsTableProps) 
     if (rank === 2) return 'bg-gray-50 border-gray-200';
     if (rank === 3) return 'bg-orange-50 border-orange-200';
     return 'bg-white border-gray-200';
+  };
+
+  const openBracketForPlayerLabel = async (playerLabel: string) => {
+    const q = playerLabel.trim();
+    if (!q) return;
+
+    if (variant === 'live' && standingsData) {
+      const row = standingsData.entries.find((e) => e.player === q);
+      if (row?.bracketId) {
+        setBracketViewerId(row.bracketId);
+        setBracketViewerTitle(q);
+        setBracketViewerOpen(true);
+        return;
+      }
+    }
+
+    setResolvingBracketFor(q);
+    try {
+      const res = await fetch(
+        `/api/standings/resolve-bracket?year=${standingsYearNum}&q=${encodeURIComponent(q)}`,
+        { cache: 'no-store' }
+      );
+      const json = await res.json();
+      if (!res.ok || !json.success || !json.data?.bracketId) {
+        alert(json.error || 'Could not open a unique bracket for this row.');
+        return;
+      }
+      setBracketViewerId(String(json.data.bracketId));
+      setBracketViewerTitle(q);
+      setBracketViewerOpen(true);
+    } catch {
+      alert('Could not load bracket.');
+    } finally {
+      setResolvingBracketFor(null);
+    }
   };
 
   if (loading && !standingsData) {
@@ -482,53 +727,104 @@ export default function StandingsTable({ viewModeToggle }: StandingsTableProps) 
     );
   }
 
+  if (variant === 'live' && !liveAvailable) {
+    return (
+      <div
+        className="flex min-h-[40vh] flex-col items-center justify-center border-t border-gray-100 bg-white px-6 py-16 text-center shadow-lg"
+        data-testid="live-standings-unavailable"
+      >
+        <p className="text-lg font-semibold text-gray-800">Live Standings Not Available</p>
+      </div>
+    );
+  }
+
   return (
+    <>
+    <BracketViewerModal
+      isOpen={bracketViewerOpen}
+      onClose={() => {
+        setBracketViewerOpen(false);
+        setBracketViewerId(null);
+        setBracketViewerTitle('');
+      }}
+      bracketId={bracketViewerId}
+      year={standingsYearNum}
+      title={bracketViewerTitle || undefined}
+    />
     <div className="bg-white rounded-lg shadow-lg">
       {/* Header with controls */}
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <h2 className="text-2xl font-bold text-gray-900">{standingsYear} Standings</h2>
-            {/* Day selector moved next to title */}
+      <div className="border-b border-gray-200 p-6">
+        <h2 className="sr-only">
+          {standingsYear} {variant === 'live' ? 'live' : 'daily'} standings
+        </h2>
+        {/* Mobile: row1 = year + day + toggle; row2 = search */}
+        <div className="flex flex-col gap-3 md:hidden">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <span className="text-lg font-semibold text-gray-900 tabular-nums">{standingsYear}</span>
+              <div className="flex items-center gap-2">
+                {variant === 'daily' ? (
+                  <StandingsDayPicker
+                    value={displayDay}
+                    days={availableDays}
+                    onChange={handleDayChange}
+                    buttonClassName="max-w-[10rem] sm:max-w-none"
+                    data-testid="standings-daily-day-picker-mobile"
+                  />
+                ) : null}
+                {loading ? (
+                  <div className="flex items-center text-blue-600">
+                    <RefreshCw className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                    <span className="ml-1 text-xs sm:text-sm">Refreshing…</span>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+            {viewModeToggle ? <div className="flex shrink-0 items-center">{viewModeToggle}</div> : null}
+          </div>
+          <div className="relative w-full">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="search"
+              placeholder="Search players..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+        {/* Desktop: left search | centered year + day | right toggle */}
+        <div className="hidden md:grid md:grid-cols-[1fr_auto_1fr] md:items-center md:gap-4">
+          <div className="relative max-w-md justify-self-start">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="search"
+              placeholder="Search players..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex items-center justify-center gap-3 justify-self-center">
+            <span className="text-lg font-semibold text-gray-900 tabular-nums">{standingsYear}</span>
             <div className="flex items-center gap-2">
-              <select
-                value={displayDay}
-                onChange={(e) => handleDayChange(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {availableDays.map(day => (
-                  <option key={day} value={day}>
-                    {day === 'Final' ? 'Final' : day.replace(/^Day(\d+)$/, 'Day $1')}
-                  </option>
-                ))}
-              </select>
-              {loading && (
+              {variant === 'daily' ? (
+                <StandingsDayPicker
+                  value={displayDay}
+                  days={availableDays}
+                  onChange={handleDayChange}
+                  data-testid="standings-daily-day-picker-desktop"
+                />
+              ) : null}
+              {loading ? (
                 <div className="flex items-center text-blue-600">
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                  <span className="ml-1 text-sm">Refreshing...</span>
+                  <RefreshCw className="h-4 w-4 animate-spin" aria-hidden />
+                  <span className="ml-1 text-sm">Refreshing…</span>
                 </div>
-              )}
+              ) : null}
             </div>
-            {viewModeToggle ? (
-              <div className="flex shrink-0 items-center">{viewModeToggle}</div>
-            ) : null}
           </div>
-          
-          <div className="flex flex-row gap-3 items-center">
-            
-            {/* Search */}
-            <div className="relative">
-              <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search players..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-md text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
-              />
-            </div>
-            
-          </div>
+          <div className="justify-self-end">{viewModeToggle ? <div className="flex justify-end">{viewModeToggle}</div> : null}</div>
         </div>
       </div>
 
@@ -546,10 +842,18 @@ export default function StandingsTable({ viewModeToggle }: StandingsTableProps) 
                   <span className="text-xs font-normal text-gray-400 italic"><span className="text-green-600">$</span> = paid</span>
                 </div>
               </th>
-              <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300" style={{width: '40px', minWidth: '40px'}}>
-                <div className="flex flex-col items-center">
+              <th
+                className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300"
+                style={{ minWidth: '56px', width: '56px' }}
+              >
+                <div className="flex flex-col items-center gap-0.5 leading-tight">
                   <span>Pts</span>
-                  <span className="text-xs italic font-normal">back</span>
+                  <span className="text-[10px] font-normal normal-case italic tracking-normal text-gray-500">
+                    back
+                  </span>
+                  <span className="text-[10px] font-normal normal-case italic tracking-normal text-gray-500">
+                    TB
+                  </span>
                 </div>
               </th>
               <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300" style={{width: '80px', minWidth: '80px'}}>
@@ -591,9 +895,17 @@ export default function StandingsTable({ viewModeToggle }: StandingsTableProps) 
                 </td>
                 <td className={`px-1 py-1 border-r border-gray-300 ${entry.paid ? 'bg-green-50' : ''}`} style={{maxWidth: '80px', minWidth: '80px'}}>
                   <div className="flex flex-col items-start gap-0.5">
-                    <div className="text-xs sm:text-sm md:text-base font-medium text-gray-900 leading-tight break-words" style={{wordBreak: 'break-word', overflowWrap: 'break-word'}}>
+                    <button
+                      type="button"
+                      onClick={() => void openBracketForPlayerLabel(entry.player)}
+                      disabled={resolvingBracketFor === entry.player}
+                      className="cursor-pointer text-left text-xs font-medium leading-tight text-blue-700 break-words underline decoration-blue-400 underline-offset-2 hover:text-blue-900 disabled:cursor-wait disabled:opacity-60 sm:text-sm md:text-base"
+                      style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+                      title="View submitted bracket"
+                      data-testid={`standings-daily-player-bracket-link-${index}`}
+                    >
                       {entry.player}
-                    </div>
+                    </button>
                     {entry.paid && (
                       <div className="flex items-center">
                         <span className="text-green-600 font-bold text-sm">$</span>
@@ -601,21 +913,28 @@ export default function StandingsTable({ viewModeToggle }: StandingsTableProps) 
                     )}
                   </div>
                 </td>
-                <td className="px-2 py-2 whitespace-nowrap border-r border-gray-300" style={{width: '40px', minWidth: '40px'}}>
-                  <div className="flex flex-col items-center">
-                    <div className="text-sm font-bold text-blue-600">
-                      {entry.points}
-                    </div>
-                    <div className="text-xs text-gray-500">
+                <td className="px-2 py-2 border-r border-gray-300 align-top" style={{ minWidth: '56px', width: '56px' }}>
+                  <div className="flex flex-col items-center gap-0.5 text-center leading-tight">
+                    <div className="whitespace-nowrap text-sm font-bold text-blue-600 tabular-nums">{entry.points}</div>
+                    <div className="whitespace-nowrap text-xs text-gray-500 tabular-nums">
                       {calculatePointsBack(entry, standingsData.entries)}
+                    </div>
+                    <div
+                      className="whitespace-nowrap text-xs text-gray-600 tabular-nums"
+                      data-testid={`standings-daily-tb-row-${index}`}
+                    >
+                      {formatStandingsTieBreakerDisplay(entry, standingsData)}
                     </div>
                   </div>
                 </td>
-                <td className="px-2 py-2 border-r border-gray-300" style={{width: '80px', minWidth: '80px'}}>
+                <td
+                  className="align-top px-2 py-1 border-r border-gray-300"
+                  style={{ width: '80px', minWidth: '80px' }}
+                >
                   {renderFinalFour(entry.finalFour, entry.finals, standingsData)}
                 </td>
-                <td className="px-3 py-2 w-18">
-                  {renderChampion(entry.champion, entry.tb, standingsData)}
+                <td className="align-top px-3 py-1 w-18">
+                  {renderChampion(entry.champion, standingsData)}
                 </td>
               </tr>
               ))
@@ -644,5 +963,6 @@ export default function StandingsTable({ viewModeToggle }: StandingsTableProps) 
         </div>
       </div>
     </div>
+    </>
   );
 }

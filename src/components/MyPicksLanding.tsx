@@ -22,7 +22,7 @@ const scoreboardFont = Press_Start_2P({
   subsets: ['latin'],
 });
 
-interface Bracket {
+export interface Bracket {
   id: string;
   playerName: string;
   playerEmail: string;
@@ -237,6 +237,8 @@ interface MyPicksLandingProps {
   siteConfig?: SiteConfigData | null;
   killSwitchEnabled?: boolean;
   killSwitchMessage?: string;
+  /** Eye icon: open full-bracket modal when set; otherwise falls back to print tab. */
+  onOpenFullBracketModal?: (bracket: Bracket) => void;
 }
 
 /**
@@ -290,6 +292,7 @@ export default function MyPicksLanding({
   siteConfig,
   killSwitchEnabled = true,
   killSwitchMessage,
+  onOpenFullBracketModal,
 }: MyPicksLandingProps) {
   const { data: session, update: updateSession } = useSession();
   const { fetchWithCSRF } = useCSRF();
@@ -442,6 +445,14 @@ export default function MyPicksLanding({
     sessionStorage.setItem('printBracketData', JSON.stringify(bracket));
     // Navigate to the print page (no URL parameters)
     window.open('/print-bracket', '_blank');
+  };
+
+  const handleEyeOpenFullBracketOrPrint = (bracket: Bracket) => {
+    if (onOpenFullBracketModal) {
+      onOpenFullBracketModal(bracket);
+      return;
+    }
+    handlePrintBracket(bracket);
   };
 
   const handleEmailBracket = (bracket: Bracket) => {
@@ -616,6 +627,24 @@ export default function MyPicksLanding({
   const isKillSwitchDisabled = () => !killSwitchEnabled;
 
   /**
+   * Primary row open from entry name or status chip: View/Print (new tab) for submitted,
+   * deleted, or in-progress when the kill switch blocks edits; otherwise open the in-app editor.
+   */
+  const openBracketFromLandingRow = (bracket: Bracket) => {
+    if (bracket.status === 'submitted' || bracket.status === 'deleted') {
+      handlePrintBracket(bracket);
+      return;
+    }
+    if (bracket.status === 'in_progress') {
+      if (isKillSwitchDisabled()) {
+        handlePrintBracket(bracket);
+        return;
+      }
+      onEditBracket(bracket);
+    }
+  };
+
+  /**
    * Convert a millisecond duration into HH:MM:SS or MM:SS.
    * Switches to MM:SS once remaining time is under one hour.
    * For long horizons (>100 hours), display "X Days Away" for readability.
@@ -705,7 +734,7 @@ export default function MyPicksLanding({
 
   /**
    * Get tooltip/disable reason for user actions.
-   * `edit` is excluded from the kill-switch gate so in-progress rows can still open the bracket read-only via the entry name / status chip.
+   * `edit` is excluded from the kill-switch gate so in-progress rows can still open View/Print via the entry name / status chip when the kill switch is on.
    */
   const getActionDisabledReason = (
     action: 'new' | 'copy' | 'edit' | 'delete' | 'return' | 'restore',
@@ -1406,6 +1435,12 @@ export default function MyPicksLanding({
                     /** In-progress brackets open read-only when the kill switch blocks saves/submits. */
                     const killSwitchForcesViewOnly =
                       bracket.status === 'in_progress' && isKillSwitchDisabled();
+                    const rowOpenTitle =
+                      bracket.status === 'submitted' ||
+                      bracket.status === 'deleted' ||
+                      killSwitchForcesViewOnly
+                        ? 'View/Print'
+                        : 'Edit bracket';
                     return (
                     <React.Fragment key={bracket.id}>
                     {showInHeader && (
@@ -1512,23 +1547,14 @@ export default function MyPicksLanding({
                     <tr className={`hover:bg-gray-50 ${isDeletedRow ? 'bg-gray-50/80' : ''}`}>
                       <td className="px-4 py-3 text-left align-top max-md:max-w-[7.25rem] max-md:min-w-0 max-md:pr-2">
                         {(() => {
-                          const editDisabled = bracket.status === 'in_progress' && Boolean(getActionDisabledReason('edit'));
                           const rawEntryName = bracket.entryName || `Bracket #${index + 1}`;
                           const mobileNameLines = computeMyPicksEntryNameMobileLines(rawEntryName);
                           return (
                         <div>
                           <div
-                            className={`inline-flex max-w-full flex-row items-start px-2 py-1 rounded-full text-xs font-medium md:items-center ${isDeletedRow ? 'cursor-default' : editDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${getStatusColor(bracket.status)}`}
-                            onClick={() => !isDeletedRow && !editDisabled && onEditBracket(bracket)}
-                            title={
-                              isDeletedRow
-                                ? 'Restore or copy this bracket from Actions'
-                                : editDisabled
-                                  ? getActionDisabledReason('edit') || ''
-                                  : killSwitchForcesViewOnly
-                                    ? 'View bracket'
-                                    : 'Open bracket'
-                            }
+                            className={`inline-flex max-w-full cursor-pointer flex-row items-start px-2 py-1 rounded-full text-xs font-medium md:items-center ${getStatusColor(bracket.status)}`}
+                            onClick={() => openBracketFromLandingRow(bracket)}
+                            title={rowOpenTitle}
                           >
                             <span className="mt-0.5 shrink-0 md:mt-0">{getStatusIcon(bracket.status)}</span>
                             <span
@@ -1556,26 +1582,13 @@ export default function MyPicksLanding({
                         </span>
                       </td>
                       <td className="hidden px-4 py-3 whitespace-nowrap text-center md:table-cell">
-                        {(() => {
-                          const editDisabled = bracket.status === 'in_progress' && Boolean(getActionDisabledReason('edit'));
-                          return (
-                        <div 
-                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${isDeletedRow ? 'cursor-default' : editDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${getStatusColor(bracket.status)}`}
-                          onClick={() => !isDeletedRow && !editDisabled && onEditBracket(bracket)}
-                          title={
-                            isDeletedRow
-                              ? 'Restore or copy this bracket from Actions'
-                              : editDisabled
-                                ? getActionDisabledReason('edit') || ''
-                                : killSwitchForcesViewOnly
-                                  ? 'View bracket'
-                                  : 'Open bracket'
-                          }
+                        <div
+                          className={`inline-flex cursor-pointer items-center rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(bracket.status)}`}
+                          onClick={() => openBracketFromLandingRow(bracket)}
+                          title={rowOpenTitle}
                         >
                           <span>{getStatusText(bracket.status)}</span>
                         </div>
-                          );
-                        })()}
                       </td>
                       <td className="hidden px-4 py-3 text-center align-middle md:table-cell">
                         {bracket.status === 'submitted' ? (
@@ -1816,6 +1829,16 @@ export default function MyPicksLanding({
                               ) : (
                                 <>
                                   <LoggedButton
+                                    onClick={() => handleEyeOpenFullBracketOrPrint(bracket)}
+                                    logLocation={onOpenFullBracketModal ? 'FullBracketModal' : 'Print'}
+                                    bracketId={number ? String(number).padStart(6, '0') : null}
+                                    className="flex h-8 w-8 cursor-pointer items-center justify-center rounded bg-blue-600 text-white transition-colors hover:bg-blue-700"
+                                    title={onOpenFullBracketModal ? 'Full bracket' : 'View/Print'}
+                                    data-testid="print-deleted-bracket-button"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </LoggedButton>
+                                  <LoggedButton
                                     onClick={() => !getActionDisabledReason('copy') && onCopyBracket(bracket)}
                                     logLocation="Copy"
                                     bracketId={number ? String(number).padStart(6, '0') : null}
@@ -1916,11 +1939,11 @@ export default function MyPicksLanding({
                               ) : (
                                 <>
                                   <LoggedButton
-                                    onClick={() => handlePrintBracket(bracket)}
-                                    logLocation="Print"
+                                    onClick={() => handleEyeOpenFullBracketOrPrint(bracket)}
+                                    logLocation={onOpenFullBracketModal ? 'FullBracketModal' : 'Print'}
                                     bracketId={number ? String(number).padStart(6, '0') : null}
-                                    className="flex w-8 h-8 items-center justify-center rounded bg-blue-600 text-white transition-colors hover:bg-blue-700 cursor-pointer"
-                                    title="View/Print"
+                                    className="flex w-8 h-8 cursor-pointer items-center justify-center rounded bg-blue-600 text-white transition-colors hover:bg-blue-700"
+                                    title={onOpenFullBracketModal ? 'Full bracket' : 'View/Print'}
                                     data-testid="print-bracket-button"
                                   >
                                     <Eye className="h-4 w-4" />

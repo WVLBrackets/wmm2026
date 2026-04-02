@@ -1,27 +1,19 @@
 /**
  * Persisted live standings (recomputed when the KEY bracket is saved).
+ * `entries` JSONB stores a full {@link StandingsData} blob (same shape as daily sheet assembly).
  */
 
+import type { StandingsData } from '@/lib/standingsData';
 import { sql } from '../databaseAdapter';
 import { getCurrentEnvironment } from '../databaseConfig';
 import { initializeDatabase } from '../database/migrations';
-
-export interface LiveStandingsEntry {
-  bracketId: string;
-  entryName: string;
-  userName: string;
-  userEmail: string;
-  points: number;
-  /** Competition rank (ties share the same rank; next rank skips). */
-  rank: number;
-}
 
 export interface LiveStandingsSnapshot {
   year: number;
   keyBracketId: string;
   keyUpdatedAt: Date;
   computedAt: Date;
-  entries: LiveStandingsEntry[];
+  standingsData: StandingsData;
 }
 
 async function ensureTable(): Promise<void> {
@@ -43,6 +35,20 @@ async function ensureTable(): Promise<void> {
   }
 }
 
+function parseStandingsDataPayload(raw: unknown): StandingsData | null {
+  if (raw == null) return null;
+  try {
+    const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (Array.isArray(data)) return null;
+    if (data && typeof data === 'object' && Array.isArray((data as StandingsData).entries)) {
+      return data as StandingsData;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Replace the snapshot for an environment + tournament year.
  */
@@ -50,7 +56,7 @@ export async function upsertLiveStandingsSnapshot(
   year: number,
   keyBracketId: string,
   keyUpdatedAt: Date,
-  entries: LiveStandingsEntry[]
+  standingsData: StandingsData
 ): Promise<void> {
   await ensureTable();
   const environment = getCurrentEnvironment();
@@ -70,7 +76,7 @@ export async function upsertLiveStandingsSnapshot(
       ${keyBracketId},
       ${keyUpdatedAt.toISOString()},
       ${new Date().toISOString()},
-      ${JSON.stringify(entries)}
+      ${JSON.stringify(standingsData)}
     )
     ON CONFLICT (environment, year)
     DO UPDATE SET
@@ -82,7 +88,7 @@ export async function upsertLiveStandingsSnapshot(
 }
 
 /**
- * Latest snapshot for the year, or null if never computed.
+ * Latest snapshot for the year, or null if never computed or legacy row format.
  */
 export async function getLiveStandingsSnapshot(year: number): Promise<LiveStandingsSnapshot | null> {
   await ensureTable();
@@ -103,16 +109,21 @@ export async function getLiveStandingsSnapshot(year: number): Promise<LiveStandi
   let entriesRaw = row.entries;
   if (typeof entriesRaw === 'string') {
     try {
-      entriesRaw = JSON.parse(entriesRaw) as LiveStandingsEntry[];
+      entriesRaw = JSON.parse(entriesRaw);
     } catch {
-      entriesRaw = [];
+      entriesRaw = null;
     }
   }
+  const standingsData = parseStandingsDataPayload(entriesRaw);
+  if (!standingsData) {
+    return null;
+  }
+
   return {
     year: row.year as number,
     keyBracketId: row.key_bracket_id as string,
     keyUpdatedAt: new Date(row.key_updated_at as string),
     computedAt: new Date(row.computed_at as string),
-    entries: Array.isArray(entriesRaw) ? (entriesRaw as LiveStandingsEntry[]) : [],
+    standingsData,
   };
 }

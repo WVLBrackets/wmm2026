@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, Suspense, Fragment } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, Suspense, Fragment } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { TournamentData, TournamentBracket, BracketSubmission } from '@/types/tournament';
@@ -10,9 +10,12 @@ import {
   buildTeamIdToDisplayNameMapFromApi,
 } from '@/lib/teamDisplayName';
 import { generate64TeamBracket } from '@/lib/bracketGenerator';
+import { applyPickCascade } from '@/lib/fullBracket/fullBracketGeometry';
+import FullBracketEditorShell from '@/components/bracket/FullBracketEditorShell';
 import { SiteConfigData } from '@/lib/siteConfig';
 import StepByStepBracket from '@/components/bracket/StepByStepBracket';
-import MyPicksLanding from '@/components/MyPicksLanding';
+import MyPicksLanding, { type Bracket as MyPicksBracketRow } from '@/components/MyPicksLanding';
+import BracketViewerModal from '@/components/bracket/BracketViewerModal';
 import { useBracketMode } from '@/contexts/BracketModeContext';
 import { Trophy } from 'lucide-react';
 import { LoggedButton } from '@/components/LoggedButton';
@@ -23,6 +26,19 @@ import { useCSRF } from '@/hooks/useCSRF';
  * My Picks table row for submit-from-landing (`entryName` may be unset until the user fills it).
  */
 type MyPicksSubmitRow = Omit<BracketSubmission, 'entryName'> & { entryName?: string };
+
+/** Step-by-step vs single full-bracket canvas (64-team layout for 1 Page). */
+type MyBracketLayoutMode = '5p' | '1p';
+
+const MY_BRACKET_LAYOUT_MODE_KEY = 'myBracketLayoutMode';
+
+function parseStoredLayoutMode(raw: string | null): MyBracketLayoutMode {
+  if (raw === '5p') return '5p';
+  if (raw === '1p') return '1p';
+  /** Legacy session values from the old 64/32 toggle → treat as one-page. */
+  if (raw === '64' || raw === '32') return '1p';
+  return '5p';
+}
 
 /**
  * Normalize save/update API payloads into the bracket list row shape.
@@ -110,6 +126,20 @@ function BracketContent() {
     draftEntryName: string;
   } | null>(null);
   const [copyNameDialogBusy, setCopyNameDialogBusy] = useState(false);
+  const [layoutMode, setLayoutMode] = useState<MyBracketLayoutMode>(() => {
+    if (typeof window === 'undefined') return '5p';
+    return parseStoredLayoutMode(sessionStorage.getItem(MY_BRACKET_LAYOUT_MODE_KEY));
+  });
+
+  const [fullBracketModalOpen, setFullBracketModalOpen] = useState(false);
+  const [fullBracketModalId, setFullBracketModalId] = useState<string | null>(null);
+  const [fullBracketModalTitle, setFullBracketModalTitle] = useState('');
+  const [fullBracketModalYear, setFullBracketModalYear] = useState(() => new Date().getFullYear());
+
+  const submittedEntryNames = useMemo(
+    () => submittedBrackets.filter((b) => b.status === 'submitted').map((b) => b.entryName),
+    [submittedBrackets]
+  );
 
   const loadTournamentRef = useRef<(() => Promise<void>) | undefined>(undefined);
   const hasRestoredState = useRef(false);
@@ -180,6 +210,11 @@ function BracketContent() {
   useEffect(() => {
     setInBracketMode(currentView === 'bracket');
   }, [currentView, setInBracketMode]);
+
+  useEffect(() => {
+    if (currentView !== 'bracket' || typeof window === 'undefined') return;
+    sessionStorage.setItem(MY_BRACKET_LAYOUT_MODE_KEY, layoutMode);
+  }, [layoutMode, currentView]);
 
   // Save bracket state to sessionStorage whenever it changes
   useEffect(() => {
@@ -537,6 +572,10 @@ function BracketContent() {
     }
   }, [pendingBracketData, bracket, tournamentData, isLiveResultsMode]);
 
+  const handleFullBracketPick = useCallback((gameId: string, teamId: string) => {
+    setPicks((prev) => applyPickCascade(prev, gameId, teamId));
+  }, []);
+
   const handlePick = (gameId: string, teamId: string) => {
     setPicks(prev => {
       const newPicks = { ...prev };
@@ -766,6 +805,22 @@ function BracketContent() {
   const handleBracketComplete = () => {
     handleSubmitBracket();
   };
+
+  const handleOpenFullBracketModalFromMyPicks = useCallback(
+    (row: MyPicksBracketRow) => {
+      setFullBracketModalId(row.id);
+      setFullBracketModalTitle(row.entryName?.trim() || '');
+      const y =
+        typeof row.year === 'number' && !Number.isNaN(row.year)
+          ? row.year
+          : siteConfig?.tournamentYear
+            ? parseInt(String(siteConfig.tournamentYear), 10)
+            : new Date().getFullYear();
+      setFullBracketModalYear(y);
+      setFullBracketModalOpen(true);
+    },
+    [siteConfig?.tournamentYear]
+  );
 
   // Landing page handlers
   const handleCreateNew = async () => {
@@ -1387,6 +1442,18 @@ function BracketContent() {
   if (currentView === 'landing') {
     return (
       <Fragment>
+        <BracketViewerModal
+          isOpen={fullBracketModalOpen}
+          onClose={() => {
+            setFullBracketModalOpen(false);
+            setFullBracketModalId(null);
+            setFullBracketModalTitle('');
+          }}
+          bracketId={fullBracketModalId}
+          year={fullBracketModalYear}
+          title={fullBracketModalTitle || undefined}
+          bracketFetchMode="owner"
+        />
         <MyPicksLanding
           brackets={submittedBrackets}
           onCreateNew={handleCreateNew}
@@ -1414,6 +1481,7 @@ function BracketContent() {
           siteConfig={siteConfig}
           killSwitchEnabled={killSwitchEnabled}
           killSwitchMessage={killSwitchMessage}
+          onOpenFullBracketModal={handleOpenFullBracketModalFromMyPicks}
         />
         {copyNameDialog && (
           <div
@@ -1495,35 +1563,91 @@ function BracketContent() {
 
   return (
     <div className="min-h-screen bg-gray-300">
-      {/* Full-screen bracket mode - no header, no toolbar */}
       <div className="w-full">
-        {/* Full-screen Step-by-Step Bracket - no padding, no header */}
-        <StepByStepBracket
-          key={bracketResetKey} // Force remount only when explicitly reset
-          tournamentData={tournamentData}
-          bracket={bracket}
-          picks={picks}
-          entryName={entryName}
-          tieBreaker={tieBreaker}
-          onPick={handlePick}
-          onComplete={handleBracketComplete}
-          onSave={handleSaveBracket}
-          onClose={handleCloseBracket}
-          onCancel={handleCloseBracket}
-          onEntryNameChange={isLiveResultsMode ? () => {} : setEntryName}
-          onTieBreakerChange={setTieBreaker}
-          readOnly={isReadOnly}
-          submitError={submitError}
-          bracketNumber={editingBracket ? (editingBracket as Record<string, unknown>).bracketNumber as number : undefined}
-          year={editingBracket ? (editingBracket as Record<string, unknown>).year as number : undefined}
-          siteConfig={siteConfig}
-          existingBracketNames={submittedBrackets.filter(b => b.status === 'submitted').map(b => b.entryName)}
-          currentBracketId={editingBracket ? (editingBracket as Record<string, unknown>).id as string : undefined}
-          isAdminMode={isAdminMode}
-          isLiveResultsMode={isLiveResultsMode}
-          disableSaveSubmit={!killSwitchEnabled && !isAdminMode}
-          disableMessage={killSwitchMessage}
-        />
+        <div
+          className="sticky top-0 z-20 flex flex-wrap items-center justify-center gap-2 border-b border-gray-400 bg-gray-200 px-3 py-2 shadow-sm"
+          role="group"
+          aria-label="Bracket layout"
+        >
+          <span className="text-xs font-semibold text-gray-700">Layout</span>
+          <div className="inline-flex rounded-lg border border-gray-300 bg-white p-0.5">
+            <button
+              type="button"
+              onClick={() => setLayoutMode('5p')}
+              className={`rounded-md px-2.5 py-1.5 text-xs font-medium ${
+                layoutMode === '5p' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-50'
+              }`}
+              data-testid="my-bracket-layout-5p"
+            >
+              5 Page
+            </button>
+            <button
+              type="button"
+              onClick={() => setLayoutMode('1p')}
+              className={`rounded-md px-2.5 py-1.5 text-xs font-medium ${
+                layoutMode === '1p' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-50'
+              }`}
+              data-testid="my-bracket-layout-1p"
+            >
+              1 Page
+            </button>
+          </div>
+        </div>
+
+        {layoutMode === '5p' ? (
+          <StepByStepBracket
+            key={bracketResetKey}
+            tournamentData={tournamentData}
+            bracket={bracket}
+            picks={picks}
+            entryName={entryName}
+            tieBreaker={tieBreaker}
+            onPick={handlePick}
+            onComplete={handleBracketComplete}
+            onSave={handleSaveBracket}
+            onClose={handleCloseBracket}
+            onCancel={handleCloseBracket}
+            onEntryNameChange={isLiveResultsMode ? () => {} : setEntryName}
+            onTieBreakerChange={setTieBreaker}
+            readOnly={isReadOnly}
+            submitError={submitError}
+            bracketNumber={editingBracket ? (editingBracket as Record<string, unknown>).bracketNumber as number : undefined}
+            year={editingBracket ? (editingBracket as Record<string, unknown>).year as number : undefined}
+            siteConfig={siteConfig}
+            existingBracketNames={submittedEntryNames}
+            currentBracketId={editingBracket ? (editingBracket as Record<string, unknown>).id as string : undefined}
+            isAdminMode={isAdminMode}
+            isLiveResultsMode={isLiveResultsMode}
+            disableSaveSubmit={!killSwitchEnabled && !isAdminMode}
+            disableMessage={killSwitchMessage}
+          />
+        ) : (
+          // 1 Page layout is always 64-team; 32 is not exposed in the UI (may revisit later).
+          <FullBracketEditorShell
+            key={bracketResetKey}
+            tournamentData={tournamentData}
+            bracket={bracket}
+            bracketSize="64"
+            picks={picks}
+            onPick={handleFullBracketPick}
+            entryName={entryName}
+            tieBreaker={tieBreaker}
+            onEntryNameChange={isLiveResultsMode ? () => {} : setEntryName}
+            onTieBreakerChange={setTieBreaker}
+            readOnly={isReadOnly}
+            submitError={submitError}
+            siteConfig={siteConfig}
+            existingBracketNames={submittedEntryNames}
+            isAdminMode={isAdminMode}
+            isLiveResultsMode={isLiveResultsMode}
+            disableSaveSubmit={!killSwitchEnabled && !isAdminMode}
+            disableMessage={killSwitchMessage}
+            onSave={handleSaveBracket}
+            onClose={handleCloseBracket}
+            onCancel={handleCloseBracket}
+            onComplete={handleBracketComplete}
+          />
+        )}
       </div>
     </div>
   );

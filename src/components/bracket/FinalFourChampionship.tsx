@@ -44,6 +44,8 @@ interface FinalFourChampionshipProps {
   isLiveResultsMode?: boolean;
   disableSaveSubmit?: boolean;
   disableSaveSubmitMessage?: string;
+  /** True when entry name matches another submitted bracket (yellow field). */
+  entryNameDuplicate?: boolean;
 }
 
 export default function FinalFourChampionship({
@@ -76,6 +78,7 @@ export default function FinalFourChampionship({
   isLiveResultsMode = false,
   disableSaveSubmit = false,
   disableSaveSubmitMessage = '',
+  entryNameDuplicate = false,
 }: FinalFourChampionshipProps) {
   const [tieBreakerHintOpen, setTieBreakerHintOpen] = useState(false);
   /** Games-row min height (rem); shipped constant — see `finalFourGamesRowLayoutStorage`. */
@@ -325,7 +328,7 @@ export default function FinalFourChampionship({
 
   const semi1 = finalFourGames[0];
   const semi2 = finalFourGames[1];
-  const showCircleSubmit = Boolean(onSubmitBracket && !readOnly && !isAdminMode);
+  const showBarSubmit = Boolean(onSubmitBracket && !readOnly && !isAdminMode);
 
   return (
     <div className="mx-auto flex w-fit max-w-full min-w-0 flex-col">
@@ -336,18 +339,24 @@ export default function FinalFourChampionship({
         <div className="inline-flex w-max max-w-full flex-col">
           <div className="min-w-0 overflow-hidden rounded-lg border-2 border-gray-300 bg-white shadow-sm">
             <div
-              className={`grid w-full grid-cols-1 gap-2 border-b px-2 py-2 sm:grid-cols-3 sm:items-center ${
+              className={`grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-1 gap-y-0 border-b px-2 py-2 sm:gap-x-2 ${
                 isComplete ? 'border-green-200/90 bg-green-50' : 'border-gray-200'
               }`}
               data-testid="bracket-final-four-title-bar"
             >
-              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 justify-self-start">
-                <label htmlFor="entryName" className="whitespace-nowrap text-xs font-medium text-gray-700">
+              <div className="flex min-w-0 flex-nowrap items-center gap-x-1 justify-self-start sm:gap-x-2">
+                <label htmlFor="entryName" className="sr-only">
                   Entry Name:
                 </label>
+                <span
+                  className="hidden shrink-0 text-xs font-medium whitespace-nowrap text-gray-700 sm:inline"
+                  aria-hidden="true"
+                >
+                  Entry Name:
+                </span>
                 {isLiveResultsMode ? (
-                  <div className="flex min-w-[200px] items-center justify-center space-x-2 rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm font-bold text-gray-800">
-                    <KeyRound className="h-4 w-4 text-amber-600" />
+                  <div className="flex min-w-0 max-w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-gray-100 px-2 py-1.5 text-xs font-bold text-gray-800 sm:min-w-[200px] sm:px-3 sm:py-2 sm:text-sm">
+                    <KeyRound className="h-4 w-4 shrink-0 text-amber-600" />
                     <span>KEY</span>
                   </div>
                 ) : (
@@ -357,34 +366,36 @@ export default function FinalFourChampionship({
                     value={entryName}
                     onChange={(e) => onEntryNameChange?.(e.target.value)}
                     disabled={readOnly}
-                    className={`min-w-[180px] max-w-full flex-1 px-3 py-2 text-sm text-black sm:max-w-[20rem] ${
+                    className={`min-w-0 w-full max-w-full flex-1 px-2 py-1.5 text-xs sm:min-w-[180px] sm:max-w-[20rem] sm:px-3 sm:py-2 sm:text-sm ${
                       readOnly
                         ? 'cursor-not-allowed rounded-lg border border-gray-300 bg-gray-100 text-gray-500'
-                        : 'rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500'
+                        : entryNameDuplicate
+                          ? 'rounded-lg border-2 border-yellow-400 bg-yellow-50 text-yellow-800 shadow-sm focus:border-yellow-500 focus:ring-2 focus:ring-yellow-300'
+                          : 'rounded-lg border border-gray-300 !bg-white text-gray-900 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500'
                     }`}
                     placeholder="Enter your bracket name"
                     data-testid="entry-name-input"
                   />
                 )}
               </div>
-              <div className="flex items-center justify-center gap-2 text-center text-lg font-bold text-gray-800">
+              <div className="flex items-center justify-center px-0.5 text-center text-sm font-bold leading-tight text-gray-800 sm:text-lg">
                 <span>Final Four</span>
               </div>
-              <div className="flex min-w-0 items-center justify-end gap-2 justify-self-end text-right">
+              <div className="flex min-w-0 shrink-0 items-center justify-end gap-1 justify-self-end text-right sm:gap-2">
                 {champion ? (
                   <>
-                    <span className="text-lg font-bold text-gray-600">#{champion.seed}</span>
+                    <span className="text-sm font-bold text-gray-600 sm:text-lg">#{champion.seed}</span>
                     {champion.logo && (
                       <Image
                         src={champion.logo}
                         alt={champion.name}
                         width={32}
                         height={32}
-                        className="h-8 w-8 flex-shrink-0 object-contain"
+                        className="h-6 w-6 shrink-0 object-contain sm:h-8 sm:w-8"
                         unoptimized
                       />
                     )}
-                    <span className="max-w-[10rem] truncate text-lg font-semibold text-gray-800 sm:max-w-none">
+                    <span className="hidden max-w-[10rem] truncate text-lg font-semibold text-gray-800 sm:inline sm:max-w-none">
                       {champion.name}
                     </span>
                   </>
@@ -435,7 +446,7 @@ export default function FinalFourChampionship({
                     {renderGame(championshipGame)}
                   </div>
                   <div
-                    className="relative z-40 row-start-1 col-start-4"
+                    className="relative z-40 row-start-1 col-start-4 flex justify-center"
                     data-testid="bracket-final-four-col-right-spacer"
                   >
                     {ghostGameSlot}
@@ -512,40 +523,6 @@ export default function FinalFourChampionship({
                   </div>
                   <div className="row-start-3 col-start-4" aria-hidden />
                 </div>
-
-                {showCircleSubmit ? (
-                  <div className="relative z-[45] flex min-w-[3rem] flex-1 shrink-0 flex-col items-center justify-center py-2">
-                    <button
-                      type="button"
-                      aria-label="Submit bracket"
-                      data-testid="submit-bracket-editor-button"
-                      onClick={() => submitEnabled && onSubmitBracket?.()}
-                      disabled={!submitEnabled}
-                      title={submitDisabledMessage || undefined}
-                      className={`
-                        flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-all
-                        ${
-                          submitEnabled
-                            ? 'cursor-pointer bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-lg hover:from-blue-700 hover:to-blue-800 hover:shadow-xl active:shadow-md'
-                            : 'cursor-not-allowed bg-gradient-to-br from-gray-300 to-gray-400 text-gray-500 shadow'
-                        }
-                      `}
-                      style={{
-                        boxShadow: submitEnabled
-                          ? '0 4px 6px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -1px 0 rgba(0, 0, 0, 0.2)'
-                          : '0 2px 4px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
-                      }}
-                    >
-                      <Send
-                        className="h-7 w-7"
-                        aria-hidden
-                        style={{
-                          filter: submitEnabled ? 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3))' : 'none',
-                        }}
-                      />
-                    </button>
-                  </div>
-                ) : null}
               </div>
             </div>
 
@@ -605,10 +582,32 @@ export default function FinalFourChampionship({
                         : 'cursor-pointer bg-purple-600 text-white hover:bg-purple-700'
                     }`}
                   >
-                    <Save className="h-3.5 w-3.5 shrink-0" />
+                    <Save className="h-3.5 w-3.5 shrink-0" aria-hidden />
                     <span>Save</span>
                   </button>
                 )}
+                {showBarSubmit ? (
+                  <button
+                    type="button"
+                    onClick={() => submitEnabled && onSubmitBracket?.()}
+                    disabled={!submitEnabled}
+                    title={submitDisabledMessage || undefined}
+                    style={{
+                      width: `${stepButtonWidthCh}ch`,
+                      minWidth: `${stepButtonWidthCh}ch`,
+                      maxWidth: `${stepButtonWidthCh}ch`,
+                    }}
+                    className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} ${
+                      submitEnabled
+                        ? 'cursor-pointer bg-blue-600 text-white hover:bg-blue-700'
+                        : 'cursor-not-allowed bg-gray-300 text-gray-500'
+                    }`}
+                    data-testid="submit-bracket-editor-button"
+                  >
+                    <Send className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <span>Submit</span>
+                  </button>
+                ) : null}
                 {onCancel && (
                   <button
                     type="button"

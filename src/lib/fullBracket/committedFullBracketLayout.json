@@ -1,0 +1,70 @@
+{
+  "rounds": {
+    "r64": {
+      "slotHeightPx": 28,
+      "matchupGapPx": 0,
+      "gameGapPx": 4,
+      "columnWidthPx": 140,
+      "overlapPx": 0
+    },
+    "r32": {
+      "slotHeightPx": 28,
+      "matchupGapPx": 32,
+      "gameGapPx": 32,
+      "columnWidthPx": 140,
+      "overlapPx": 0
+    },
+    "s16": {
+      "slotHeightPx": 28,
+      "matchupGapPx": 92,
+      "gameGapPx": 92,
+      "columnWidthPx": 140,
+      "overlapPx": 40
+    },
+    "e8": {
+      "slotHeightPx": 28,
+      "matchupGapPx": 212,
+      "gameGapPx": 212,
+      "columnWidthPx": 140,
+      "overlapPx": 60
+    },
+    "r5": {
+      "slotHeightPx": 28,
+      "matchupGapPx": 0,
+      "gameGapPx": 0,
+      "columnWidthPx": 140,
+      "overlapPx": 80
+    }
+  },
+  "finals": {
+    "finalistWidthPx": 120,
+    "finalistHeightPx": 28,
+    "finalistFontSizePx": 16,
+    "finalistTitleFontSizePx": 11,
+    "finalistGapPx": 6,
+    "finalistOffsetXPx": 0,
+    "finalistOffsetYPx": 0,
+    "finalsClusterOffsetYPx": 0,
+    "champWidthPx": 120,
+    "champHeightPx": 28,
+    "champFontSizePx": 12,
+    "champTitleFontSizePx": 11,
+    "champOffsetXPx": 0,
+    "champOffsetYPx": 0,
+    "finalScoreWidthPx": 120,
+    "finalScoreHeightPx": 28,
+    "finalScoreFontSizePx": 12,
+    "finalScoreTitleFontSizePx": 11,
+    "finalScoreOffsetXPx": 0,
+    "finalScoreOffsetYPx": 0
+  },
+  "regionLabels": {
+    "fontSizePx": 20,
+    "offsetXPx": 0,
+    "offsetYPx": 8
+  },
+  "quadGrid": {
+    "columnGapPx": 0,
+    "rowGapPx": 0
+  }
+}

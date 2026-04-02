@@ -127,6 +127,11 @@ export default function StepByStepBracket({
     [stepNavLabels],
   );
 
+  const entryNameDuplicate = useMemo(
+    () => isSubmitDuplicateEntryName(entryName, siteConfig, existingBracketNames),
+    [entryName, siteConfig, existingBracketNames]
+  );
+
   const updatedBracketForSubmit = useMemo(
     () => updateBracketWithPicks(bracket, picks, tournamentData),
     [bracket, picks, tournamentData],
@@ -300,6 +305,12 @@ export default function StepByStepBracket({
             FALLBACK_CONFIG.bracketRegionalMessage?.trim() ??
             ''
           }
+          bracketRegionalMessageDone={
+            siteConfig?.bracketRegionalMessageDone?.trim() ??
+            FALLBACK_CONFIG.bracketRegionalMessageDone?.trim() ??
+            ''
+          }
+          entryNameDuplicate={entryNameDuplicate}
         />
       );
     } else {
@@ -335,6 +346,7 @@ export default function StepByStepBracket({
           isLiveResultsMode={isLiveResultsMode}
           disableSaveSubmit={disableSaveSubmit}
           disableSaveSubmitMessage={disableMessage}
+          entryNameDuplicate={entryNameDuplicate}
         />
       );
     }

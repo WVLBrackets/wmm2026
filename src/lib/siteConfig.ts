@@ -65,6 +65,8 @@ export interface SiteConfigData {
   finalFourDisabledMessage?: string;
   /** Bracket editor: banner atop each regional step (`||` = line break). Sheet: `bracket_regional_message` */
   bracketRegionalMessage?: string;
+  /** Shown in the same banner when that region is complete (`||` = line break). Sheet: `bracket_regional_message_done` */
+  bracketRegionalMessageDone?: string;
   // WMM logo used on brackets page, print bracket, and emailed PDF
   wmmLogo?: string;
   // Email PDF template content
@@ -460,6 +462,9 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
             break;
           case 'bracket_regional_message':
             config.bracketRegionalMessage = value;
+            break;
+          case 'bracket_regional_message_done':
+            config.bracketRegionalMessageDone = value;
             break;
           case 'wmm_logo':
             config.wmmLogo = value;

@@ -8,18 +8,31 @@ export interface StandingsEntry {
   champion: string;
   tb: number;
   paid: boolean;
+  /** Pool bracket id (live standings); daily sheet rows omit this and use resolve-bracket API. */
+  bracketId?: string;
 }
+
+/** Row 2 KEY cells E–H: actual regional champs (TL, BL, TR, BR). Blanks mean game not final yet. */
+export type RegionalChampionKeyRow = [string, string, string, string];
 
 export interface StandingsData {
   day: string;
   entries: StandingsEntry[];
   lastUpdated: string;
   sheetLastModified?: string; // Actual Google Sheet modification time
-  quarterfinalWinners?: string[]; // Col E-H: Quarterfinal winners (Final Four)
+  quarterfinalWinners?: string[]; // Col E-H: non-empty regional champs only (legacy / summaries)
+  /** E2,F2,G2,H2 with blanks preserved — drives per-region Daily Standings shading. */
+  regionalChampionKey?: RegionalChampionKeyRow;
   semifinalWinners?: string[]; // Col I-J: Semifinal winners (Finals)
   semifinalKey?: string[]; // Col I-J: Raw KEY values (including blanks)
   finalWinner?: string; // Col K: Final winner (Champion)
-  eliminatedTeams?: string[]; // Column O: Teams that are out
+  eliminatedTeams?: string[]; // Column O: Teams that are out (P = TRUE)
+  /**
+   * True when KEY L2 holds a non-zero numeric tie-break total: Pts column shows differential (col D)
+   * and sort uses tbDiff after points. Blank, `0`, or non-numeric L2 → show pick TB (col L); same
+   * points share rank (no tbDiff ordering).
+   */
+  keyTieBreakerPopulated?: boolean;
 }
 
 // Cache for standings data to improve performance
@@ -131,7 +144,16 @@ export async function getStandingsData(day: string = 'Day1'): Promise<StandingsD
   }
   
   const csvText = await response.text();
-  const { entries, quarterfinalWinners, semifinalWinners, semifinalKey, finalWinner, eliminatedTeams } = parseStandingsCSV(csvText);
+  const {
+    entries,
+    quarterfinalWinners,
+    regionalChampionKey,
+    semifinalWinners,
+    semifinalKey,
+    finalWinner,
+    eliminatedTeams,
+    keyTieBreakerPopulated,
+  } = parseStandingsCSV(csvText);
   
   // Get the sheet's last modified time
   const sheetLastModified = await getSheetLastModified(day);
@@ -142,10 +164,12 @@ export async function getStandingsData(day: string = 'Day1'): Promise<StandingsD
     lastUpdated: new Date().toISOString(),
     sheetLastModified: sheetLastModified || new Date().toISOString(),
     quarterfinalWinners,
+    regionalChampionKey,
     semifinalWinners,
     semifinalKey,
     finalWinner,
-    eliminatedTeams
+    eliminatedTeams,
+    keyTieBreakerPopulated,
   };
   
   // Cache the result
@@ -157,23 +181,85 @@ export async function getStandingsData(day: string = 'Day1'): Promise<StandingsD
 }
 
 /**
+ * Sort standings for display and assign ranks (1,1,3…). When `keyTieBreakerPopulated`, break ties on
+ * points using tbDiff ascending; otherwise same points share a rank (stable by player name).
+ */
+export function sortAndRankStandingsEntries(
+  entries: StandingsEntry[],
+  keyTieBreakerPopulated: boolean
+): StandingsEntry[] {
+  if (entries.length === 0) return [];
+
+  const sorted = [...entries].sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    if (keyTieBreakerPopulated) {
+      const d = a.tbDiff - b.tbDiff;
+      if (d !== 0) return d;
+    }
+    return a.player.localeCompare(b.player, undefined, { sensitivity: 'base' });
+  });
+
+  let currentRank = 1;
+  return sorted.map((e, i) => {
+    if (i > 0) {
+      const p = sorted[i - 1];
+      const sameGroup =
+        e.points === p.points && (!keyTieBreakerPopulated || e.tbDiff === p.tbDiff);
+      if (!sameGroup) currentRank = i + 1;
+    }
+    return { ...e, rank: currentRank };
+  });
+}
+
+/**
+ * Third line of the daily Pts column: bracket TB from column L unless KEY L2 is a non-zero number,
+ * then differential from column D.
+ */
+export function formatStandingsTieBreakerDisplay(entry: StandingsEntry, data: StandingsData): string {
+  if (data.keyTieBreakerPopulated) {
+    return `TB: ${entry.tbDiff}`;
+  }
+  return `TB: ${entry.tb}`;
+}
+
+/**
+ * True when KEY L2 has an entered tie-break total (non-zero number). Blank, `0`, or non-numeric
+ * counts as not set.
+ */
+function isKeyL2TieBreakerActive(raw: string | undefined): boolean {
+  const trimmed = (raw ?? '').trim();
+  if (trimmed === '') return false;
+  const n = Number(trimmed);
+  return Number.isFinite(n) && n !== 0;
+}
+
+/**
  * Parse CSV data into standings entries
  */
-function parseStandingsCSV(csvText: string): { entries: StandingsEntry[]; quarterfinalWinners: string[]; semifinalWinners: string[]; semifinalKey: string[]; finalWinner: string; eliminatedTeams: string[] } {
+function parseStandingsCSV(csvText: string): {
+  entries: StandingsEntry[];
+  quarterfinalWinners: string[];
+  regionalChampionKey: RegionalChampionKeyRow;
+  semifinalWinners: string[];
+  semifinalKey: string[];
+  finalWinner: string;
+  eliminatedTeams: string[];
+  keyTieBreakerPopulated: boolean;
+} {
   const lines = csvText.split('\n').filter(line => line.trim());
   const entries: StandingsEntry[] = [];
   
   // Extract Row 2 (Key) - actual tournament winners
   const keyRow = lines[1] ? parseCSVLine(lines[1]) : [];
   
-  // Extract specific columns from Key row
-  // Col E-H (indices 4-7): Quarterfinal winners (Final Four)
-  const quarterfinalWinners = [
+  // Col E-H (indices 4-7): regional champions — keep blanks per slot (E=TL, F=BL, G=TR, H=BR)
+  const regionalChampionKey: RegionalChampionKeyRow = [
     keyRow[4]?.trim() || '',
     keyRow[5]?.trim() || '',
     keyRow[6]?.trim() || '',
-    keyRow[7]?.trim() || ''
-  ].filter(team => team !== '');
+    keyRow[7]?.trim() || '',
+  ];
+  const quarterfinalWinners = regionalChampionKey.filter((team) => team !== '');
   
   // Col I-J (indices 8-9): Semifinal winners (Finals)
   const semifinalWinners = [
@@ -189,7 +275,10 @@ function parseStandingsCSV(csvText: string): { entries: StandingsEntry[]; quarte
   
   // Col K (index 10): Final winner (Champion)
   const finalWinner = keyRow[10]?.trim() || '';
-  
+
+  // Col L (index 11) on KEY row: non-zero number → use TB differential (col D) + sort by tbDiff
+  const keyTieBreakerPopulated = isKeyL2TieBreakerActive(keyRow[11]);
+
   // Extract eliminated teams using new logic: Column O (teams) + Column P (TRUE/FALSE)
   const eliminatedTeams: string[] = [];
   
@@ -253,8 +342,19 @@ function parseStandingsCSV(csvText: string): { entries: StandingsEntry[]; quarte
       }
     }
   }
-  
-  return { entries, quarterfinalWinners, semifinalWinners, semifinalKey, finalWinner, eliminatedTeams };
+
+  const rankedEntries = sortAndRankStandingsEntries(entries, keyTieBreakerPopulated);
+
+  return {
+    entries: rankedEntries,
+    quarterfinalWinners,
+    regionalChampionKey,
+    semifinalWinners,
+    semifinalKey,
+    finalWinner,
+    eliminatedTeams,
+    keyTieBreakerPopulated,
+  };
 }
 
 /**
@@ -351,85 +451,80 @@ export function getStandingsCacheStats(): { size: number; entries: string[] } {
   };
 }
 
-/**
- * Color coding logic for quarterfinals (Final Four backgrounds)
- */
-export function getQuarterfinalColor(
-  team: string,
-  quarterfinalWinners: string[],
-  eliminatedTeams: string[]
-): 'correct' | 'incorrect' | 'neutral' {
-  // PRIORITY: If there are quarterfinal results, use those (winners override eliminated status)
-  if (quarterfinalWinners.length > 0) {
-    if (quarterfinalWinners.includes(team)) {
-      return 'correct';
-    } else {
-      return 'incorrect';
-    }
-  }
-  
-  // If no quarterfinal results yet, check if team is eliminated
-  if (eliminatedTeams.includes(team)) {
-    return 'incorrect';
-  }
+export type StandingsShade = 'correct' | 'incorrect' | 'neutral';
 
-  // No results yet and team not eliminated, neutral
+/** Border tone for heavy ring; `neutral` = black when game still pending but pick alive. */
+export type StandingsBorderTone = 'correct' | 'incorrect' | 'neutral';
+
+function isEliminated(team: string, eliminatedTeams: string[]): boolean {
+  const t = team.trim();
+  if (!t) return false;
+  return eliminatedTeams.some((e) => e.trim() === t);
+}
+
+/**
+ * Regional champ cell fill: compare player pick to one KEY cell (E/F/G/H). If blank, use elimination only.
+ */
+export function getRegionalChampionSquareShade(
+  pick: string,
+  keyCellWinner: string,
+  eliminatedTeams: string[]
+): StandingsShade {
+  const p = pick.trim();
+  if (!p) return 'neutral';
+  const actual = keyCellWinner.trim();
+  if (actual !== '') {
+    return p === actual ? 'correct' : 'incorrect';
+  }
+  if (isEliminated(p, eliminatedTeams)) return 'incorrect';
   return 'neutral';
 }
 
 /**
- * Color coding logic for semifinals (Final Four borders)
+ * Heavy border on finalist picks: one KEY cell (I or J) for that semi. `neutral` → black ring.
  */
-export function getSemifinalColor(
-  team: string,
-  semifinalWinners: string[],
-  semifinalKey: string[],
+export function getFinalistBorderTone(
+  pick: string,
+  keyCellWinner: string,
   eliminatedTeams: string[]
-): 'correct' | 'incorrect' | 'neutral' {
-  // Check if this team's semifinal game has been played (non-blank in KEY)
-  const teamSemifinalPlayed = semifinalKey.includes(team);
-  
-  if (teamSemifinalPlayed) {
-    // Team's semifinal has been played - check if they won
-    if (semifinalWinners.includes(team)) {
-      return 'correct';
-    } else {
-      return 'incorrect';
-    }
-  } else {
-    // Team's semifinal hasn't been played yet
-    if (eliminatedTeams.includes(team)) {
-      return 'incorrect';
-    } else {
-      return 'neutral';
-    }
+): StandingsBorderTone {
+  const p = pick.trim();
+  if (!p) return 'neutral';
+  const actual = keyCellWinner.trim();
+  if (actual !== '') {
+    return p === actual ? 'correct' : 'incorrect';
   }
+  if (isEliminated(p, eliminatedTeams)) return 'incorrect';
+  return 'neutral';
+}
+
+export interface ChampionDisplayColors {
+  shade: StandingsShade;
+  /** `undefined` = no heavy border (pick still alive, K2 blank). */
+  borderTone: StandingsBorderTone | undefined;
 }
 
 /**
- * Color coding logic for finals (Champion background and border)
+ * Champ column: K2 populated → green/red fill + border; K2 blank → eliminated only red; else neutral + no heavy border.
  */
-export function getFinalColor(
-  team: string,
-  finalWinner: string,
+export function getChampionDisplayColors(
+  pick: string,
+  k2Winner: string,
   eliminatedTeams: string[]
-): 'correct' | 'incorrect' | 'neutral' {
-  // If team is eliminated, it's incorrect
-  if (eliminatedTeams.includes(team)) {
-    return 'incorrect';
+): ChampionDisplayColors {
+  const p = pick.trim();
+  if (!p) return { shade: 'neutral', borderTone: undefined };
+  const actual = k2Winner.trim();
+  if (actual !== '') {
+    const ok = p === actual;
+    return {
+      shade: ok ? 'correct' : 'incorrect',
+      borderTone: ok ? 'correct' : 'incorrect',
+    };
   }
-  
-  // If there is a final result and team matches, it's correct
-  if (finalWinner && finalWinner === team) {
-    return 'correct';
+  if (isEliminated(p, eliminatedTeams)) {
+    return { shade: 'incorrect', borderTone: 'incorrect' };
   }
-  
-  // If there is a final result but team doesn't match, it's incorrect
-  if (finalWinner && finalWinner !== team) {
-    return 'incorrect';
-  }
-  
-  // No result yet and team not eliminated, neutral
-  return 'neutral';
+  return { shade: 'neutral', borderTone: undefined };
 }
 

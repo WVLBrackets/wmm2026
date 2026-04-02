@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { KeyRound, Loader2, Pencil } from 'lucide-react';
+import { KeyRound, Pencil } from 'lucide-react';
 import KeyBracketPreviewModal from '@/components/admin/KeyBracketPreviewModal';
 
 interface BracketSummary {
@@ -14,12 +13,11 @@ interface LiveResultsTabProps {
 }
 
 export default function LiveResultsTab({ brackets }: LiveResultsTabProps) {
-  const router = useRouter();
   const [selectedYear, setSelectedYear] = useState<string>('');
-  const [opening, setOpening] = useState(false);
   const [showBracketPreview, setShowBracketPreview] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [tournamentYear, setTournamentYear] = useState<string>('');
+  /** Bump to remount embedded read-only preview after closing the edit modal so picks stay in sync. */
+  const [embeddedPreviewKey, setEmbeddedPreviewKey] = useState(0);
 
   const availableYears = useMemo(() => {
     const years = new Set<number>();
@@ -57,37 +55,9 @@ export default function LiveResultsTab({ brackets }: LiveResultsTabProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleOpenLiveResults = async () => {
-    if (!selectedYear) return;
-
-    setOpening(true);
-    setError(null);
-    try {
-      const response = await fetch('/api/admin/live-results', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ year: Number(selectedYear) }),
-      });
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        setError(result.error || 'Failed to open Live Results.');
-        return;
-      }
-
-      const bracketId = result.data?.bracketId;
-      if (!bracketId) {
-        setError('Live Results session started, but no bracket ID was returned.');
-        return;
-      }
-
-      router.push(`/bracket?edit=${bracketId}&admin=true&live=true&year=${selectedYear}`);
-    } catch (requestError) {
-      console.error('Error opening Live Results:', requestError);
-      setError('Failed to open Live Results.');
-    } finally {
-      setOpening(false);
-    }
+  const handleCloseEditModal = () => {
+    setShowBracketPreview(false);
+    setEmbeddedPreviewKey((k) => k + 1);
   };
 
   return (
@@ -98,7 +68,8 @@ export default function LiveResultsTab({ brackets }: LiveResultsTabProps) {
       </div>
 
       <p className="text-sm text-gray-600 mb-6">
-        Open and edit the KEY bracket for the selected tournament year. Only one admin can edit at a time.
+        Edit the KEY bracket in the full-canvas modal. Changes auto-save. The preview below updates when you close the
+        modal.
       </p>
 
       <div className="flex flex-col sm:flex-row sm:items-end gap-4">
@@ -123,44 +94,26 @@ export default function LiveResultsTab({ brackets }: LiveResultsTabProps) {
           </select>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleOpenLiveResults}
-            disabled={opening || !selectedYear}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              opening || !selectedYear
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-indigo-600 text-white hover:bg-indigo-700'
-            }`}
-          >
-            {opening ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
-            {opening ? 'Opening...' : 'Key Regions'}
-          </button>
-
-          <button
-            onClick={() => setShowBracketPreview(true)}
-            disabled={!selectedYear}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              !selectedYear
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-indigo-600 text-white hover:bg-indigo-700'
-            }`}
-          >
-            <Pencil className="h-4 w-4" />
-            Key Full
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setShowBracketPreview(true)}
+          disabled={!selectedYear}
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            !selectedYear
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-indigo-600 text-white hover:bg-indigo-700'
+          }`}
+          data-testid="key-live-results-edit-button"
+        >
+          <Pencil className="h-4 w-4" aria-hidden />
+          Edit
+        </button>
       </div>
-
-      {error && (
-        <div className="mt-4 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-700">
-          {error}
-        </div>
-      )}
 
       {selectedYear && (
         <KeyBracketPreviewModal
-          isOpen={true}
+          key={`embedded-${selectedYear}-${embeddedPreviewKey}`}
+          isOpen
           year={selectedYear}
           onClose={() => {}}
           embedded
@@ -171,7 +124,7 @@ export default function LiveResultsTab({ brackets }: LiveResultsTabProps) {
       <KeyBracketPreviewModal
         isOpen={showBracketPreview}
         year={selectedYear}
-        onClose={() => setShowBracketPreview(false)}
+        onClose={handleCloseEditModal}
       />
     </div>
   );
