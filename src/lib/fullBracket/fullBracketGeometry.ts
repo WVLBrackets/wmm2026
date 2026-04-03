@@ -28,6 +28,7 @@ export interface FinalsLayoutSettings {
   finalistHeightPx: number;
   finalistFontSizePx: number;
   finalistTitleFontSizePx: number;
+  /** Space between each finalist team row and its region label (semifinals bar). */
   finalistGapPx: number;
   finalistOffsetXPx: number;
   finalistOffsetYPx: number;
@@ -45,6 +46,28 @@ export interface FinalsLayoutSettings {
   finalScoreTitleFontSizePx: number;
   finalScoreOffsetXPx: number;
   finalScoreOffsetYPx: number;
+  /** Padding on all sides of the overlay that centers the finals strip over the quad grid. */
+  finalsOverlayPaddingPx: number;
+  /** Vertical gap between the semifinals bar and the champ/tie square. */
+  finalsStripStackGapPx: number;
+  /** Inner horizontal padding of the semifinals row card. */
+  semifinalsBarPaddingXPx: number;
+  /** Inner vertical padding of the semifinals row card. */
+  semifinalsBarPaddingYPx: number;
+  /** Horizontal gap between the two finalist columns in the semifinals bar. */
+  semifinalsBarInterColumnGapPx: number;
+  /** Inner padding of the champ + tie breaker square card. */
+  champTieBlockPaddingPx: number;
+  /** Gap between the CHAMP block and the tie breaker block inside the square. */
+  champTieBlockInnerGapPx: number;
+  /** Minimum side length (px) for the champ/tie square. */
+  champTieSquareMinSidePx: number;
+  /** Extra horizontal room in the square size formula (legacy +24). */
+  champTieSquareWidthBonusPx: number;
+  /** Extra vertical room at the bottom of the square size formula (legacy +28). */
+  champTieSquareBottomBonusPx: number;
+  /** Title line-height factor when estimating vertical space inside the square (legacy 1.4). */
+  champTieSquareTitleHeightFactor: number;
 }
 
 export interface RegionLabelLayoutSettings {
@@ -133,6 +156,17 @@ export const BUILTIN_FULL_BRACKET_LAYOUT: LayoutSettings = {
     finalScoreTitleFontSizePx: 11,
     finalScoreOffsetXPx: 0,
     finalScoreOffsetYPx: 0,
+    finalsOverlayPaddingPx: 16,
+    finalsStripStackGapPx: 12,
+    semifinalsBarPaddingXPx: 16,
+    semifinalsBarPaddingYPx: 12,
+    semifinalsBarInterColumnGapPx: 16,
+    champTieBlockPaddingPx: 12,
+    champTieBlockInnerGapPx: 8,
+    champTieSquareMinSidePx: 120,
+    champTieSquareWidthBonusPx: 24,
+    champTieSquareBottomBonusPx: 28,
+    champTieSquareTitleHeightFactor: 1.4,
   },
   regionLabels: {
     fontSizePx: 16,
@@ -146,8 +180,7 @@ export const BUILTIN_FULL_BRACKET_LAYOUT: LayoutSettings = {
 };
 
 /**
- * Effective defaults for all full-bracket surfaces: builtin baseline + committed JSON (checked in for staging),
- * before localStorage overlays in the browser.
+ * Effective defaults for all full-bracket surfaces: builtin baseline + committed JSON (checked in for staging/prod).
  */
 export const DEFAULT_FULL_BRACKET_LAYOUT: LayoutSettings = mergeLayoutSettings(
   BUILTIN_FULL_BRACKET_LAYOUT,

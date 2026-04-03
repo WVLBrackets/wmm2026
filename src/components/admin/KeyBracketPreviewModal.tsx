@@ -18,11 +18,12 @@ import {
   getRoundLabel,
   withUpdatedRoundSetting,
 } from '@/lib/fullBracket/fullBracketGeometry';
-import {
-  KEY_BRACKET_PREVIEW_LAYOUT_STORAGE_KEY,
-  readKeyBracketPreviewLayoutFromStorage,
-} from '@/lib/fullBracket/keyBracketPreviewLayoutStorage';
 import { FULL_BRACKET_VIEWPORT_PADDING_X, fullBracketDebugOutline } from '@/lib/fullBracket/fullBracketViewChrome';
+
+/** Returns a new layout with finals fields shallow-merged (immutable update). */
+function patchFinals(layout: LayoutSettings, patch: Partial<LayoutSettings['finals']>): LayoutSettings {
+  return { ...layout, finals: { ...layout.finals, ...patch } };
+}
 
 interface KeyBracketPreviewModalProps {
   isOpen: boolean;
@@ -60,28 +61,12 @@ export default function KeyBracketPreviewModal({
   const [isSaving, setIsSaving] = useState(false);
   const [layout, setLayout] = useState<LayoutSettings>(DEFAULT_FULL_BRACKET_LAYOUT);
   const [showLayoutControls, setShowLayoutControls] = useState(false);
-  const [layoutLoaded, setLayoutLoaded] = useState(false);
   const [bracketSize, setBracketSize] = useState<FullBracketSizeMode>('64');
   const [layoutCopyStatus, setLayoutCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
+  const [layoutRepoStatus, setLayoutRepoStatus] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle');
+  const [layoutRepoMessage, setLayoutRepoMessage] = useState<string | null>(null);
   const lastSavedRef = useRef<string>('');
   const layoutCopyResetRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      setLayout(readKeyBracketPreviewLayoutFromStorage());
-    } catch (storageError) {
-      console.warn('Failed to restore KEY bracket preview layout settings:', storageError);
-    } finally {
-      setLayoutLoaded(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (!layoutLoaded) return;
-    window.localStorage.setItem(KEY_BRACKET_PREVIEW_LAYOUT_STORAGE_KEY, JSON.stringify(layout));
-  }, [layout, layoutLoaded]);
 
   useEffect(() => {
     return () => {
@@ -170,6 +155,32 @@ export default function KeyBracketPreviewModal({
 
   const handleTeamPick = (gameId: string, teamId: string) => {
     setPicks((previous) => applyPickCascade(previous, gameId, teamId));
+  };
+
+  const saveLayoutToRepository = async () => {
+    setLayoutRepoStatus('saving');
+    setLayoutRepoMessage(null);
+    try {
+      const res = await fetch('/api/admin/full-bracket-layout', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(layout),
+      });
+      const data = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+      setLayoutRepoStatus('saved');
+      setLayoutRepoMessage('Layout saved. Reloading page so Turbopack picks up the updated JSON…');
+      // Imported JSON modules confuse Turbopack HMR when the file is overwritten on disk; full reload avoids
+      // "[Turbopack HMR] Expected module to match pattern: ... committedFullBracketLayout.json".
+      window.setTimeout(() => {
+        window.location.reload();
+      }, 600);
+    } catch (err) {
+      setLayoutRepoStatus('failed');
+      setLayoutRepoMessage(err instanceof Error ? err.message : 'Save failed');
+    }
   };
 
   useEffect(() => {
@@ -319,6 +330,20 @@ export default function KeyBracketPreviewModal({
                     </button>
                     <button
                       type="button"
+                      onClick={() => void saveLayoutToRepository()}
+                      disabled={layoutRepoStatus === 'saving'}
+                      className="rounded border border-blue-600 bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+                      title="Writes merged layout to src/lib/fullBracket/committedFullBracketLayout.json (local dev with writable FS)."
+                      data-testid="key-bracket-save-layout-repo"
+                    >
+                      {layoutRepoStatus === 'saving'
+                        ? 'Saving…'
+                        : layoutRepoStatus === 'saved'
+                          ? 'Saved to repo file'
+                          : 'Save layout to repository'}
+                    </button>
+                    <button
+                      type="button"
                       onClick={async () => {
                         try {
                           await navigator.clipboard.writeText(JSON.stringify(layout, null, 2));
@@ -330,7 +355,7 @@ export default function KeyBracketPreviewModal({
                         layoutCopyResetRef.current = window.setTimeout(() => setLayoutCopyStatus('idle'), 2500);
                       }}
                       className="rounded border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                      title="Copies to the clipboard. Paste into src/lib/fullBracket/committedFullBracketLayout.json and commit."
+                      title="Copies JSON for pasting into committedFullBracketLayout.json when server save is unavailable."
                       data-testid="key-bracket-copy-layout-json"
                     >
                       {layoutCopyStatus === 'copied'
@@ -351,13 +376,23 @@ export default function KeyBracketPreviewModal({
           </div>
 
           {showLayoutControls && !embedded && (
-            <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
+            <div className="mb-4 max-h-[min(70vh,720px)] overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-3">
               <p className="mb-2 text-[11px] text-gray-600">
-                Staging and other environments use the layout in{' '}
-                <code className="rounded bg-gray-100 px-1">committedFullBracketLayout.json</code> (merged onto the
-                builtin baseline). Use &quot;Copy layout JSON&quot; after you are happy, replace that file, run{' '}
-                <code className="rounded bg-gray-100 px-1">npm run build</code>, then push.
+                Runtime layout comes only from{' '}
+                <code className="rounded bg-gray-100 px-1">committedFullBracketLayout.json</code> (merged onto the builtin
+                baseline at build time). Use <strong>Save layout to repository</strong> on a local dev machine to write
+                that file; the page reloads so the dev server picks up the change, then run{' '}
+                <code className="rounded bg-gray-100 px-1">npm run build</code> and push. On hosts with a read-only
+                filesystem, use <strong>Copy layout JSON</strong> and paste the file locally instead.
               </p>
+              {layoutRepoMessage ? (
+                <p
+                  className={`mb-2 text-[11px] ${layoutRepoStatus === 'failed' ? 'text-red-700' : 'text-green-800'}`}
+                  data-testid="key-bracket-layout-repo-message"
+                >
+                  {layoutRepoMessage}
+                </p>
+              ) : null}
               <div className="mb-2 hidden gap-2 px-1 lg:grid lg:grid-cols-[110px_repeat(5,minmax(120px,1fr))]">
                 <div className="text-[11px] font-semibold text-gray-600">Round</div>
                 <div className="text-[11px] font-semibold text-gray-600">Box Height</div>
@@ -579,30 +614,259 @@ export default function KeyBracketPreviewModal({
               </div>
 
               <div className="mt-3 border-t border-gray-200 pt-3">
-                <div className="mb-2 text-xs font-semibold text-gray-700">Finals cluster (semifinals + champ + tie)</div>
+                <div className="mb-2 text-xs font-semibold text-gray-700">Finals — cluster position</div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  <label className="text-xs text-gray-700">
+                    Cluster vertical (px)
+                    <input
+                      type="number"
+                      min={-400}
+                      max={400}
+                      value={layout.finals.finalsClusterOffsetYPx}
+                      onChange={(event) =>
+                        setLayout((p) =>
+                          patchFinals(p, { finalsClusterOffsetYPx: Number(event.target.value) || 0 })
+                        )
+                      }
+                      className="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1 text-gray-900"
+                      data-testid="key-layout-finals-cluster-y"
+                    />
+                  </label>
+                  <label className="text-xs text-gray-700">
+                    Finalist offset X (px)
+                    <input
+                      type="number"
+                      min={-200}
+                      max={200}
+                      value={layout.finals.finalistOffsetXPx}
+                      onChange={(event) =>
+                        setLayout((p) => patchFinals(p, { finalistOffsetXPx: Number(event.target.value) || 0 }))
+                      }
+                      className="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1 text-gray-900"
+                    />
+                  </label>
+                  <label className="text-xs text-gray-700">
+                    Finalist offset Y (px)
+                    <input
+                      type="number"
+                      min={-200}
+                      max={200}
+                      value={layout.finals.finalistOffsetYPx}
+                      onChange={(event) =>
+                        setLayout((p) => patchFinals(p, { finalistOffsetYPx: Number(event.target.value) || 0 }))
+                      }
+                      className="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1 text-gray-900"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div className="mt-3 border-t border-gray-200 pt-3">
+                <div className="mb-2 text-xs font-semibold text-gray-700">Finals — semifinals (team rows)</div>
+                <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+                  {(
+                    [
+                      ['finalistWidthPx', 'Width (px)', 60, 220],
+                      ['finalistHeightPx', 'Height (px)', 16, 56],
+                      ['finalistFontSizePx', 'Font (px)', 8, 24],
+                      ['finalistTitleFontSizePx', 'Label font (px)', 8, 18],
+                      ['finalistGapPx', 'Gap under row (px)', 0, 24],
+                    ] as const
+                  ).map(([key, label, min, max]) => (
+                    <label key={key} className="text-xs text-gray-700">
+                      {label}
+                      <input
+                        type="number"
+                        min={min}
+                        max={max}
+                        value={layout.finals[key]}
+                        onChange={(event) =>
+                          setLayout((p) =>
+                            patchFinals(p, { [key]: Number(event.target.value) || 0 } as Partial<
+                              LayoutSettings['finals']
+                            >)
+                          )
+                        }
+                        className="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1 text-gray-900"
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-3 border-t border-gray-200 pt-3">
+                <div className="mb-2 text-xs font-semibold text-gray-700">Finals — championship row</div>
+                <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+                  {(
+                    [
+                      ['champWidthPx', 'Width (px)', 60, 220],
+                      ['champHeightPx', 'Height (px)', 16, 56],
+                      ['champFontSizePx', 'Font (px)', 8, 24],
+                      ['champTitleFontSizePx', 'CHAMP label (px)', 8, 18],
+                      ['champOffsetXPx', 'Offset X (px)', -80, 80],
+                      ['champOffsetYPx', 'Offset Y (px)', -80, 80],
+                    ] as const
+                  ).map(([key, label, min, max]) => (
+                    <label key={key} className="text-xs text-gray-700">
+                      {label}
+                      <input
+                        type="number"
+                        min={min}
+                        max={max}
+                        value={layout.finals[key]}
+                        onChange={(event) =>
+                          setLayout((p) =>
+                            patchFinals(p, { [key]: Number(event.target.value) || 0 } as Partial<
+                              LayoutSettings['finals']
+                            >)
+                          )
+                        }
+                        className="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1 text-gray-900"
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-3 border-t border-gray-200 pt-3">
+                <div className="mb-2 text-xs font-semibold text-gray-700">Finals — tie breaker row</div>
+                <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+                  {(
+                    [
+                      ['finalScoreWidthPx', 'Width (px)', 60, 220],
+                      ['finalScoreHeightPx', 'Height (px)', 16, 56],
+                      ['finalScoreFontSizePx', 'Font (px)', 8, 24],
+                      ['finalScoreTitleFontSizePx', 'Label font (px)', 8, 18],
+                      ['finalScoreOffsetXPx', 'Offset X (px)', -80, 80],
+                      ['finalScoreOffsetYPx', 'Offset Y (px)', -80, 80],
+                    ] as const
+                  ).map(([key, label, min, max]) => (
+                    <label key={key} className="text-xs text-gray-700">
+                      {label}
+                      <input
+                        type="number"
+                        min={min}
+                        max={max}
+                        value={layout.finals[key]}
+                        onChange={(event) =>
+                          setLayout((p) =>
+                            patchFinals(p, { [key]: Number(event.target.value) || 0 } as Partial<
+                              LayoutSettings['finals']
+                            >)
+                          )
+                        }
+                        className="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1 text-gray-900"
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-3 border-t border-gray-200 pt-3">
+                <div className="mb-2 text-xs font-semibold text-gray-700">Finals — overlay and chrome (px)</div>
                 <p className="mb-2 text-[11px] text-gray-500">
-                  Moves the whole finals block up or down together (same offset for both rows).
+                  Controls padding around the centered finals stack, the semifinals card, and the champ/tie square.
                 </p>
-                <label className="text-xs text-gray-700">
-                  Vertical offset (px)
-                  <input
-                    type="number"
-                    min={-400}
-                    max={400}
-                    value={layout.finals.finalsClusterOffsetYPx}
-                    onChange={(event) =>
-                      setLayout((previous) => ({
-                        ...previous,
-                        finals: {
-                          ...previous.finals,
-                          finalsClusterOffsetYPx: Number(event.target.value) || 0,
-                        },
-                      }))
-                    }
-                    className="mt-1 w-full max-w-[200px] rounded border border-gray-300 bg-white px-2 py-1 text-gray-900"
-                    data-testid="key-layout-finals-cluster-y"
-                  />
-                </label>
+                <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+                  {(
+                    [
+                      ['finalsOverlayPaddingPx', 'Overlay padding', 0, 48],
+                      ['finalsStripStackGapPx', 'Bar ↔ square gap', 0, 48],
+                      ['semifinalsBarPaddingXPx', 'Semifinals pad X', 0, 48],
+                      ['semifinalsBarPaddingYPx', 'Semifinals pad Y', 0, 48],
+                      ['semifinalsBarInterColumnGapPx', 'Semifinals column gap', 0, 48],
+                      ['champTieBlockPaddingPx', 'Champ square padding', 0, 36],
+                      ['champTieBlockInnerGapPx', 'CHAMP ↔ TB gap', 0, 36],
+                    ] as const
+                  ).map(([key, label, min, max]) => (
+                    <label key={key} className="text-xs text-gray-700">
+                      {label}
+                      <input
+                        type="number"
+                        min={min}
+                        max={max}
+                        value={layout.finals[key]}
+                        onChange={(event) =>
+                          setLayout((p) =>
+                            patchFinals(p, { [key]: Number(event.target.value) || 0 } as Partial<
+                              LayoutSettings['finals']
+                            >)
+                          )
+                        }
+                        className="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1 text-gray-900"
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-3 border-t border-gray-200 pt-3">
+                <div className="mb-2 text-xs font-semibold text-gray-700">Finals — champ/tie square size formula</div>
+                <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
+                  <label className="text-xs text-gray-700">
+                    Min side (px)
+                    <input
+                      type="number"
+                      min={80}
+                      max={400}
+                      value={layout.finals.champTieSquareMinSidePx}
+                      onChange={(event) =>
+                        setLayout((p) =>
+                          patchFinals(p, { champTieSquareMinSidePx: Number(event.target.value) || 80 })
+                        )
+                      }
+                      className="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1 text-gray-900"
+                    />
+                  </label>
+                  <label className="text-xs text-gray-700">
+                    Width bonus (px)
+                    <input
+                      type="number"
+                      min={0}
+                      max={80}
+                      value={layout.finals.champTieSquareWidthBonusPx}
+                      onChange={(event) =>
+                        setLayout((p) =>
+                          patchFinals(p, { champTieSquareWidthBonusPx: Number(event.target.value) || 0 })
+                        )
+                      }
+                      className="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1 text-gray-900"
+                    />
+                  </label>
+                  <label className="text-xs text-gray-700">
+                    Bottom bonus (px)
+                    <input
+                      type="number"
+                      min={0}
+                      max={80}
+                      value={layout.finals.champTieSquareBottomBonusPx}
+                      onChange={(event) =>
+                        setLayout((p) =>
+                          patchFinals(p, { champTieSquareBottomBonusPx: Number(event.target.value) || 0 })
+                        )
+                      }
+                      className="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1 text-gray-900"
+                    />
+                  </label>
+                  <label className="text-xs text-gray-700 lg:col-span-3">
+                    Title height factor
+                    <input
+                      type="number"
+                      step={0.05}
+                      min={1}
+                      max={2}
+                      value={layout.finals.champTieSquareTitleHeightFactor}
+                      onChange={(event) =>
+                        setLayout((p) =>
+                          patchFinals(p, {
+                            champTieSquareTitleHeightFactor: Number(event.target.value) || 1.4,
+                          })
+                        )
+                      }
+                      className="mt-1 w-full max-w-[200px] rounded border border-gray-300 bg-white px-2 py-1 text-gray-900"
+                    />
+                  </label>
+                </div>
               </div>
             </div>
           )}

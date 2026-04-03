@@ -1,7 +1,7 @@
 import type { FinalsLayoutSettings, LayoutSettings } from '@/lib/fullBracket/fullBracketGeometry';
 
 /**
- * Deep-merge a partial layout (e.g. localStorage or committed JSON) onto a full baseline.
+ * Deep-merge a partial layout (e.g. committed JSON or admin PUT body) onto a full baseline.
  */
 export function mergeLayoutSettings(base: LayoutSettings, patch: unknown): LayoutSettings {
   if (!patch || typeof patch !== 'object') return base;

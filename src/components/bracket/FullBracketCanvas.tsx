@@ -301,32 +301,43 @@ function FinalsStrip({
   const champion = getPickedWinner(updatedBracket.championship, picks);
   const championTeamId = champion?.id ?? null;
 
-  /** Square below semifinals: fits champ row + tie row with layout pixel sizes. */
+  const th = finalsLayout.champTieSquareTitleHeightFactor;
+  /** Square below semifinals: fits champ row + tie row; sizing driven entirely by layout JSON. */
   const squareSidePx = Math.ceil(
     Math.max(
-      120,
-      finalsLayout.champWidthPx + 24,
-      finalsLayout.finalScoreWidthPx + 24,
+      finalsLayout.champTieSquareMinSidePx,
+      finalsLayout.champWidthPx + finalsLayout.champTieSquareWidthBonusPx,
+      finalsLayout.finalScoreWidthPx + finalsLayout.champTieSquareWidthBonusPx,
       finalsLayout.champHeightPx +
-        finalsLayout.champTitleFontSizePx * 1.4 +
+        finalsLayout.champTitleFontSizePx * th +
         finalsLayout.finalScoreHeightPx +
-        finalsLayout.finalScoreTitleFontSizePx * 1.4 +
-        28
+        finalsLayout.finalScoreTitleFontSizePx * th +
+        finalsLayout.champTieSquareBottomBonusPx
     )
   );
 
+  const stripTranslateY = finalsLayout.finalsClusterOffsetYPx + finalsLayout.finalistOffsetYPx;
+
   return (
     <div
-      className="relative z-20 flex w-full max-w-full flex-col items-center gap-3"
+      className="relative z-20 flex w-full max-w-full flex-col items-center"
       data-testid="full-bracket-finals-strip"
       style={{
-        transform: `translate(${finalsLayout.finalistOffsetXPx}px, ${finalsLayout.finalsClusterOffsetYPx}px)`,
+        gap: `${finalsLayout.finalsStripStackGapPx}px`,
+        transform: `translate(${finalsLayout.finalistOffsetXPx}px, ${stripTranslateY}px)`,
       }}
     >
       {/* Wide bar: left semifinal flush left, right semifinal flush right; titles centered under each slot */}
       <div
-        className="flex w-full items-start justify-between gap-4 rounded-xl border border-gray-300 bg-white/95 px-4 py-3 shadow-lg backdrop-blur-sm sm:px-6"
+        className="flex w-full items-start justify-between rounded-xl border border-gray-300 bg-white/95 shadow-lg backdrop-blur-sm"
         data-testid="full-bracket-semifinals-bar"
+        style={{
+          gap: `${finalsLayout.semifinalsBarInterColumnGapPx}px`,
+          paddingLeft: `${finalsLayout.semifinalsBarPaddingXPx}px`,
+          paddingRight: `${finalsLayout.semifinalsBarPaddingXPx}px`,
+          paddingTop: `${finalsLayout.semifinalsBarPaddingYPx}px`,
+          paddingBottom: `${finalsLayout.semifinalsBarPaddingYPx}px`,
+        }}
       >
         <div className="flex min-w-0 flex-col items-center">
           <TeamRow
@@ -342,8 +353,9 @@ function FinalsStrip({
             }
           />
           <div
-            className="mt-1 text-center font-semibold leading-tight text-gray-700"
+            className="text-center font-semibold leading-tight text-gray-700"
             style={{
+              marginTop: `${finalsLayout.finalistGapPx}px`,
               width: `${finalsLayout.finalistWidthPx}px`,
               fontSize: `${finalsLayout.finalistTitleFontSizePx}px`,
             }}
@@ -365,8 +377,9 @@ function FinalsStrip({
             }
           />
           <div
-            className="mt-1 text-center font-semibold leading-tight text-gray-700"
+            className="text-center font-semibold leading-tight text-gray-700"
             style={{
+              marginTop: `${finalsLayout.finalistGapPx}px`,
               width: `${finalsLayout.finalistWidthPx}px`,
               fontSize: `${finalsLayout.finalistTitleFontSizePx}px`,
             }}
@@ -378,11 +391,21 @@ function FinalsStrip({
 
       {/* Centered square: CHAMP on top, tie breaker below */}
       <div
-        className="flex flex-col items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white/95 p-3 shadow-lg backdrop-blur-sm"
+        className="flex flex-col items-center justify-center rounded-xl border border-gray-300 bg-white/95 shadow-lg backdrop-blur-sm"
         data-testid="full-bracket-champ-tie-block"
-        style={{ width: `${squareSidePx}px`, height: `${squareSidePx}px` }}
+        style={{
+          width: `${squareSidePx}px`,
+          height: `${squareSidePx}px`,
+          gap: `${finalsLayout.champTieBlockInnerGapPx}px`,
+          padding: `${finalsLayout.champTieBlockPaddingPx}px`,
+        }}
       >
-        <div className="flex flex-col items-center">
+        <div
+          className="flex flex-col items-center"
+          style={{
+            transform: `translate(${finalsLayout.champOffsetXPx}px, ${finalsLayout.champOffsetYPx}px)`,
+          }}
+        >
           <TeamRow
             team={champion ?? undefined}
             isWinner={Boolean(champion)}
@@ -392,13 +415,22 @@ function FinalsStrip({
             winnerTone="gold"
           />
           <div
-            className="mt-1 text-center font-semibold text-gray-700"
-            style={{ width: `${finalsLayout.champWidthPx}px`, fontSize: `${finalsLayout.champTitleFontSizePx}px` }}
+            className="text-center font-semibold text-gray-700"
+            style={{
+              marginTop: `${finalsLayout.finalistGapPx}px`,
+              width: `${finalsLayout.champWidthPx}px`,
+              fontSize: `${finalsLayout.champTitleFontSizePx}px`,
+            }}
           >
             CHAMP
           </div>
         </div>
-        <div className="flex flex-col items-center">
+        <div
+          className="flex flex-col items-center"
+          style={{
+            transform: `translate(${finalsLayout.finalScoreOffsetXPx}px, ${finalsLayout.finalScoreOffsetYPx}px)`,
+          }}
+        >
           {readOnly ? (
             <TeamRow
               heightPx={finalsLayout.finalScoreHeightPx}
@@ -423,8 +455,12 @@ function FinalsStrip({
             </div>
           )}
           <div
-            className="mt-1 text-center font-semibold text-gray-700"
-            style={{ width: `${finalsLayout.finalScoreWidthPx}px`, fontSize: `${finalsLayout.finalScoreTitleFontSizePx}px` }}
+            className="text-center font-semibold text-gray-700"
+            style={{
+              marginTop: `${finalsLayout.finalistGapPx}px`,
+              width: `${finalsLayout.finalScoreWidthPx}px`,
+              fontSize: `${finalsLayout.finalScoreTitleFontSizePx}px`,
+            }}
           >
             Tie Breaker
           </div>
@@ -550,8 +586,11 @@ export default function FullBracketCanvas({
           </div>
 
           <div
-            className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center p-2 sm:p-4"
+            className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center"
             data-testid="full-bracket-finals-overlay"
+            style={{
+              padding: `${layout.finals.finalsOverlayPaddingPx}px`,
+            }}
           >
             <div className="pointer-events-auto">
               <FinalsStrip

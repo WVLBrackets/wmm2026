@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Image from 'next/image';
 import { KeyRound, Save, Send, X } from 'lucide-react';
 import type { TournamentBracket, TournamentData } from '@/types/tournament';
@@ -20,7 +20,6 @@ import {
   DEFAULT_FULL_BRACKET_LAYOUT,
   type LayoutSettings,
 } from '@/lib/fullBracket/fullBracketGeometry';
-import { readKeyBracketPreviewLayoutFromStorage } from '@/lib/fullBracket/keyBracketPreviewLayoutStorage';
 import { FULL_BRACKET_VIEWPORT_PADDING_X, fullBracketDebugOutline } from '@/lib/fullBracket/fullBracketViewChrome';
 
 export interface FullBracketEditorShellProps {
@@ -76,15 +75,8 @@ export default function FullBracketEditorShell({
   onComplete,
   bracketSize,
 }: FullBracketEditorShellProps) {
-  /** Same geometry as KEY preview + standings full-bracket modal (localStorage). */
-  const [fullBracketLayout, setFullBracketLayout] = useState<LayoutSettings>(DEFAULT_FULL_BRACKET_LAYOUT);
-
-  useEffect(() => {
-    const sync = () => setFullBracketLayout(readKeyBracketPreviewLayoutFromStorage());
-    sync();
-    window.addEventListener('storage', sync);
-    return () => window.removeEventListener('storage', sync);
-  }, []);
+  /** Geometry from committed full-bracket layout JSON (bundled at build time). */
+  const [fullBracketLayout] = useState<LayoutSettings>(DEFAULT_FULL_BRACKET_LAYOUT);
 
   const updatedBracket = useMemo(
     () => updateBracketWithPicks(bracket, picks, tournamentData),

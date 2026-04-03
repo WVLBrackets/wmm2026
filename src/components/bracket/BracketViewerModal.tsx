@@ -11,7 +11,6 @@ import {
 import type { TournamentBracket, TournamentData } from '@/types/tournament';
 import FullBracketCanvas from '@/components/bracket/FullBracketCanvas';
 import { DEFAULT_FULL_BRACKET_LAYOUT, type LayoutSettings } from '@/lib/fullBracket/fullBracketGeometry';
-import { readKeyBracketPreviewLayoutFromStorage } from '@/lib/fullBracket/keyBracketPreviewLayoutStorage';
 import { FULL_BRACKET_VIEWPORT_PADDING_X, fullBracketDebugOutline } from '@/lib/fullBracket/fullBracketViewChrome';
 
 export interface BracketViewerModalProps {
@@ -45,13 +44,7 @@ export default function BracketViewerModal({
   const [picks, setPicks] = useState<Record<string, string>>({});
   const [tieBreaker, setTieBreaker] = useState('');
   const [entryLabel, setEntryLabel] = useState('');
-  const [layout, setLayout] = useState<LayoutSettings>(DEFAULT_FULL_BRACKET_LAYOUT);
-
-  /** Match KEY admin canvas geometry (localStorage overrides from "Show Layout Controls"). */
-  useEffect(() => {
-    if (!isOpen) return;
-    setLayout(readKeyBracketPreviewLayoutFromStorage());
-  }, [isOpen]);
+  const [layout] = useState<LayoutSettings>(DEFAULT_FULL_BRACKET_LAYOUT);
 
   const load = useCallback(async () => {
     if (!bracketId) return;
