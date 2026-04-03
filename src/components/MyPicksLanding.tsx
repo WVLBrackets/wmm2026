@@ -627,20 +627,37 @@ export default function MyPicksLanding({
   const isKillSwitchDisabled = () => !killSwitchEnabled;
 
   /**
-   * Primary row open from entry name or status chip: View/Print (new tab) for submitted,
-   * deleted, or in-progress when the kill switch blocks edits; otherwise open the in-app editor.
+   * Primary row open from entry name or status chip: read-only full-bracket modal when available
+   * (same as the eye icon) for submitted/deleted; in-progress opens the editor while entries are
+   * still accepted, otherwise the modal; print layout is only from the modal’s Print View button.
    */
   const openBracketFromLandingRow = (bracket: Bracket) => {
     if (bracket.status === 'submitted' || bracket.status === 'deleted') {
-      handlePrintBracket(bracket);
+      if (onOpenFullBracketModal) {
+        onOpenFullBracketModal(bracket);
+      } else {
+        handlePrintBracket(bracket);
+      }
       return;
     }
     if (bracket.status === 'in_progress') {
       if (isKillSwitchDisabled()) {
-        handlePrintBracket(bracket);
+        if (onOpenFullBracketModal) {
+          onOpenFullBracketModal(bracket);
+        } else {
+          handlePrintBracket(bracket);
+        }
         return;
       }
-      onEditBracket(bracket);
+      if (!isBracketCreationDisabled()) {
+        onEditBracket(bracket);
+        return;
+      }
+      if (onOpenFullBracketModal) {
+        onOpenFullBracketModal(bracket);
+      } else {
+        handlePrintBracket(bracket);
+      }
     }
   };
 
@@ -734,7 +751,7 @@ export default function MyPicksLanding({
 
   /**
    * Get tooltip/disable reason for user actions.
-   * `edit` is excluded from the kill-switch gate so in-progress rows can still open View/Print via the entry name / status chip when the kill switch is on.
+   * `edit` is excluded from the kill-switch gate so in-progress rows can still open the read-only modal via the entry name / status chip when the kill switch is on.
    */
   const getActionDisabledReason = (
     action: 'new' | 'copy' | 'edit' | 'delete' | 'return' | 'restore',
@@ -1435,12 +1452,21 @@ export default function MyPicksLanding({
                     /** In-progress brackets open read-only when the kill switch blocks saves/submits. */
                     const killSwitchForcesViewOnly =
                       bracket.status === 'in_progress' && isKillSwitchDisabled();
+                    const entriesStillAccepted = !isBracketCreationDisabled();
                     const rowOpenTitle =
-                      bracket.status === 'submitted' ||
-                      bracket.status === 'deleted' ||
-                      killSwitchForcesViewOnly
-                        ? 'View/Print'
-                        : 'Edit bracket';
+                      bracket.status === 'submitted' || bracket.status === 'deleted'
+                        ? onOpenFullBracketModal
+                          ? 'View bracket'
+                          : 'View/Print'
+                        : killSwitchForcesViewOnly
+                          ? onOpenFullBracketModal
+                            ? 'View bracket'
+                            : 'View/Print'
+                          : bracket.status === 'in_progress' && entriesStillAccepted
+                            ? 'Edit bracket'
+                            : onOpenFullBracketModal
+                              ? 'View bracket'
+                              : 'View/Print';
                     return (
                     <React.Fragment key={bracket.id}>
                     {showInHeader && (

@@ -446,6 +446,7 @@ async function createIndexes(): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS idx_usage_logs_environment ON usage_logs(environment)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_usage_logs_timestamp ON usage_logs(timestamp)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_usage_logs_username ON usage_logs(username)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_usage_logs_bracket_id ON usage_logs(bracket_id) WHERE bracket_id IS NOT NULL`;
   await sql`CREATE INDEX IF NOT EXISTS idx_error_logs_environment ON error_logs(environment)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_error_logs_timestamp ON error_logs(timestamp)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_error_logs_username ON error_logs(username)`;

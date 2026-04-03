@@ -91,6 +91,7 @@ export default function LogsTab() {
   const [logUsernameFilter, setLogUsernameFilter] = useState<string>('');
   const [logEventTypeFilter, setLogEventTypeFilter] = useState<string>('');
   const [logLocationFilter, setLogLocationFilter] = useState<string>('');
+  const [logBracketIdFilter, setLogBracketIdFilter] = useState<string>('');
   const [deletingLogs, setDeletingLogs] = useState(false);
   const [emailLogs, setEmailLogs] = useState<EmailLog[]>([]);
   const [emailSummary, setEmailSummary] = useState<{
@@ -172,7 +173,10 @@ export default function LogsTab() {
       if (logLocationFilter) {
         params.append('location', logLocationFilter);
       }
-      
+      if (logBracketIdFilter.trim()) {
+        params.append('bracketId', logBracketIdFilter.trim());
+      }
+
       const response = await fetch(`/api/admin/logs/usage?${params.toString()}`);
       const data = await response.json();
       
@@ -186,7 +190,7 @@ export default function LogsTab() {
       
       // If no filters are applied, update allUsageLogs for dropdown options
       // This ensures dropdowns always show all available options
-      if (!logUsernameFilter && !logEventTypeFilter && !logLocationFilter) {
+      if (!logUsernameFilter && !logEventTypeFilter && !logLocationFilter && !logBracketIdFilter.trim()) {
         setAllUsageLogs(logs);
       }
     } catch (error) {
@@ -196,7 +200,7 @@ export default function LogsTab() {
     } finally {
       setLogsLoading(false);
     }
-  }, [logStartDate, logEndDate, logUsernameFilter, logEventTypeFilter, logLocationFilter, loadAllLogs]);
+  }, [logStartDate, logEndDate, logUsernameFilter, logEventTypeFilter, logLocationFilter, logBracketIdFilter, loadAllLogs]);
 
   const loadErrorLogs = useCallback(async () => {
     try {
@@ -493,7 +497,7 @@ export default function LogsTab() {
         loadEmailLogs();
       }
     }
-  }, [logsTab, emailLogsView, logStartDate, logEndDate, logUsernameFilter, logEventTypeFilter, logLocationFilter, loadUsageSummary, loadUsageLogs, loadErrorLogs, loadEmailSummary, loadEmailLogs]);
+  }, [logsTab, emailLogsView, logStartDate, logEndDate, logUsernameFilter, logEventTypeFilter, logLocationFilter, logBracketIdFilter, loadUsageSummary, loadUsageLogs, loadErrorLogs, loadEmailSummary, loadEmailLogs]);
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
@@ -768,8 +772,8 @@ export default function LogsTab() {
               {logsError}
             </div>
           )}
-          {/* Filter Dropdowns */}
-          <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+          {/* Filters */}
+          <div className="mb-4 grid grid-cols-1 gap-4 p-4 bg-gray-50 rounded-lg md:grid-cols-2 lg:grid-cols-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Username
@@ -820,6 +824,22 @@ export default function LogsTab() {
                   </option>
                 ))}
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="usage-log-bracket-id-filter">
+                Bracket ID
+              </label>
+              <input
+                id="usage-log-bracket-id-filter"
+                type="text"
+                value={logBracketIdFilter}
+                onChange={(e) => setLogBracketIdFilter(e.target.value)}
+                placeholder="Exact bracket UUID"
+                autoComplete="off"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400"
+                data-testid="usage-logs-bracket-id-filter"
+              />
+              <p className="mt-1 text-xs text-gray-500">Shows all usage rows with this bracket id (exact match).</p>
             </div>
           </div>
           <div className="overflow-x-auto">
