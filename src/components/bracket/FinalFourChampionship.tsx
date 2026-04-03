@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState, RefObject } from 'react';
 import Image from 'next/image';
 import { TournamentGame } from '@/types/tournament';
 import { SiteConfigData } from '@/lib/siteConfig';
@@ -10,6 +10,7 @@ import BracketEditorTopMessage from './BracketEditorTopMessage';
 import BracketStepNavBar from './BracketStepNavBar';
 import { FINAL_FOUR_GAMES_ROW_SHIPPED_MIN_HEIGHT_REM } from './finalFourGamesRowLayoutStorage';
 import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
+import { filterTieBreakerIntegerString, getTieBreakerHintTooltipText } from '@/lib/bracketTieBreakerHint';
 
 interface FinalFourChampionshipProps {
   finalFourGames: TournamentGame[];
@@ -278,6 +279,8 @@ export default function FinalFourChampionship({
     ? tieBreakerHintSource.split(/\|\|/).map((p) => p.trim()).filter(Boolean)
     : [];
 
+  const tieBreakerTooltip = useMemo(() => getTieBreakerHintTooltipText(siteConfig), [siteConfig]);
+
   const hasScrolledToStartRef = useRef(false);
   const hasScrolledToChampionshipRef = useRef(false);
   const hasScrolledToEndRef = useRef(false);
@@ -470,29 +473,36 @@ export default function FinalFourChampionship({
                           <Info className="h-4 w-4" strokeWidth={2} aria-hidden />
                         </button>
                       ) : null}
-                      <label htmlFor="tieBreaker" className="text-right text-xs font-medium text-gray-700">
+                      <label
+                        htmlFor="tieBreaker"
+                        className="text-right text-xs font-medium text-gray-700"
+                        title={tieBreakerTooltip || undefined}
+                      >
                         Tie Breaker:
                       </label>
                     </div>
                   </div>
                   <div className="row-start-2 col-start-3 flex h-full items-center px-2">
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="off"
                       id="tieBreaker"
                       value={tieBreaker}
-                      onChange={(e) => onTieBreakerChange(e.target.value)}
-                      min="50"
-                      max="500"
+                      onChange={(e) => {
+                        const next = filterTieBreakerIntegerString(e.target.value);
+                        if (next !== null) onTieBreakerChange(next);
+                      }}
                       disabled={readOnly}
                       className={`w-full min-w-0 rounded-lg border px-3 py-2 text-sm ${
                         readOnly
                           ? 'cursor-not-allowed border-gray-300 bg-gray-100 text-gray-500'
                           : tieBreakerNeedsAttention
-                            ? 'border-yellow-300 bg-yellow-50 text-black placeholder:text-gray-300 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-300'
-                            : 'border-gray-300 text-black placeholder:text-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500'
+                            ? 'border-yellow-300 bg-yellow-50 text-black placeholder:text-xs placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-300'
+                            : 'border-gray-300 text-black placeholder:text-xs placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500'
                       }`}
-                      placeholder="###"
-                      title="Total combined points scored in the championship game"
+                      placeholder="TBD"
+                      title={tieBreakerTooltip || undefined}
                       data-testid="tiebreaker-input"
                     />
                   </div>

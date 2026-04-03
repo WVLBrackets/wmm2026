@@ -14,6 +14,7 @@ import {
   getPickedWinner,
 } from '@/lib/fullBracket/fullBracketGeometry';
 import { fullBracketDebugOutline } from '@/lib/fullBracket/fullBracketViewChrome';
+import { filterTieBreakerIntegerString } from '@/lib/bracketTieBreakerHint';
 
 export type FullBracketSizeMode = '64' | '32';
 
@@ -24,6 +25,7 @@ function TeamRow({
   widthPx,
   fontSizePx,
   labelText,
+  labelDisplayMuted,
   winnerTone = 'blue',
   onClick,
 }: {
@@ -33,6 +35,8 @@ function TeamRow({
   widthPx?: number;
   fontSizePx?: number;
   labelText?: string;
+  /** When true (e.g. TBD), render label in smaller grey text. */
+  labelDisplayMuted?: boolean;
   winnerTone?: 'blue' | 'gold';
   onClick?: () => void;
 }) {
@@ -44,8 +48,14 @@ function TeamRow({
   if (labelText) {
     return (
       <div
-        className="flex items-center justify-center rounded border border-gray-300 bg-white px-2 font-semibold text-gray-800"
-        style={{ height: `${heightPx}px`, width: widthPx ? `${widthPx}px` : undefined, fontSize: `${fontSizePx ?? 12}px` }}
+        className={`flex items-center justify-center rounded border border-gray-300 bg-white px-2 ${
+          labelDisplayMuted ? 'text-xs font-normal text-gray-400' : 'font-semibold text-gray-800'
+        }`}
+        style={{
+          height: `${heightPx}px`,
+          width: widthPx ? `${widthPx}px` : undefined,
+          ...(labelDisplayMuted ? {} : { fontSize: `${fontSizePx ?? 12}px` }),
+        }}
       >
         {labelText}
       </div>
@@ -285,6 +295,7 @@ function FinalsStrip({
   finalistLeftTitle,
   finalistRightTitle,
   onSelectTeam,
+  tieBreakerHintTooltip,
 }: {
   updatedBracket: TournamentBracket;
   picks: Record<string, string>;
@@ -295,6 +306,8 @@ function FinalsStrip({
   finalistLeftTitle: string;
   finalistRightTitle: string;
   onSelectTeam?: (gameId: string, teamId: string) => void;
+  /** Native tooltip on tie breaker field + label (e.g. My Picks one-page editor). */
+  tieBreakerHintTooltip?: string;
 }) {
   const finalistLeft = getPickedWinner(updatedBracket.finalFour[0], picks);
   const finalistRight = getPickedWinner(updatedBracket.finalFour[1], picks);
@@ -436,21 +449,29 @@ function FinalsStrip({
               heightPx={finalsLayout.finalScoreHeightPx}
               widthPx={finalsLayout.finalScoreWidthPx}
               fontSizePx={finalsLayout.finalScoreFontSizePx}
-              labelText={tieBreaker.trim() || 'Tie Breaker'}
+              labelText={tieBreaker.trim() ? tieBreaker : 'TBD'}
+              labelDisplayMuted={!tieBreaker.trim()}
             />
           ) : (
             <div
               className="flex items-center justify-center rounded border border-gray-300 bg-white px-2 text-gray-800"
               style={{ height: `${finalsLayout.finalScoreHeightPx}px`, width: `${finalsLayout.finalScoreWidthPx}px` }}
+              title={tieBreakerHintTooltip || undefined}
             >
               <input
-                type="number"
+                id="full-bracket-tiebreaker-input"
+                type="text"
                 inputMode="numeric"
+                autoComplete="off"
                 value={tieBreaker}
-                onChange={(event) => onTieBreakerChange?.(event.target.value)}
-                placeholder="Tie Breaker"
-                className="w-full bg-transparent text-center text-gray-900 outline-none placeholder:text-gray-400"
+                onChange={(event) => {
+                  const next = filterTieBreakerIntegerString(event.target.value);
+                  if (next !== null) onTieBreakerChange?.(next);
+                }}
+                placeholder="TBD"
+                className="w-full min-w-0 bg-transparent text-center text-gray-900 outline-none placeholder:text-xs placeholder:text-gray-400"
                 style={{ fontSize: `${finalsLayout.finalScoreFontSizePx}px` }}
+                data-testid="full-bracket-tiebreaker-input"
               />
             </div>
           )}
@@ -461,6 +482,7 @@ function FinalsStrip({
               width: `${finalsLayout.finalScoreWidthPx}px`,
               fontSize: `${finalsLayout.finalScoreTitleFontSizePx}px`,
             }}
+            title={tieBreakerHintTooltip || undefined}
           >
             Tie Breaker
           </div>
@@ -480,6 +502,8 @@ export interface FullBracketCanvasProps {
   readOnly?: boolean;
   onTieBreakerChange?: (value: string) => void;
   onSelectTeam?: (gameId: string, teamId: string) => void;
+  /** Tooltip text for tie breaker input + label (My Picks one-page editor). */
+  tieBreakerHintTooltip?: string;
 }
 
 /**
@@ -495,6 +519,7 @@ export default function FullBracketCanvas({
   readOnly,
   onTieBreakerChange,
   onSelectTeam,
+  tieBreakerHintTooltip,
 }: FullBracketCanvasProps) {
   const getRegionByPosition = (position: string) => tournamentData.regions.find((region) => region.position === position);
 
@@ -603,6 +628,7 @@ export default function FullBracketCanvas({
                 finalistLeftTitle={`${topLeft?.name ?? 'Top Left'} vs. ${bottomLeft?.name ?? 'Bottom Left'}`}
                 finalistRightTitle={`${topRight?.name ?? 'Top Right'} vs. ${bottomRight?.name ?? 'Bottom Right'}`}
                 onSelectTeam={readOnly ? undefined : onSelectTeam}
+                tieBreakerHintTooltip={tieBreakerHintTooltip}
               />
             </div>
           </div>

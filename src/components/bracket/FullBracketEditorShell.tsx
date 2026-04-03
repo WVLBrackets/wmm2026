@@ -21,6 +21,7 @@ import {
   type LayoutSettings,
 } from '@/lib/fullBracket/fullBracketGeometry';
 import { FULL_BRACKET_VIEWPORT_PADDING_X, fullBracketDebugOutline } from '@/lib/fullBracket/fullBracketViewChrome';
+import { getTieBreakerHintTooltipText } from '@/lib/bracketTieBreakerHint';
 
 export interface FullBracketEditorShellProps {
   tournamentData: TournamentData;
@@ -77,6 +78,8 @@ export default function FullBracketEditorShell({
 }: FullBracketEditorShellProps) {
   /** Geometry from committed full-bracket layout JSON (bundled at build time). */
   const [fullBracketLayout] = useState<LayoutSettings>(DEFAULT_FULL_BRACKET_LAYOUT);
+
+  const tieBreakerHintTooltip = useMemo(() => getTieBreakerHintTooltipText(siteConfig), [siteConfig]);
 
   const updatedBracket = useMemo(
     () => updateBracketWithPicks(bracket, picks, tournamentData),
@@ -276,6 +279,7 @@ export default function FullBracketEditorShell({
                 readOnly={readOnly}
                 onTieBreakerChange={readOnly ? undefined : onTieBreakerChange}
                 onSelectTeam={readOnly ? undefined : onPick}
+                tieBreakerHintTooltip={tieBreakerHintTooltip || undefined}
               />
             </div>
           </div>
