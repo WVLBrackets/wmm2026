@@ -192,6 +192,10 @@ export interface SiteConfigData {
   cta6Title?: string;
   cta6Destination?: string;
   cta6Image?: string;
+  /** Venmo username (without @) for payment deep links; parsed from `venmo_user` in the Google Sheets config. */
+  venmoUser?: string;
+  /** When "YES", the Pay button is shown to all users; otherwise admin-only. Parsed from `enable_pay_capability`. */
+  enablePayCapability?: string;
 }
 
 /**
@@ -333,6 +337,12 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
             break;
           case 'entry_cost':
             config.entryCost = parseInt(value) || 5;
+            break;
+          case 'venmo_user':
+            config.venmoUser = value;
+            break;
+          case 'enable_pay_capability':
+            config.enablePayCapability = value;
             break;
           case 'welcome_no_brackets_line2':
             config.welcomeNoBracketsLine2 = value;

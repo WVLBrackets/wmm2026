@@ -86,6 +86,8 @@ export async function initializeDatabase(): Promise<void> {
     `;
 
     await addBracketSubmittedAtColumn();
+    await addBracketPaymentColumns();
+    await createPaymentsTable();
 
     // Admin actions audit table
     await sql`
@@ -451,6 +453,52 @@ async function createIndexes(): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS idx_error_logs_timestamp ON error_logs(timestamp)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_error_logs_username ON error_logs(username)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_feature_flags_environment ON feature_flags(environment)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_payments_status_env ON payments(status, environment)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_brackets_payment_status ON brackets(payment_status) WHERE payment_status IS NOT NULL`;
+}
+
+/**
+ * Add payment tracking columns to brackets table.
+ */
+async function addBracketPaymentColumns(): Promise<void> {
+  try {
+    await sql`ALTER TABLE brackets ADD COLUMN IF NOT EXISTS payment_status VARCHAR(20)`;
+    await sql`ALTER TABLE brackets ADD COLUMN IF NOT EXISTS payment_id VARCHAR(36)`;
+  } catch (error) {
+    console.error('[addBracketPaymentColumns] Error:', error);
+  }
+}
+
+/**
+ * Create payments table for batch payment requests (Venmo deep-link flow).
+ */
+async function createPaymentsTable(): Promise<void> {
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS payments (
+        id VARCHAR(36) PRIMARY KEY,
+        user_id VARCHAR(36) NOT NULL,
+        user_email VARCHAR(255) NOT NULL,
+        bracket_ids JSONB NOT NULL DEFAULT '[]',
+        bracket_count INTEGER NOT NULL DEFAULT 0,
+        additional_count INTEGER NOT NULL DEFAULT 0,
+        additional_note TEXT,
+        amount_cents INTEGER NOT NULL,
+        venmo_note TEXT,
+        status VARCHAR(20) NOT NULL DEFAULT 'pending',
+        requested_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        confirmed_at TIMESTAMPTZ,
+        confirmed_by VARCHAR(255),
+        admin_transaction_id VARCHAR(255),
+        admin_notes TEXT,
+        environment VARCHAR(50) NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `;
+  } catch (error) {
+    console.error('[createPaymentsTable] Error:', error);
+  }
 }
 
 /**

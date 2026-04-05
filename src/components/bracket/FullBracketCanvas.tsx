@@ -2,9 +2,17 @@
 
 import { useMemo } from 'react';
 import Image from 'next/image';
-import type { TournamentBracket, TournamentData, TournamentGame, TournamentTeam } from '@/types/tournament';
+import type {
+  TournamentBracket,
+  TournamentData,
+  TournamentGame,
+  TournamentRegion,
+  TournamentTeam,
+} from '@/types/tournament';
 import {
+  type FullBracketSizeMode,
   type LayoutSettings,
+  type PickResultContext,
   type RoundDefinition,
   type RoundLayoutSettings,
   type RoundSlot,
@@ -13,10 +21,11 @@ import {
   computeRoundGeometries,
   getPickedWinner,
 } from '@/lib/fullBracket/fullBracketGeometry';
+import { getAdvancementResultTone, getChampionKeyTone } from '@/lib/fullBracket/keyPickResultStyles';
 import { fullBracketDebugOutline } from '@/lib/fullBracket/fullBracketViewChrome';
 import { filterTieBreakerIntegerString } from '@/lib/bracketTieBreakerHint';
 
-export type FullBracketSizeMode = '64' | '32';
+export type { FullBracketSizeMode } from '@/lib/fullBracket/fullBracketGeometry';
 
 function TeamRow({
   team,
@@ -27,6 +36,7 @@ function TeamRow({
   labelText,
   labelDisplayMuted,
   winnerTone = 'blue',
+  pickResultTone,
   onClick,
 }: {
   team?: TournamentTeam;
@@ -38,12 +48,25 @@ function TeamRow({
   /** When true (e.g. TBD), render label in smaller grey text. */
   labelDisplayMuted?: boolean;
   winnerTone?: 'blue' | 'gold';
+  /** When set with {@link isWinner}, KEY vs user pick styling (read-only viewer). */
+  pickResultTone?: 'blue' | 'green' | 'red';
   onClick?: () => void;
 }) {
+  const blueWinnerClasses = 'border-blue-500 bg-blue-50 text-blue-900 font-semibold';
+  const goldWinnerClasses = 'border-amber-500 bg-amber-50 text-amber-900 font-semibold';
+  const greenWinnerClasses = 'border-green-600 bg-green-50 text-green-900 font-semibold';
+  const redWinnerClasses = 'border-red-500 bg-red-50 text-red-900 font-semibold';
+
   const winnerClasses =
-    winnerTone === 'gold'
-      ? 'border-amber-500 bg-amber-50 text-amber-900 font-semibold'
-      : 'border-blue-500 bg-blue-50 text-blue-900 font-semibold';
+    pickResultTone === 'green'
+      ? greenWinnerClasses
+      : pickResultTone === 'red'
+        ? redWinnerClasses
+        : pickResultTone === 'blue'
+          ? blueWinnerClasses
+          : winnerTone === 'gold'
+            ? goldWinnerClasses
+            : blueWinnerClasses;
 
   if (labelText) {
     return (
@@ -73,10 +96,12 @@ function TeamRow({
     );
   }
 
+  const highlighted = Boolean(isWinner || pickResultTone);
+
   return (
     <div
       className={`flex items-center gap-1.5 rounded border px-2 ${
-        isWinner ? winnerClasses : 'border-gray-300 bg-white text-gray-800'
+        highlighted ? winnerClasses : 'border-gray-300 bg-white text-gray-800'
       } ${onClick ? 'cursor-pointer select-none hover:border-gray-500' : ''}`}
       style={{ height: `${heightPx}px`, width: widthPx ? `${widthPx}px` : undefined, fontSize: `${fontSizePx ?? 12}px` }}
       onClick={onClick}
@@ -131,6 +156,7 @@ function RoundColumn({
             <TeamRow
               team={slot.team}
               isWinner={slot.isWinner}
+              pickResultTone={slot.pickResultTone}
               heightPx={settings.slotHeightPx}
               onClick={pickedTeamId && onSelectTeam ? () => onSelectTeam(slot.gameId, pickedTeamId) : undefined}
             />
@@ -151,6 +177,7 @@ function RegionBoard({
   bracketSize,
   onSelectTeam,
   embedded = false,
+  pickResultContext,
 }: {
   regionName: string;
   regionPosition: string;
@@ -162,6 +189,7 @@ function RegionBoard({
   onSelectTeam?: (gameId: string, teamId: string) => void;
   /** When true, omit per-region card chrome (used inside one unified full-bracket card). */
   embedded?: boolean;
+  pickResultContext?: PickResultContext | null;
 }) {
   const round64 = regionGames.filter((game) => game.round === 'Round of 64');
   const round32 = regionGames.filter((game) => game.round === 'Round of 32');
@@ -173,31 +201,31 @@ function RegionBoard({
   const definitions: RoundDefinition[] = useMemo(() => {
     const r64: RoundDefinition = {
       key: 'r64',
-      slots: buildRoundSlots(round64, picks),
+      slots: buildRoundSlots(round64, picks, pickResultContext, bracketSize),
       settings: layout.rounds.r64,
     };
     const r32: RoundDefinition = {
       key: 'r32',
-      slots: buildRoundSlots(round32, picks),
+      slots: buildRoundSlots(round32, picks, pickResultContext, bracketSize),
       settings: layout.rounds.r32,
     };
     const s16: RoundDefinition = {
       key: 's16',
-      slots: buildRoundSlots(sweet16, picks),
+      slots: buildRoundSlots(sweet16, picks, pickResultContext, bracketSize),
       settings: layout.rounds.s16,
     };
     const e8: RoundDefinition = {
       key: 'e8',
-      slots: buildRoundSlots(elite8, picks),
+      slots: buildRoundSlots(elite8, picks, pickResultContext, bracketSize),
       settings: layout.rounds.e8,
     };
     const r5: RoundDefinition = {
       key: 'r5',
-      slots: buildRegionalChampionSlots(elite8, picks, semifinalGameId),
+      slots: buildRegionalChampionSlots(elite8, picks, semifinalGameId, pickResultContext),
       settings: layout.rounds.r5,
     };
     return bracketSize === '64' ? [r64, r32, s16, e8, r5] : [r32, s16, e8, r5];
-  }, [bracketSize, elite8, layout.rounds, picks, round32, round64, semifinalGameId, sweet16]);
+  }, [bracketSize, elite8, layout.rounds, picks, pickResultContext, round32, round64, semifinalGameId, sweet16]);
 
   const geometry = useMemo(() => computeRoundGeometries(definitions), [definitions]);
 
@@ -283,9 +311,27 @@ function RegionBoard({
 }
 
 /**
+ * Elite 8 game id for the side that feeds {@link finalFourGame} (left bar = TL/BL, right = TR/BR).
+ */
+function eliteEightFeederId(
+  finalist: TournamentTeam | null,
+  picks: Record<string, string>,
+  topRegion: TournamentRegion,
+  bottomRegion: TournamentRegion
+): string | null {
+  if (!finalist?.id) return null;
+  const topE8 = `${topRegion.position}-e8-1`;
+  const bottomE8 = `${bottomRegion.position}-e8-1`;
+  if (picks[topE8] === finalist.id) return topE8;
+  if (picks[bottomE8] === finalist.id) return bottomE8;
+  return null;
+}
+
+/**
  * Semifinals bar + champ/tie square — centered over the quad grid in {@link FullBracketCanvas}.
  */
 function FinalsStrip({
+  tournamentData,
   updatedBracket,
   picks,
   finalsLayout,
@@ -296,7 +342,9 @@ function FinalsStrip({
   finalistRightTitle,
   onSelectTeam,
   tieBreakerHintTooltip,
+  pickResultContext,
 }: {
+  tournamentData: TournamentData;
   updatedBracket: TournamentBracket;
   picks: Record<string, string>;
   finalsLayout: LayoutSettings['finals'];
@@ -308,11 +356,51 @@ function FinalsStrip({
   onSelectTeam?: (gameId: string, teamId: string) => void;
   /** Native tooltip on tie breaker field + label (e.g. My Picks one-page editor). */
   tieBreakerHintTooltip?: string;
+  pickResultContext?: PickResultContext | null;
 }) {
   const finalistLeft = getPickedWinner(updatedBracket.finalFour[0], picks);
   const finalistRight = getPickedWinner(updatedBracket.finalFour[1], picks);
   const champion = getPickedWinner(updatedBracket.championship, picks);
   const championTeamId = champion?.id ?? null;
+
+  const finalistLeftIsChampPick = Boolean(
+    finalistLeft?.id && championTeamId && finalistLeft.id === championTeamId
+  );
+  const finalistRightIsChampPick = Boolean(
+    finalistRight?.id && championTeamId && finalistRight.id === championTeamId
+  );
+
+  const [topLeftR, bottomLeftR, topRightR, bottomRightR] = tournamentData.regions;
+  const leftFeederId =
+    topLeftR && bottomLeftR ? eliteEightFeederId(finalistLeft, picks, topLeftR, bottomLeftR) : null;
+  const rightFeederId =
+    topRightR && bottomRightR ? eliteEightFeederId(finalistRight, picks, topRightR, bottomRightR) : null;
+
+  const finalistLeftTone =
+    pickResultContext && finalistLeft?.id && leftFeederId
+      ? getAdvancementResultTone(
+          leftFeederId,
+          finalistLeft.id,
+          pickResultContext.keyPicks,
+          pickResultContext.eliminatedTeamIds
+        )
+      : undefined;
+  const finalistRightTone =
+    pickResultContext && finalistRight?.id && rightFeederId
+      ? getAdvancementResultTone(
+          rightFeederId,
+          finalistRight.id,
+          pickResultContext.keyPicks,
+          pickResultContext.eliminatedTeamIds
+        )
+      : undefined;
+  const championTone =
+    pickResultContext && champion?.id
+      ? getChampionKeyTone(champion.id, pickResultContext.keyPicks, pickResultContext.eliminatedTeamIds)
+      : undefined;
+
+  const finalistLeftHighlight = pickResultContext ? Boolean(finalistLeft?.id) : finalistLeftIsChampPick;
+  const finalistRightHighlight = pickResultContext ? Boolean(finalistRight?.id) : finalistRightIsChampPick;
 
   const th = finalsLayout.champTieSquareTitleHeightFactor;
   /** Square below semifinals: fits champ row + tie row; sizing driven entirely by layout JSON. */
@@ -355,7 +443,8 @@ function FinalsStrip({
         <div className="flex min-w-0 flex-col items-center">
           <TeamRow
             team={finalistLeft ?? undefined}
-            isWinner={Boolean(finalistLeft?.id && championTeamId && finalistLeft.id === championTeamId)}
+            isWinner={finalistLeftHighlight}
+            pickResultTone={finalistLeftTone}
             heightPx={finalsLayout.finalistHeightPx}
             widthPx={finalsLayout.finalistWidthPx}
             fontSizePx={finalsLayout.finalistFontSizePx}
@@ -379,7 +468,8 @@ function FinalsStrip({
         <div className="flex min-w-0 flex-col items-center">
           <TeamRow
             team={finalistRight ?? undefined}
-            isWinner={Boolean(finalistRight?.id && championTeamId && finalistRight.id === championTeamId)}
+            isWinner={finalistRightHighlight}
+            pickResultTone={finalistRightTone}
             heightPx={finalsLayout.finalistHeightPx}
             widthPx={finalsLayout.finalistWidthPx}
             fontSizePx={finalsLayout.finalistFontSizePx}
@@ -422,6 +512,7 @@ function FinalsStrip({
           <TeamRow
             team={champion ?? undefined}
             isWinner={Boolean(champion)}
+            pickResultTone={championTone}
             heightPx={finalsLayout.champHeightPx}
             widthPx={finalsLayout.champWidthPx}
             fontSizePx={finalsLayout.champFontSizePx}
@@ -504,6 +595,8 @@ export interface FullBracketCanvasProps {
   onSelectTeam?: (gameId: string, teamId: string) => void;
   /** Tooltip text for tie breaker input + label (My Picks one-page editor). */
   tieBreakerHintTooltip?: string;
+  /** When set (e.g. bracket viewer modal), color user picks vs KEY results. */
+  pickResultContext?: PickResultContext | null;
 }
 
 /**
@@ -520,6 +613,7 @@ export default function FullBracketCanvas({
   onTieBreakerChange,
   onSelectTeam,
   tieBreakerHintTooltip,
+  pickResultContext = null,
 }: FullBracketCanvasProps) {
   const getRegionByPosition = (position: string) => tournamentData.regions.find((region) => region.position === position);
 
@@ -561,6 +655,7 @@ export default function FullBracketCanvas({
                   layout={layout}
                   bracketSize={bracketSize}
                   onSelectTeam={readOnly ? undefined : onSelectTeam}
+                  pickResultContext={pickResultContext}
                 />
               ) : null}
             </div>
@@ -576,6 +671,7 @@ export default function FullBracketCanvas({
                   layout={layout}
                   bracketSize={bracketSize}
                   onSelectTeam={readOnly ? undefined : onSelectTeam}
+                  pickResultContext={pickResultContext}
                 />
               ) : null}
             </div>
@@ -590,6 +686,7 @@ export default function FullBracketCanvas({
                   layout={layout}
                   bracketSize={bracketSize}
                   onSelectTeam={readOnly ? undefined : onSelectTeam}
+                  pickResultContext={pickResultContext}
                 />
               ) : null}
             </div>
@@ -605,6 +702,7 @@ export default function FullBracketCanvas({
                   layout={layout}
                   bracketSize={bracketSize}
                   onSelectTeam={readOnly ? undefined : onSelectTeam}
+                  pickResultContext={pickResultContext}
                 />
               ) : null}
             </div>
@@ -619,6 +717,7 @@ export default function FullBracketCanvas({
           >
             <div className="pointer-events-auto">
               <FinalsStrip
+                tournamentData={tournamentData}
                 updatedBracket={updatedBracket}
                 picks={picks}
                 finalsLayout={layout.finals}
@@ -629,6 +728,7 @@ export default function FullBracketCanvas({
                 finalistRightTitle={`${topRight?.name ?? 'Top Right'} vs. ${bottomRight?.name ?? 'Bottom Right'}`}
                 onSelectTeam={readOnly ? undefined : onSelectTeam}
                 tieBreakerHintTooltip={tieBreakerHintTooltip}
+                pickResultContext={pickResultContext}
               />
             </div>
           </div>

@@ -448,7 +448,8 @@ export async function GET() {
       bracketNumber: bracket.bracketNumber,
       year: bracket.year,
       isPublic: bracket.status === 'submitted',
-      status: bracket.status
+      status: bracket.status,
+      paymentStatus: bracket.paymentStatus || null,
     }));
     
     return NextResponse.json(

@@ -1482,6 +1482,7 @@ function BracketContent() {
           killSwitchEnabled={killSwitchEnabled}
           killSwitchMessage={killSwitchMessage}
           onOpenFullBracketModal={handleOpenFullBracketModalFromMyPicks}
+          onPaymentCreated={loadSubmittedBrackets}
         />
         {copyNameDialog && (
           <div

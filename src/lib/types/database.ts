@@ -58,6 +58,10 @@ export interface Bracket {
   lockAcquiredAt?: Date | null;
   /** Set on each transition into `submitted`; cleared when status leaves `submitted`. */
   submittedAt?: Date | null;
+  /** Payment tracking: null (unpaid), 'pending', or 'paid'. */
+  paymentStatus?: string | null;
+  /** FK to payments table when part of a payment batch. */
+  paymentId?: string | null;
   environment: string;
   createdAt: Date;
   updatedAt: Date;
@@ -116,4 +120,26 @@ export interface BracketCounts {
   submitted: number;
   inProgress: number;
   deleted: number;
+}
+
+/**
+ * Payment record for a Venmo payment batch (one or more brackets + optional additional).
+ */
+export interface Payment {
+  id: string;
+  userId: string;
+  userEmail: string;
+  bracketIds: string[];
+  bracketCount: number;
+  additionalCount: number;
+  additionalNote?: string;
+  amountCents: number;
+  venmoNote?: string;
+  status: 'pending' | 'confirmed' | 'rejected';
+  requestedAt: Date;
+  confirmedAt?: Date | null;
+  confirmedBy?: string | null;
+  adminTransactionId?: string | null;
+  adminNotes?: string | null;
+  environment: string;
 }

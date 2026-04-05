@@ -20,6 +20,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Database,
+  DollarSign,
 } from 'lucide-react';
 import { useBracketMode } from '@/contexts/BracketModeContext';
 import UsersTab from '@/components/admin/UsersTab';
@@ -29,6 +30,7 @@ import TeamDataTab from '@/components/admin/TeamDataTab';
 import TourneyTab from '@/components/admin/TourneyTab';
 import LogsTab from '@/components/admin/LogsTab';
 import LiveResultsTab from '@/components/admin/LiveResultsTab';
+import PaymentsTab from '@/components/admin/PaymentsTab';
 import { getCSRFHeaders } from '@/hooks/useCSRF';
 
 interface User {
@@ -106,7 +108,7 @@ export default function AdminPage() {
   const [killSwitchError, setKillSwitchError] = useState<string | null>(null);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'brackets' | 'users' | 'live-results' | 'data' | 'tourney' | 'logs' | 'usage'>('users');
+  const [activeTab, setActiveTab] = useState<'brackets' | 'users' | 'live-results' | 'data' | 'tourney' | 'logs' | 'usage' | 'payments'>('users');
 
   // Ensure bracket mode is disabled when admin page loads
   useEffect(() => {
@@ -303,7 +305,7 @@ export default function AdminPage() {
   };
 
   // Helper function to update URL with new tab
-  const updateUrlTab = (tab: 'brackets' | 'users' | 'live-results' | 'data' | 'tourney' | 'logs' | 'usage', logsTab?: 'summary' | 'usage' | 'error' | 'email', emailView?: 'summary' | 'detail') => {
+  const updateUrlTab = (tab: 'brackets' | 'users' | 'live-results' | 'data' | 'tourney' | 'logs' | 'usage' | 'payments', logsTab?: 'summary' | 'usage' | 'error' | 'email', emailView?: 'summary' | 'detail') => {
     const params = new URLSearchParams(searchParams?.toString() || '');
     params.set('tab', tab);
     
@@ -323,7 +325,7 @@ export default function AdminPage() {
   };
 
   // Wrapper functions that update both state and URL
-  const handleSetActiveTab = (tab: 'brackets' | 'users' | 'live-results' | 'data' | 'tourney' | 'logs' | 'usage') => {
+  const handleSetActiveTab = (tab: 'brackets' | 'users' | 'live-results' | 'data' | 'tourney' | 'logs' | 'usage' | 'payments') => {
     setActiveTab(tab);
     // Update URL immediately to reflect the change
     updateUrlTab(tab);
@@ -337,8 +339,8 @@ export default function AdminPage() {
     if (!searchParams) return;
     
     const tabParam = searchParams.get('tab');
-    if (tabParam && ['brackets', 'users', 'live-results', 'data', 'tourney', 'logs', 'usage'].includes(tabParam)) {
-      const newTab = tabParam as 'brackets' | 'users' | 'live-results' | 'data' | 'tourney' | 'logs' | 'usage';
+    if (tabParam && ['brackets', 'users', 'live-results', 'data', 'tourney', 'logs', 'usage', 'payments'].includes(tabParam)) {
+      const newTab = tabParam as 'brackets' | 'users' | 'live-results' | 'data' | 'tourney' | 'logs' | 'usage' | 'payments';
       if (newTab !== activeTab) {
         setActiveTab(newTab);
       }
@@ -939,6 +941,19 @@ export default function AdminPage() {
                 <Zap className="inline h-5 w-5 shrink-0 lg:mr-2 lg:h-4 lg:w-4" aria-hidden />
                 <span className="hidden lg:inline">Usage</span>
               </button>
+              <button
+                type="button"
+                aria-label="Payments"
+                onClick={() => handleSetActiveTab('payments')}
+                className={`flex shrink-0 items-center justify-center whitespace-nowrap border-b-2 px-2.5 py-2 text-sm font-medium lg:justify-start lg:px-4 ${
+                  activeTab === 'payments'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                }`}
+              >
+                <DollarSign className="inline h-5 w-5 shrink-0 lg:mr-2 lg:h-4 lg:w-4" aria-hidden />
+                <span className="hidden lg:inline">Payments</span>
+              </button>
             </nav>
             <button
               type="button"
@@ -984,6 +999,11 @@ export default function AdminPage() {
         {/* Usage tab */}
         {activeTab === 'usage' && (
           <UsageMonitoringTab />
+        )}
+
+        {/* Payments tab */}
+        {activeTab === 'payments' && (
+          <PaymentsTab />
         )}
 
       </div>

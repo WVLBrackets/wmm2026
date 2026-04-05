@@ -5,12 +5,20 @@
 import type { TournamentGame, TournamentTeam } from '@/types/tournament';
 import committedFullBracketLayout from '@/lib/fullBracket/committedFullBracketLayout.json';
 import { mergeLayoutSettings } from '@/lib/fullBracket/layoutMerge';
+import { getAdvancementResultTone, type KeyPickResultTone } from '@/lib/fullBracket/keyPickResultStyles';
+
+export interface PickResultContext {
+  keyPicks: Record<string, string>;
+  eliminatedTeamIds: Set<string>;
+}
 
 export interface RoundSlot {
   id: string;
   gameId: string;
   team?: TournamentTeam;
   isWinner: boolean;
+  /** When set (KEY comparison in read-only viewer), overrides default blue winner styling. */
+  pickResultTone?: KeyPickResultTone;
 }
 
 export type RoundKey = 'r64' | 'r32' | 's16' | 'e8' | 'r5';
@@ -187,6 +195,36 @@ export const DEFAULT_FULL_BRACKET_LAYOUT: LayoutSettings = mergeLayoutSettings(
   committedFullBracketLayout
 );
 
+/** First canvas column with fixed seeds: R64 (64-team) or R32 (32-team). No KEY shading there. */
+export type FullBracketSizeMode = '64' | '32';
+
+function isDefinitionalSlotRound(round: string | undefined, bracketSize: FullBracketSizeMode): boolean {
+  if (!round) return false;
+  if (bracketSize === '64') return round === 'Round of 64';
+  return round === 'Round of 32';
+}
+
+/**
+ * Regional game id for the matchup that feeds `teamSlot` (1 = top, 2 = bottom) into {@link currentGame}.
+ */
+export function getRegionalFeederGameId(currentGame: TournamentGame, teamSlot: 1 | 2): string | null {
+  const m = currentGame.id.match(/^(.*)-(r32|s16|e8)-(\d+)$/);
+  if (!m) return null;
+  const position = m[1];
+  const roundKey = m[2];
+  const n = parseInt(m[3], 10);
+  if (roundKey === 'r32') {
+    return teamSlot === 1 ? `${position}-r64-${2 * n - 1}` : `${position}-r64-${2 * n}`;
+  }
+  if (roundKey === 's16') {
+    return teamSlot === 1 ? `${position}-r32-${2 * n - 1}` : `${position}-r32-${2 * n}`;
+  }
+  if (roundKey === 'e8') {
+    return teamSlot === 1 ? `${position}-s16-1` : `${position}-s16-2`;
+  }
+  return null;
+}
+
 export function buildRoundTopOffsets(slotCount: number, settings: RoundLayoutSettings): number[] {
   const offsets: number[] = [];
   let cursor = 0;
@@ -309,22 +347,46 @@ export function computeRoundGeometries(definitions: RoundDefinition[]): {
   };
 }
 
-export function buildRoundSlots(games: TournamentGame[], picks: Record<string, string>): RoundSlot[] {
+export function buildRoundSlots(
+  games: TournamentGame[],
+  picks: Record<string, string>,
+  resultContext?: PickResultContext | null,
+  bracketSize: FullBracketSizeMode = '64'
+): RoundSlot[] {
   const slots: RoundSlot[] = [];
 
   games.forEach((game) => {
     const pickedTeamId = picks[game.id];
+    let win1 = game.team1?.id === pickedTeamId;
+    let win2 = game.team2?.id === pickedTeamId;
+
+    const skipKeyStyling = Boolean(resultContext && isDefinitionalSlotRound(game.round, bracketSize));
+    if (skipKeyStyling) {
+      win1 = false;
+      win2 = false;
+    }
+
+    /** Tone vs KEY for each row that shows an advancing team — both slots, not only who the user picked to win this game. */
+    const toneForSlot = (teamId: string | undefined, teamSlot: 1 | 2): KeyPickResultTone | undefined => {
+      if (!resultContext || skipKeyStyling || !teamId) return undefined;
+      const feeder = getRegionalFeederGameId(game, teamSlot);
+      if (!feeder) return undefined;
+      return getAdvancementResultTone(feeder, teamId, resultContext.keyPicks, resultContext.eliminatedTeamIds);
+    };
+
     slots.push({
       id: `${game.id}-1`,
       gameId: game.id,
       team: game.team1,
-      isWinner: game.team1?.id === pickedTeamId,
+      isWinner: win1,
+      pickResultTone: toneForSlot(game.team1?.id, 1),
     });
     slots.push({
       id: `${game.id}-2`,
       gameId: game.id,
       team: game.team2,
-      isWinner: game.team2?.id === pickedTeamId,
+      isWinner: win2,
+      pickResultTone: toneForSlot(game.team2?.id, 2),
     });
   });
 
@@ -334,7 +396,8 @@ export function buildRoundSlots(games: TournamentGame[], picks: Record<string, s
 export function buildRegionalChampionSlots(
   elite8Games: TournamentGame[],
   picks: Record<string, string>,
-  semifinalGameId: 'final-four-1' | 'final-four-2'
+  semifinalGameId: 'final-four-1' | 'final-four-2',
+  resultContext?: PickResultContext | null
 ): RoundSlot[] {
   const game = elite8Games[0];
   if (!game) {
@@ -345,12 +408,20 @@ export function buildRegionalChampionSlots(
   const winnerTeam =
     game.team1?.id === pickedTeamId ? game.team1 : game.team2?.id === pickedTeamId ? game.team2 : undefined;
 
+  const hasEliteEightPick = Boolean(winnerTeam?.id);
+  const isWinnerSemifinalExtension = Boolean(winnerTeam?.id && picks[semifinalGameId] === winnerTeam.id);
+  const displayAsSelected = resultContext ? hasEliteEightPick : isWinnerSemifinalExtension;
+
   return [
     {
       id: `${game.id}-winner`,
       gameId: semifinalGameId,
       team: winnerTeam,
-      isWinner: Boolean(winnerTeam?.id && picks[semifinalGameId] === winnerTeam.id),
+      isWinner: displayAsSelected,
+      pickResultTone:
+        resultContext && hasEliteEightPick && winnerTeam?.id
+          ? getAdvancementResultTone(game.id, winnerTeam.id, resultContext.keyPicks, resultContext.eliminatedTeamIds)
+          : undefined,
     },
   ];
 }

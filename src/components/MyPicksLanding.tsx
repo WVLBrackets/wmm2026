@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import { Press_Start_2P } from 'next/font/google';
-import { Trophy, Plus, Edit, Clock, CheckCircle, LogOut, Trash2, Copy, Eye, Info, X, Mail, RotateCcw, Undo2, Search, Pencil, Send } from 'lucide-react';
+import { Trophy, Plus, Edit, Clock, CheckCircle, LogOut, Trash2, Copy, Eye, Info, X, Mail, RotateCcw, Undo2, Search, Pencil, Send, DollarSign } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { useCSRF } from '@/hooks/useCSRF';
 import { TournamentData, TournamentBracket } from '@/types/tournament';
@@ -16,6 +16,7 @@ import {
 } from '@/lib/bracketSubmitReadiness';
 import { LoggedButton } from '@/components/LoggedButton';
 import { useServerTime } from '@/hooks/useServerTime';
+import PaymentModal from '@/components/bracket/PaymentModal';
 
 const scoreboardFont = Press_Start_2P({
   weight: '400',
@@ -36,6 +37,8 @@ export interface Bracket {
   status: 'in_progress' | 'submitted' | 'deleted';
   totalPoints?: number;
   year?: number;
+  /** Payment tracking: null/undefined (unpaid), 'pending', or 'paid'. */
+  paymentStatus?: string | null;
 }
 
 /** Which bracket statuses appear in the My Picks table (user-controlled). */
@@ -239,6 +242,8 @@ interface MyPicksLandingProps {
   killSwitchMessage?: string;
   /** Eye icon: open full-bracket modal when set; otherwise falls back to print tab. */
   onOpenFullBracketModal?: (bracket: Bracket) => void;
+  /** Called after a Venmo payment request is recorded so the parent can refresh the bracket list. */
+  onPaymentCreated?: () => void;
 }
 
 /**
@@ -293,6 +298,7 @@ export default function MyPicksLanding({
   killSwitchEnabled = true,
   killSwitchMessage,
   onOpenFullBracketModal,
+  onPaymentCreated,
 }: MyPicksLandingProps) {
   const { data: session, update: updateSession } = useSession();
   const { fetchWithCSRF } = useCSRF();
@@ -311,6 +317,8 @@ export default function MyPicksLanding({
   const [profileLoadError, setProfileLoadError] = useState<string | null>(null);
   const [profileSaveError, setProfileSaveError] = useState<string | null>(null);
   const [profileDisplayName, setProfileDisplayName] = useState('');
+  const [payModalOpen, setPayModalOpen] = useState(false);
+  const [isCurrentUserAdmin, setIsCurrentUserAdmin] = useState(false);
   const [profileDetails, setProfileDetails] = useState<{
     email: string;
     createdAt: string;
@@ -331,6 +339,25 @@ export default function MyPicksLanding({
       ),
     [brackets, tournamentYear]
   );
+
+  const unpaidSubmittedBrackets = useMemo(
+    () => bracketsForYear.filter((b) => b.status === 'submitted' && !b.paymentStatus),
+    [bracketsForYear]
+  );
+
+  const entryCost = siteConfig?.entryCost ?? 5;
+  const venmoUser = siteConfig?.venmoUser;
+  const payCapabilityEnabled = siteConfig?.enablePayCapability?.toUpperCase() === 'YES';
+
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    fetch('/api/check-admin')
+      .then((r) => r.json())
+      .then((d) => setIsCurrentUserAdmin(d.isAdmin || false))
+      .catch(() => setIsCurrentUserAdmin(false));
+  }, [session?.user?.email]);
+
+  const showPayButton = venmoUser && unpaidSubmittedBrackets.length > 0 && (payCapabilityEnabled || isCurrentUserAdmin);
 
   const [statusVisibility, setStatusVisibility] = useState<BracketStatusVisibility>(DEFAULT_STATUS_VISIBILITY);
   const [entrySearchQuery, setEntrySearchQuery] = useState('');
@@ -1105,6 +1132,18 @@ export default function MyPicksLanding({
                         <Plus className="h-4 w-4" />
                         <span>New Bracket</span>
                       </button>
+
+                      {showPayButton && (
+                        <button
+                          onClick={() => setPayModalOpen(true)}
+                          className="px-4 py-2 rounded-lg flex items-center space-x-2 bg-green-600 text-white hover:bg-green-700 cursor-pointer"
+                          data-testid="pay-button-desktop"
+                          title="Pay for submitted brackets via Venmo"
+                        >
+                          <DollarSign className="h-4 w-4" />
+                          <span>Pay</span>
+                        </button>
+                      )}
                       
                       <LoggedButton
                         onClick={() => signOut({ callbackUrl: '/auth/signin' })}
@@ -1191,6 +1230,18 @@ export default function MyPicksLanding({
                         >
                           <Plus className="h-4 w-4" />
                         </button>
+
+                        {showPayButton && (
+                          <button
+                            onClick={() => setPayModalOpen(true)}
+                            className="px-2 py-2 rounded-lg flex items-center bg-green-600 text-white hover:bg-green-700 cursor-pointer"
+                            data-testid="pay-button-mobile"
+                            aria-label="Pay"
+                            title="Pay for submitted brackets via Venmo"
+                          >
+                            <DollarSign className="h-4 w-4" />
+                          </button>
+                        )}
                         
                         <LoggedButton
                           onClick={() => signOut({ callbackUrl: '/auth/signin' })}
@@ -1618,11 +1669,35 @@ export default function MyPicksLanding({
                       </td>
                       <td className="hidden px-4 py-3 text-center align-middle md:table-cell">
                         {bracket.status === 'submitted' ? (
-                          <div className="flex justify-center" title="Submitted — complete">
-                            <CheckCircle
-                              className="h-6 w-6 text-green-600"
-                              aria-label="Submitted — bracket complete"
-                            />
+                          <div className="flex items-center justify-center gap-1.5">
+                            <span title="Submitted — complete">
+                              <CheckCircle
+                                className="h-6 w-6 text-green-600"
+                                aria-label="Submitted — bracket complete"
+                              />
+                            </span>
+                            {venmoUser && (
+                              <span
+                                title={
+                                  bracket.paymentStatus === 'paid'
+                                    ? 'Payment Confirmed'
+                                    : bracket.paymentStatus === 'pending'
+                                      ? 'Payment Pending'
+                                      : 'Not Paid'
+                                }
+                              >
+                                <DollarSign
+                                  className={`h-5 w-5 ${
+                                    bracket.paymentStatus === 'paid'
+                                      ? 'text-green-600'
+                                      : bracket.paymentStatus === 'pending'
+                                        ? 'text-yellow-500'
+                                        : 'text-gray-400'
+                                  }`}
+                                  aria-hidden
+                                />
+                              </span>
+                            )}
                           </div>
                         ) : (
                           <div className="flex flex-col items-center space-y-1 mx-auto" style={{ width: 'fit-content' }}>
@@ -1750,26 +1825,35 @@ export default function MyPicksLanding({
                                 </>
                               ) : (
                                 <>
-                                  {/* In Progress: Edit, Submit, Copy, Delete */}
-                                  <LoggedButton
-                                    onClick={() =>
-                                      !getInProgressEditButtonDisabledReason() && onEditBracket(bracket)
-                                    }
-                                    logLocation="Edit"
-                                    bracketId={number ? String(number).padStart(6, '0') : null}
-                                    disabled={Boolean(getInProgressEditButtonDisabledReason())}
-                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
-                                      getInProgressEditButtonDisabledReason()
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                                    }`}
-                                    title={
-                                      getInProgressEditButtonDisabledReason() ||
-                                      (killSwitchForcesViewOnly ? 'View bracket' : 'Edit')
-                                    }
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </LoggedButton>
+                                  {/* In Progress: Edit (or View when kill-switch on), Submit, Copy, Delete */}
+                                  {killSwitchForcesViewOnly ? (
+                                    <LoggedButton
+                                      onClick={() => handleEyeOpenFullBracketOrPrint(bracket)}
+                                      logLocation={onOpenFullBracketModal ? 'FullBracketModal' : 'Print'}
+                                      bracketId={number ? String(number).padStart(6, '0') : null}
+                                      className="w-8 h-8 rounded flex items-center justify-center transition-colors bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
+                                      title="View"
+                                    >
+                                      <Eye className="h-4 w-4" />
+                                    </LoggedButton>
+                                  ) : (
+                                    <LoggedButton
+                                      onClick={() =>
+                                        !getInProgressEditButtonDisabledReason() && onEditBracket(bracket)
+                                      }
+                                      logLocation="Edit"
+                                      bracketId={number ? String(number).padStart(6, '0') : null}
+                                      disabled={Boolean(getInProgressEditButtonDisabledReason())}
+                                      className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
+                                        getInProgressEditButtonDisabledReason()
+                                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                          : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                                      }`}
+                                      title={getInProgressEditButtonDisabledReason() || 'Edit'}
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </LoggedButton>
+                                  )}
                                   <LoggedButton
                                     onClick={() => {
                                       if (!submitDisabledReason) void onSubmitBracket(bracket);
@@ -1859,7 +1943,7 @@ export default function MyPicksLanding({
                                     logLocation={onOpenFullBracketModal ? 'FullBracketModal' : 'Print'}
                                     bracketId={number ? String(number).padStart(6, '0') : null}
                                     className="flex h-8 w-8 cursor-pointer items-center justify-center rounded bg-blue-600 text-white transition-colors hover:bg-blue-700"
-                                    title={onOpenFullBracketModal ? 'Full bracket' : 'View/Print'}
+                                    title={onOpenFullBracketModal ? 'View' : 'View/Print'}
                                     data-testid="print-deleted-bracket-button"
                                   >
                                     <Eye className="h-4 w-4" />
@@ -1969,7 +2053,7 @@ export default function MyPicksLanding({
                                     logLocation={onOpenFullBracketModal ? 'FullBracketModal' : 'Print'}
                                     bracketId={number ? String(number).padStart(6, '0') : null}
                                     className="flex w-8 h-8 cursor-pointer items-center justify-center rounded bg-blue-600 text-white transition-colors hover:bg-blue-700"
-                                    title={onOpenFullBracketModal ? 'Full bracket' : 'View/Print'}
+                                    title={onOpenFullBracketModal ? 'View' : 'View/Print'}
                                     data-testid="print-bracket-button"
                                   >
                                     <Eye className="h-4 w-4" />
@@ -2190,6 +2274,25 @@ export default function MyPicksLanding({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Venmo Payment Modal */}
+      {venmoUser && (
+        <PaymentModal
+          isOpen={payModalOpen}
+          onClose={() => setPayModalOpen(false)}
+          unpaidBrackets={unpaidSubmittedBrackets.map((b) => ({
+            id: b.id,
+            entryName: b.entryName || `Bracket`,
+            bracketNumber: (b as unknown as { bracketNumber?: number }).bracketNumber,
+          }))}
+          entryCost={entryCost}
+          venmoUser={venmoUser}
+          onPaymentCreated={() => {
+            setPayModalOpen(false);
+            onPaymentCreated?.();
+          }}
+        />
       )}
 
       {/* Email Status Message */}

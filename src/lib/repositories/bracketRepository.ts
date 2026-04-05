@@ -533,6 +533,8 @@ function mapRowToBracket(row: Record<string, unknown>): Bracket {
       const d = parseDbInstant(raw);
       return Number.isNaN(d.getTime()) ? null : d;
     })(),
+    paymentStatus: (row.payment_status as string | null) ?? null,
+    paymentId: (row.payment_id as string | null) ?? null,
     environment: row.environment as string,
     createdAt: parseDbInstant(row.created_at),
     updatedAt: parseDbInstant(row.updated_at),

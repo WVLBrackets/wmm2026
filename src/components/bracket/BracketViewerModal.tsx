@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Loader2, Printer, X } from 'lucide-react';
 import { generate64TeamBracket, updateBracketWithPicks } from '@/lib/bracketGenerator';
 import { loadTournamentData } from '@/lib/tournamentLoader';
@@ -10,7 +10,12 @@ import {
 } from '@/lib/teamDisplayName';
 import type { TournamentBracket, TournamentData } from '@/types/tournament';
 import FullBracketCanvas from '@/components/bracket/FullBracketCanvas';
-import { DEFAULT_FULL_BRACKET_LAYOUT, type LayoutSettings } from '@/lib/fullBracket/fullBracketGeometry';
+import {
+  DEFAULT_FULL_BRACKET_LAYOUT,
+  type LayoutSettings,
+  type PickResultContext,
+} from '@/lib/fullBracket/fullBracketGeometry';
+import { buildEliminatedTeamIdsFromKeyPicks } from '@/lib/fullBracket/keyPickResultStyles';
 import { FULL_BRACKET_VIEWPORT_PADDING_X, fullBracketDebugOutline } from '@/lib/fullBracket/fullBracketViewChrome';
 
 export interface BracketViewerModalProps {
@@ -44,6 +49,7 @@ export default function BracketViewerModal({
   const [picks, setPicks] = useState<Record<string, string>>({});
   const [tieBreaker, setTieBreaker] = useState('');
   const [entryLabel, setEntryLabel] = useState('');
+  const [keyPicks, setKeyPicks] = useState<Record<string, string>>({});
   const [layout] = useState<LayoutSettings>(DEFAULT_FULL_BRACKET_LAYOUT);
 
   const load = useCallback(async () => {
@@ -55,15 +61,23 @@ export default function BracketViewerModal({
         bracketFetchMode === 'owner'
           ? `/api/tournament-bracket/${encodeURIComponent(bracketId)}`
           : `/api/tournament-bracket/${encodeURIComponent(bracketId)}?pool=1`;
-      const [bracketRes, rawTournament] = await Promise.all([
+      const [bracketRes, rawTournament, keyRes] = await Promise.all([
         fetch(bracketUrl, { cache: 'no-store' }),
         loadTournamentData(String(year)),
+        fetch(`/api/key-picks?year=${encodeURIComponent(String(year))}`, { cache: 'no-store' }),
       ]);
 
       const bracketJson = await bracketRes.json();
+      const keyJson = await keyRes.json().catch(() => ({}));
       if (!bracketRes.ok || !bracketJson.success || !bracketJson.data) {
         throw new Error(bracketJson.error || 'Failed to load bracket');
       }
+
+      const kp =
+        keyRes.ok && keyJson.success && keyJson.data?.picks && typeof keyJson.data.picks === 'object'
+          ? (keyJson.data.picks as Record<string, string>)
+          : {};
+      setKeyPicks(kp);
 
       let tournament = rawTournament;
       try {
@@ -96,6 +110,7 @@ export default function BracketViewerModal({
       setError(e instanceof Error ? e.message : 'Failed to load bracket');
       setTournamentData(null);
       setUpdatedBracket(null);
+      setKeyPicks({});
     } finally {
       setLoading(false);
     }
@@ -114,6 +129,15 @@ export default function BracketViewerModal({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen, onClose]);
+
+  const pickResultContext = useMemo((): PickResultContext | null => {
+    if (!tournamentData || Object.keys(keyPicks).length === 0) return null;
+    const baseBracket = generate64TeamBracket(tournamentData);
+    return {
+      keyPicks,
+      eliminatedTeamIds: buildEliminatedTeamIdsFromKeyPicks(keyPicks, tournamentData, baseBracket),
+    };
+  }, [tournamentData, keyPicks]);
 
   const canOpenPrintLayout = Boolean(!loading && !error && tournamentData && updatedBracket);
 
@@ -135,7 +159,7 @@ export default function BracketViewerModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 max-md:items-start max-md:justify-center max-md:px-3 max-md:pb-3 max-md:pt-[calc(env(safe-area-inset-top,0px)+2.75rem)]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="bracket-viewer-title"
@@ -143,7 +167,7 @@ export default function BracketViewerModal({
       data-testid="bracket-viewer-modal"
     >
       <div
-        className={`max-h-[92vh] w-full max-w-[1500px] overflow-hidden rounded-xl bg-white shadow-2xl ${fullBracketDebugOutline('shell')}`.trim()}
+        className={`max-h-[92vh] max-md:max-h-[calc(100dvh-5.5rem-env(safe-area-inset-top,0px))] w-full max-w-[1500px] overflow-hidden rounded-xl bg-white shadow-2xl ${fullBracketDebugOutline('shell')}`.trim()}
         onClick={(e) => e.stopPropagation()}
       >
         <div
@@ -179,7 +203,7 @@ export default function BracketViewerModal({
         </div>
 
         <div
-          className={`max-h-[calc(92vh-4rem)] overflow-auto py-3 ${FULL_BRACKET_VIEWPORT_PADDING_X} ${fullBracketDebugOutline('canvasWrap')}`.trim()}
+          className={`max-h-[calc(92vh-4rem)] max-md:max-h-[calc(100dvh-9.5rem-env(safe-area-inset-top,0px))] overflow-auto py-3 ${FULL_BRACKET_VIEWPORT_PADDING_X} ${fullBracketDebugOutline('canvasWrap')}`.trim()}
         >
           {loading && (
             <div className="flex h-64 items-center justify-center text-gray-600">
@@ -199,6 +223,7 @@ export default function BracketViewerModal({
               layout={layout}
               bracketSize="64"
               readOnly
+              pickResultContext={pickResultContext}
             />
           )}
         </div>

@@ -66,4 +66,6 @@ export interface BracketSubmission {
   year?: number;
   /** Friendly numeric id for display / usage logging when the API provides it. */
   bracketNumber?: number;
+  /** Payment tracking: null/undefined (unpaid), 'pending', or 'paid'. */
+  paymentStatus?: string | null;
 }
