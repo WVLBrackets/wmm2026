@@ -510,6 +510,173 @@ export async function releaseKeyBracketLock(bracketId: string, adminUserId: stri
   return !!updated;
 }
 
+/** Admin UI values for `brackets.payment_status` (unpaid clears `payment_id`). */
+export type AdminBracketPaymentStatus = 'unpaid' | 'pending' | 'paid';
+
+/**
+ * Admin-only: set `payment_status` on a bracket. Unpaid clears `payment_id`.
+ *
+ * @param bracketId - Bracket primary key
+ * @param status - Display status; stored as NULL (unpaid), `pending`, or `paid`
+ * @returns Updated bracket or null if not in current environment
+ */
+export async function adminUpdateBracketPaymentStatus(
+  bracketId: string,
+  status: AdminBracketPaymentStatus
+): Promise<Bracket | null> {
+  const environment = getCurrentEnvironment();
+  const exists = await sql`
+    SELECT id FROM brackets WHERE id = ${bracketId} AND environment = ${environment}
+  `;
+  if (exists.rows.length === 0) {
+    return null;
+  }
+
+  if (status === 'unpaid') {
+    await sql`
+      UPDATE brackets
+      SET payment_status = NULL, payment_id = NULL, updated_at = now()
+      WHERE id = ${bracketId} AND environment = ${environment}
+    `;
+  } else {
+    const dbStatus = status === 'paid' ? 'paid' : 'pending';
+    await sql`
+      UPDATE brackets
+      SET payment_status = ${dbStatus}, updated_at = now()
+      WHERE id = ${bracketId} AND environment = ${environment}
+    `;
+  }
+
+  return getBracketById(bracketId);
+}
+
+export interface AdminBulkBracketPaymentResult {
+  bracketsUpdated: number;
+  paymentsConfirmed: number;
+  paymentsRejected: number;
+}
+
+/**
+ * Admin-only: apply confirm (paid) or reject (unpaid) to many brackets.
+ * When a pending `payments` row’s `bracket_ids` are all included in `bracketIds`, that row is confirmed/rejected too.
+ *
+ * @param bracketIds - Bracket IDs to update (deduped)
+ * @param action - `confirm` sets `payment_status = 'paid'`; `reject` clears status and `payment_id`
+ * @param options - `transactionId` required for confirm; `adminEmail` for payment audit columns
+ */
+export async function adminBulkBracketPaymentAction(
+  bracketIds: string[],
+  action: 'confirm' | 'reject',
+  options: { transactionId?: string; adminEmail: string; adminNotes?: string | null }
+): Promise<AdminBulkBracketPaymentResult> {
+  const environment = getCurrentEnvironment();
+  const uniqueIds = [...new Set(bracketIds.filter((id) => typeof id === 'string' && id.trim()))];
+
+  if (uniqueIds.length === 0) {
+    return { bracketsUpdated: 0, paymentsConfirmed: 0, paymentsRejected: 0 };
+  }
+
+  const rows: { id: string; payment_id: string | null }[] = [];
+  for (const id of uniqueIds) {
+    const r = await sql`
+      SELECT id, payment_id FROM brackets WHERE id = ${id} AND environment = ${environment}
+    `;
+    if (r.rows.length === 0) {
+      throw new Error(`Bracket not found: ${id}`);
+    }
+    rows.push({
+      id: r.rows[0].id as string,
+      payment_id: (r.rows[0].payment_id as string | null) ?? null,
+    });
+  }
+
+  const idSet = new Set(uniqueIds);
+  const paymentIdSet = new Set<string>();
+  for (const row of rows) {
+    if (row.payment_id) paymentIdSet.add(row.payment_id);
+  }
+
+  if (action === 'confirm') {
+    const txn = options.transactionId?.trim();
+    if (!txn) {
+      throw new Error('Transaction ID is required when confirming.');
+    }
+    for (const id of uniqueIds) {
+      await sql`
+        UPDATE brackets
+        SET payment_status = 'paid', updated_at = now()
+        WHERE id = ${id} AND environment = ${environment}
+      `;
+    }
+
+    let paymentsConfirmed = 0;
+    const notes = options.adminNotes?.trim() || null;
+    for (const pid of paymentIdSet) {
+      const pr = await sql`SELECT bracket_ids, status FROM payments WHERE id = ${pid}`;
+      if (pr.rows.length === 0) continue;
+      const paymentRow = pr.rows[0] as { bracket_ids: string[]; status: string };
+      if (paymentRow.status !== 'pending') continue;
+      const bids = Array.isArray(paymentRow.bracket_ids) ? paymentRow.bracket_ids : [];
+      const allIncluded = bids.length > 0 && bids.every((bid) => idSet.has(bid));
+      if (!allIncluded) continue;
+
+      await sql`
+        UPDATE payments
+        SET status = 'confirmed',
+            confirmed_at = now(),
+            confirmed_by = ${options.adminEmail},
+            admin_transaction_id = ${txn},
+            admin_notes = ${notes}
+        WHERE id = ${pid}
+      `;
+      paymentsConfirmed += 1;
+    }
+
+    return {
+      bracketsUpdated: uniqueIds.length,
+      paymentsConfirmed,
+      paymentsRejected: 0,
+    };
+  }
+
+  // reject → unpaid
+  for (const id of uniqueIds) {
+    await sql`
+      UPDATE brackets
+      SET payment_status = NULL, payment_id = NULL, updated_at = now()
+      WHERE id = ${id} AND environment = ${environment}
+    `;
+  }
+
+  let paymentsRejected = 0;
+  const notes = options.adminNotes?.trim() || null;
+  for (const pid of paymentIdSet) {
+    const pr = await sql`SELECT bracket_ids, status FROM payments WHERE id = ${pid}`;
+    if (pr.rows.length === 0) continue;
+    const paymentRow = pr.rows[0] as { bracket_ids: string[]; status: string };
+    if (paymentRow.status !== 'pending') continue;
+    const bids = Array.isArray(paymentRow.bracket_ids) ? paymentRow.bracket_ids : [];
+    const allIncluded = bids.length > 0 && bids.every((bid) => idSet.has(bid));
+    if (!allIncluded) continue;
+
+    await sql`
+      UPDATE payments
+      SET status = 'rejected',
+          confirmed_at = now(),
+          confirmed_by = ${options.adminEmail},
+          admin_notes = ${notes}
+      WHERE id = ${pid}
+    `;
+    paymentsRejected += 1;
+  }
+
+  return {
+    bracketsUpdated: uniqueIds.length,
+    paymentsConfirmed: 0,
+    paymentsRejected,
+  };
+}
+
 /**
  * Map database row to Bracket type
  */

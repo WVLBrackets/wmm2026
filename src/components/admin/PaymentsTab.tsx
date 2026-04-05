@@ -56,6 +56,28 @@ function resolvePaymentFilter(paymentStatus: string | null): PaymentStatusFilter
   return 'unpaid';
 }
 
+type EditablePaymentValue = 'unpaid' | 'pending' | 'paid';
+
+/**
+ * Maps DB `payment_status` to the admin select value.
+ */
+function paymentStatusToSelectValue(paymentStatus: string | null): EditablePaymentValue {
+  if (paymentStatus === 'paid') return 'paid';
+  if (paymentStatus === 'pending') return 'pending';
+  return 'unpaid';
+}
+
+/**
+ * Case-insensitive match on entry name and user email (substring).
+ */
+function bracketMatchesTextQuery(b: BracketPaymentRow, rawQuery: string): boolean {
+  const q = rawQuery.trim().toLowerCase();
+  if (!q) return true;
+  const entry = (b.entryName || '').toLowerCase();
+  const email = (b.userEmail || '').toLowerCase();
+  return entry.includes(q) || email.includes(q);
+}
+
 /**
  * Admin tab for reviewing bracket payment status and confirming/rejecting Venmo payments.
  */
@@ -67,6 +89,7 @@ export default function PaymentsTab() {
 
   const currentYear = new Date().getFullYear();
   const [yearFilter, setYearFilter] = useState<number>(currentYear);
+  const [textQuery, setTextQuery] = useState('');
   const [statusVisibility, setStatusVisibility] = useState<Record<PaymentStatusFilter, boolean>>({
     unpaid: true,
     pending: true,
@@ -79,6 +102,13 @@ export default function PaymentsTab() {
   const [adminNotes, setAdminNotes] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  const [savingBracketId, setSavingBracketId] = useState<string | null>(null);
+  const [bulkPanel, setBulkPanel] = useState<'confirm' | 'reject' | null>(null);
+  const [bulkTxnId, setBulkTxnId] = useState('');
+  const [bulkNotes, setBulkNotes] = useState('');
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -132,13 +162,14 @@ export default function PaymentsTab() {
     return brackets
       .filter((b) => b.year === yearFilter)
       .filter((b) => statusVisibility[resolvePaymentFilter(b.paymentStatus)])
+      .filter((b) => bracketMatchesTextQuery(b, textQuery))
       .sort((a, b) => {
         const statusOrder: Record<PaymentStatusFilter, number> = { unpaid: 0, pending: 1, confirmed: 2 };
         const diff = statusOrder[resolvePaymentFilter(a.paymentStatus)] - statusOrder[resolvePaymentFilter(b.paymentStatus)];
         if (diff !== 0) return diff;
         return a.userEmail.localeCompare(b.userEmail) || a.entryName.localeCompare(b.entryName);
       });
-  }, [brackets, yearFilter, statusVisibility]);
+  }, [brackets, yearFilter, statusVisibility, textQuery]);
 
   const counts = useMemo(() => {
     const yearBrackets = brackets.filter((b) => b.year === yearFilter);
@@ -166,6 +197,84 @@ export default function PaymentsTab() {
   const cancelAction = () => {
     setActionPaymentId(null);
     setActionType(null);
+  };
+
+  const patchBracketPaymentStatus = async (bracketId: string, paymentStatus: EditablePaymentValue) => {
+    setSavingBracketId(bracketId);
+    try {
+      const res = await fetch(`/api/admin/brackets/${bracketId}/payment`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...(await getCSRFHeaders()) },
+        body: JSON.stringify({ paymentStatus }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error || 'Update failed.');
+      setBrackets((prev) =>
+        prev.map((row) =>
+          row.id === bracketId
+            ? {
+                ...row,
+                paymentStatus:
+                  paymentStatus === 'unpaid'
+                    ? null
+                    : paymentStatus === 'pending'
+                      ? 'pending'
+                      : 'paid',
+                paymentId: paymentStatus === 'unpaid' ? null : row.paymentId,
+              }
+            : row
+        )
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update payment status.');
+    } finally {
+      setSavingBracketId(null);
+    }
+  };
+
+  const openBulkPanel = (action: 'confirm' | 'reject') => {
+    setBulkPanel(action);
+    setBulkTxnId('');
+    setBulkNotes('');
+    setBulkError(null);
+    cancelAction();
+  };
+
+  const cancelBulkPanel = () => {
+    setBulkPanel(null);
+    setBulkTxnId('');
+    setBulkNotes('');
+    setBulkError(null);
+  };
+
+  const submitBulk = async () => {
+    if (!bulkPanel) return;
+    if (bulkPanel === 'confirm' && !bulkTxnId.trim()) {
+      setBulkError('Transaction ID is required.');
+      return;
+    }
+    setBulkLoading(true);
+    setBulkError(null);
+    try {
+      const res = await fetch('/api/admin/payments/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await getCSRFHeaders()) },
+        body: JSON.stringify({
+          bracketIds: filteredBrackets.map((b) => b.id),
+          action: bulkPanel === 'confirm' ? 'confirm' : 'reject',
+          transactionId: bulkTxnId.trim(),
+          adminNotes: bulkNotes.trim(),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error || 'Bulk action failed.');
+      cancelBulkPanel();
+      void loadData();
+    } catch (err) {
+      setBulkError(err instanceof Error ? err.message : 'Bulk action failed.');
+    } finally {
+      setBulkLoading(false);
+    }
   };
 
   const submitAction = async () => {
@@ -213,7 +322,16 @@ export default function PaymentsTab() {
           <DollarSign className="mr-1 inline h-5 w-5 text-green-600" aria-hidden />
           Payments
         </h2>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full min-w-0 flex-1 flex-wrap items-center justify-end gap-2 sm:max-w-none sm:flex-initial">
+          <input
+            type="search"
+            value={textQuery}
+            onChange={(e) => setTextQuery(e.target.value)}
+            placeholder="Search entry name or email"
+            className="min-w-[10rem] flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 sm:max-w-xs sm:flex-initial md:min-w-[14rem]"
+            aria-label="Search by bracket entry name or user email"
+            data-testid="payments-text-query"
+          />
           <select
             value={yearFilter}
             onChange={(e) => setYearFilter(Number(e.target.value))}
@@ -257,6 +375,85 @@ export default function PaymentsTab() {
         })}
       </div>
 
+      <div className="mb-4 flex flex-wrap items-start gap-3">
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={filteredBrackets.length === 0 || bulkLoading || !!bulkPanel}
+            onClick={() => openBulkPanel('confirm')}
+            className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+            data-testid="payments-bulk-confirm"
+          >
+            <Check className="h-3.5 w-3.5" />
+            Confirm All Visible
+          </button>
+          <button
+            type="button"
+            disabled={filteredBrackets.length === 0 || bulkLoading || !!bulkPanel}
+            onClick={() => openBulkPanel('reject')}
+            className="inline-flex items-center gap-1 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+            data-testid="payments-bulk-reject"
+          >
+            <XCircle className="h-3.5 w-3.5" />
+            Reject All Visible
+          </button>
+        </div>
+        {bulkPanel && (
+          <div
+            className="min-w-[240px] max-w-md flex-1 rounded-lg border border-gray-300 bg-gray-50 p-3 text-left"
+            data-testid="payments-bulk-panel"
+          >
+            <h4 className="mb-2 text-xs font-semibold text-gray-800">
+              {bulkPanel === 'confirm'
+                ? `Confirm all ${filteredBrackets.length} visible bracket(s)`
+                : `Reject all ${filteredBrackets.length} visible bracket(s)`}
+            </h4>
+            {bulkPanel === 'confirm' && (
+              <input
+                type="text"
+                value={bulkTxnId}
+                onChange={(e) => setBulkTxnId(e.target.value)}
+                placeholder="Transaction ID *"
+                className="mb-2 w-full rounded border border-gray-300 px-2 py-1 text-xs text-gray-900 placeholder:text-gray-400"
+                data-testid="payments-bulk-txn-id"
+              />
+            )}
+            <input
+              type="text"
+              value={bulkNotes}
+              onChange={(e) => setBulkNotes(e.target.value)}
+              placeholder="Admin notes (optional)"
+              className="mb-2 w-full rounded border border-gray-300 px-2 py-1 text-xs text-gray-900 placeholder:text-gray-400"
+              data-testid="payments-bulk-notes"
+            />
+            {bulkError && <p className="mb-2 text-xs text-red-600">{bulkError}</p>}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={submitBulk}
+                disabled={bulkLoading}
+                className={`inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-white disabled:opacity-50 ${
+                  bulkPanel === 'confirm' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
+                }`}
+                data-testid="payments-bulk-submit"
+              >
+                {bulkLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+                Apply
+              </button>
+              <button
+                type="button"
+                onClick={cancelBulkPanel}
+                disabled={bulkLoading}
+                className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-white disabled:opacity-50"
+                data-testid="payments-bulk-cancel"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {error && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
       )}
@@ -296,9 +493,21 @@ export default function PaymentsTab() {
                       {b.userName && <div className="text-xs text-gray-400">{b.userEmail}</div>}
                     </td>
                     <td className="px-3 py-2.5 text-center">
-                      <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${colors.bg} ${colors.text} ${colors.ring}`}>
-                        {STATUS_LABELS[paymentFilter]}
-                      </span>
+                      <select
+                        value={paymentStatusToSelectValue(b.paymentStatus)}
+                        disabled={savingBracketId === b.id || bulkLoading}
+                        onChange={(e) => {
+                          const v = e.target.value as EditablePaymentValue;
+                          void patchBracketPaymentStatus(b.id, v);
+                        }}
+                        className={`max-w-[9rem] rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 ring-1 ${colors.ring} ${colors.bg}`}
+                        aria-label={`Payment status for ${b.entryName || b.id}`}
+                        data-testid={`payment-status-select-${b.id}`}
+                      >
+                        <option value="unpaid">{STATUS_LABELS.unpaid}</option>
+                        <option value="pending">{STATUS_LABELS.pending}</option>
+                        <option value="paid">{STATUS_LABELS.confirmed}</option>
+                      </select>
                       {paymentRecord && (
                         <div className="mt-1 text-[10px] text-gray-400">
                           ${(paymentRecord.amountCents / 100).toFixed(0)} &middot; {fmtDate(paymentRecord.requestedAt)}
