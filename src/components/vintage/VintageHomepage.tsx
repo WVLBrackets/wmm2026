@@ -15,6 +15,7 @@ import {
 import type { VintageContent, VintagePromotion } from "@/lib/vintage/content";
 import HomeViewToggle from "@/components/HomeViewToggle";
 import VintageCountdown from "./VintageCountdown";
+import VintageMasthead from "./VintageMasthead";
 import BasketballMark from "./BasketballMark";
 import "./vintage.css";
 function EditorialLink({
@@ -149,25 +150,10 @@ export default function VintageHomepage({
               <span className="v-account-label">Sign In</span>
             </Link>
           </nav>
-          <h1
-            className="v-nameplate"
-            data-testid="vintage-masthead"
-            aria-label={`${c.masthead.first} ${c.masthead.second}`}
-          >
-            <svg viewBox="0 0 1000 115" aria-hidden="true" focusable="false">
-              <text
-                x="0"
-                y="98"
-                textLength="1000"
-                lengthAdjust="spacingAndGlyphs"
-              >
-                <tspan className="v-nameplate-first">{c.masthead.first}</tspan>{" "}
-                <tspan className="v-nameplate-second">
-                  {c.masthead.second}
-                </tspan>
-              </text>
-            </svg>
-          </h1>
+          <VintageMasthead
+            first={c.masthead.first}
+            second={c.masthead.second}
+          />
         </header>
         <main className="v-main">
           <section

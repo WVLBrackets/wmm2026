@@ -726,21 +726,22 @@
   margin: 0;
   line-height: 1;
 }
-.v-nameplate svg {
-  display: block;
-  width: 100%;
-  height: auto;
-  overflow: visible;
+.v-nameplate {
+  overflow: hidden;
 }
-.v-nameplate text {
+.v-nameplate-line {
+  display: inline-block;
+  width: max-content;
+  white-space: nowrap;
   font-family: "Alfa Slab One", Georgia, serif;
-  font-size: 120px;
+  font-size: 48px;
   font-weight: 400;
+  line-height: 1.2;
   text-transform: uppercase;
-  fill: var(--v-ink);
+  transform-origin: left center;
 }
 .v-nameplate-second {
-  fill: var(--v-red);
+  color: var(--v-red);
 }
 .v-shortcuts {
   display: flex;
@@ -896,8 +897,11 @@
   }
   .v-nameplate {
     max-width: none;
-    padding: 10px 0;
+    padding: 6px 0;
     border-bottom: 4px double var(--v-ink);
+  }
+  .v-nameplate-line {
+    font-size: 40px;
   }
   .v-countdown-section {
     max-width: 530px;

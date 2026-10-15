@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import { chromium } from "playwright";
+import { chromium, webkit } from "playwright";
 import lambdaChromium from "@sparticuz/chromium";
 import { encode } from "next-auth/jwt";
 import { DEFAULT_VINTAGE_CONTENT } from "../src/lib/vintage/content";
@@ -56,15 +56,25 @@ async function main() {
       if (i === 89) throw new Error("Local server did not start.");
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
-    browser = await chromium.launch(
-      process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
-        ? {
-            executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
-            args: lambdaChromium.args,
-            headless: true,
-          }
-        : { headless: true },
-    );
+    browser =
+      process.env.VINTAGE_BROWSER === "webkit"
+        ? await webkit.launch(
+            process.env.PLAYWRIGHT_WEBKIT_EXECUTABLE_PATH
+              ? {
+                  executablePath: process.env.PLAYWRIGHT_WEBKIT_EXECUTABLE_PATH,
+                }
+              : {},
+          )
+        : await chromium.launch(
+            process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+              ? {
+                  executablePath:
+                    process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+                  args: lambdaChromium.args,
+                  headless: true,
+                }
+              : { headless: true },
+          );
     const context = await browser.newContext({
       viewport: { width: 1440, height: 1100 },
     });
@@ -101,7 +111,7 @@ async function main() {
       path: path.join(screenshotDir, "desktop.png"),
       fullPage: true,
     });
-    for (const width of [375, 390, 768, 1024, 1440]) {
+    for (const width of [320, 375, 390, 430, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       assert.equal(
         await page.evaluate(
@@ -112,13 +122,16 @@ async function main() {
       );
       await page.evaluate(() => window.scrollTo(0, 0));
       const nameplate = page.getByTestId("vintage-masthead");
-      assert.equal(
-        await nameplate.evaluate((el) => el.scrollWidth <= el.clientWidth),
-        true,
-        `Masthead overflow at ${width}px`,
-      );
+      await page.waitForFunction(() => {
+        const title = document.querySelector(".v-nameplate");
+        const line = document.querySelector(".v-nameplate-line");
+        if (!title || !line) return false;
+        const box = title.getBoundingClientRect();
+        const ink = line.getBoundingClientRect();
+        return ink.width > 0 && ink.right <= box.right + 1;
+      });
       const mastheadFonts = await nameplate
-        .locator("tspan")
+        .locator(".v-nameplate-line > span")
         .evaluateAll((parts) =>
           parts.map((part) => ({
             family: getComputedStyle(part).fontFamily,
@@ -132,6 +145,17 @@ async function main() {
         "Entire masthead must use one font and size",
       );
       assert.ok(mastheadFonts[0].family.includes("Alfa Slab One"));
+      const letterBounds = await nameplate
+        .locator(".v-nameplate-line")
+        .boundingBox();
+      const containerBounds = await nameplate.boundingBox();
+      assert.ok(letterBounds && containerBounds && letterBounds.width > 0);
+      assert.ok(
+        letterBounds.x >= containerBounds.x - 1 &&
+          letterBounds.x + letterBounds.width <=
+            containerBounds.x + containerBounds.width + 1,
+        "Visible masthead lettering must fit its container",
+      );
       const heading = await nameplate.boundingBox();
       const clock = await page
         .getByTestId("vintage-countdown-section")
@@ -199,6 +223,11 @@ async function main() {
     console.log(
       "PASS public homepage: desktop/mobile, two promotions, toggles, no Sheets requests, private draft/admin protection",
     );
+    if (process.env.VINTAGE_PUBLIC_ONLY === "true") {
+      assert.equal(errors.length, 0, errors.join("\n"));
+      await context.close();
+      return;
+    }
     const outsider = await encode({
       secret,
       token: { email: "not-admin@example.invalid", sub: "outsider" },

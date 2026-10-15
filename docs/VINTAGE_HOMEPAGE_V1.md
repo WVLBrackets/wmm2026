@@ -96,7 +96,7 @@ The feature branch is published, and `VINTAGE_HOMEPAGE_ENABLED=true` is scoped t
 
 ## Approved header and countdown refinement
 
-The mobile header uses a 48px sticky navy icon toolbar, followed by a compact single-line navy/red newspaper masthead. Only the toolbar sticks on mobile (up to 900px); desktop combines navigation and branding into one sticky row. Both account for the existing Preview environment banner. The masthead uses a self-hosted Alfa Slab One font in an inline SVG text element. Both colored parts inherit exactly the same font and size; SVG text-length fitting condenses the entire line uniformly. Its accessible heading label and editor fields remain text.
+The mobile header uses a 48px sticky navy icon toolbar, followed by a compact single-line navy/red newspaper masthead. Only the toolbar sticks on mobile (up to 900px); desktop combines navigation and branding into one sticky row. Both account for the existing Preview environment banner. The masthead uses self-hosted Alfa Slab One as regular HTML text. Both colored parts inherit exactly the same font and size. A small client component measures the loaded font and available width, then applies one horizontal scale to the complete line; it refits on font loading, resizing, and content changes. Overflow is contained while measurements settle. This replaces SVG text-length fitting, which overflowed on the user’s iPhone. Its accessible heading and editor fields remain text.
 
 The original-style four-column countdown now sits immediately below the masthead, ahead of the hero. Its target is still configured independently through the vintage editor. Without an enabled valid date it shows four dashes and “Tipoff date to be announced”; it never treats the mockup’s sample numbers as a real countdown. After the target it displays “Let the madness begin.” Navigation always exposes My Picks; access and submission rules remain enforced by the existing bracket application. The rest of the homepage is reserved for subsequent section-by-section design review, including the planned commissioner section.
 
@@ -111,3 +111,7 @@ https://wmm2026-git-feature-vinta-9633ca-ncaatourney-gmailcoms-projects.vercel.a
 Vercel automatically moves this branch alias to the newest successful deployment from `feature/vintage-homepage-v1`. Deployment-specific URLs remain useful for comparing older versions but should not be used as the ongoing review link.
 
 Alfa Slab One is bundled from the Google Fonts repository (`ofl/alfaslabone`) alongside its SIL Open Font License. It is used only for the vintage masthead and requires no external font request.
+
+### iPhone masthead overflow fix
+
+The user’s iPhone exposed an SVG text fitting overflow that Chromium did not reproduce. The title now uses regular HTML text with a measured, shared horizontal scale. Both parts retain one font size. Browser checks verify the transformed text bounds, equal typography, single-line fit and sticky behavior at 320, 375, 390, 430, 768, 1024 and 1440px. The public-page checks can run in WebKit with `VINTAGE_BROWSER=webkit VINTAGE_PUBLIC_ONLY=true npm run test:vintage:browser`; `PLAYWRIGHT_WEBKIT_EXECUTABLE_PATH` optionally selects an installed executable.
