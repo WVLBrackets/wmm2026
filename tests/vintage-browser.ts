@@ -77,6 +77,7 @@ async function main() {
           );
     const context = await browser.newContext({
       viewport: { width: 1440, height: 1100 },
+      timezoneId: "America/Chicago",
     });
     // Keep local verification independent of external integrations.
     await context.route("**/*", (route) =>
@@ -393,6 +394,23 @@ async function main() {
     await page.getByRole("status").waitFor();
     assert.equal(actions[0], "save");
     assert.equal(doc.hero.headline, "A NEW FRONT PAGE.");
+    await page.getByTestId("vintage-tab-1").click();
+    const countdownDate = page.getByLabel("Countdown date and time", {
+      exact: true,
+    });
+    assert.equal(await countdownDate.getAttribute("type"), "datetime-local");
+    await page.getByTestId("vintage-tournament-countdownEnabled").check();
+    await countdownDate.fill("2027-03-18T11:00");
+    await page.getByTestId("vintage-save-draft").click();
+    await page.getByRole("status").waitFor();
+    assert.equal(doc.tournament.countdownEnabled, true);
+    assert.equal(doc.tournament.countdownAt, "2027-03-18T16:00:00.000Z");
+    assert.equal(await countdownDate.inputValue(), "2027-03-18T11:00");
+    assert.ok(
+      (
+        await page.locator("#vintage-countdown-timezone").textContent()
+      )?.includes("America/Chicago"),
+    );
     await page.getByTestId("vintage-tab-2").click();
     await page.getByTestId("vintage-news-add").click();
     assert.equal(

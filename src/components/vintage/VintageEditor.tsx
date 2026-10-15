@@ -23,7 +23,7 @@ import type { VintageMedia } from "@/lib/vintage/media";
 import "./editor.css";
 const tabs = [
   "Front page",
-  "Tournament",
+  "Tournament & countdown",
   "Newsroom",
   "History",
   "Promotions",
@@ -46,9 +46,11 @@ export default function VintageEditor() {
   const [media, setMedia] = useState<VintageMedia[]>([]);
   const [imageTarget, setImageTarget] = useState("hero.image");
   const [uploadAlt, setUploadAlt] = useState("");
+  const [timeZone, setTimeZone] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
   useEffect(() => {
     let cancelled = false;
+    setTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone);
     fetch("/api/admin/vintage-homepage", { cache: "no-store" })
       .then(async (response) => {
         const data = await response.json();
@@ -432,26 +434,64 @@ export default function VintageEditor() {
               {field("introduction.body", "Welcome text", { multiline: true })}
             </>
           )}
-          {tab === "Tournament" && (
+          {tab === "Tournament & countdown" && (
             <>
               <p className="ve-help">
                 These are homepage display settings. Bracket availability and
                 submission deadlines remain controlled by the existing bracket
                 application.
               </p>
-              <div className="ve-grid">
-                {field("tournament.year", "Tournament year")}
-                {field("tournament.title", "Tournament title")}
-              </div>
-              {field("tournament.dates", "Dates or display message")}
+              <h3>Countdown clock</h3>
               {checkbox(
                 "tournament.countdownEnabled",
                 "Show countdown",
                 content.tournament.countdownEnabled,
               )}
-              {field("tournament.countdownAt", "Countdown date and time", {
-                hint: "Include the timezone, for example 2027-03-18T11:00:00-05:00. Verify the official date before publishing.",
-              })}
+              <label
+                className="ve-field"
+                htmlFor="vintage-tournament-countdownAt"
+              >
+                <span id="vintage-countdown-label">
+                  Countdown date and time
+                </span>
+                <input
+                  id="vintage-tournament-countdownAt"
+                  data-testid="vintage-tournament-countdownAt"
+                  type="datetime-local"
+                  step="60"
+                  value={(() => {
+                    if (!content.tournament.countdownAt) return "";
+                    const date = new Date(content.tournament.countdownAt);
+                    if (Number.isNaN(date.getTime())) return "";
+                    const pad = (value: number) =>
+                      String(value).padStart(2, "0");
+                    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+                  })()}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    if (!value) {
+                      update("tournament.countdownAt", "");
+                      return;
+                    }
+                    const date = new Date(value);
+                    if (!Number.isNaN(date.getTime()))
+                      update("tournament.countdownAt", date.toISOString());
+                  }}
+                  aria-describedby="vintage-countdown-timezone"
+                  aria-labelledby="vintage-countdown-label"
+                />
+                <small id="vintage-countdown-timezone">
+                  Time zone: {timeZone || "your device’s local time zone"}.
+                  Saved as one exact moment for all visitors. Save Draft to
+                  preview; Publish to Preview to update the homepage.
+                </small>
+              </label>
+              <h3>Tournament details</h3>
+              <div className="ve-grid">
+                {field("tournament.year", "Tournament year")}
+                {field("tournament.title", "Tournament title")}
+              </div>
+              {field("tournament.dates", "Dates or display message")}
               {checkbox(
                 "tournament.picksEnabled",
                 "Show My Picks link in homepage navigation",
