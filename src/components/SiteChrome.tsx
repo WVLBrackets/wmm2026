@@ -15,7 +15,10 @@ export default function SiteChrome({
 }) {
   const pathname = usePathname() || "";
   const standalone =
-    pathname === "/vintage" || pathname.startsWith("/admin/vintage-homepage");
+    pathname === "/vintage" ||
+    pathname === "/vintage/admin" ||
+    pathname.startsWith("/vintage/admin/") ||
+    pathname.startsWith("/admin/vintage-homepage");
   if (standalone) return <>{children}</>;
   return (
     <>

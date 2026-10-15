@@ -921,3 +921,24 @@
     margin-top: 6px;
   }
 }
+
+.v-admin-tools {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--v-rule);
+  font-family: Oswald, sans-serif;
+  font-size: 12px;
+}
+.v-admin-tools > span {
+  color: var(--v-red);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.v-admin-tools a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}

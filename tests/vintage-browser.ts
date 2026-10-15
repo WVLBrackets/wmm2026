@@ -231,7 +231,7 @@ async function main() {
       403,
     );
     const privatePreview = await page.request.get(
-      baseURL + "/admin/vintage-homepage/preview",
+      baseURL + "/vintage/admin/preview",
       { maxRedirects: 0 },
     );
     assert.ok([307, 404].includes(privatePreview.status()));
@@ -243,6 +243,43 @@ async function main() {
       await context.close();
       return;
     }
+    await page.goto(baseURL + "/vintage/admin", {
+      waitUntil: "networkidle",
+    });
+    assert.equal(await page.getByTestId("vintage-admin-signin").count(), 1);
+    assert.equal(
+      await page.locator("#vintage-admin-password").getAttribute("type"),
+      "password",
+    );
+    await page.route("**/api/auth/callback/credentials", (route) =>
+      route.fulfill({
+        json: {
+          url: baseURL + "/vintage/admin?error=CredentialsSignin",
+        },
+      }),
+    );
+    await page
+      .getByLabel("Email", { exact: true })
+      .fill("invalid@example.invalid");
+    await page
+      .getByLabel("Password", { exact: true })
+      .fill("not-a-real-password");
+    await page.getByRole("button", { name: "Sign in to admin" }).click();
+    await page
+      .getByText(
+        "Unable to sign in. Check your administrator email and password.",
+        { exact: true },
+      )
+      .waitFor();
+    await page.unroute("**/api/auth/callback/credentials");
+    assert.equal(
+      requests.some((url) => /site-config|google\.com\/spreadsheets/.test(url)),
+      false,
+      "Admin sign-in must not load Sheets configuration",
+    );
+    console.log(
+      "PASS dedicated admin sign-in: masked credentials, failed sign-in feedback, no Sheets configuration requests (mocked credentials response)",
+    );
     const outsider = await encode({
       secret,
       token: { email: "not-admin@example.invalid", sub: "outsider" },
@@ -259,6 +296,12 @@ async function main() {
     console.log(
       "PASS authorization: signed-in non-admin cannot read homepage drafts",
     );
+    await page.goto(baseURL + "/vintage", { waitUntil: "networkidle" });
+    assert.equal(
+      await page.getByTestId("vintage-admin-tools").count(),
+      0,
+      "Non-admin must not see admin controls",
+    );
     const token = await encode({
       secret,
       token: {
@@ -271,6 +314,19 @@ async function main() {
     await context.addCookies([
       { name: "next-auth.session-token", value: token, url: baseURL },
     ]);
+    await page.goto(baseURL + "/vintage", { waitUntil: "networkidle" });
+    assert.equal(await page.getByTestId("vintage-admin-tools").count(), 1);
+    assert.equal(
+      await page.getByTestId("vintage-signin").getAttribute("href"),
+      "/vintage/admin",
+    );
+    assert.equal(
+      await page.getByTestId("vintage-admin-edit").getAttribute("href"),
+      "/vintage/admin",
+    );
+    console.log(
+      "PASS homepage admin controls: visible only to signed-in administrator; account icon opens dedicated editor",
+    );
     const csrfResponse = await page.request.get(baseURL + "/api/csrf-token");
     const { csrfToken } = await csrfResponse.json();
     const noCSRF = await page.request.post(
@@ -303,7 +359,7 @@ async function main() {
     console.log(
       "PASS API: CSRF required, missing downloads block publication, unavailable database cannot silently save",
     );
-    await page.goto(baseURL + "/admin/vintage-homepage", {
+    await page.goto(baseURL + "/vintage/admin", {
       waitUntil: "networkidle",
     });
     assert.equal(

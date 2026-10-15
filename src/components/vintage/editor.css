@@ -385,3 +385,16 @@
     padding: 15px;
   }
 }
+
+.ve-signin {
+  max-width: 760px;
+  margin: auto;
+  padding: 40px 24px;
+}
+.ve-signin-form {
+  max-width: 440px;
+  margin-top: 30px;
+}
+.ve-signin-form .ve-button {
+  margin-top: 12px;
+}

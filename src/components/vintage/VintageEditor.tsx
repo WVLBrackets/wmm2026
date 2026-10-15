@@ -287,10 +287,7 @@ export default function VintageEditor() {
         {error ? (
           <div className="ve-notice ve-error" role="alert">
             {error}{" "}
-            <a
-              href="/admin/vintage-homepage"
-              data-testid="vintage-editor-retry"
-            >
+            <a href="/vintage/admin" data-testid="vintage-editor-retry">
               Try again
             </a>
           </div>
@@ -344,7 +341,7 @@ export default function VintageEditor() {
             <Save size={16} /> Save draft
           </button>
           <a
-            href="/admin/vintage-homepage/preview"
+            href="/vintage/admin/preview"
             target="_blank"
             rel="noopener noreferrer"
             className="ve-button"

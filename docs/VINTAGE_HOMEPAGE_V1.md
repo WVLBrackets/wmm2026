@@ -37,7 +37,7 @@ Then deploy the feature branch to Vercel **Preview only**. Confirm the Vercel pr
 
 ## The editor
 
-Open `/admin/vintage-homepage` and authenticate as the existing administrator. It is a separate editor rather than a new tab in the existing dashboard.
+Open `/vintage/admin` and authenticate as the existing administrator. It is a separate editor rather than a new tab in the existing dashboard.
 
 - Edit masthead, lead story, image/crop, tournament display information, announcements, history, two promotions, two Excel resources, and footer.
 - Save Draft persists a new revision without changing published content.
@@ -115,3 +115,11 @@ Alfa Slab One is bundled from the Google Fonts repository (`ofl/alfaslabone`) al
 ### iPhone masthead overflow fix
 
 The user’s iPhone exposed an SVG text fitting overflow that Chromium did not reproduce. The title now uses regular HTML text with a measured, shared horizontal scale. Both parts retain one font size. Browser checks verify the transformed text bounds, equal typography, single-line fit and sticky behavior at 320, 375, 390, 430, 768, 1024 and 1440px. The public-page checks can run in WebKit with `VINTAGE_BROWSER=webkit VINTAGE_PUBLIC_ONLY=true npm run test:vintage:browser`; `PLAYWRIGHT_WEBKIT_EXECUTABLE_PATH` optionally selects an installed executable.
+
+## Admin access from the homepage
+
+Open `/vintage/admin` (or the Homepage editor link in the newspaper footer) to sign in using the existing administrator account. This dedicated sign-in form uses the existing credentials provider without loading the old Google Sheets configuration, and returns directly to the vintage editor. Only a server-verified administrator sees the Admin mode toolbar on `/vintage`; its Edit homepage link and account icon open the standalone editor. Non-admin sessions never receive those controls, and all editor APIs continue enforcing authorization independently.
+
+The feature-specific database and image store are still not provisioned. Creating the dedicated public image store through the connected Vercel account returned scope 403. No store was created, no application database was reused, and no production environment settings changed. A Neon connection has been offered for provisioning a separate content database. Saving and image uploads must remain explicitly unavailable until the dedicated resources are connected and initialized.
+
+The canonical editor entry is `/vintage/admin`, outside the legacy `/admin` layout. It performs its own server-side role check before rendering any editor UI. The original `/admin/vintage-homepage` URLs remain as protected compatibility routes. The legacy admin layout is unchanged.

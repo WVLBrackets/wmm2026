@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { vintageAdminEmail } from "@/lib/vintage/admin";
 import { isVintageEnabled } from "@/lib/vintage/access";
 import { getPublishedVintageContent } from "@/lib/vintage/store";
 import VintageHomepage from "@/components/vintage/VintageHomepage";
@@ -9,5 +10,9 @@ export const metadata = {
 };
 export default async function VintagePage() {
   if (!isVintageEnabled()) notFound();
-  return <VintageHomepage content={await getPublishedVintageContent()} />;
+  const [content, adminEmail] = await Promise.all([
+    getPublishedVintageContent(),
+    vintageAdminEmail(),
+  ]);
+  return <VintageHomepage content={content} admin={!!adminEmail} />;
 }

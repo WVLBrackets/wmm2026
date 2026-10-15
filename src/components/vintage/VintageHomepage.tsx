@@ -83,19 +83,18 @@ function Promotion({ item, index }: { item: VintagePromotion; index: number }) {
 export default function VintageHomepage({
   content: c,
   draft = false,
+  admin = false,
 }: {
   content: VintageContent;
   draft?: boolean;
+  admin?: boolean;
 }) {
   return (
     <div className="vintage-page" data-testid="vintage-homepage">
       {draft && (
         <div className="v-draft-banner">
           UNPUBLISHED DRAFT{" "}
-          <Link
-            href="/admin/vintage-homepage"
-            data-testid="vintage-return-editor"
-          >
+          <Link href="/vintage/admin" data-testid="vintage-return-editor">
             Return to editor →
           </Link>
         </div>
@@ -141,13 +140,17 @@ export default function VintageHomepage({
               <span>History</span>
             </Link>
             <Link
-              href="/auth/signin"
+              href={admin ? "/vintage/admin" : "/auth/signin"}
               className="v-shortcut-account"
               data-testid="vintage-signin"
-              aria-label="Sign in to your account"
+              aria-label={
+                admin ? "Open homepage admin" : "Sign in to your account"
+              }
             >
               <CircleUserRound aria-hidden="true" />
-              <span className="v-account-label">Sign In</span>
+              <span className="v-account-label">
+                {admin ? "Admin" : "Sign In"}
+              </span>
             </Link>
           </nav>
           <VintageMasthead
@@ -156,6 +159,19 @@ export default function VintageHomepage({
           />
         </header>
         <main className="v-main">
+          {admin && !draft && (
+            <aside
+              className="v-admin-tools"
+              aria-label="Homepage administration"
+              data-testid="vintage-admin-tools"
+            >
+              <span>Admin mode</span>
+              <Link href="/vintage/admin" data-testid="vintage-admin-edit">
+                Edit homepage <ArrowUpRight size={14} />
+              </Link>
+              <Link href="/vintage/admin/preview">Saved draft</Link>
+            </aside>
+          )}
           <section
             className="v-countdown-section"
             aria-labelledby="v-countdown-heading"
@@ -335,10 +351,7 @@ export default function VintageHomepage({
               A note to the commissioner <ArrowUpRight size={13} />
             </a>
           )}
-          <Link
-            data-testid="vintage-open-editor"
-            href="/admin/vintage-homepage"
-          >
+          <Link data-testid="vintage-open-editor" href="/vintage/admin">
             Homepage editor
           </Link>
         </footer>

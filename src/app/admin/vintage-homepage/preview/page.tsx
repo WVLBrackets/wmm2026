@@ -10,7 +10,9 @@ export const metadata = {
 export default async function VintageDraftPage() {
   if (!(await vintageAdminEmail())) notFound();
   try {
-    return <VintageHomepage content={(await readVintageState()).draft} draft />;
+    return (
+      <VintageHomepage content={(await readVintageState()).draft} draft admin />
+    );
   } catch {
     return (
       <p className="p-10">
