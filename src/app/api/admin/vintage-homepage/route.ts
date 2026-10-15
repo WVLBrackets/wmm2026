@@ -6,6 +6,7 @@ import {
   writeVintageContent,
 } from "@/lib/vintage/store";
 import { validateVintageContent } from "@/lib/vintage/content";
+import { vintageStorageError } from "@/lib/vintage/storageError";
 export const dynamic = "force-dynamic";
 const headers = { "Cache-Control": "private, no-store" };
 export async function GET(request: NextRequest) {
@@ -16,14 +17,10 @@ export async function GET(request: NextRequest) {
       { state: await readVintageState(), storageReady: hasVintageDatabase() },
       { headers },
     );
-  } catch {
-    return NextResponse.json(
-      {
-        error:
-          "Vintage storage is unavailable. Check the dedicated database and schema.",
-      },
-      { status: 503, headers },
-    );
+  } catch (error) {
+    const diagnostic = vintageStorageError(error);
+    console.error("[Vintage] Editor storage read failed:", diagnostic.code);
+    return NextResponse.json(diagnostic, { status: 503, headers });
   }
 }
 export async function POST(request: NextRequest) {
