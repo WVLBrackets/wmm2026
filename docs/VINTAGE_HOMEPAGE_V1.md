@@ -19,7 +19,9 @@ Set these values in the feature branch's **Preview** environment, using the exis
 | --------------------------------- | ---------------------------------------------------------------------- |
 | `VINTAGE_HOMEPAGE_ENABLED=true`   | Enable the Preview routes                                              |
 | `VINTAGE_DATABASE_URL`            | Dedicated vintage Postgres database; do not reuse any bracket database |
-| `VINTAGE_BLOB_READ_WRITE_TOKEN`   | Token for a dedicated public vintage image store                       |
+| `VINTAGE_S3_ENDPOINT`, `VINTAGE_S3_REGION`, `VINTAGE_S3_BUCKET` | Dedicated Neon public image bucket on the feature Preview branch |
+| `VINTAGE_S3_ACCESS_KEY_ID`, `VINTAGE_S3_SECRET_ACCESS_KEY` | Branch-scoped Neon storage credentials, server-side only |
+| `VINTAGE_BLOB_READ_WRITE_TOKEN` | Optional alternative for a dedicated Vercel Blob store; unused in this Preview |
 | `ADMIN_EMAIL`                     | Existing administrator identity                                        |
 | `NEXTAUTH_SECRET`, `NEXTAUTH_URL` | Existing authentication settings, with the URL correct for Preview     |
 
@@ -70,7 +72,7 @@ npm run build
 
 `test:vintage:browser` starts its own local server and uses Playwright. It checks widths from 375 to 1440 px, no Sheets configuration calls, admin/draft protection, CSRF, required workbook links, honest storage failures, and editing/save/publish UI contracts. Editor persistence is mocked in the UI contract portion; real SQL behavior is tested separately. It never targets staging or production. Install Playwright Chromium first, or set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to an existing local Chromium executable. Screenshots go to `test-results/vintage`.
 
-Real Preview sign-in, database migration/persistence, Blob uploads, actual workbook downloads, and the full bracket regression flow must be checked on isolated Preview resources before considering the feature deployment verified.
+Real deployed Preview sign-in, editor persistence, image uploads, actual workbook downloads, and the full bracket regression flow must be checked before considering the deployed feature verified. Provider checks and local mocked checks do not establish the complete deployed flow.
 
 ## Assets
 
@@ -86,13 +88,13 @@ Oswald and Roboto Slab are self-hosted under `public/fonts/vintage` with their a
 - Repository-wide lint reports 19 errors and 39 warnings in unchanged files.
 - The standard Turbopack build is blocked here by the existing bracket component's Google-hosted `Press Start 2P` font request. The new homepage fonts are self-hosted.
 - An additional optimized Webpack build completed, including lint/type checks and all 74 static pages, using a temporary local copy of that same existing font through Next's build-test response hook. No font workaround or build-script change was committed. Existing bracket-loader `fs` and unused-variable warnings remain; the old homepage's Sheets announcements timed out and used its existing fallback.
-- Production, shared staging, external databases, and remote image stores were not modified. Real Vercel Preview validation is still required.
+- Production and shared staging were not modified. Dedicated feature Preview storage was provisioned later as described below. Real Vercel Preview browser validation is still required.
 
 ## Connected Vercel project
 
 The connected Vercel account exposes the existing `wmm2026` project (`prj_dJPGINQQ9vrHV2rJoQJhrM5wPAxC`). Its current production deployment is `main` at the inspected baseline `b23ac3312361fa13604c71f75836cff152515cea`; `staging` has separate Preview deployments. Existing Preview authentication/database variable names are present; their secret values were not retrieved.
 
-The feature branch is published, and `VINTAGE_HOMEPAGE_ENABLED=true` is scoped to that branch’s Preview environment. The first Preview deployment reached READY. Production still points to its original deployment. Protected Preview fetching and build-log tools currently return Vercel scope permission errors, so remote browser verification remains incomplete. Dedicated vintage Postgres/Blob resources and the two actual Excel URLs are still required.
+The feature branch is published, and `VINTAGE_HOMEPAGE_ENABLED=true` is scoped to that branch’s Preview environment. The first Preview deployment reached READY. Production still points to its original deployment. Protected Preview fetching and build-log tools currently return Vercel scope permission errors, so remote browser verification remains incomplete. The two actual Excel URLs are still required. Dedicated Preview storage was subsequently provisioned as described below.
 
 ## Approved header and countdown refinement
 
@@ -120,6 +122,18 @@ The user’s iPhone exposed an SVG text fitting overflow that Chromium did not r
 
 Open `/vintage/admin` (or the Homepage editor link in the newspaper footer) to sign in using the existing administrator account. This dedicated sign-in form uses the existing credentials provider without loading the old Google Sheets configuration, and returns directly to the vintage editor. Only a server-verified administrator sees the Admin mode toolbar on `/vintage`; its Edit homepage link and account icon open the standalone editor. Non-admin sessions never receive those controls, and all editor APIs continue enforcing authorization independently.
 
-The feature-specific database and image store are still not provisioned. Creating the dedicated public image store through the connected Vercel account returned scope 403. No store was created, no application database was reused, and no production environment settings changed. A Neon connection has been offered for provisioning a separate content database. Saving and image uploads must remain explicitly unavailable until the dedicated resources are connected and initialized.
+The Vercel Blob provisioning API returned scope 403, so no Blob store was created. After Neon was connected, dedicated content and image storage were provisioned on the existing feature Preview database branch. No production environment settings changed.
 
 The canonical editor entry is `/vintage/admin`, outside the legacy `/admin` layout. It performs its own server-side role check before rendering any editor UI. The original `/admin/vintage-homepage` URLs remain as protected compatibility routes. The legacy admin layout is unchanged.
+
+## Connected feature Preview storage
+
+The Vercel-managed Neon organization does not permit creating projects directly through Neon. The existing `neon-wmm-preview` project already has a Vercel-created `preview/feature/vintage-homepage-v1` branch (`br-ancient-cake-ad5t9y75`). That branch now contains a separate `vintage_homepage` database, owned by `vintage_homepage_owner`, with only the three vintage tables. No bracket tables were altered. The versioned vintage initializer DDL was applied only to this new database. Application traffic uses its pooled URL in `VINTAGE_DATABASE_URL`, scoped to the feature branch's Preview environment.
+
+Images use the dedicated `vintage-homepage-media` Neon bucket on the same branch, with public reads and authenticated writes. Storage credentials have only storage read/write scopes and are anchored to this feature branch. All five `VINTAGE_S3_*` variables are scoped to that branch's Preview environment; standard `AWS_*` variables and existing application credentials are never reused. The server uses the AWS S3 client with explicit credentials, endpoint, region, path-style addressing, unique object keys, and immutable cache headers. A failed metadata insert attempts to remove its newly uploaded object. Existing optional Vercel Blob support remains available for future explicitly configured environments.
+
+A separate `vintage-admin-verification` child branch (`br-rapid-grass-adt5yuiu`) holds disposable provider verification data. It is not linked to the site. Never use its content database for the homepage: it contains deliberately minimal test JSON. Workspace direct PostgreSQL access fails DNS resolution (`EAI_AGAIN`); this is a local network restriction. Neon API checks confirmed the dedicated schema and transactional draft/published/revision storage on the verification branch. Full local browser tests continue using isolated mock storage, and protected Vercel Preview browser access remains blocked by connector scope permissions. These limits must be kept distinct from deployed end-to-end verification.
+
+The application image upload helper was exercised against the verification branch through the workspace HTTPS proxy: authenticated S3 PUT succeeded, anonymous GET returned 200 with the expected image type, and downloaded bytes exactly matched the source WebP. No test image was uploaded to the feature Preview bucket. The complete deployed editor-to-database flow still requires signed-in Preview testing.
+
+The verification child branch expires automatically on 2026-10-22. The final local Chromium suite passed after the storage update, including editing, saving, and publishing UI contracts (mocked persistence). All six content/security/SQL tests, TypeScript, and focused lint passed.

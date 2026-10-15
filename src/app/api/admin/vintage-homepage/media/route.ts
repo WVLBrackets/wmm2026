@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { put, del } from "@vercel/blob";
+import {
+  hasVintageImageStorage,
+  uploadVintageImage,
+} from "@/lib/vintage/imageStore";
 import { authorizeVintageRequest } from "@/lib/vintage/admin";
 import { listVintageMedia, mediaDatabase } from "@/lib/vintage/media";
 export const runtime = "nodejs";
@@ -21,8 +24,13 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const auth = await authorizeVintageRequest(request);
   if (auth instanceof Response) return auth;
-  const token = process.env.VINTAGE_BLOB_READ_WRITE_TOKEN;
-  if (!token)
+  let imageStorageReady = false;
+  try {
+    imageStorageReady = hasVintageImageStorage();
+  } catch {
+    // Invalid configuration must return a safe storage error, not an unhandled 500.
+  }
+  if (!imageStorageReady)
     return NextResponse.json(
       { error: "Dedicated vintage image storage is not configured." },
       { status: 503, headers },
@@ -75,32 +83,30 @@ export async function POST(request: NextRequest) {
       { error: "Only JPEG, PNG and WebP images are supported." },
       { status: 400, headers },
     );
-  let uploaded: string | undefined;
+  let uploaded: Awaited<ReturnType<typeof uploadVintageImage>> | undefined;
   let pool;
   try {
     pool = await mediaDatabase();
     const id = randomUUID();
     const extension = isJpeg ? "jpg" : isPng ? "png" : "webp";
-    const blob = await put(`vintage/${id}.${extension}`, bytes, {
-      access: "public",
-      token,
-      contentType: type,
-      addRandomSuffix: false,
-    });
-    uploaded = blob.url;
+    uploaded = await uploadVintageImage(
+      `vintage/${id}.${extension}`,
+      bytes,
+      type,
+    );
     const filename =
       file.name.replace(/[^a-zA-Z0-9._ -]/g, "").slice(0, 160) ||
       `image.${extension}`;
     await pool.query(
       "INSERT INTO vintage_homepage_media (id, url, filename, alt, author) VALUES ($1,$2,$3,$4,$5)",
-      [id, blob.url, filename, alt, auth.email],
+      [id, uploaded.url, filename, alt, auth.email],
     );
     return NextResponse.json(
-      { media: { id, url: blob.url, filename, alt } },
+      { media: { id, url: uploaded.url, filename, alt } },
       { status: 201, headers },
     );
   } catch {
-    if (uploaded) await del(uploaded, { token }).catch(() => undefined);
+    if (uploaded) await uploaded.remove().catch(() => undefined);
     return NextResponse.json(
       { error: "Image upload failed. Check dedicated vintage storage." },
       { status: 503, headers },

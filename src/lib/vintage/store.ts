@@ -35,7 +35,12 @@ function database(): Pool {
       "Set VINTAGE_DATABASE_URL to a dedicated vintage database.",
     );
   assertDedicatedVintageDatabase(connectionString);
-  pool ??= new Pool({ connectionString, max: 3 });
+  pool ??= new Pool({
+    connectionString,
+    max: 3,
+    connectionTimeoutMillis: 10000,
+    query_timeout: 15000,
+  });
   return pool;
 }
 export function hasVintageDatabase(): boolean {

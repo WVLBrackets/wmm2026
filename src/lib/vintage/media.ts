@@ -15,6 +15,8 @@ export async function mediaDatabase(): Promise<Pool> {
   return new Pool({
     connectionString: process.env.VINTAGE_DATABASE_URL,
     max: 1,
+    connectionTimeoutMillis: 10000,
+    query_timeout: 15000,
   });
 }
 export async function listVintageMedia(): Promise<VintageMedia[]> {

@@ -14,6 +14,7 @@ export function assertDedicatedVintageDatabase(
   for (const key of [
     "POSTGRES_URL",
     "PRODUCTION_POSTGRES_URL",
+    "POSTGRES_URL_PROD",
     "PREVIEW_POSTGRES_URL",
     "LOCAL_POSTGRES_URL",
     "POSTGRES_URL_LOCAL",
