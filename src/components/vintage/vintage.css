@@ -41,44 +41,6 @@
   box-shadow: 0 5px 30px #1c25221c;
   border: 1px solid #c7bdab;
 }
-.v-topline {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  background: var(--v-ink);
-  color: var(--v-paper);
-  padding: 5px 10px;
-  font-family: Oswald, sans-serif;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-}
-.v-topline span:last-child {
-  color: #f2a493;
-}
-.v-masthead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  line-height: 1.15;
-  margin: 9px 0 11px;
-  white-space: nowrap;
-}
-.v-masthead > span:first-child {
-  font-family: "Roboto Slab", Georgia, serif;
-  font-size: clamp(32px, 5vw, 71px);
-  font-weight: 900;
-  letter-spacing: -3px;
-}
-.v-masthead > span:last-child {
-  font-family: Oswald, Impact, sans-serif;
-  font-weight: 700;
-  font-size: clamp(32px, 5.4vw, 76px);
-  color: var(--v-red);
-  letter-spacing: -1.8px;
-}
 .v-ball {
   width: 43px;
   height: 43px;
@@ -86,38 +48,6 @@
   font-size: 43px;
   color: var(--v-red);
   line-height: 1;
-}
-.v-nav {
-  border-top: 2px solid var(--v-ink);
-  border-bottom: 1px solid var(--v-ink);
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 5px 0;
-  font-family: Oswald, sans-serif;
-  font-weight: 500;
-  text-transform: uppercase;
-  font-size: 12px;
-}
-.v-nav > div {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.v-nav a {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  padding: 8px 15px;
-  text-decoration: none;
-}
-.v-nav a:hover {
-  background: #152c3a12;
-}
-.v-nav .v-active,
-.v-nav .v-account {
-  color: #fff8e9;
-  background: var(--v-red);
 }
 .v-frontpage {
   display: grid;
@@ -552,33 +482,6 @@
   background: var(--v-ink);
   color: var(--v-paper);
 }
-.v-countdown {
-  display: flex;
-  justify-content: space-between;
-  margin: 18px 0 8px;
-  gap: 8px;
-}
-.v-countdown > div {
-  text-align: center;
-  border-right: 1px solid var(--v-rule);
-  padding-right: 12px;
-}
-.v-countdown > div:last-child {
-  border: 0;
-  padding-right: 0;
-}
-.v-countdown strong {
-  font-family: Oswald, sans-serif;
-  font-size: 40px;
-  line-height: 1;
-}
-.v-countdown span {
-  font-family: Oswald, sans-serif;
-  text-transform: uppercase;
-  display: block;
-  font-size: 9px;
-  margin-top: 9px;
-}
 .v-countdown-started {
   font-family: Oswald, sans-serif;
   font-size: 26px;
@@ -596,12 +499,6 @@
   text-decoration: underline;
 }
 @media (min-width: 1500px) {
-  .v-masthead > span:first-child {
-    font-size: 71px;
-  }
-  .v-masthead > span:last-child {
-    font-size: 76px;
-  }
 }
 @media (max-width: 1050px) {
   .vintage-page {
@@ -609,15 +506,6 @@
   }
   .v-paper {
     padding: 18px 22px 0;
-  }
-  .v-masthead {
-    gap: 8px;
-  }
-  .v-masthead > span:first-child {
-    letter-spacing: -2px;
-  }
-  .v-masthead > span:last-child {
-    letter-spacing: -1px;
   }
   .v-ball {
     font-size: 30px;
@@ -641,13 +529,6 @@
   }
   .v-editorial h2 {
     font-size: 39px;
-  }
-  .v-nav a {
-    padding: 7px 11px;
-    font-size: 11px;
-  }
-  .v-topline {
-    font-size: 8px;
   }
   .v-hero,
   .v-hero-copy {
@@ -685,56 +566,6 @@
     padding: 14px 18px 0;
     border: 0;
     box-shadow: none;
-  }
-  .v-topline {
-    padding: 6px 7px;
-    font-size: 8px;
-  }
-  .v-topline > span:nth-child(2) {
-    display: none;
-  }
-  .v-masthead {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0;
-    margin: 12px 0;
-  }
-  .v-masthead > span:first-child {
-    font-size: clamp(35px, 9vw, 59px);
-    letter-spacing: -2px;
-    line-height: 1.1;
-  }
-  .v-masthead > .v-ball {
-    width: 30px;
-    height: 30px;
-    font-size: 30px;
-    margin-left: 10px;
-  }
-  .v-masthead > span:last-child {
-    font-size: clamp(35px, 9vw, 59px);
-    line-height: 1.15;
-    letter-spacing: 0;
-    width: 100%;
-    text-align: center;
-  }
-  .v-nav {
-    display: block;
-    padding: 5px 0;
-    font-size: 11px;
-  }
-  .v-nav > div {
-    justify-content: center;
-    gap: 2px;
-    flex-wrap: wrap;
-  }
-  .v-nav > div:last-child {
-    border-top: 1px solid var(--v-rule);
-    margin-top: 5px;
-    padding-top: 5px;
-  }
-  .v-nav a {
-    padding: 7px 10px;
-    font-size: 11px;
   }
   .v-frontpage {
     grid-template-columns: 1fr;
@@ -851,15 +682,6 @@
   .v-footer > span {
     width: 100%;
   }
-  .v-countdown strong {
-    font-size: 31px;
-  }
-  .v-countdown > div {
-    padding-right: 8px;
-  }
-  .v-countdown span {
-    font-size: 8px;
-  }
   .v-view-toggle {
     padding: 20px 0;
   }
@@ -873,5 +695,227 @@
     scroll-behavior: auto;
     animation: none !important;
     transition: none !important;
+  }
+}
+
+/* Approved Navy Wire header and original newspaper countdown. */
+.v-edition-header {
+  position: sticky;
+  top: var(--staging-banner-height, 0px);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 74px;
+  background: var(--v-paper);
+  border-bottom: 4px double var(--v-ink);
+}
+.v-nameplate {
+  order: -1;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin: 0;
+  white-space: nowrap;
+  text-transform: uppercase;
+  line-height: 1.12;
+}
+.v-nameplate-first {
+  font-family: "Roboto Slab", Georgia, serif;
+  font-size: clamp(21px, 2vw, 29px);
+  font-weight: 900;
+  letter-spacing: -1.4px;
+}
+.v-nameplate-second {
+  font-family: Oswald, Impact, sans-serif;
+  font-size: clamp(25px, 2.6vw, 38px);
+  font-weight: 700;
+  letter-spacing: -1px;
+  color: var(--v-red);
+}
+.v-shortcuts {
+  display: flex;
+  flex: 0 1 460px;
+  align-items: stretch;
+  background: var(--v-ink);
+  color: var(--v-paper);
+  min-height: 52px;
+}
+.v-shortcuts a {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 44px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 5px 8px;
+  color: inherit;
+  text-decoration: none;
+  font-family: Oswald, sans-serif;
+  font-size: 10px;
+  line-height: 1.2;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.v-shortcuts svg {
+  width: 21px;
+  height: 21px;
+  stroke-width: 1.7;
+  flex-shrink: 0;
+}
+.v-shortcuts .v-shortcut-active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 8%;
+  right: 8%;
+  height: 3px;
+  background: var(--v-red);
+}
+.v-shortcuts a:hover {
+  background: #ffffff16;
+}
+.v-shortcuts a:focus-visible {
+  outline-color: var(--v-paper);
+  outline-offset: -4px;
+}
+.v-shortcut-account::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 20%;
+  bottom: 20%;
+  border-left: 1px solid #f2ead866;
+}
+.v-countdown-section {
+  max-width: 650px;
+  margin: 0 auto;
+  padding: 20px 0 15px;
+  text-align: center;
+  border-bottom: 4px double var(--v-ink);
+}
+.v-countdown-section h2 {
+  margin: 0 0 12px;
+  font-family: Oswald, Impact, sans-serif;
+  font-weight: 600;
+  font-size: 20px;
+  line-height: 1.2;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+}
+.v-countdown-section .v-countdown {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+}
+.v-countdown-section .v-countdown > div {
+  min-width: 0;
+  padding: 0 8px;
+  border-right: 1px solid var(--v-rule);
+}
+.v-countdown-section .v-countdown > div:last-child {
+  border-right: 0;
+}
+.v-countdown-section .v-countdown strong {
+  display: block;
+  font-family: Oswald, Impact, sans-serif;
+  font-size: 60px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -1.5px;
+  font-variant-numeric: tabular-nums;
+}
+.v-countdown-section .v-countdown span {
+  display: block;
+  font-family: Oswald, sans-serif;
+  text-transform: uppercase;
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.3;
+  letter-spacing: 1px;
+}
+.v-countdown-pending {
+  margin: 10px 0 0;
+  font-family: Oswald, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.4px;
+}
+.v-countdown-section .v-countdown-started {
+  margin: 12px 0;
+}
+@media (max-width: 900px) {
+  .vintage-page {
+    padding: 0;
+    background: var(--v-paper);
+  }
+  .v-paper {
+    padding: 0 18px;
+    border: 0;
+    box-shadow: none;
+  }
+  /* Display contents lets the toolbar stick within the entire newspaper. */
+  .v-edition-header {
+    display: contents;
+  }
+  .v-shortcuts {
+    position: sticky;
+    top: var(--staging-banner-height, 0px);
+    z-index: 40;
+    margin: 0 -18px;
+    min-height: 48px;
+  }
+  .v-shortcuts a {
+    min-height: 48px;
+    padding: 4px 2px;
+    font-size: 9px;
+    gap: 2px;
+  }
+  .v-shortcuts svg {
+    width: 20px;
+    height: 20px;
+  }
+  .v-shortcuts .v-shortcut-account svg {
+    width: 25px;
+    height: 25px;
+  }
+  .v-account-label {
+    display: none;
+  }
+  .v-nameplate {
+    gap: 5px;
+    padding: 13px 0 12px;
+    border-bottom: 4px double var(--v-ink);
+  }
+  .v-nameplate-first {
+    font-size: clamp(21px, 6.5vw, 40px);
+    letter-spacing: -1.2px;
+  }
+  .v-nameplate-second {
+    font-size: clamp(25px, 7.7vw, 47px);
+    letter-spacing: -0.8px;
+  }
+  .v-countdown-section {
+    max-width: 530px;
+    padding: 14px 0 12px;
+  }
+  .v-countdown-section h2 {
+    font-size: 17px;
+    letter-spacing: 1.3px;
+    margin-bottom: 11px;
+  }
+  .v-countdown-section .v-countdown strong {
+    font-size: clamp(36px, 12vw, 58px);
+  }
+  .v-countdown-section .v-countdown span {
+    font-size: 10px;
+    letter-spacing: 0.7px;
+    margin-top: 6px;
   }
 }

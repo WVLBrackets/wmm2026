@@ -68,6 +68,12 @@ async function main() {
     const context = await browser.newContext({
       viewport: { width: 1440, height: 1100 },
     });
+    // Keep local verification independent of external integrations.
+    await context.route("**/*", (route) =>
+      route.request().url().startsWith(baseURL)
+        ? route.continue()
+        : route.abort(),
+    );
     const page = await context.newPage();
     const errors: string[] = [];
     const requests: string[] = [];
@@ -104,6 +110,54 @@ async function main() {
         true,
         `Overflow at ${width}px`,
       );
+      await page.evaluate(() => window.scrollTo(0, 0));
+      const nameplate = page.getByTestId("vintage-masthead");
+      assert.equal(
+        await nameplate.evaluate((el) => el.scrollWidth <= el.clientWidth),
+        true,
+        `Masthead overflow at ${width}px`,
+      );
+      const heading = await nameplate.boundingBox();
+      const clock = await page
+        .getByTestId("vintage-countdown-section")
+        .boundingBox();
+      const hero = await page.locator(".v-hero").boundingBox();
+      assert.ok(heading && clock && hero);
+      assert.ok(
+        clock.y >= heading.y + heading.height - 1 && clock.y < hero.y,
+        "Countdown belongs between masthead and hero",
+      );
+      assert.equal(
+        await page.getByTestId("vintage-toolbar").getByRole("link").count(),
+        6,
+      );
+      await page.evaluate(() => window.scrollTo(0, 700));
+      await page.waitForFunction(() => window.scrollY >= 650);
+      const toolbar = await page.getByTestId("vintage-toolbar").boundingBox();
+      const scrolledHeading = await nameplate.boundingBox();
+      assert.ok(toolbar && scrolledHeading);
+      if (width <= 900) {
+        assert.ok(
+          Math.abs(toolbar.y - 28) <= 1,
+          `Mobile toolbar must stick below Preview banner at ${width}px`,
+        );
+        assert.ok(
+          scrolledHeading.y + scrolledHeading.height < 28,
+          "Mobile masthead should scroll away",
+        );
+        assert.ok(toolbar.height <= 52, "Mobile toolbar should stay narrow");
+      } else {
+        const header = await page.getByTestId("vintage-header").boundingBox();
+        assert.ok(
+          header && Math.abs(header.y - 28) <= 1,
+          "Combined desktop header must stick",
+        );
+        assert.ok(
+          scrolledHeading.y >= 28,
+          "Desktop masthead stays with navigation",
+        );
+      }
+      await page.evaluate(() => window.scrollTo(0, 0));
     }
     await page.setViewportSize({ width: 390, height: 844 });
     await page.screenshot({

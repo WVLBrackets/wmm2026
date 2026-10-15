@@ -6,6 +6,11 @@ import {
   Megaphone,
   FileSpreadsheet,
   ArrowRight,
+  House,
+  GitFork,
+  FileText,
+  ChartNoAxesColumnIncreasing,
+  CircleUserRound,
 } from "lucide-react";
 import type { VintageContent, VintagePromotion } from "@/lib/vintage/content";
 import HomeViewToggle from "@/components/HomeViewToggle";
@@ -95,57 +100,71 @@ export default function VintageHomepage({
         </div>
       )}
       <div className="v-paper">
-        <header className="v-header">
-          <div className="v-topline">
-            <span>{c.masthead.established}</span>
-            <span>{c.masthead.tagline}</span>
-            <span>{c.masthead.slogan}</span>
-          </div>
-          <h1 className="v-masthead">
-            <span>{c.masthead.first}</span>
-            <BasketballMark />
-            <span>{c.masthead.second}</span>
-          </h1>
-          <nav className="v-nav" aria-label="Main navigation">
-            <div>
-              <Link
-                data-testid="vintage-nav-home"
-                className="v-active"
-                href="/vintage"
-                aria-current="page"
-              >
-                Home
-              </Link>
-              {c.tournament.picksEnabled && (
-                <Link data-testid="vintage-nav-picks" href="/bracket">
-                  My Picks
-                </Link>
-              )}
-              <Link data-testid="vintage-nav-info" href="/info">
-                Pool Info
-              </Link>
-              <Link data-testid="vintage-nav-standings" href="/standings">
-                Standings
-              </Link>
-              <Link data-testid="vintage-nav-history" href="/hall-of-fame">
-                Hall of Fame
-              </Link>
-            </div>
-            <div>
-              <Link href="/auth/signin" data-testid="vintage-signin">
-                Sign In
-              </Link>
-              <Link
-                href="/auth/signup"
-                className="v-account"
-                data-testid="vintage-create-account"
-              >
-                Create Account <ArrowUpRight size={13} />
-              </Link>
-            </div>
+        <header className="v-edition-header" data-testid="vintage-header">
+          <nav
+            className="v-shortcuts"
+            aria-label="Main navigation"
+            data-testid="vintage-toolbar"
+          >
+            <Link
+              data-testid="vintage-nav-home"
+              className="v-shortcut-active"
+              href="/vintage"
+              aria-current="page"
+            >
+              <House aria-hidden="true" />
+              <span>Home</span>
+            </Link>
+            <Link data-testid="vintage-nav-picks" href="/bracket">
+              <GitFork aria-hidden="true" />
+              <span>My Picks</span>
+            </Link>
+            <Link
+              data-testid="vintage-nav-info"
+              href="/info"
+              aria-label="Pool information"
+            >
+              <FileText aria-hidden="true" />
+              <span>Info</span>
+            </Link>
+            <Link data-testid="vintage-nav-standings" href="/standings">
+              <ChartNoAxesColumnIncreasing aria-hidden="true" />
+              <span>Standings</span>
+            </Link>
+            <Link
+              data-testid="vintage-nav-history"
+              href="/hall-of-fame"
+              aria-label="Hall of Fame"
+            >
+              <Trophy aria-hidden="true" />
+              <span>History</span>
+            </Link>
+            <Link
+              href="/auth/signin"
+              className="v-shortcut-account"
+              data-testid="vintage-signin"
+              aria-label="Sign in to your account"
+            >
+              <CircleUserRound aria-hidden="true" />
+              <span className="v-account-label">Sign In</span>
+            </Link>
           </nav>
+          <h1 className="v-nameplate" data-testid="vintage-masthead">
+            <span className="v-nameplate-first">{c.masthead.first}</span>{" "}
+            <span className="v-nameplate-second">{c.masthead.second}</span>
+          </h1>
         </header>
         <main className="v-main">
+          <section
+            className="v-countdown-section"
+            aria-labelledby="v-countdown-heading"
+            data-testid="vintage-countdown-section"
+          >
+            <h2 id="v-countdown-heading">Countdown to tipoff</h2>
+            <VintageCountdown
+              at={c.tournament.countdownEnabled ? c.tournament.countdownAt : ""}
+            />
+          </section>
           <section className="v-frontpage" aria-label="The front page">
             <article className="v-hero">
               <Image
@@ -180,20 +199,12 @@ export default function VintageHomepage({
             <div className="v-lead">
               <div className="v-tournament-row">
                 <div className="v-tipoff">
-                  <span className="v-eyebrow">
-                    {c.tournament.countdownEnabled
-                      ? "COUNTDOWN TO TIPOFF"
-                      : "NEXT UP · THE BIG DANCE"}
-                  </span>
-                  {c.tournament.countdownEnabled ? (
-                    <VintageCountdown at={c.tournament.countdownAt} />
-                  ) : (
-                    <h2>
-                      March is
-                      <br />
-                      <em>our season.</em>
-                    </h2>
-                  )}
+                  <span className="v-eyebrow">NEXT UP · THE BIG DANCE</span>
+                  <h2>
+                    March is
+                    <br />
+                    <em>our season.</em>
+                  </h2>
                 </div>
                 <div className="v-datebox">
                   <BasketballMark />

@@ -92,4 +92,12 @@ Oswald and Roboto Slab are self-hosted under `public/fonts/vintage` with their a
 
 The connected Vercel account exposes the existing `wmm2026` project (`prj_dJPGINQQ9vrHV2rJoQJhrM5wPAxC`). Its current production deployment is `main` at the inspected baseline `b23ac3312361fa13604c71f75836cff152515cea`; `staging` has separate Preview deployments. Existing Preview authentication/database variable names are present; their secret values were not retrieved.
 
-Preparing the feature-specific Preview enable variable was rejected because `feature/vintage-homepage-v1` has not been pushed to the connected repository. No environment change was made. GitHub write access is the next prerequisite for the branch-based Preview workflow. No deployment was created and no production setting was changed.
+The feature branch is published, and `VINTAGE_HOMEPAGE_ENABLED=true` is scoped to that branch’s Preview environment. The first Preview deployment reached READY. Production still points to its original deployment. Protected Preview fetching and build-log tools currently return Vercel scope permission errors, so remote browser verification remains incomplete. Dedicated vintage Postgres/Blob resources and the two actual Excel URLs are still required.
+
+## Approved header and countdown refinement
+
+The mobile header uses a 48px sticky navy icon toolbar, followed by a compact single-line navy/red newspaper masthead. Only the toolbar sticks on mobile (up to 900px); desktop combines navigation and branding into one sticky row. Both account for the existing Preview environment banner. The masthead remains editable, selectable text rather than a raster image.
+
+The original-style four-column countdown now sits immediately below the masthead, ahead of the hero. Its target is still configured independently through the vintage editor. Without an enabled valid date it shows four dashes and “Tipoff date to be announced”; it never treats the mockup’s sample numbers as a real countdown. After the target it displays “Let the madness begin.” Navigation always exposes My Picks; access and submission rules remain enforced by the existing bracket application. The rest of the homepage is reserved for subsequent section-by-section design review, including the planned commissioner section.
+
+Local browser verification covers sticky behavior and masthead/countdown placement across mobile, tablet and desktop widths. An isolated local React harness also checks configured values, ticking, expired dates and unset/invalid dates with zero external requests. It imports only the countdown component, creates no deployed test route, and does not load the existing application shell.
