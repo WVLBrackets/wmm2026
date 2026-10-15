@@ -1,4 +1,11 @@
 @font-face {
+  font-family: "Alfa Slab One";
+  src: url("/fonts/vintage/AlfaSlabOne.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
   font-family: Oswald;
   src: url("/fonts/vintage/Oswald.ttf") format("truetype");
   font-style: normal;
@@ -713,28 +720,27 @@
 }
 .v-nameplate {
   order: -1;
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 6px;
-  flex-shrink: 0;
+  flex: 1 1 550px;
+  min-width: 0;
+  max-width: 600px;
   margin: 0;
-  white-space: nowrap;
-  text-transform: uppercase;
-  line-height: 1.12;
+  line-height: 1;
 }
-.v-nameplate-first {
-  font-family: "Roboto Slab", Georgia, serif;
-  font-size: clamp(21px, 2vw, 29px);
-  font-weight: 900;
-  letter-spacing: -1.4px;
+.v-nameplate svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.v-nameplate text {
+  font-family: "Alfa Slab One", Georgia, serif;
+  font-size: 120px;
+  font-weight: 400;
+  text-transform: uppercase;
+  fill: var(--v-ink);
 }
 .v-nameplate-second {
-  font-family: Oswald, Impact, sans-serif;
-  font-size: clamp(25px, 2.6vw, 38px);
-  font-weight: 700;
-  letter-spacing: -1px;
-  color: var(--v-red);
+  fill: var(--v-red);
 }
 .v-shortcuts {
   display: flex;
@@ -889,17 +895,9 @@
     display: none;
   }
   .v-nameplate {
-    gap: 5px;
-    padding: 13px 0 12px;
+    max-width: none;
+    padding: 10px 0;
     border-bottom: 4px double var(--v-ink);
-  }
-  .v-nameplate-first {
-    font-size: clamp(21px, 6.5vw, 40px);
-    letter-spacing: -1.2px;
-  }
-  .v-nameplate-second {
-    font-size: clamp(25px, 7.7vw, 47px);
-    letter-spacing: -0.8px;
   }
   .v-countdown-section {
     max-width: 530px;

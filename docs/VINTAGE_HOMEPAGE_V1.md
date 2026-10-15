@@ -96,8 +96,18 @@ The feature branch is published, and `VINTAGE_HOMEPAGE_ENABLED=true` is scoped t
 
 ## Approved header and countdown refinement
 
-The mobile header uses a 48px sticky navy icon toolbar, followed by a compact single-line navy/red newspaper masthead. Only the toolbar sticks on mobile (up to 900px); desktop combines navigation and branding into one sticky row. Both account for the existing Preview environment banner. The masthead remains editable, selectable text rather than a raster image.
+The mobile header uses a 48px sticky navy icon toolbar, followed by a compact single-line navy/red newspaper masthead. Only the toolbar sticks on mobile (up to 900px); desktop combines navigation and branding into one sticky row. Both account for the existing Preview environment banner. The masthead uses a self-hosted Alfa Slab One font in an inline SVG text element. Both colored parts inherit exactly the same font and size; SVG text-length fitting condenses the entire line uniformly. Its accessible heading label and editor fields remain text.
 
 The original-style four-column countdown now sits immediately below the masthead, ahead of the hero. Its target is still configured independently through the vintage editor. Without an enabled valid date it shows four dashes and “Tipoff date to be announced”; it never treats the mockup’s sample numbers as a real countdown. After the target it displays “Let the madness begin.” Navigation always exposes My Picks; access and submission rules remain enforced by the existing bracket application. The rest of the homepage is reserved for subsequent section-by-section design review, including the planned commissioner section.
 
 Local browser verification covers sticky behavior and masthead/countdown placement across mobile, tablet and desktop widths. An isolated local React harness also checks configured values, ticking, expired dates and unset/invalid dates with zero external requests. It imports only the countdown component, creates no deployed test route, and does not load the existing application shell.
+
+## Stable review URL
+
+Keep this branch URL open and refresh after each successful Preview build:
+
+https://wmm2026-git-feature-vinta-9633ca-ncaatourney-gmailcoms-projects.vercel.app/vintage
+
+Vercel automatically moves this branch alias to the newest successful deployment from `feature/vintage-homepage-v1`. Deployment-specific URLs remain useful for comparing older versions but should not be used as the ongoing review link.
+
+Alfa Slab One is bundled from the Google Fonts repository (`ofl/alfaslabone`) alongside its SIL Open Font License. It is used only for the vintage masthead and requires no external font request.

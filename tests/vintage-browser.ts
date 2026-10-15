@@ -117,6 +117,21 @@ async function main() {
         true,
         `Masthead overflow at ${width}px`,
       );
+      const mastheadFonts = await nameplate
+        .locator("tspan")
+        .evaluateAll((parts) =>
+          parts.map((part) => ({
+            family: getComputedStyle(part).fontFamily,
+            size: getComputedStyle(part).fontSize,
+          })),
+        );
+      assert.equal(mastheadFonts.length, 2);
+      assert.deepEqual(
+        mastheadFonts[0],
+        mastheadFonts[1],
+        "Entire masthead must use one font and size",
+      );
+      assert.ok(mastheadFonts[0].family.includes("Alfa Slab One"));
       const heading = await nameplate.boundingBox();
       const clock = await page
         .getByTestId("vintage-countdown-section")
