@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef } from "react";
 
 /** Measure the real font width rather than relying on SVG textLength support. */
 export default function VintageMasthead({
@@ -12,7 +12,6 @@ export default function VintageMasthead({
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
   const line = useRef<HTMLSpanElement>(null);
-  const [scale, setScale] = useState<number | null>(null);
 
   useLayoutEffect(() => {
     const container = heading.current;
@@ -21,7 +20,7 @@ export default function VintageMasthead({
     let active = true;
     const fit = () => {
       if (!active || !text.offsetWidth) return;
-      setScale(Math.min(1, container.clientWidth / text.offsetWidth));
+      text.style.transform = `scaleX(${Math.min(1, container.clientWidth / text.offsetWidth)})`;
     };
     const observer = new ResizeObserver(fit);
     observer.observe(container);
@@ -41,7 +40,7 @@ export default function VintageMasthead({
       <span
         ref={line}
         className="v-nameplate-line"
-        style={{ transform: `scaleX(${scale ?? 0})` }}
+        style={{ transform: "scaleX(0)" }}
       >
         <span className="v-nameplate-first">{first}</span>{" "}
         <span className="v-nameplate-second">{second}</span>

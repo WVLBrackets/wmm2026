@@ -199,6 +199,21 @@ async function main() {
       await page.evaluate(() => window.scrollTo(0, 0));
     }
     await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForFunction(() => {
+      const title = document
+        .querySelector(".v-nameplate")
+        ?.getBoundingClientRect();
+      const line = document
+        .querySelector(".v-nameplate-line")
+        ?.getBoundingClientRect();
+      return title && line && line.width > 0 && line.right <= title.right + 1;
+    });
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
     await page.screenshot({
       path: path.join(screenshotDir, "mobile.png"),
       fullPage: true,
