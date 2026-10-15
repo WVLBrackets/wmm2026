@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { siteConfig } from "@/config/site";
-import NavigationWrapper from "@/components/NavigationWrapper";
-import Footer from "@/components/Footer";
+import SiteChrome from "@/components/SiteChrome";
+import { isVintageEnabled } from "@/lib/vintage/access";
 import SessionProvider from "@/components/SessionProvider";
 import { BracketModeProvider } from "@/contexts/BracketModeContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -16,11 +16,11 @@ export const metadata: Metadata = {
   // Prefer PNG first so tabs use the basketball even when /favicon.ico is a legacy/default asset.
   icons: {
     icon: [
-      { url: '/basketball-favicon.png', type: 'image/png' },
-      { url: '/favicon.ico', sizes: 'any' },
+      { url: "/basketball-favicon.png", type: "image/png" },
+      { url: "/favicon.ico", sizes: "any" },
     ],
-    shortcut: '/basketball-favicon.png',
-    apple: '/basketball-favicon.png',
+    shortcut: "/basketball-favicon.png",
+    apple: "/basketball-favicon.png",
   },
   openGraph: {
     title: siteConfig.siteName,
@@ -34,11 +34,13 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const isStagingEnvironment = process.env.VERCEL_ENV !== 'production';
-  const stagingBannerHeight = isStagingEnvironment ? '28px' : '0px';
-  const bodyStyle = { '--staging-banner-height': stagingBannerHeight } as CSSProperties;
-  const envLabel = process.env.VERCEL_ENV === 'production' ? 'PROD' : 'STAGE';
-  const shortSha = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || 'local';
+  const isStagingEnvironment = process.env.VERCEL_ENV !== "production";
+  const stagingBannerHeight = isStagingEnvironment ? "28px" : "0px";
+  const bodyStyle = {
+    "--staging-banner-height": stagingBannerHeight,
+  } as CSSProperties;
+  const envLabel = process.env.VERCEL_ENV === "production" ? "PROD" : "STAGE";
+  const shortSha = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || "local";
   const deployId = process.env.VERCEL_DEPLOYMENT_ID?.slice(0, 8);
   const buildStamp = deployId
     ? `${envLabel} • ${shortSha} • ${deployId}`
@@ -50,7 +52,11 @@ export default function RootLayout({
         <meta name="format-detection" content="telephone=no" />
         <link rel="icon" href="/basketball-favicon.png" type="image/png" />
         <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="shortcut icon" href="/basketball-favicon.png" type="image/png" />
+        <link
+          rel="shortcut icon"
+          href="/basketball-favicon.png"
+          type="image/png"
+        />
         <link rel="apple-touch-icon" href="/basketball-favicon.png" />
       </head>
       <body
@@ -67,11 +73,12 @@ export default function RootLayout({
         <ErrorBoundary>
           <SessionProvider>
             <BracketModeProvider>
-              <NavigationWrapper />
-              <main>
+              <SiteChrome
+                buildStamp={buildStamp}
+                vintageEnabled={isVintageEnabled()}
+              >
                 {children}
-              </main>
-              <Footer buildStamp={buildStamp} />
+              </SiteChrome>
             </BracketModeProvider>
           </SessionProvider>
         </ErrorBoundary>

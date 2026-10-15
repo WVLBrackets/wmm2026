@@ -1,0 +1,387 @@
+.vintage-editor {
+  color: #182e3b;
+  background: #f7f5ef;
+  min-height: 100vh;
+  padding: 36px max(24px, calc((100vw - 1280px) / 2));
+  font-family: Arial, Helvetica, sans-serif;
+  color-scheme: light;
+}
+.vintage-editor * {
+  box-sizing: border-box;
+}
+.ve-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  border-bottom: 2px solid #182e3b;
+  padding-bottom: 25px;
+}
+.ve-back {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  text-decoration: none;
+  margin-bottom: 26px;
+}
+.ve-eyebrow {
+  font-size: 10px;
+  letter-spacing: 1.7px;
+  font-weight: 700;
+  color: #a4322b;
+  margin: 0 0 10px;
+}
+.ve-header h1 {
+  font-family: Georgia, serif;
+  font-size: 46px;
+  font-weight: 700;
+  letter-spacing: -1.5px;
+  margin: 0 0 10px;
+}
+.ve-header > div > p:last-child {
+  font-size: 14px;
+  color: #657075;
+  margin: 0;
+}
+.ve-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.ve-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 100%;
+  background: #3c7551;
+}
+.ve-dot.dirty {
+  background: #b07520;
+}
+.ve-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  position: sticky;
+  top: 28px;
+  z-index: 20;
+  padding: 16px 0;
+  background: #f7f5eff5;
+  border-bottom: 1px solid #d5d6cc;
+  backdrop-filter: blur(10px);
+}
+.ve-toolbar > div {
+  display: flex;
+  gap: 8px;
+}
+.ve-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px 14px;
+  border: 1px solid #b6bebd;
+  border-radius: 3px;
+  font-size: 12px;
+  line-height: 1.3;
+  color: #182e3b;
+  text-decoration: none;
+  background: #fffefa;
+  cursor: pointer;
+}
+.ve-button:hover {
+  border-color: #182e3b;
+}
+.ve-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.ve-primary {
+  background: #a4322b;
+  color: #fff;
+  border-color: #a4322b;
+}
+.ve-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  background: #e4eee4;
+  font-size: 13px;
+  margin: 15px 0;
+  line-height: 1.6;
+  border-left: 3px solid #3c7551;
+}
+.ve-error {
+  background: #fae6e1;
+  border-color: #a4322b;
+  color: #742d22;
+}
+.ve-warning {
+  background: #f3ead3;
+  border-color: #b07520;
+}
+.ve-notice svg {
+  flex-shrink: 0;
+}
+.ve-workspace {
+  display: grid;
+  grid-template-columns: 210px 1fr;
+  gap: 35px;
+  padding: 30px 0;
+}
+.ve-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-self: start;
+  position: sticky;
+  top: 110px;
+}
+.ve-tabs button {
+  display: flex;
+  text-align: left;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 0;
+  background: transparent;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 3px;
+  color: #485960;
+}
+.ve-tabs button span {
+  font-size: 10px;
+  color: #8c9697;
+}
+.ve-tabs button[aria-current="page"] {
+  background: #182e3b;
+  color: #fff9e8;
+}
+.ve-tabs button[aria-current="page"] span {
+  color: #c0c8ca;
+}
+.ve-panel {
+  background: #fffefa;
+  border: 1px solid #e2e0d5;
+  padding: 30px 35px;
+  min-width: 0;
+  max-width: 950px;
+}
+.ve-panel h2 {
+  font-family: Georgia, serif;
+  font-size: 29px;
+  font-weight: 700;
+  margin: 0 0 28px;
+}
+.ve-panel h3 {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 28px 0 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #dedfd5;
+}
+.ve-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 18px;
+  min-width: 0;
+}
+.ve-field > span {
+  font-size: 12px;
+  font-weight: 600;
+}
+.ve-field input,
+.ve-field textarea,
+.ve-field select {
+  padding: 11px 12px;
+  border: 1px solid #bfc7c6;
+  background: #fff;
+  border-radius: 3px;
+  font:
+    14px/1.5 Arial,
+    sans-serif;
+  color: #182e3b;
+  width: 100%;
+}
+.ve-field textarea {
+  resize: vertical;
+}
+.ve-field input:focus,
+.ve-field textarea:focus,
+.ve-field select:focus {
+  outline: 2px solid #a4322b;
+  outline-offset: 2px;
+}
+.ve-field small,
+.ve-help {
+  font-size: 12px;
+  color: #667375;
+  line-height: 1.8;
+}
+.ve-help {
+  margin: 0 0 24px;
+}
+.ve-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 20px;
+}
+.ve-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  margin: 20px 0;
+}
+.ve-check input {
+  width: 17px;
+  height: 17px;
+  accent-color: #a4322b;
+}
+.ve-card {
+  border: 1px solid #d7dcd5;
+  padding: 22px;
+  margin: 0 0 25px;
+  min-width: 0;
+}
+.ve-card legend {
+  font-family: Georgia, serif;
+  font-size: 16px;
+  font-weight: bold;
+  padding: 0 8px;
+}
+.ve-image-fields {
+  border: 1px solid #d7dcd5;
+  padding: 20px;
+}
+.ve-image-preview {
+  height: 170px;
+  width: 120px;
+  object-fit: cover;
+  margin-bottom: 20px;
+}
+.ve-row {
+  display: flex;
+  gap: 8px;
+}
+.ve-media-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+.ve-media-card {
+  border: 1px solid #d7dcd5;
+  padding: 8px;
+  text-align: left;
+  background: transparent;
+  cursor: pointer;
+  min-width: 0;
+}
+.ve-media-card img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+.ve-media-card span {
+  font-size: 11px;
+  display: block;
+  overflow-wrap: anywhere;
+  margin: 8px 0;
+}
+.ve-media-card small {
+  font-size: 10px;
+  color: #a4322b;
+}
+.ve-revision {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 17px 0;
+  border-bottom: 1px solid #dedfd5;
+}
+.ve-revision strong {
+  display: block;
+  font-size: 13px;
+}
+.ve-revision span {
+  display: block;
+  font-size: 11px;
+  color: #667375;
+  margin-top: 6px;
+}
+.ve-draft-note {
+  font-size: 12px;
+  color: #795823;
+  margin-top: 12px;
+}
+.vintage-editor button:focus-visible,
+.vintage-editor a:focus-visible {
+  outline: 2px solid #a4322b;
+  outline-offset: 3px;
+}
+@media (max-width: 760px) {
+  .vintage-editor {
+    padding: 22px 16px;
+  }
+  .ve-header {
+    display: block;
+  }
+  .ve-header h1 {
+    font-size: 36px;
+  }
+  .ve-status {
+    margin-top: 20px;
+  }
+  .ve-toolbar {
+    flex-wrap: wrap;
+    top: 28px;
+    padding: 12px 0;
+  }
+  .ve-button {
+    font-size: 11px;
+    padding: 10px;
+  }
+  .ve-workspace {
+    display: block;
+    padding-top: 15px;
+  }
+  .ve-tabs {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+    margin-bottom: 20px;
+    padding-bottom: 8px;
+  }
+  .ve-tabs button {
+    flex-shrink: 0;
+    font-size: 12px;
+    padding: 10px;
+  }
+  .ve-tabs button span {
+    display: none;
+  }
+  .ve-panel {
+    padding: 22px 18px;
+  }
+  .ve-grid {
+    grid-template-columns: 1fr;
+  }
+  .ve-card {
+    padding: 16px;
+  }
+  .ve-media-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ve-revision {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .ve-image-fields {
+    padding: 15px;
+  }
+}
