@@ -137,3 +137,13 @@ A separate `vintage-admin-verification` child branch (`br-rapid-grass-adt5yuiu`)
 The application image upload helper was exercised against the verification branch through the workspace HTTPS proxy: authenticated S3 PUT succeeded, anonymous GET returned 200 with the expected image type, and downloaded bytes exactly matched the source WebP. No test image was uploaded to the feature Preview bucket. The complete deployed editor-to-database flow still requires signed-in Preview testing.
 
 The verification child branch expires automatically on 2026-10-22. The final local Chromium suite passed after the storage update, including editing, saving, and publishing UI contracts (mocked persistence). All six content/security/SQL tests, TypeScript, and focused lint passed.
+
+## Dedicated database endpoint correction
+
+The deployed editor reported `DATABASE_ISOLATION_BLOCKED`. Its URL-identity guard detected an overlap with a known application database setting before opening a connection. The exact matching runtime environment key could not be read through the connector's restricted runtime logs. The guard was retained unchanged.
+
+The editor now uses a dedicated `vintage-content-preview` Neon branch (`br-shy-thunder-adxk07yz`), forked from the feature Preview branch. Its `vintage_homepage` database contains only the three vintage tables. At the switch it had zero content rows, revisions, and image metadata rows, matching the original feature database. No user content was discarded. The original feature database remains intact. Inherited application databases are not used or modified by the editor.
+
+Both `VINTAGE_DATABASE_URL` and `VINTAGE_S3_ENDPOINT` were updated only for `feature/vintage-homepage-v1` in the Vercel Preview environment. The bucket and storage credential remain inherited from the feature branch; the existing branch-anchored storage credential also authorizes descendants. Production and shared staging settings are unchanged.
+
+Verification used the actual exported `readVintageState` application function, bundled with unused writes removed, running in an ephemeral Vercel sandbox. It connected to the dedicated endpoint with production-mode Node settings and the unchanged isolation guard. Sanitized comparison URLs simulated an app Preview alias referring to the old vintage database and a separate bracket database; no bracket or production credentials were sent to the sandbox. The complete application read returned version 0 and zero revisions successfully. Protected deployed editor verification still requires the signed-in user's refresh because connector access to protected Preview fetching and runtime logs returns 403.
