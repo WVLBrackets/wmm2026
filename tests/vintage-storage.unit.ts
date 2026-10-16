@@ -42,6 +42,8 @@ test("draft, publication and revision restoration persist independently in SQL",
       "test@example.invalid",
     );
     assert.equal(published.published.hero.headline, "DRAFT HEADLINE");
+    assert.equal(published.published.downloads[0].href, "");
+    assert.equal(published.published.downloads[1].href, "");
     await assert.rejects(
       writeVintageContent(
         { action: "save", version: 0, content: draft },
@@ -62,6 +64,24 @@ test("draft, publication and revision restoration persist independently in SQL",
     assert.equal(restored.draft.hero.headline, "DRAFT HEADLINE");
     assert.equal(restored.published.hero.headline, "DRAFT HEADLINE");
     assert.equal(restored.revisions.length, 4);
+    const picksReady = structuredClone(restored.draft);
+    picksReady.downloads[0].href = "https://example.invalid/picks.xlsx";
+    const picksPublished = await writeVintageContent(
+      { action: "publish", version: 4, content: picksReady },
+      "test@example.invalid",
+    );
+    assert.equal(
+      picksPublished.published.downloads[0].href,
+      picksReady.downloads[0].href,
+    );
+    assert.equal(picksPublished.published.downloads[1].href, "");
+    const trackerReady = structuredClone(picksReady);
+    trackerReady.downloads[1].href = "https://example.invalid/tracker.xlsx";
+    const bothPublished = await writeVintageContent(
+      { action: "publish", version: 5, content: trackerReady },
+      "test@example.invalid",
+    );
+    assert.deepEqual(bothPublished.published.downloads, trackerReady.downloads);
   } finally {
     pg.Pool = originalPool;
     process.env = originalEnv;

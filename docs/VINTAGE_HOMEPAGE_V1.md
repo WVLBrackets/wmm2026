@@ -54,7 +54,7 @@ The countdown date includes an explicit timezone. The homepage My Picks link is 
 
 ## Content still needed
 
-The current public homepage did not expose the two workbook destinations during inspection. No workbook URLs were hardcoded in the repository. The editor has separate fields for the existing Excel Picks Sheet and Excel Tournament Tracker URLs; populate them with the real destinations. Publishing is blocked until both are set. Do not replace or edit the workbook files.
+The current public homepage did not expose the two workbook destinations during inspection. No workbook URLs were hardcoded in the repository. The editor has separate fields for the existing Excel Picks Sheet and Excel Tournament Tracker URLs; populate them with the real destinations. Each URL is optional until that workbook becomes available. A blank URL renders “Download coming soon.” Picks and Tracker can become available independently, and pending workbooks never block publication of the countdown or other content. Do not replace or edit the workbook files.
 
 The initial preview includes two clearly provisional property promotions, empty champion/count data, and a disabled countdown rather than invented tournament details. Replace these through the editor. If storage is absent, the public vintage page renders the bundled starter edition; the editor states that saving is unavailable. A database error cannot silently save edits.
 
@@ -70,7 +70,7 @@ npm run build
 
 `test:vintage` covers content validation, safe URLs, fixed placement/resource counts, production disabling, database isolation, and draft/publication/restoration SQL behavior. SQL tests use `pg-mem` only and cannot verify real Postgres transaction isolation or provider availability.
 
-`test:vintage:browser` starts its own local server and uses Playwright. It checks widths from 375 to 1440 px, no Sheets configuration calls, admin/draft protection, CSRF, required workbook links, honest storage failures, and editing/save/publish UI contracts. Editor persistence is mocked in the UI contract portion; real SQL behavior is tested separately. It never targets staging or production. Install Playwright Chromium first, or set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to an existing local Chromium executable. Screenshots go to `test-results/vintage`.
+`test:vintage:browser` starts its own local server and uses Playwright. It checks widths from 375 to 1440 px, no Sheets configuration calls, admin/draft protection, CSRF, pending workbook publication, honest storage failures, and editing/save/publish UI contracts. Editor persistence is mocked in the UI contract portion; real SQL behavior is tested separately. It never targets staging or production. Install Playwright Chromium first, or set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to an existing local Chromium executable. Screenshots go to `test-results/vintage`.
 
 Real deployed Preview sign-in, editor persistence, image uploads, actual workbook downloads, and the full bracket regression flow must be checked before considering the deployed feature verified. Provider checks and local mocked checks do not establish the complete deployed flow.
 
@@ -94,7 +94,7 @@ Oswald and Roboto Slab are self-hosted under `public/fonts/vintage` with their a
 
 The connected Vercel account exposes the existing `wmm2026` project (`prj_dJPGINQQ9vrHV2rJoQJhrM5wPAxC`). Its current production deployment is `main` at the inspected baseline `b23ac3312361fa13604c71f75836cff152515cea`; `staging` has separate Preview deployments. Existing Preview authentication/database variable names are present; their secret values were not retrieved.
 
-The feature branch is published, and `VINTAGE_HOMEPAGE_ENABLED=true` is scoped to that branch’s Preview environment. The first Preview deployment reached READY. Production still points to its original deployment. Protected Preview fetching and build-log tools currently return Vercel scope permission errors, so remote browser verification remains incomplete. The two actual Excel URLs are still required. Dedicated Preview storage was subsequently provisioned as described below.
+The feature branch is published, and `VINTAGE_HOMEPAGE_ENABLED=true` is scoped to that branch’s Preview environment. The first Preview deployment reached READY. Production still points to its original deployment. Protected Preview fetching and build-log tools currently return Vercel scope permission errors, so remote browser verification remains incomplete. The two actual Excel URLs can be added independently when their workbooks become available. Dedicated Preview storage was subsequently provisioned as described below.
 
 ## Approved header and countdown refinement
 
@@ -150,4 +150,4 @@ Verification used the actual exported `readVintageState` application function, b
 
 ## Countdown editor controls
 
-The second editor tab is now labeled **Tournament & countdown**. Its first controls are **Show countdown** and a native **Countdown date and time** picker. The picker displays the administrator's device timezone and converts the selected local time to an explicit UTC ISO timestamp before saving. Every visitor counts down to that same instant. Saved timestamps display back in the editor's local timezone. Save Draft changes the saved preview; Publish to Preview updates the homepage. The existing content schema and publication checks are unchanged.
+The second editor tab is now labeled **Tournament & countdown**. Its first controls are **Show countdown** and a native **Countdown date and time** picker. The picker displays the administrator's device timezone and converts the selected local time to an explicit UTC ISO timestamp before saving. Every visitor counts down to that same instant. Saved timestamps display back in the editor's local timezone. Save Draft changes the saved preview; Publish to Preview updates the homepage. The content schema still preserves both workbook entries. Their URLs may remain blank while the workbooks are pending.

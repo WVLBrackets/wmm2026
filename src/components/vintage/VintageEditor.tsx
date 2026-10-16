@@ -609,15 +609,20 @@ export default function VintageEditor() {
           {tab === "Excel resources" && (
             <>
               <p className="ve-help">
-                Keep the two existing workbooks available using their current
-                download destinations. Both URLs are required before publishing.
+                Each workbook can become available separately. Leave its URL
+                blank to show “Download coming soon.” Pending downloads do not
+                prevent you from publishing other homepage changes.
               </p>
               {content.downloads.map((_, i) => (
                 <fieldset className="ve-card" key={i}>
                   <legend>Excel resource {i + 1}</legend>
                   {field(`downloads.${i}.label`, "Download label")}
                   {field(`downloads.${i}.description`, "Short description")}
-                  {field(`downloads.${i}.href`, "Existing download URL")}
+                  {field(`downloads.${i}.href`, "Download URL (optional)", {
+                    hint: content.downloads[i].href
+                      ? "Available: this workbook will have a download link."
+                      : "Pending: Download coming soon. Add this workbook’s URL when it is ready.",
+                  })}
                 </fieldset>
               ))}
             </>

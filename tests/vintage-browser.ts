@@ -95,6 +95,17 @@ async function main() {
     assert.equal(await page.getByTestId("vintage-homepage").count(), 1);
     assert.equal(await page.getByTestId("vintage-promotion-1").count(), 1);
     assert.equal(await page.getByTestId("vintage-promotion-2").count(), 1);
+    for (const index of [1, 2]) {
+      assert.equal(
+        await page.getByTestId(`vintage-download-link-${index}`).count(),
+        0,
+      );
+      assert.ok(
+        (
+          await page.getByTestId(`vintage-download-${index}`).textContent()
+        )?.includes("Download coming soon."),
+      );
+    }
     assert.equal(
       await page.getByTestId("home-view-old").getAttribute("href"),
       "/",
@@ -348,7 +359,11 @@ async function main() {
         },
       },
     );
-    assert.equal(missingDownloads.status(), 400);
+    assert.equal(missingDownloads.status(), 503);
+    assert.match(
+      (await missingDownloads.json()).error,
+      /storage is not configured/i,
+    );
     const saveWithoutStorage = await page.request.post(
       baseURL + "/api/admin/vintage-homepage",
       {
@@ -358,7 +373,7 @@ async function main() {
     );
     assert.equal(saveWithoutStorage.status(), 503);
     console.log(
-      "PASS API: CSRF required, missing downloads block publication, unavailable database cannot silently save",
+      "PASS API: CSRF required, pending workbooks pass publication validation, unavailable database cannot silently save",
     );
     await page.goto(baseURL + "/vintage/admin", {
       waitUntil: "networkidle",
@@ -411,6 +426,12 @@ async function main() {
         await page.locator("#vintage-countdown-timezone").textContent()
       )?.includes("America/Chicago"),
     );
+    await page.getByTestId("vintage-publish").click();
+    await page.getByRole("status").waitFor();
+    assert.equal(actions.at(-1), "publish");
+    assert.equal(doc.downloads[0].href, "");
+    assert.equal(doc.downloads[1].href, "");
+    assert.equal(doc.tournament.countdownEnabled, true);
     await page.getByTestId("vintage-tab-2").click();
     await page.getByTestId("vintage-news-add").click();
     assert.equal(

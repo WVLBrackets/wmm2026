@@ -50,13 +50,6 @@ export async function POST(request: NextRequest) {
       )
         throw new Error("Invalid revision.");
     } else validateVintageContent(input.content);
-    if (
-      input.action === "publish" &&
-      input.content.downloads.some((item: { href: string }) => !item.href)
-    )
-      throw new Error(
-        "Configure both existing Excel download URLs before publishing.",
-      );
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Invalid content." },
