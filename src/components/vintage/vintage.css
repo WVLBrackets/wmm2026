@@ -740,6 +740,7 @@
   text-transform: uppercase;
   transform-origin: left center;
 }
+.v-nameplate-first,
 .v-nameplate-second {
   color: var(--v-red);
 }
