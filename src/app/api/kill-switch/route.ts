@@ -27,7 +27,7 @@ export async function GET() {
         error: 'Failed to load kill switch state',
         data: {
           enabled: true,
-          message: FALLBACK_CONFIG.killSwitchOn,
+          message: FALLBACK_CONFIG.masterLockMessage,
         },
       },
       { status: 500 }

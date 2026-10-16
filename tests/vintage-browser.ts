@@ -33,7 +33,7 @@ async function main() {
         VERCEL_ENV: process.env.VINTAGE_TEST_ENV || "preview",
         VINTAGE_HOMEPAGE_ENABLED: "true",
         NODE_OPTIONS: `${process.env.NODE_OPTIONS || ""} --require ${path.resolve("tests/fixtures/vintage-network-stubs.cjs")}`,
-        APP_ENV: "local",
+        APP_ENV: process.env.VINTAGE_TEST_ENV || "preview",
         VINTAGE_DATABASE_URL: "",
         DEV_AUTH_BYPASS: "false",
         NEXT_PUBLIC_DEV_AUTH_BYPASS: "false",
