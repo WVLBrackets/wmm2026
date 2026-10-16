@@ -103,7 +103,7 @@ export default function AdminPage() {
   const [configValidationResult, setConfigValidationResult] = useState<ConfigValidationResult | null>(null);
   const [showValidationDetails, setShowValidationDetails] = useState(false);
   const [killSwitchEnabled, setKillSwitchEnabled] = useState<boolean>(true);
-  const [killSwitchMessage, setKillSwitchMessage] = useState<string>('Bracket actions are temporarily disabled by the administrator.');
+  const [killSwitchMessage, setKillSwitchMessage] = useState<string>('Bracket actions are temporarily locked by the administrator.');
   const [killSwitchLoading, setKillSwitchLoading] = useState(false);
   const [killSwitchError, setKillSwitchError] = useState<string | null>(null);
 
@@ -783,7 +783,7 @@ export default function AdminPage() {
               <div className="flex flex-row items-center justify-between gap-2 lg:block lg:justify-start">
                 <p className="flex items-center gap-2 text-sm font-semibold text-gray-900">
                   <Power className={`h-4 w-4 shrink-0 ${killSwitchEnabled ? 'text-green-600' : 'text-red-600'}`} />
-                  Master Kill Switch
+                  Application Master Lock
                 </p>
                 <button
                   type="button"
@@ -799,15 +799,15 @@ export default function AdminPage() {
                   data-testid="admin-kill-switch-toggle-mobile"
                 >
                   <Power className="h-3.5 w-3.5" />
-                  {killSwitchLoading ? '…' : killSwitchEnabled ? 'ON' : 'OFF'}
+                  {killSwitchLoading ? '…' : killSwitchEnabled ? 'Unlocked' : 'Locked'}
                 </button>
               </div>
               <p className="mt-1 hidden text-xs text-gray-600 lg:block">
-                Controls New, Copy, Edit, Delete, Save, and Submit bracket actions.
+                Last-resort lock for New, Copy, Edit, Delete, Save, and Submit. Unlocked (green) has no effect; Locked (red) blocks mutations.
               </p>
               {!killSwitchEnabled && (
                 <p className="mt-1 hidden text-xs text-amber-700 lg:block">
-                  Disabled hover message: {killSwitchMessage}
+                  Locked message: {killSwitchMessage}
                 </p>
               )}
               {killSwitchError && <p className="mt-1 text-xs text-red-600">{killSwitchError}</p>}
@@ -827,7 +827,7 @@ export default function AdminPage() {
               data-testid="admin-kill-switch-toggle-desktop"
             >
               <Power className="h-4 w-4" />
-              {killSwitchLoading ? 'Updating...' : killSwitchEnabled ? 'ON' : 'OFF'}
+              {killSwitchLoading ? 'Updating...' : killSwitchEnabled ? 'Unlocked' : 'Locked'}
             </button>
           </div>
         </div>

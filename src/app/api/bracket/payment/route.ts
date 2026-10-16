@@ -7,6 +7,8 @@ import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
 import { sql } from '@/lib/databaseAdapter';
 import { getCurrentEnvironment } from '@/lib/databaseConfig';
 import { csrfProtection } from '@/lib/csrf';
+import { getActiveTournamentYear, isHistoricalYear } from '@/lib/services/tournamentYearService';
+import { getMasterLockDisabledMessage } from '@/lib/killSwitch';
 
 /**
  * POST /api/bracket/payment — Create a payment request (Venmo deep-link flow).
@@ -24,6 +26,12 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Application Master Lock only (payment remains allowed after tip-off / stop_submit)
+    const masterLockMessage = await getMasterLockDisabledMessage();
+    if (masterLockMessage) {
+      return NextResponse.json({ success: false, error: masterLockMessage }, { status: 403 });
     }
 
     const user = await getUserByEmail(session.user.email);
@@ -55,12 +63,23 @@ export async function POST(request: NextRequest) {
 
     const userBrackets = await getBracketsByUserId(user.id);
     const userBracketMap = new Map(userBrackets.map((b) => [b.id, b]));
+    const activeYear = await getActiveTournamentYear();
 
     for (const bid of bracketIds) {
       const b = userBracketMap.get(bid);
       if (!b) {
         return NextResponse.json(
           { success: false, error: `Bracket ${bid} not found or does not belong to you.` },
+          { status: 403 }
+        );
+      }
+      // Prior-year payments are read-only history (do not apply stop_submit — pay is for submitted entries)
+      if (isHistoricalYear(b.year, activeYear)) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Brackets from ${b.year} are read-only. Payments apply to ${activeYear} only.`,
+          },
           { status: 403 }
         );
       }

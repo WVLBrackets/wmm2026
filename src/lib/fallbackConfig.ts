@@ -26,8 +26,6 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   footerText: '© 2001 Warren\'s March Madness | All rights reserved',
   contactMe: 'warren@example.com',
   prizesActiveForecast: 'Forecast',
-  showPicksDev: 'Yes',
-  showPicksProd: 'No',
   // Welcome banner defaults
   welcomeGreeting: 'Welcome back {name}',
   entryCost: 5,
@@ -119,7 +117,15 @@ export const FALLBACK_CONFIG: SiteConfigData = {
   stopSubmitToggle: 'No',
   finalMessageTooLate: 'Bracket submissions are closed. The deadline has passed.',
   finalMessageSubmitOff: 'Bracket submissions are currently disabled.',
-  killSwitchOn: 'Bracket actions are temporarily disabled by the administrator.',
+  masterLockMessage: 'Bracket actions are temporarily locked by the administrator.',
+  bracketsAvailable: 'NO',
+  bracketsNotAvailableMessage:
+    'Bracket data is not published yet. Please check back on <date time>',
+  bracketsAvailableDateTime: '',
+  bracketsMissingErrorMessage:
+    'Bracket field data is missing for this year. Please contact the administrator.',
+  priorYearWarningMessage:
+    'You are viewing <Active Year> (read-only). Switch back to <tournament_year> to create or edit picks.',
   permDeleteMessage:
     'Permanently delete this bracket? This cannot be undone.||Are you sure you want to continue?',
   inThePoolHeader: 'In the pool',

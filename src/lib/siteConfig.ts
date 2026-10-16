@@ -32,8 +32,10 @@ export interface SiteConfigData {
   footerText: string;
   contactMe: string;
   prizesActiveForecast: string;
-  showPicksDev: string;
-  showPicksProd: string;
+  /** @deprecated Removed from product config; My Picks is always shown. Kept optional for legacy sheet rows. */
+  showPicksDev?: string;
+  /** @deprecated Removed from product config; My Picks is always shown. Kept optional for legacy sheet rows. */
+  showPicksProd?: string;
   // Welcome banner configuration
   welcomeGreeting: string;
   entryCost: number;
@@ -130,8 +132,24 @@ export interface SiteConfigData {
   stopSubmitToggle?: string;
   finalMessageTooLate?: string;
   finalMessageSubmitOff?: string;
-  // Global kill switch hover/help message
-  killSwitchOn?: string;
+  /** Sheet: `master_lock_message` — shown when Application Master Lock is Locked. */
+  masterLockMessage?: string;
+  /**
+   * Sheet: `brackets_available` — YES when field is released; NO during countdown/advertising.
+   * Availability is config-driven; missing JSON when YES is an error state.
+   */
+  bracketsAvailable?: string;
+  /** Sheet: `brackets_not_available_message` — may include `<date time>` placeholder. */
+  bracketsNotAvailableMessage?: string;
+  /** Sheet: `brackets_available_date_time` — fills `<date time>` in not-available message. */
+  bracketsAvailableDateTime?: string;
+  /** Sheet: `brackets_missing_error_message` — when available=YES but tournament JSON is missing. */
+  bracketsMissingErrorMessage?: string;
+  /**
+   * Sheet: `prior_year_warning_message` — My Picks banner when viewing a historical year.
+   * Placeholders: `<Active Year>` (viewing year), `<tournament_year>` (current contest year).
+   */
+  priorYearWarningMessage?: string;
   /** My Picks: permanent-delete confirmation (`perm_delete_message` in Sheets; `||` = line breaks). */
   permDeleteMessage?: string;
   /** My Picks: in-pool section — bold title (before em dash). Sheet: `in_the_pool_header` */
@@ -428,8 +446,23 @@ async function fetchSiteConfigFromGoogleSheetsUncached(): Promise<SiteConfigData
           case 'final_message_submit_off':
             config.finalMessageSubmitOff = value;
             break;
-          case 'kill_switch_on':
-            config.killSwitchOn = value;
+          case 'master_lock_message':
+            config.masterLockMessage = value;
+            break;
+          case 'brackets_available':
+            config.bracketsAvailable = value;
+            break;
+          case 'brackets_not_available_message':
+            config.bracketsNotAvailableMessage = value;
+            break;
+          case 'brackets_available_date_time':
+            config.bracketsAvailableDateTime = value;
+            break;
+          case 'brackets_missing_error_message':
+            config.bracketsMissingErrorMessage = value;
+            break;
+          case 'prior_year_warning_message':
+            config.priorYearWarningMessage = value;
             break;
           case 'perm_delete_message':
             config.permDeleteMessage = value;

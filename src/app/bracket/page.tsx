@@ -4,7 +4,8 @@ import { useState, useEffect, useRef, useCallback, useMemo, Suspense, Fragment }
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { TournamentData, TournamentBracket, BracketSubmission } from '@/types/tournament';
-import { loadTournamentData } from '@/lib/tournamentLoader';
+import { tryLoadTournamentData } from '@/lib/tournamentLoader';
+import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 import {
   applyDisplayNamesToTournamentData,
   buildTeamIdToDisplayNameMapFromApi,
@@ -21,6 +22,12 @@ import { Trophy } from 'lucide-react';
 import { LoggedButton } from '@/components/LoggedButton';
 import { useUsageLogger } from '@/hooks/useUsageLogger';
 import { useCSRF } from '@/hooks/useCSRF';
+import { evaluatePicksAccess } from '@/lib/services/picksAccessPolicy';
+import {
+  buildYearScopedPath,
+  isHistoricalYear,
+  parseViewingYear,
+} from '@/lib/services/tournamentYearService';
 
 /**
  * My Picks table row for submit-from-landing (`entryName` may be unset until the user fills it).
@@ -118,7 +125,10 @@ function BracketContent() {
   const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
   const [pendingBracketData, setPendingBracketData] = useState<Record<string, unknown> | null>(null);
   const [killSwitchEnabled, setKillSwitchEnabled] = useState<boolean>(true);
-  const [killSwitchMessage, setKillSwitchMessage] = useState<string>('Bracket actions are temporarily disabled by the administrator.');
+  const [killSwitchMessage, setKillSwitchMessage] = useState<string>(
+    FALLBACK_CONFIG.masterLockMessage ||
+      'Bracket actions are temporarily locked by the administrator.'
+  );
   const [submittingBracketId, setSubmittingBracketId] = useState<string | null>(null);
   /** After a successful Copy API call: confirm name before opening the bracket editor. */
   const [copyNameDialog, setCopyNameDialog] = useState<{
@@ -135,36 +145,49 @@ function BracketContent() {
   const [fullBracketModalId, setFullBracketModalId] = useState<string | null>(null);
   const [fullBracketModalTitle, setFullBracketModalTitle] = useState('');
   const [fullBracketModalYear, setFullBracketModalYear] = useState(() => new Date().getFullYear());
+  const [activeYear, setActiveYear] = useState<number>(() =>
+    parseInt(String(FALLBACK_CONFIG.tournamentYear || new Date().getFullYear()), 10)
+  );
+  const [viewingYear, setViewingYear] = useState<number>(() =>
+    parseInt(String(FALLBACK_CONFIG.tournamentYear || new Date().getFullYear()), 10)
+  );
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
 
   const submittedEntryNames = useMemo(
     () => submittedBrackets.filter((b) => b.status === 'submitted').map((b) => b.entryName),
     [submittedBrackets]
   );
 
+  const viewingHistorical = isHistoricalYear(viewingYear, activeYear);
+
   const loadTournamentRef = useRef<(() => Promise<void>) | undefined>(undefined);
   const hasRestoredState = useRef(false);
 
-  // Determine if My Picks page should be shown based on environment and feature flags
-  const shouldShowMyPicksPage = () => {
-    if (!siteConfig) return false;
-    
-    // Detect preview/staging by checking if we're on a Vercel preview URL
-    // Vercel preview URLs follow the pattern: project-name-git-branch-owner-projects.vercel.app
-    // Production is typically on a custom domain (wmm2026.com) or the main vercel.app domain
-    const isPreview = typeof window !== 'undefined' && (
-      window.location.hostname.includes('-git-') || 
-      (window.location.hostname.includes('vercel.app') && 
-       !window.location.hostname.startsWith('wmm2026') &&
-       window.location.hostname.includes('.'))
-    );
-    
-    // Use dev flag for preview/staging deployments
-    if (isPreview) {
-      return siteConfig.showPicksDev === 'Yes';
+  /**
+   * Active tournament year from site config (string form for JSON filename).
+   */
+  const resolveTournamentYear = (config: SiteConfigData | null | undefined): string =>
+    String(config?.tournamentYear || FALLBACK_CONFIG.tournamentYear || new Date().getFullYear());
+
+  /**
+   * Load and enrich tournament field JSON for a year (null when file is absent).
+   */
+  const loadFieldDataForYear = async (year: string): Promise<TournamentData | null> => {
+    const data = await tryLoadTournamentData(year);
+    if (!data) return null;
+    try {
+      const refResponse = await fetch('/api/team-data?activeOnly=false', { cache: 'no-store' });
+      const refJson = await refResponse.json();
+      if (refJson.success && Array.isArray(refJson.data) && refJson.data.length > 0) {
+        return applyDisplayNamesToTournamentData(
+          data,
+          buildTeamIdToDisplayNameMapFromApi(refJson.data)
+        );
+      }
+    } catch (refError) {
+      console.warn('[Bracket] Could not apply team display names:', refError);
     }
-    
-    // Use prod flag for production deployments only
-    return siteConfig.showPicksProd === 'Yes';
+    return data;
   };
 
   // Check for admin mode and edit parameter
@@ -392,56 +415,123 @@ function BracketContent() {
   };
 
   /**
-   * Ensure bracket mutations are allowed (master kill switch).
-   * Opening a bracket for **view** uses {@link handleEditBracket} instead (read-only when the switch is off).
+   * Client-side picks access: brackets_available → JSON → stop_submit → master lock.
+   * `killSwitchEnabled` means Application Master Lock is Unlocked.
    */
-  const ensureKillSwitchEnabledForAction = async (): Promise<boolean> => {
+  const picksAccess = useMemo(
+    () =>
+      evaluatePicksAccess(siteConfig, {
+        tournamentJsonPresent: Boolean(tournamentData),
+        masterLockUnlocked: killSwitchEnabled,
+      }),
+    [siteConfig, tournamentData, killSwitchEnabled]
+  );
+
+  const mutationsBlockMessage =
+    picksAccess.message ||
+    killSwitchMessage ||
+    FALLBACK_CONFIG.masterLockMessage ||
+    'Bracket actions are temporarily locked by the administrator.';
+
+  /**
+   * Ensure bracket mutations are allowed (server check-creation; same priority as picksAccess).
+   * Opening a bracket for **view** uses {@link handleEditBracket} instead (read-only when blocked).
+   */
+  const ensureMutationsAllowed = async (): Promise<boolean> => {
     if (isAdminMode) return true;
-    const state = await getLatestKillSwitchState();
-    if (!state.enabled) {
-      alert(state.message);
+    if (viewingHistorical) {
+      alert(`Brackets from ${viewingYear} are read-only. Switch to ${activeYear} to make changes.`);
       return false;
     }
-    return true;
+    try {
+      const response = await fetch('/api/bracket/check-creation', { cache: 'no-store' });
+      const data = await response.json();
+      if (!data.success || !data.allowed) {
+        alert(data.reason || mutationsBlockMessage);
+        await loadKillSwitchState();
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('Error verifying bracket mutation access:', error);
+      alert('Failed to verify bracket access. Please try again.');
+      return false;
+    }
+  };
+
+  /**
+   * Load brackets for a viewing year and refresh year-switcher metadata.
+   */
+  const loadSubmittedBrackets = async (yearForList?: number) => {
+    try {
+      const year = yearForList ?? viewingYear;
+      const response = await fetch(`/api/tournament-bracket?year=${year}`, { cache: 'no-store' });
+      const data = await response.json();
+
+      if (data.success) {
+        if (typeof data.activeYear === 'number') {
+          setActiveYear(data.activeYear);
+        }
+        if (typeof data.viewingYear === 'number') {
+          setViewingYear(data.viewingYear);
+        }
+        if (Array.isArray(data.availableYears)) {
+          setAvailableYears(data.availableYears);
+        }
+        const userBrackets = data.data.filter(
+          (bracket: unknown) =>
+            bracket &&
+            typeof bracket === 'object' &&
+            'playerEmail' in bracket &&
+            (bracket as { playerEmail: string }).playerEmail === session?.user?.email
+        );
+        setSubmittedBrackets(userBrackets);
+      } else {
+        console.error('Failed to load brackets:', data.error);
+      }
+    } catch (error) {
+      console.error('Error loading submitted brackets:', error);
+    }
+  };
+
+  /**
+   * Switch My Picks viewing year via URL (`?year=` omitted for the active year).
+   */
+  const handleViewingYearChange = (nextYear: number) => {
+    if (nextYear === viewingYear) return;
+    setCurrentView('landing');
+    setEditingBracket(null);
+    router.replace(buildYearScopedPath('/bracket', nextYear, activeYear));
   };
 
   // Assign function to ref after it's declared
   const loadTournament = async () => {
     try {
       setIsLoading(true);
-      
-      // Load site config first to get tournament year (via API route)
+
       const configResponse = await fetch('/api/site-config?fresh=true', { cache: 'no-store' });
       const configResult = await configResponse.json();
       const config = configResult.success ? configResult.data : null;
       setSiteConfig(config);
       await loadKillSwitchState();
-      
-      // Use tournament year from config (fallback to '2025' if not available)
-      const tournamentYear = config?.tournamentYear || '2025';
-      const data = await loadTournamentData(tournamentYear);
-      let enriched = data;
-      try {
-        const refResponse = await fetch('/api/team-data?activeOnly=false', {
-          cache: 'no-store',
-        });
-        const refJson = await refResponse.json();
-        if (refJson.success && Array.isArray(refJson.data) && refJson.data.length > 0) {
-          enriched = applyDisplayNamesToTournamentData(
-            data,
-            buildTeamIdToDisplayNameMapFromApi(refJson.data)
-          );
-        }
-      } catch (refError) {
-        console.warn('[Bracket] Could not apply team display names:', refError);
+
+      const active = parseInt(resolveTournamentYear(config), 10);
+      const safeActive = Number.isNaN(active) ? new Date().getFullYear() : active;
+      const viewing = parseViewingYear(searchParams?.get('year'), safeActive);
+      setActiveYear(safeActive);
+      setViewingYear(viewing);
+
+      const enriched = await loadFieldDataForYear(String(viewing));
+      if (!enriched) {
+        setTournamentData(null);
+        setBracket(null);
+        await loadSubmittedBrackets(viewing);
+        return;
       }
+
       setTournamentData(enriched);
-      
-      const bracketData = generate64TeamBracket(enriched);
-      setBracket(bracketData);
-      
-      // Load user's submitted brackets
-      await loadSubmittedBrackets();
+      setBracket(generate64TeamBracket(enriched));
+      await loadSubmittedBrackets(viewing);
     } catch (error) {
       console.error('Error loading tournament:', error);
     } finally {
@@ -479,61 +569,28 @@ function BracketContent() {
     return () => window.clearInterval(intervalId);
   }, [currentView, loadKillSwitchState]);
 
-  const loadSubmittedBrackets = async () => {
-    try {
-      const response = await fetch('/api/tournament-bracket', { cache: 'no-store' });
-      const data = await response.json();
-      
-      if (data.success) {
-        // Filter brackets for the current user
-        const userBrackets = data.data.filter((bracket: unknown) => 
-          bracket && typeof bracket === 'object' && 'playerEmail' in bracket && 
-          (bracket as { playerEmail: string }).playerEmail === session?.user?.email
-        );
-        setSubmittedBrackets(userBrackets);
-      } else {
-        console.error('Failed to load brackets:', data.error);
-      }
-    } catch (error) {
-      console.error('Error loading submitted brackets:', error);
-    }
-  };
-
   const loadBracketForEdit = async (bracketId: string, adminMode = false) => {
     try {
       setIsLoading(true);
       
-      // Load tournament data first if not already loaded
+      // Load tournament field for the bracket's year if structure is not ready
       if (!tournamentData || !bracket) {
-        // Load site config first to get tournament year (via API route)
         const configResponse = await fetch('/api/site-config?fresh=true', { cache: 'no-store' });
         const configResult = await configResponse.json();
         const config = configResult.success ? configResult.data : null;
         setSiteConfig(config);
         await loadKillSwitchState();
-        
-        // Use tournament year from config (fallback to '2025' if not available)
-        const tournamentYear = config?.tournamentYear || '2025';
-        const rawTournament = await loadTournamentData(tournamentYear);
-        let tournamentDataLoaded = rawTournament;
-        try {
-          const refResponse = await fetch('/api/team-data?activeOnly=false', {
-          cache: 'no-store',
-        });
-          const refJson = await refResponse.json();
-          if (refJson.success && Array.isArray(refJson.data) && refJson.data.length > 0) {
-            tournamentDataLoaded = applyDisplayNamesToTournamentData(
-              rawTournament,
-              buildTeamIdToDisplayNameMapFromApi(refJson.data)
-            );
-          }
-        } catch (refError) {
-          console.warn('[Bracket] Could not apply team display names:', refError);
+
+        const yearForField = resolveTournamentYear(config);
+        const tournamentDataLoaded = await loadFieldDataForYear(yearForField);
+        if (!tournamentDataLoaded) {
+          setTournamentData(null);
+          setBracket(null);
+          setIsLoading(false);
+          return;
         }
         setTournamentData(tournamentDataLoaded);
-        
-        const bracketDataStructure = generate64TeamBracket(tournamentDataLoaded);
-        setBracket(bracketDataStructure);
+        setBracket(generate64TeamBracket(tournamentDataLoaded));
       }
       
       // Use admin endpoint if in admin mode
@@ -665,8 +722,12 @@ function BracketContent() {
   };
 
   const handleSubmitBracket = async () => {
-    if (!killSwitchEnabled) {
-      setSubmitError(killSwitchMessage);
+    if ((picksAccess.blocked || viewingHistorical) && !isAdminMode) {
+      setSubmitError(
+        viewingHistorical
+          ? `Brackets from ${viewingYear} are read-only.`
+          : mutationsBlockMessage
+      );
       return;
     }
 
@@ -751,7 +812,7 @@ function BracketContent() {
    * Submit an in-progress bracket from My Picks (same payload as in-editor submit).
    */
   const handleSubmitFromLanding = async (row: MyPicksSubmitRow) => {
-    if (!(await ensureKillSwitchEnabledForAction())) {
+    if (!(await ensureMutationsAllowed())) {
       return;
     }
 
@@ -824,29 +885,28 @@ function BracketContent() {
 
   // Landing page handlers
   const handleCreateNew = async () => {
-    if (!(await ensureKillSwitchEnabledForAction())) {
+    if (viewingHistorical) {
+      handleViewingYearChange(activeYear);
+      alert(`Switched to ${activeYear}. Use New Bracket again to create an entry.`);
+      return;
+    }
+
+    if (!(await ensureMutationsAllowed())) {
+      return;
+    }
+
+    if (!tournamentData || !bracket) {
+      alert(
+        siteConfig?.bracketsMissingErrorMessage ||
+          FALLBACK_CONFIG.bracketsMissingErrorMessage ||
+          `Bracket field data is missing for ${resolveTournamentYear(siteConfig)}.`
+      );
       return;
     }
 
     // Log New Bracket immediately when button is clicked (no bracket ID yet)
     const { usageLogger } = await import('@/lib/usageLogger');
     usageLogger.log('Click', 'New Bracket', null);
-    
-    // Check with server if bracket creation is currently allowed (fresh config check)
-    try {
-      const response = await fetch('/api/bracket/check-creation');
-      const data = await response.json();
-      
-      if (!data.success || !data.allowed) {
-        // Bracket creation is not allowed - show error and don't proceed
-        alert(data.reason || 'Bracket creation is currently disabled.');
-        return;
-      }
-    } catch (error) {
-      console.error('Error checking bracket creation status:', error);
-      alert('Failed to verify bracket creation status. Please try again.');
-      return;
-    }
     
     // If we get here, creation is allowed - proceed with creating new bracket
     setEditingBracket(null);
@@ -865,17 +925,40 @@ function BracketContent() {
       return;
     }
 
-    const state = isAdminMode ? { enabled: true } : await getLatestKillSwitchState();
-    const bracketMutationsAllowed = isAdminMode || state.enabled;
+    const latestLock = isAdminMode
+      ? { enabled: true }
+      : await getLatestKillSwitchState();
+    const freshAccess = evaluatePicksAccess(siteConfig, {
+      tournamentJsonPresent: Boolean(tournamentData),
+      masterLockUnlocked: latestLock.enabled,
+    });
+    const configActiveYear = parseInt(resolveTournamentYear(siteConfig), 10);
+    const bracketYear =
+      typeof bracketData.year === 'number'
+        ? bracketData.year
+        : configActiveYear;
+    const isPriorYear = !isAdminMode && bracketYear !== configActiveYear;
+    const bracketMutationsAllowed =
+      isAdminMode || (!isPriorYear && !freshAccess.blocked);
+
+    // Ensure field JSON matches the bracket year when opening a prior-year entry
+    if (isPriorYear || bracketYear !== viewingYear) {
+      const fieldForBracket = await loadFieldDataForYear(String(bracketYear));
+      if (fieldForBracket) {
+        setTournamentData(fieldForBracket);
+        setBracket(generate64TeamBracket(fieldForBracket));
+      }
+    }
 
     setEditingBracket(bracketToEdit);
     const bracketPicks = (bracketData.picks as Record<string, string>) || {};
     setPicks(bracketPicks);
     setEntryName((bracketData.entryName as string) || session?.user?.name || '');
     setTieBreaker((bracketData.tieBreaker as string) || '');
-    /** Submitted brackets are always view-only; in-progress brackets become view-only when the kill switch blocks saves/submits. */
+    /** Submitted / prior-year / picks-access blocked → view-only. */
     setIsReadOnly(
       bracketData.status === 'submitted' ||
+        isPriorYear ||
         (bracketData.status === 'in_progress' && !bracketMutationsAllowed)
     );
     
@@ -970,7 +1053,7 @@ function BracketContent() {
   };
 
   const handleCopyBracket = async (bracketToCopy: unknown) => {
-    if (!(await ensureKillSwitchEnabledForAction())) {
+    if (!(await ensureMutationsAllowed())) {
       return;
     }
 
@@ -1075,7 +1158,7 @@ function BracketContent() {
    * Restore a soft-deleted bracket to in-progress so the user can edit or submit again.
    */
   const handleRestoreBracket = async (bracketId: string) => {
-    if (!(await ensureKillSwitchEnabledForAction())) {
+    if (!(await ensureMutationsAllowed())) {
       return;
     }
 
@@ -1101,7 +1184,7 @@ function BracketContent() {
    * Show inline permanent-delete confirmation for a deleted bracket.
    */
   const handlePermanentDeleteClick = async (bracketId: string) => {
-    if (!(await ensureKillSwitchEnabledForAction())) {
+    if (!(await ensureMutationsAllowed())) {
       return;
     }
     setPendingPermanentDeleteBracketId(bracketId);
@@ -1115,7 +1198,7 @@ function BracketContent() {
    * Hard-delete a bracket after the user confirms in the inline dialog.
    */
   const handleConfirmPermanentDelete = async (bracketId: string) => {
-    if (!(await ensureKillSwitchEnabledForAction())) {
+    if (!(await ensureMutationsAllowed())) {
       setPendingPermanentDeleteBracketId(null);
       return;
     }
@@ -1145,7 +1228,7 @@ function BracketContent() {
    * Submitted bracket: show inline confirmation, then move back to In Progress (out of pool until resubmitted).
    */
   const handleReturnBracketClick = async (bracketId: string) => {
-    if (!(await ensureKillSwitchEnabledForAction())) {
+    if (!(await ensureMutationsAllowed())) {
       return;
     }
     setPendingReturnBracketId(bracketId);
@@ -1156,7 +1239,7 @@ function BracketContent() {
   };
 
   const handleConfirmReturnBracket = async (bracketId: string) => {
-    if (!(await ensureKillSwitchEnabledForAction())) {
+    if (!(await ensureMutationsAllowed())) {
       setPendingReturnBracketId(null);
       return;
     }
@@ -1293,8 +1376,12 @@ function BracketContent() {
   };
 
   const handleDeleteBracket = (bracketId: string) => {
-    if (!killSwitchEnabled && !isAdminMode) {
-      alert(killSwitchMessage);
+    if ((picksAccess.blocked || viewingHistorical) && !isAdminMode) {
+      alert(
+        viewingHistorical
+          ? `Brackets from ${viewingYear} are read-only.`
+          : mutationsBlockMessage
+      );
       return;
     }
 
@@ -1381,27 +1468,6 @@ function BracketContent() {
     );
   }
 
-  // Check if My Picks page should be available based on config
-  if (siteConfig && !shouldShowMyPicksPage()) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center">
-            <div className="bg-white rounded-lg shadow-lg p-12 max-w-md mx-auto">
-              <Trophy className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Page not Available
-              </h2>
-              <p className="text-gray-600">
-                This page is currently not available.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (status === 'unauthenticated') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -1481,8 +1547,12 @@ function BracketContent() {
           siteConfig={siteConfig}
           killSwitchEnabled={killSwitchEnabled}
           killSwitchMessage={killSwitchMessage}
+          viewingYear={viewingYear}
+          activeYear={activeYear}
+          availableYears={availableYears.length > 0 ? availableYears : [activeYear]}
+          onViewingYearChange={handleViewingYearChange}
           onOpenFullBracketModal={handleOpenFullBracketModalFromMyPicks}
-          onPaymentCreated={loadSubmittedBrackets}
+          onPaymentCreated={() => loadSubmittedBrackets(viewingYear)}
         />
         {copyNameDialog && (
           <div
@@ -1619,8 +1689,12 @@ function BracketContent() {
             currentBracketId={editingBracket ? (editingBracket as Record<string, unknown>).id as string : undefined}
             isAdminMode={isAdminMode}
             isLiveResultsMode={isLiveResultsMode}
-            disableSaveSubmit={!killSwitchEnabled && !isAdminMode}
-            disableMessage={killSwitchMessage}
+            disableSaveSubmit={(picksAccess.blocked || viewingHistorical) && !isAdminMode}
+            disableMessage={
+              viewingHistorical
+                ? `Brackets from ${viewingYear} are read-only.`
+                : mutationsBlockMessage
+            }
           />
         ) : (
           // 1 Page layout is always 64-team; 32 is not exposed in the UI (may revisit later).
@@ -1641,8 +1715,12 @@ function BracketContent() {
             existingBracketNames={submittedEntryNames}
             isAdminMode={isAdminMode}
             isLiveResultsMode={isLiveResultsMode}
-            disableSaveSubmit={!killSwitchEnabled && !isAdminMode}
-            disableMessage={killSwitchMessage}
+            disableSaveSubmit={(picksAccess.blocked || viewingHistorical) && !isAdminMode}
+            disableMessage={
+              viewingHistorical
+                ? `Brackets from ${viewingYear} are read-only.`
+                : mutationsBlockMessage
+            }
             onSave={handleSaveBracket}
             onClose={handleCloseBracket}
             onCancel={handleCloseBracket}

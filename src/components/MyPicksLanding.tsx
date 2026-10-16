@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import { Press_Start_2P } from 'next/font/google';
-import { Trophy, Plus, Edit, Clock, CheckCircle, LogOut, Trash2, Copy, Eye, Info, X, Mail, RotateCcw, Undo2, Search, Pencil, Send, DollarSign } from 'lucide-react';
+import { Trophy, Plus, Edit, Clock, CheckCircle, LogOut, Trash2, Copy, Eye, Info, X, Mail, RotateCcw, Undo2, Search, Pencil, Send, DollarSign, ChevronDown } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { useCSRF } from '@/hooks/useCSRF';
 import { TournamentData, TournamentBracket } from '@/types/tournament';
@@ -17,6 +17,12 @@ import {
 import { LoggedButton } from '@/components/LoggedButton';
 import { useServerTime } from '@/hooks/useServerTime';
 import PaymentModal from '@/components/bracket/PaymentModal';
+import {
+  evaluatePicksAccess,
+  formatPriorYearWarningMessage,
+  isBracketsAvailableFlag,
+} from '@/lib/services/picksAccessPolicy';
+import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 
 const scoreboardFont = Press_Start_2P({
   weight: '400',
@@ -240,6 +246,14 @@ interface MyPicksLandingProps {
   siteConfig?: SiteConfigData | null;
   killSwitchEnabled?: boolean;
   killSwitchMessage?: string;
+  /** Year currently displayed (from `?year=` or active year). */
+  viewingYear?: number;
+  /** Active tournament year from site config (only this year accepts mutations). */
+  activeYear?: number;
+  /** Years available in the switcher (user brackets ∪ active year). */
+  availableYears?: number[];
+  /** Switch My Picks viewing year (parent updates URL). */
+  onViewingYearChange?: (year: number) => void;
   /** Eye icon: open full-bracket modal when set; otherwise falls back to print tab. */
   onOpenFullBracketModal?: (bracket: Bracket) => void;
   /** Called after a Venmo payment request is recorded so the parent can refresh the bracket list. */
@@ -297,6 +311,10 @@ export default function MyPicksLanding({
   siteConfig,
   killSwitchEnabled = true,
   killSwitchMessage,
+  viewingYear: viewingYearProp,
+  activeYear: activeYearProp,
+  availableYears = [],
+  onViewingYearChange,
   onOpenFullBracketModal,
   onPaymentCreated,
 }: MyPicksLandingProps) {
@@ -318,6 +336,7 @@ export default function MyPicksLanding({
   const [profileSaveError, setProfileSaveError] = useState<string | null>(null);
   const [profileDisplayName, setProfileDisplayName] = useState('');
   const [payModalOpen, setPayModalOpen] = useState(false);
+  const [yearPickerOpen, setYearPickerOpen] = useState(false);
   const [isCurrentUserAdmin, setIsCurrentUserAdmin] = useState(false);
   const [profileDetails, setProfileDetails] = useState<{
     email: string;
@@ -326,19 +345,82 @@ export default function MyPicksLanding({
     bracketsEntered: number;
   } | null>(null);
   const { getServerNowMs } = useServerTime();
-  const killSwitchDisabledReason = killSwitchMessage || siteConfig?.killSwitchOn || 'Bracket actions are temporarily disabled by the administrator.';
-  
-  // Get tournament year from config or tournament data
-  const tournamentYear = siteConfig?.tournamentYear ? parseInt(siteConfig.tournamentYear) : (tournamentData?.year ? parseInt(tournamentData.year) : new Date().getFullYear());
-  
-  /** All brackets for the current tournament year (counts and filters are based on this). */
+
+  // Active year from config; viewing year from parent URL / props
+  const activeYear =
+    activeYearProp ??
+    (siteConfig?.tournamentYear
+      ? parseInt(String(siteConfig.tournamentYear), 10)
+      : tournamentData?.year
+        ? parseInt(String(tournamentData.year), 10)
+        : new Date().getFullYear());
+  const viewingYear = viewingYearProp ?? activeYear;
+  const isHistoricalView = viewingYear !== activeYear;
+  const historicalReadOnlyMessage = `Brackets from ${viewingYear} are read-only. Switch to ${activeYear} to create or edit.`;
+
+  const priorYearBannerMessage = useMemo(
+    () =>
+      formatPriorYearWarningMessage(
+        siteConfig?.priorYearWarningMessage,
+        viewingYear,
+        activeYear
+      ),
+    [siteConfig?.priorYearWarningMessage, viewingYear, activeYear]
+  );
+
+  /**
+   * Unified mutation gate for the *active* year only.
+   * Prior-year viewing is always read-only (separate from publish / lock gates).
+   */
+  const picksAccess = useMemo(
+    () =>
+      evaluatePicksAccess(siteConfig, {
+        tournamentJsonPresent: Boolean(tournamentData),
+        masterLockUnlocked: killSwitchEnabled,
+      }),
+    [siteConfig, tournamentData, killSwitchEnabled]
+  );
+
+  const accessBlockMessage = isHistoricalView
+    ? historicalReadOnlyMessage
+    : picksAccess.message ||
+      killSwitchMessage ||
+      siteConfig?.masterLockMessage ||
+      FALLBACK_CONFIG.masterLockMessage ||
+      'Bracket actions are temporarily locked by the administrator.';
+
+  const accessMessageClassName =
+    picksAccess.reasonCode === 'brackets_missing_json' || picksAccess.reasonCode === 'master_lock'
+      ? 'text-sm text-red-600 mt-1 font-medium'
+      : 'text-sm text-amber-800 mt-1 font-medium';
+
+  /** Mutations blocked for prior-year view or active-year access gates. */
+  const mutationsBlocked = isHistoricalView || picksAccess.blocked;
+
+  /** All brackets for the viewing year (parent usually pre-filters; keep a safety filter). */
   const bracketsForYear = useMemo(
     () =>
       brackets.filter(
-        (b) => b.year === tournamentYear || (!b.year && tournamentYear === new Date().getFullYear())
+        (b) => b.year === viewingYear || (!b.year && viewingYear === new Date().getFullYear())
       ),
-    [brackets, tournamentYear]
+    [brackets, viewingYear]
   );
+
+  /** Not-available copy belongs in the empty-state panel (active year only). */
+  const showNotAvailableInEmptyState =
+    !isHistoricalView &&
+    picksAccess.reasonCode === 'brackets_not_available' &&
+    bracketsForYear.length === 0;
+
+  const showHeaderAccessMessage =
+    mutationsBlocked && !showNotAvailableInEmptyState && !isHistoricalView;
+
+  const yearOptions = useMemo(() => {
+    const set = new Set<number>(availableYears.length > 0 ? availableYears : [activeYear]);
+    set.add(activeYear);
+    set.add(viewingYear);
+    return Array.from(set).sort((a, b) => b - a);
+  }, [availableYears, activeYear, viewingYear]);
 
   const unpaidSubmittedBrackets = useMemo(
     () => bracketsForYear.filter((b) => b.status === 'submitted' && !b.paymentStatus),
@@ -357,7 +439,11 @@ export default function MyPicksLanding({
       .catch(() => setIsCurrentUserAdmin(false));
   }, [session?.user?.email]);
 
-  const showPayButton = venmoUser && unpaidSubmittedBrackets.length > 0 && (payCapabilityEnabled || isCurrentUserAdmin);
+  const showPayButton =
+    !isHistoricalView &&
+    venmoUser &&
+    unpaidSubmittedBrackets.length > 0 &&
+    (payCapabilityEnabled || isCurrentUserAdmin);
 
   const [statusVisibility, setStatusVisibility] = useState<BracketStatusVisibility>(DEFAULT_STATUS_VISIBILITY);
   const [entrySearchQuery, setEntrySearchQuery] = useState('');
@@ -580,31 +666,40 @@ export default function MyPicksLanding({
     return { submittedCount, inProgressCount, deletedCount, totalCost };
   };
 
-  // Get dynamic message based on bracket counts
-  const getDynamicMessage = () => {
+  /**
+   * Header status copy based on bracket counts.
+   * Returns null when New Bracket is disabled and the user has no entries — avoid
+   * prompting them to click a disabled control.
+   */
+  const getDynamicMessage = (): string | null => {
     const { submittedCount, inProgressCount, totalCost } = getBracketsInfo();
-    
+
     let message = '';
-    
-    // Determine which message to use based on counts
+
     if (submittedCount === 0 && inProgressCount === 0) {
+      if (mutationsBlocked) return null;
       message = siteConfig?.welcomeNoBrackets || 'Click New Bracket to start your first entry';
     } else if (submittedCount > 0 && inProgressCount === 0) {
-      message = siteConfig?.welcomeNoInProgress || `Your total cost so far is $${totalCost}. You can create a new entry and save it for later without submitting it now.`;
+      message =
+        siteConfig?.welcomeNoInProgress ||
+        `Your total cost so far is $${totalCost}. You can create a new entry and save it for later without submitting it now.`;
     } else if (submittedCount === 0 && inProgressCount > 0) {
-      message = siteConfig?.welcomeNoSubmitted || 'You have not submitted any brackets yet. Please complete and submit your bracket(s) to be included in the contest.';
+      message =
+        siteConfig?.welcomeNoSubmitted ||
+        'You have not submitted any brackets yet. Please complete and submit your bracket(s) to be included in the contest.';
     } else {
-      message = siteConfig?.welcomeYourBrackets || `Your total cost so far is $${totalCost}. In Progress brackets are not included in the contest until submitted.`;
+      message =
+        siteConfig?.welcomeYourBrackets ||
+        `Your total cost so far is $${totalCost}. In Progress brackets are not included in the contest until submitted.`;
     }
-    
-    // Replace template variables
-    message = message
+
+    return message
       .replace(/{Submitted}/g, submittedCount.toString())
       .replace(/{In Progress}/g, inProgressCount.toString())
       .replace(/{cost}/g, totalCost.toString());
-    
-    return message;
   };
+
+  const dynamicMessage = getDynamicMessage();
 
   // Helper function to render messages with line breaks (using || as delimiter)
   const renderMessageWithLineBreaks = (message: string) => {
@@ -629,30 +724,6 @@ export default function MyPicksLanding({
     );
   };
 
-  // Check if bracket creation/copying is disabled due to deadline or toggle
-  const isBracketCreationDisabled = () => {
-    // Check stop_submit_toggle first
-    if (siteConfig?.stopSubmitToggle === 'Yes') {
-      return true;
-    }
-    
-    // Check stop_submit_date_time
-    if (siteConfig?.stopSubmitDateTime) {
-      try {
-        const deadline = new Date(siteConfig.stopSubmitDateTime);
-        if (getServerNowMs() >= deadline.getTime()) {
-          return true;
-        }
-      } catch {
-        // Invalid date format - ignore
-      }
-    }
-    
-    return false;
-  };
-
-  const isKillSwitchDisabled = () => !killSwitchEnabled;
-
   /**
    * Primary row open from entry name or status chip: read-only full-bracket modal when available
    * (same as the eye icon) for submitted/deleted; in-progress opens the editor while entries are
@@ -668,7 +739,7 @@ export default function MyPicksLanding({
       return;
     }
     if (bracket.status === 'in_progress') {
-      if (isKillSwitchDisabled()) {
+      if (mutationsBlocked) {
         if (onOpenFullBracketModal) {
           onOpenFullBracketModal(bracket);
         } else {
@@ -676,24 +747,32 @@ export default function MyPicksLanding({
         }
         return;
       }
-      if (!isBracketCreationDisabled()) {
-        onEditBracket(bracket);
-        return;
-      }
-      if (onOpenFullBracketModal) {
-        onOpenFullBracketModal(bracket);
-      } else {
-        handlePrintBracket(bracket);
-      }
+      onEditBracket(bracket);
     }
   };
 
   /**
+   * Target datetime for the My Picks countdown scoreboard.
+   * Pre-release (`brackets_available=NO`): `brackets_available_date_time`.
+   * Once available: `tournament_start_date` (tip-off).
+   */
+  const countdownTargetRaw = useMemo(() => {
+    if (!isBracketsAvailableFlag(siteConfig)) {
+      return siteConfig?.bracketsAvailableDateTime?.trim() || '';
+    }
+    return siteConfig?.tournamentStartDate?.trim() || '';
+  }, [
+    siteConfig?.bracketsAvailable,
+    siteConfig?.bracketsAvailableDateTime,
+    siteConfig?.tournamentStartDate,
+  ]);
+
+  /**
    * Convert a millisecond duration into HH:MM:SS or MM:SS.
    * Switches to MM:SS once remaining time is under one hour.
-   * For long horizons (>100 hours), display "X Days Away" for readability.
-   */
-  /**
+   * For long horizons (>100 hours), display the sheet “X Days …” template using
+   * full remaining calendar days (not day-of-month delta).
+   *
    * @param useMobileDaysTemplate When true and the “X days away” branch applies, use `countdownTimerMessageMobile` (fallback: desktop message).
    */
   const formatCountdown = (remainingMs: number, useMobileDaysTemplate = false) => {
@@ -702,19 +781,13 @@ export default function MyPicksLanding({
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
 
-    if (hours > 100 && siteConfig?.stopSubmitDateTime) {
-      const deadline = new Date(siteConfig.stopSubmitDateTime);
-      const serverNow = new Date(getServerNowMs());
-      if (!Number.isNaN(deadline.getTime()) && !Number.isNaN(serverNow.getTime())) {
-        const dayDelta = deadline.getDate() - serverNow.getDate();
-        const fallbackDays = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
-        const daysAway = dayDelta > 0 ? dayDelta : Math.max(1, fallbackDays);
-        const desktopTemplate = siteConfig?.countdownTimerMessage?.trim() || 'X Days Away';
-        const mobileTemplate =
-          siteConfig?.countdownTimerMessageMobile?.trim() || desktopTemplate;
-        const template = useMobileDaysTemplate ? mobileTemplate : desktopTemplate;
-        return template.replace(/X/g, String(daysAway));
-      }
+    if (hours > 100) {
+      const daysAway = Math.max(1, Math.ceil(remainingMs / (24 * 60 * 60 * 1000)));
+      const desktopTemplate = siteConfig?.countdownTimerMessage?.trim() || 'X Days Away';
+      const mobileTemplate =
+        siteConfig?.countdownTimerMessageMobile?.trim() || desktopTemplate;
+      const template = useMobileDaysTemplate ? mobileTemplate : desktopTemplate;
+      return template.replace(/X/g, String(daysAway));
     }
 
     if (hours < 1) {
@@ -725,13 +798,12 @@ export default function MyPicksLanding({
   };
 
   React.useEffect(() => {
-    const stopDateTime = siteConfig?.stopSubmitDateTime;
-    if (!stopDateTime) {
+    if (!countdownTargetRaw) {
       setCountdownMs(null);
       return;
     }
 
-    const deadline = new Date(stopDateTime);
+    const deadline = new Date(countdownTargetRaw);
     if (Number.isNaN(deadline.getTime())) {
       setCountdownMs(null);
       return;
@@ -744,61 +816,38 @@ export default function MyPicksLanding({
     updateCountdown();
     const intervalId = window.setInterval(updateCountdown, 1000);
     return () => window.clearInterval(intervalId);
-  }, [siteConfig?.stopSubmitDateTime, getServerNowMs]);
+  }, [countdownTargetRaw, getServerNowMs]);
 
   const countdownDisplayDesktop =
     countdownMs !== null ? formatCountdown(countdownMs, false) : null;
   const countdownDisplayMobile =
     countdownMs !== null ? formatCountdown(countdownMs, true) : null;
   const showCountdownTimer = siteConfig?.showCountdownTimer?.trim().toUpperCase() === 'YES';
-  const scoreboardTimeDesktop = killSwitchEnabled ? (countdownDisplayDesktop || '00:00') : '00:00';
-  const scoreboardTimeMobile = killSwitchEnabled ? (countdownDisplayMobile || '00:00') : '00:00';
-
-  // Get the reason bracket creation is disabled
-  const getBracketCreationDisabledReason = () => {
-    // Check stop_submit_toggle first
-    if (siteConfig?.stopSubmitToggle === 'Yes') {
-      return siteConfig?.finalMessageSubmitOff || 'Bracket submissions are currently disabled.';
-    }
-    
-    // Check stop_submit_date_time
-    if (siteConfig?.stopSubmitDateTime) {
-      try {
-        const deadline = new Date(siteConfig.stopSubmitDateTime);
-        if (getServerNowMs() >= deadline.getTime()) {
-          return siteConfig?.finalMessageTooLate || 'Bracket submissions are closed. The deadline has passed.';
-        }
-      } catch {
-        // Invalid date format - ignore
-      }
-    }
-    
-    return null;
-  };
+  // Countdown is independent of Application Master Lock (lock is a separate fail-safe).
+  const scoreboardTimeDesktop = countdownDisplayDesktop || '00:00';
+  const scoreboardTimeMobile = countdownDisplayMobile || '00:00';
+  const countdownHoverTitle = isBracketsAvailableFlag(siteConfig)
+    ? 'Countdown to Bracket Submission Deadline'
+    : 'Countdown to Bracket Publication';
 
   /**
    * Get tooltip/disable reason for user actions.
-   * `edit` is excluded from the kill-switch gate so in-progress rows can still open the read-only modal via the entry name / status chip when the kill switch is on.
+   * `edit` is excluded so in-progress rows can still open the read-only modal via the entry name / status chip.
    */
   const getActionDisabledReason = (
     action: 'new' | 'copy' | 'edit' | 'delete' | 'return' | 'restore',
   ) => {
-    if ((action === 'new' || action === 'copy') && isBracketCreationDisabled()) {
-      return getBracketCreationDisabledReason();
-    }
-    // Opening a bracket is allowed under the kill switch (read-only in-editor). Block other actions.
-    if (action !== 'edit' && isKillSwitchDisabled()) {
-      return killSwitchDisabledReason;
-    }
-    return null;
+    if (!mutationsBlocked) return null;
+    if (action === 'edit') return null;
+    return accessBlockMessage;
   };
 
   /**
    * Disable reason for the in-progress **Edit** control in Actions only (does not apply to row click “view read-only”).
    */
   const getInProgressEditButtonDisabledReason = (): string | null => {
-    if (isKillSwitchDisabled()) return killSwitchDisabledReason;
-    return getActionDisabledReason('edit');
+    if (mutationsBlocked) return accessBlockMessage;
+    return null;
   };
 
   const submittedEntryNamesForDuplicateCheck = useMemo(
@@ -812,14 +861,18 @@ export default function MyPicksLanding({
 
   /**
    * Disable reason for the in-progress row Submit action. Matches in-editor Submit ordering:
-   * kill switch → incomplete picks/entry/tie-breaker → duplicate name → submission deadline/toggle.
+   * picks access gates → incomplete picks/entry/tie-breaker → duplicate name.
    */
   const getInProgressSubmitDisabledReason = (row: Bracket): string | null => {
     if (row.status !== 'in_progress') return null;
     if (submittingBracketId === row.id) return 'Submitting…';
-    if (isKillSwitchDisabled()) return killSwitchDisabledReason;
+    if (mutationsBlocked) return accessBlockMessage;
     if (!tournamentData || !emptyBracketTemplate) {
-      return 'Tournament data not loaded. Try refreshing.';
+      return (
+        siteConfig?.bracketsMissingErrorMessage ||
+        FALLBACK_CONFIG.bracketsMissingErrorMessage ||
+        'Tournament data not loaded. Try refreshing.'
+      );
     }
     const picks = row.picks || {};
     const entry = row.entryName || '';
@@ -847,9 +900,6 @@ export default function MyPicksLanding({
         siteConfig?.finalMessageDuplicateName ||
         'An entry with this name already exists for this year. Please choose a different name.'
       );
-    }
-    if (isBracketCreationDisabled()) {
-      return getBracketCreationDisabledReason();
     }
     return null;
   };
@@ -1038,36 +1088,119 @@ export default function MyPicksLanding({
     </button>
   );
 
+  /**
+   * Thin orange frame around the WMM logo with a year tab that overlaps the logo
+   * blue and shares a thick orange bottom bar — flat across the bottom.
+   */
+  const renderLogoYearFrame = (variant: 'desktop' | 'mobile') => {
+    const isDesktop = variant === 'desktop';
+    const canPickYear = Boolean(onViewingYearChange);
+    const frameWidth = isDesktop ? 168 : 108;
+    const logoHeight = isDesktop ? 118 : 76;
+    const tabWidth = isDesktop ? 76 : 60;
+    const tabHeight = isDesktop ? 20 : 17;
+    /** How far the tab overlaps up into the logo blue (px). */
+    const tabOverlap = isDesktop ? 10 : 8;
+    /** Thick bottom border height; equals tab height so bottoms align flush. */
+    const bottomBarHeight = tabHeight;
+
+    return (
+      <div
+        className={`relative flex-shrink-0 ${isDesktop ? 'mr-4' : ''}`}
+        style={{ width: frameWidth }}
+        data-testid={`picks-logo-year-frame-${variant}`}
+      >
+        {/*
+          Outer orange shell: 1px top/sides, thick bottom bar (= tab height)
+          so the year tab and frame share one flat bottom edge.
+        */}
+        <div
+          className="rounded-[1px] bg-[#f97316]"
+          style={{
+            paddingTop: 1,
+            paddingLeft: 1,
+            paddingRight: 1,
+            paddingBottom: bottomBarHeight,
+          }}
+        >
+          <div
+            className="overflow-hidden bg-[#0f2744]"
+            style={{ height: logoHeight }}
+          >
+            <div className="flex h-full w-full items-center justify-center">
+              {siteConfig?.wmmLogo && !logoError ? (
+                <Image
+                  src={`/images/${siteConfig.wmmLogo}`}
+                  alt="Site Logo"
+                  width={isDesktop ? 220 : 140}
+                  height={isDesktop ? 118 : 76}
+                  className="h-full w-full object-contain"
+                  onError={() => setLogoError(true)}
+                />
+              ) : (
+                <span className="px-1 text-center text-[10px] font-semibold text-gray-300">
+                  {logoError ? 'Image not Found' : 'WMM'}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        {/*
+          Year tab: bumped up into the logo blue, bottom flush with the thick
+          orange bottom bar (trapezoid only visible on the top/sides into blue).
+        */}
+        <button
+          type="button"
+          onClick={() => canPickYear && setYearPickerOpen(true)}
+          disabled={!canPickYear}
+          title={canPickYear ? 'Change tournament year' : undefined}
+          aria-label={`Viewing year ${viewingYear}. Change tournament year`}
+          data-testid={`picks-year-badge-${variant}`}
+          className={`absolute left-1/2 z-10 flex -translate-x-1/2 items-center justify-center gap-0.5 bg-[#f97316] font-bold leading-none text-[#0f2744] transition-colors ${
+            isDesktop ? 'text-[11px]' : 'text-[10px]'
+          } ${
+            canPickYear
+              ? 'cursor-pointer hover:brightness-110'
+              : 'cursor-default'
+          }`}
+          style={{
+            bottom: 0,
+            width: tabWidth,
+            height: tabHeight + tabOverlap,
+            clipPath: 'polygon(12% 0, 88% 0, 100% 100%, 0 100%)',
+          }}
+        >
+          <span className="translate-y-[1px]">{viewingYear}</span>
+          {canPickYear && (
+            <ChevronDown
+              className={`${isDesktop ? 'h-3 w-3' : 'h-2.5 w-2.5'} translate-y-[1px]`}
+              aria-hidden
+              strokeWidth={2.75}
+            />
+          )}
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
             {/* Welcome Header */}
             <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
+              {isHistoricalView && (
+                <div
+                  className="mb-4 rounded-md border border-yellow-300 bg-yellow-100 px-3 py-2 text-sm font-medium text-yellow-800"
+                  data-testid="picks-historical-banner"
+                >
+                  {renderMessageWithLineBreaks(priorYearBannerMessage)}
+                </div>
+              )}
               {/* Desktop Layout */}
               <div className="hidden md:block">
                 <div className="flex items-start justify-between">
-                  {/* Site Logo - Far Left */}
-                  {siteConfig?.wmmLogo && (
-                    <div className="flex-shrink-0 mr-4">
-                      <div className="h-32 w-auto flex items-center justify-center">
-                        {logoError ? (
-                          <div className="text-red-600 text-xs text-center">
-                            Image not Found
-                          </div>
-                        ) : (
-                          <Image
-                            src={`/images/${siteConfig.wmmLogo}`}
-                            alt="Site Logo"
-                            width={200}
-                            height={100}
-                            className="h-full w-auto object-contain max-h-full"
-                            onError={() => setLogoError(true)}
-                          />
-                        )}
-                      </div>
-                    </div>
-                  )}
+                  {renderLogoYearFrame('desktop')}
                   
                   <div className="flex-1">
                     {/* Line 1: Welcome message with full name */}
@@ -1078,17 +1211,18 @@ export default function MyPicksLanding({
                       {renderProfileEditButton('desktop')}
                     </h1>
                     
-                    {/* Line 2: Brackets message (or kill-switch replacement) */}
-                    {killSwitchEnabled ? (
+                    {/* Line 2: Brackets message, or access-block (not-available goes to empty state) */}
+                    {showHeaderAccessMessage ? (
+                      <p className={accessMessageClassName} data-testid="picks-access-message-desktop">
+                        {renderMessageWithLineBreaks(accessBlockMessage)}
+                      </p>
+                    ) : (
+                      !mutationsBlocked &&
                       siteConfig?.bracketsMessage && (
                         <p className="text-sm text-gray-600 mt-1">
                           {renderMessageWithLineBreaks(siteConfig.bracketsMessage)}
                         </p>
                       )
-                    ) : (
-                      <p className="text-sm text-red-600 mt-1 font-medium">
-                        {killSwitchDisabledReason}
-                      </p>
                     )}
                     
                     {/* Line 3: Status bubbles - always shown */}
@@ -1109,10 +1243,12 @@ export default function MyPicksLanding({
                       )}
                     </div>
                     
-                    {/* Line 4: Dynamic message - always shown on desktop */}
-                    <p className="text-sm text-gray-600 mt-2">
-                      {renderMessageWithLineBreaks(getDynamicMessage())}
-                    </p>
+                    {/* Line 4: Dynamic message — hidden when it would push a disabled New Bracket */}
+                    {dynamicMessage && (
+                      <p className="text-sm text-gray-600 mt-2">
+                        {renderMessageWithLineBreaks(dynamicMessage)}
+                      </p>
+                    )}
                   </div>
                   
                   {/* Action buttons */}
@@ -1157,14 +1293,8 @@ export default function MyPicksLanding({
                     </div>
                     {showCountdownTimer && (
                       <div
-                        className={`flex w-full items-center justify-center rounded border border-gray-700 bg-black px-4 py-2.5 shadow-inner ${
-                          killSwitchEnabled ? 'text-amber-300' : 'text-red-500'
-                        }`}
-                        title={
-                          killSwitchEnabled
-                            ? 'Countdown to bracket submission deadline'
-                            : killSwitchDisabledReason
-                        }
+                        className="flex w-full items-center justify-center rounded border border-gray-700 bg-black px-4 py-2.5 shadow-inner text-amber-300"
+                        title={countdownHoverTitle}
                         style={{
                           backgroundImage:
                             'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.14) 0.7px, transparent 0.7px)',
@@ -1174,9 +1304,7 @@ export default function MyPicksLanding({
                         <span
                           className={`${scoreboardFont.className} text-[16px] tracking-[0.05em]`}
                           style={{
-                            textShadow: killSwitchEnabled
-                              ? '0 0 5px rgba(252,211,77,0.9)'
-                              : '0 0 5px rgba(239,68,68,0.9)',
+                            textShadow: '0 0 5px rgba(252,211,77,0.9)',
                           }}
                         >
                           {scoreboardTimeDesktop}
@@ -1190,31 +1318,33 @@ export default function MyPicksLanding({
               {/* Mobile Layout */}
               <div className="flex flex-col md:hidden gap-3">
                 <div className="flex flex-col">
-                  {/* Top row: Welcome message and buttons */}
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
+                  {/* Top row: logo/year frame, welcome, buttons */}
+                  <div className="flex items-start justify-between gap-2">
+                    {renderLogoYearFrame('mobile')}
+                    <div className="min-w-0 flex-1">
                       {/* Line 1: Welcome message with first name only */}
                       <h1 className="text-xl font-bold text-gray-900 flex flex-wrap items-center gap-2">
                         <span>Welcome {getFirstName(session?.user?.name)}</span>
                         {renderProfileEditButton('mobile')}
                       </h1>
                       
-                      {/* Line 2: Mobile brackets message (or kill-switch replacement) */}
-                      {killSwitchEnabled ? (
+                      {/* Line 2: Mobile brackets message, or access-block (not-available goes to empty state) */}
+                      {showHeaderAccessMessage ? (
+                        <p className={accessMessageClassName} data-testid="picks-access-message-mobile">
+                          {renderMessageWithLineBreaks(accessBlockMessage)}
+                        </p>
+                      ) : (
+                        !mutationsBlocked &&
                         siteConfig?.mobileBracketsMessage && (
                           <p className="text-sm text-gray-600 mt-1">
                             {renderMessageWithLineBreaks(siteConfig.mobileBracketsMessage)}
                           </p>
                         )
-                      ) : (
-                        <p className="text-sm text-red-600 mt-1 font-medium">
-                          {killSwitchDisabledReason}
-                        </p>
                       )}
                     </div>
                     
                     {/* Action buttons */}
-                    <div className="flex flex-col items-end flex-shrink-0 ml-2 gap-2">
+                    <div className="flex flex-col items-end flex-shrink-0 gap-2">
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={onCreateNew}
@@ -1254,14 +1384,8 @@ export default function MyPicksLanding({
                       </div>
                       {showCountdownTimer && (
                         <div
-                          className={`inline-flex items-center rounded border border-gray-700 bg-black px-2 py-1 shadow-inner ${
-                            killSwitchEnabled ? 'text-amber-300' : 'text-red-500'
-                          }`}
-                          title={
-                            killSwitchEnabled
-                              ? 'Countdown to bracket submission deadline'
-                              : killSwitchDisabledReason
-                          }
+                          className="inline-flex items-center rounded border border-gray-700 bg-black px-2 py-1 shadow-inner text-amber-300"
+                          title={countdownHoverTitle}
                           style={{
                             backgroundImage:
                               'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.14) 0.7px, transparent 0.7px)',
@@ -1271,9 +1395,7 @@ export default function MyPicksLanding({
                           <span
                             className={`${scoreboardFont.className} text-[9px] tracking-[0.05em]`}
                             style={{
-                              textShadow: killSwitchEnabled
-                                ? '0 0 5px rgba(252,211,77,0.9)'
-                                : '0 0 5px rgba(239,68,68,0.9)',
+                              textShadow: '0 0 5px rgba(252,211,77,0.9)',
                             }}
                           >
                             {scoreboardTimeMobile}
@@ -1302,19 +1424,22 @@ export default function MyPicksLanding({
                       )}
                     </div>
                     
-                    {/* Info icon - aligned with logout button */}
-                    <button
-                      onClick={() => setExpandedStatus(expandedStatus === 'info' ? null : 'info')}
-                      className="text-blue-600 hover:text-blue-700 cursor-pointer flex-shrink-0"
-                      style={{ width: '16px', marginLeft: '8px' }}
-                    >
-                      <Info className="h-4 w-4" />
-                    </button>
+                    {/* Info icon — only when there is header status copy to reveal */}
+                    {dynamicMessage && (
+                      <button
+                        onClick={() => setExpandedStatus(expandedStatus === 'info' ? null : 'info')}
+                        className="text-blue-600 hover:text-blue-700 cursor-pointer flex-shrink-0"
+                        style={{ width: '16px', marginLeft: '8px' }}
+                        aria-label="Show bracket status details"
+                      >
+                        <Info className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
                 
                 {/* Line 4: Dynamic message - full width, hidden by default, shown when info icon is clicked */}
-                {expandedStatus === 'info' && (
+                {expandedStatus === 'info' && dynamicMessage && (
                   <div className="text-sm text-gray-600 bg-blue-50 p-2 rounded relative w-full">
                     <button
                       onClick={() => setExpandedStatus(null)}
@@ -1324,7 +1449,7 @@ export default function MyPicksLanding({
                       <X className="h-4 w-4" />
                     </button>
                     <div className="pr-6">
-                      <p>{renderMessageWithLineBreaks(getDynamicMessage())}</p>
+                      <p>{renderMessageWithLineBreaks(dynamicMessage)}</p>
                     </div>
                   </div>
                 )}
@@ -1336,13 +1461,42 @@ export default function MyPicksLanding({
         <div className="bg-white rounded-lg shadow-lg p-6">
 
           {bracketsForYear.length === 0 ? (
-            <div className="text-center py-12">
+            <div className="text-center py-12" data-testid="picks-empty-state">
               <Trophy className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No brackets yet</h3>
-              <p className="text-gray-600">
-                <span className="hidden md:inline">Use the &quot;New Bracket&quot; button to create your first bracket.</span>
-                <span className="md:hidden">Use the &quot;+&quot; button to create your first bracket.</span>
-              </p>
+              {isHistoricalView ? (
+                <>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    No entries for {viewingYear}
+                  </h3>
+                  <p className="text-gray-600" data-testid="picks-empty-historical-message">
+                    You have no brackets for {viewingYear}. Switch to {activeYear} to create new picks.
+                  </p>
+                </>
+              ) : showNotAvailableInEmptyState ? (
+                <p
+                  className="mx-auto max-w-2xl text-lg font-bold leading-relaxed text-gray-900 md:text-2xl md:leading-snug"
+                  data-testid="picks-empty-not-available-message"
+                >
+                  {renderMessageWithLineBreaks(accessBlockMessage)}
+                </p>
+              ) : picksAccess.blocked ? (
+                <>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No brackets yet</h3>
+                  <p className={accessMessageClassName.replace('mt-1', '')} data-testid="picks-empty-access-message">
+                    {renderMessageWithLineBreaks(accessBlockMessage)}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No brackets yet</h3>
+                  <p className="text-gray-600">
+                    <span className="hidden md:inline">
+                      Use the &quot;New Bracket&quot; button to create your first bracket.
+                    </span>
+                    <span className="md:hidden">Use the &quot;+&quot; button to create your first bracket.</span>
+                  </p>
+                </>
+              )}
             </div>
           ) : (
             <>
@@ -1500,16 +1654,16 @@ export default function MyPicksLanding({
                     const finalFour = getFinalFourTeams(bracket.picks);
                     
                     const isDeletedRow = bracket.status === 'deleted';
-                    /** In-progress brackets open read-only when the kill switch blocks saves/submits. */
-                    const killSwitchForcesViewOnly =
-                      bracket.status === 'in_progress' && isKillSwitchDisabled();
-                    const entriesStillAccepted = !isBracketCreationDisabled();
+                    /** In-progress brackets open read-only when picks access blocks mutations. */
+                    const accessForcesViewOnly =
+                      bracket.status === 'in_progress' && mutationsBlocked;
+                    const entriesStillAccepted = !mutationsBlocked;
                     const rowOpenTitle =
                       bracket.status === 'submitted' || bracket.status === 'deleted'
                         ? onOpenFullBracketModal
                           ? 'View bracket'
                           : 'View/Print'
-                        : killSwitchForcesViewOnly
+                        : accessForcesViewOnly
                           ? onOpenFullBracketModal
                             ? 'View bracket'
                             : 'View/Print'
@@ -1826,7 +1980,7 @@ export default function MyPicksLanding({
                               ) : (
                                 <>
                                   {/* In Progress: Edit (or View when kill-switch on), Submit, Copy, Delete */}
-                                  {killSwitchForcesViewOnly ? (
+                                  {accessForcesViewOnly ? (
                                     <LoggedButton
                                       onClick={() => handleEyeOpenFullBracketOrPrint(bracket)}
                                       logLocation={onOpenFullBracketModal ? 'FullBracketModal' : 'Print'}
@@ -2272,6 +2426,69 @@ export default function MyPicksLanding({
                 {isSendingEmail ? 'Sending...' : 'Send Email'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tournament year picker (from logo year tile) */}
+      {yearPickerOpen && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="picks-year-picker-title"
+          data-testid="picks-year-picker-modal"
+          onClick={() => setYearPickerOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2
+              id="picks-year-picker-title"
+              className="text-lg font-bold text-gray-900"
+            >
+              Select tournament year
+            </h2>
+            <p className="mt-1 text-sm text-gray-600">
+              Prior years are read-only. Only {activeYear} accepts new picks.
+            </p>
+            <div className="mt-4 flex flex-col gap-2">
+              {yearOptions.map((y) => {
+                const isCurrentContest = y === activeYear;
+                const isSelected = y === viewingYear;
+                return (
+                  <button
+                    key={y}
+                    type="button"
+                    data-testid={`picks-year-option-${y}`}
+                    onClick={() => {
+                      onViewingYearChange?.(y);
+                      setYearPickerOpen(false);
+                    }}
+                    className={`flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left text-sm font-semibold transition-colors ${
+                      isSelected
+                        ? 'border-blue-600 bg-blue-50 text-blue-900'
+                        : 'border-gray-200 bg-white text-gray-900 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span>
+                      {y}
+                      {isCurrentContest ? ' (current)' : ''}
+                    </span>
+                    {isSelected && <span className="text-blue-600">Selected</span>}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              className="mt-4 w-full rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              onClick={() => setYearPickerOpen(false)}
+              data-testid="picks-year-picker-cancel"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}

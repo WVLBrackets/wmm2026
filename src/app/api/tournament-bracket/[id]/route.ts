@@ -4,11 +4,10 @@ import { authOptions } from '@/lib/auth';
 import { getBracketById, updateBracket, deleteBracket } from '@/lib/repositories/bracketRepository';
 import { getUserByEmail } from '@/lib/repositories/userRepository';
 import { sendSubmissionConfirmationEmail, processEmailAsync } from '@/lib/bracketEmailService';
-import { getSiteConfigFromGoogleSheetsFresh } from '@/lib/siteConfig';
-import { checkSubmissionAllowed } from '@/lib/bracketSubmissionValidator';
 import { csrfProtection } from '@/lib/csrf';
-import { getKillSwitchDisabledMessage } from '@/lib/killSwitch';
 import { normalizeStoredDisplayName } from '@/lib/stringNormalize';
+import { evaluateBracketMutationAccess } from '@/lib/services/bracketMutationPolicy';
+import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 
 /**
  * GET /api/tournament-bracket/[id] - Get a specific bracket
@@ -135,14 +134,6 @@ export async function PUT(
       );
     }
 
-    const killSwitchMessage = await getKillSwitchDisabledMessage();
-    if (killSwitchMessage) {
-      return NextResponse.json(
-        { success: false, error: killSwitchMessage },
-        { status: 403 }
-      );
-    }
-
     const bracket = await getBracketById(id);
     
     if (!bracket) {
@@ -158,6 +149,15 @@ export async function PUT(
       return NextResponse.json(
         { success: false, error: 'Unauthorized to update this bracket' },
         { status: 403 }
+      );
+    }
+
+    // Prior-year read-only + brackets_available / stop_submit / master lock for current year
+    const mutationAccess = await evaluateBracketMutationAccess(bracket.year);
+    if (!mutationAccess.allowed) {
+      return NextResponse.json(
+        { success: false, error: mutationAccess.error },
+        { status: mutationAccess.status }
       );
     }
 
@@ -178,35 +178,15 @@ export async function PUT(
       }
     }
 
-    // If changing status to submitted, check if submission is allowed and validate
+    // If changing status to submitted, validate duplicate names / structure
     if (body.status === 'submitted') {
-      // Get fresh site config to check submission rules (bypass cache for real-time validation)
-      let siteConfig = null;
-      let tournamentYear = new Date().getFullYear(); // Default fallback
-      try {
-        siteConfig = await getSiteConfigFromGoogleSheetsFresh();
-        if (siteConfig?.tournamentYear) {
-          tournamentYear = parseInt(siteConfig.tournamentYear);
-        }
-      } catch {
-        // Use fallback config if Google Sheets fails
-        const { FALLBACK_CONFIG } = await import('@/lib/fallbackConfig');
-        siteConfig = FALLBACK_CONFIG;
-        if (FALLBACK_CONFIG.tournamentYear) {
-          tournamentYear = parseInt(FALLBACK_CONFIG.tournamentYear);
-        }
-      }
-
-      // Check if submission is allowed (deadline/toggle check) BEFORE other validations
-      const submissionCheck = checkSubmissionAllowed(siteConfig);
-      if (!submissionCheck.allowed) {
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: submissionCheck.reason || 'Bracket submission is currently disabled.'
-          },
-          { status: 400 }
-        );
+      const siteConfig = mutationAccess.siteConfig;
+      let tournamentYear = mutationAccess.activeYear;
+      if (siteConfig?.tournamentYear) {
+        const parsed = parseInt(String(siteConfig.tournamentYear), 10);
+        if (!Number.isNaN(parsed)) tournamentYear = parsed;
+      } else if (FALLBACK_CONFIG.tournamentYear) {
+        tournamentYear = parseInt(String(FALLBACK_CONFIG.tournamentYear), 10);
       }
       
       // Check for duplicate names within the same year
@@ -357,14 +337,6 @@ export async function DELETE(
       );
     }
 
-    const killSwitchMessage = await getKillSwitchDisabledMessage();
-    if (killSwitchMessage) {
-      return NextResponse.json(
-        { success: false, error: killSwitchMessage },
-        { status: 403 }
-      );
-    }
-
     const bracket = await getBracketById(id);
     
     if (!bracket) {
@@ -380,6 +352,14 @@ export async function DELETE(
       return NextResponse.json(
         { success: false, error: 'Unauthorized to delete this bracket' },
         { status: 403 }
+      );
+    }
+
+    const mutationAccess = await evaluateBracketMutationAccess(bracket.year);
+    if (!mutationAccess.allowed) {
+      return NextResponse.json(
+        { success: false, error: mutationAccess.error },
+        { status: mutationAccess.status }
       );
     }
 
