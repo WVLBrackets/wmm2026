@@ -28,8 +28,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // For all other routes, continue normally (they may have their own auth checks)
-  return NextResponse.next();
+  const response = NextResponse.next();
+  // The homepage is personalized server-side; never cache an admin response for visitors.
+  if (pathname === '/' || pathname === '/vintage' || pathname.startsWith('/vintage/')) {
+    response.headers.set('Cache-Control', 'private, no-store, max-age=0');
+  }
+  return response;
 }
 
 // Configure which routes this middleware runs on

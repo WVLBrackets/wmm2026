@@ -525,3 +525,30 @@ async function addEnvironmentConstraints(): Promise<void> {
     console.error('[addEnvironmentConstraints] brackets constraint update failed:', error);
   }
 }
+
+/** Isolated vintage schema. Explicitly invoked against its dedicated database only. */
+export async function initializeVintageHomepageDatabase(pool: import('pg').Pool): Promise<void> {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS vintage_homepage (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      version BIGINT NOT NULL DEFAULT 0,
+      draft JSONB NOT NULL,
+      published JSONB NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS vintage_homepage_revisions (
+      id UUID PRIMARY KEY,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      author TEXT NOT NULL,
+      action TEXT NOT NULL CHECK (action IN ('save', 'publish', 'restore')),
+      content JSONB NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS vintage_homepage_media (
+      id UUID PRIMARY KEY,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      url TEXT NOT NULL,
+      filename TEXT NOT NULL,
+      alt TEXT NOT NULL,
+      author TEXT NOT NULL
+    );
+  `);
+}

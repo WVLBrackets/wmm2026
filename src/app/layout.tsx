@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { siteConfig } from "@/config/site";
-import NavigationWrapper from "@/components/NavigationWrapper";
-import Footer from "@/components/Footer";
+import SiteChrome from "@/components/SiteChrome";
+import { getBuildStamp } from "@/lib/buildStamp";
 import SessionProvider from "@/components/SessionProvider";
 import { BracketModeProvider } from "@/contexts/BracketModeContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -63,15 +63,6 @@ function getEnvironmentBanner(appEnv: AppEnvironment): {
   return { show: false, label: '', className: '' };
 }
 
-/**
- * Footer / build stamp environment label.
- */
-function getEnvironmentStampLabel(appEnv: AppEnvironment): string {
-  if (appEnv === 'local') return 'LOCAL';
-  if (appEnv === 'preview') return 'STAGE';
-  return 'PROD';
-}
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -81,12 +72,7 @@ export default function RootLayout({
   const banner = getEnvironmentBanner(appEnv);
   const stagingBannerHeight = banner.show ? '28px' : '0px';
   const bodyStyle = { '--staging-banner-height': stagingBannerHeight } as CSSProperties;
-  const envLabel = getEnvironmentStampLabel(appEnv);
-  const shortSha = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || 'local';
-  const deployId = process.env.VERCEL_DEPLOYMENT_ID?.slice(0, 8);
-  const buildStamp = deployId
-    ? `${envLabel} • ${shortSha} • ${deployId}`
-    : `${envLabel} • ${shortSha}`;
+  const buildStamp = getBuildStamp();
 
   return (
     <html lang="en">
@@ -114,11 +100,7 @@ export default function RootLayout({
         <ErrorBoundary>
           <SessionProvider>
             <BracketModeProvider>
-              <NavigationWrapper />
-              <main>
-                {children}
-              </main>
-              <Footer buildStamp={buildStamp} />
+              <SiteChrome buildStamp={buildStamp}>{children}</SiteChrome>
             </BracketModeProvider>
           </SessionProvider>
         </ErrorBoundary>
