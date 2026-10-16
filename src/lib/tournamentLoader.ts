@@ -1,14 +1,26 @@
 import { TournamentData } from '@/types/tournament';
+import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 
 /**
- * Load tournament data from JSON file
- * Uses fs.readFileSync on server-side, fetch in browser
+ * Default year string when callers omit year (prefer site fallback over a stale literal).
  */
-export async function loadTournamentData(year: string = '2025'): Promise<TournamentData> {
+function defaultTournamentYear(): string {
+  return String(FALLBACK_CONFIG.tournamentYear || new Date().getFullYear());
+}
+
+/**
+ * Load tournament data from JSON file.
+ * Uses fs.readFileSync on server-side, fetch in browser.
+ * Throws when the file is missing — prefer {@link tryLoadTournamentData} for optional loads.
+ *
+ * @param year - Tournament year (e.g. "2027")
+ */
+export async function loadTournamentData(year?: string): Promise<TournamentData> {
+  const resolvedYear = year || defaultTournamentYear();
   try {
     // Check if we're in a server environment (Node.js) or browser
     const isServer = typeof window === 'undefined';
-    
+
     if (isServer) {
       // Server-side: Read directly from filesystem using dynamic require
       // This prevents fs from being bundled in client-side code
@@ -16,26 +28,76 @@ export async function loadTournamentData(year: string = '2025'): Promise<Tournam
       const fs = require('fs');
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const path = require('path');
-      
-      const filePath = path.join(process.cwd(), 'public', 'data', `tournament-${year}.json`);
-      
+
+      const filePath = path.join(process.cwd(), 'public', 'data', `tournament-${resolvedYear}.json`);
+
       if (!fs.existsSync(filePath)) {
-        throw new Error(`Tournament data file not found: tournament-${year}.json`);
+        throw new Error(`Tournament data file not found: tournament-${resolvedYear}.json`);
       }
-      
+
       const fileContent = fs.readFileSync(filePath, 'utf8');
       return JSON.parse(fileContent) as TournamentData;
     } else {
       // Client-side: Use fetch with relative URL
-      const response = await fetch(`/data/tournament-${year}.json`);
+      const response = await fetch(`/data/tournament-${resolvedYear}.json`);
       if (!response.ok) {
-        throw new Error(`Failed to load tournament data for ${year}`);
+        throw new Error(`Failed to load tournament data for ${resolvedYear}`);
       }
       return await response.json();
     }
   } catch (error) {
     console.error('Error loading tournament data:', error);
     throw error;
+  }
+}
+
+/**
+ * Attempt to load tournament JSON without throwing when the field file is absent.
+ * Missing files are a quiet null (no error log) — callers decide if that is expected
+ * (`brackets_available=NO`) or an error (`brackets_available=YES`).
+ *
+ * @param year - Tournament year (e.g. "2027")
+ * @returns Tournament data, or null if the file is missing / unreachable
+ */
+export async function tryLoadTournamentData(year?: string): Promise<TournamentData | null> {
+  const resolvedYear = year || defaultTournamentYear();
+  const isServer = typeof window === 'undefined';
+
+  if (isServer) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const fs = require('fs');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const path = require('path');
+    const filePath = path.join(process.cwd(), 'public', 'data', `tournament-${resolvedYear}.json`);
+    if (!fs.existsSync(filePath)) {
+      return null;
+    }
+    try {
+      const fileContent = fs.readFileSync(filePath, 'utf8');
+      return JSON.parse(fileContent) as TournamentData;
+    } catch (error) {
+      console.warn(
+        `[tournamentLoader] Failed to parse tournament-${resolvedYear}.json`,
+        error instanceof Error ? error.message : error
+      );
+      return null;
+    }
+  }
+
+  try {
+    const response = await fetch(`/data/tournament-${resolvedYear}.json`);
+    if (response.status === 404) {
+      return null;
+    }
+    if (!response.ok) {
+      console.warn(
+        `[tournamentLoader] Unexpected response loading tournament-${resolvedYear}.json: ${response.status}`
+      );
+      return null;
+    }
+    return (await response.json()) as TournamentData;
+  } catch {
+    return null;
   }
 }
 
@@ -131,4 +193,3 @@ export function getScoringPoints(round: string, tournamentData: TournamentData):
   const scoring = tournamentData.metadata.scoring.find(s => s.round === round);
   return scoring ? scoring.points : 0;
 }
-

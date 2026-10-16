@@ -1,18 +1,20 @@
 # Global Engineering Standards
 
-**Project:** WMM2026 (Tournament Bracket Application)  
+**Scope:** All web applications in this organization’s portfolio (Next.js / Vercel / Neon stack and aligned patterns).  
 **Created:** February 21, 2026  
-**Last Updated:** February 22, 2026 (Formalized responsive test ID standard: -desktop/-mobile suffixes)  
-**Purpose:** Living document defining engineering standards for this project
+**Last Updated:** April 4, 2026 (Organization-wide scope; configuration standards; Base App alignment)  
+**Purpose:** Living document defining **how we implement solutions**—security, architecture, testing, APIs, and operational patterns teams should follow or consciously deviate from with Architect review.
 
 ---
 
 ## How to Use This Document
 
-- **The Standards** is our single source of truth for engineering decisions
-- Update this document when establishing new standards or modifying existing ones
-- All code changes should align with these standards
-- When in doubt, discuss before deviating
+- **The Standards** are the single source of truth for **cross-cutting engineering decisions** (stack, security, data access, testing conventions, etc.).
+- **Not every feature or product** must exercise every section on day one. Apply the sections that fit the problem (e.g. a batch job may not need Playwright E2E patterns; a new route still needs API and auth standards where applicable). When a section does not apply, document the exception in the project README or ADR if non-obvious.
+- **New application bootstrap:** The first stand-up of a **greenfield** app follows **[docs/templates/BASE_APP_REQUIREMENTS.md](docs/templates/BASE_APP_REQUIREMENTS.md)** and **[docs/templates/PROJECT_START_CHECKLIST.md](docs/templates/PROJECT_START_CHECKLIST.md)** (nav shell, Config Sheet rules, auth, admin users, env banners, provisioning). Those documents define the **initial product slice**; this document defines **ongoing engineering quality** for any codebase in the portfolio.
+- **Examples** in this file often reference the **WMM2026** repository (tournament bracket product) as a concrete reference implementation. Treat those paths and names as **illustrative**; new apps use the same patterns with domain-appropriate modules (`orders/`, `reports/`, etc.).
+- Update this document when portfolio-wide standards change. Update the Base App Requirements when the **template** for new apps changes.
+- When in doubt, discuss with the Application Architect before deviating.
 
 ### Rating Legend
 
@@ -45,7 +47,7 @@
 > **Section Owner:** Application Architect  
 > **Last Reviewed:** February 21, 2026
 
-This section defines the approved technologies for this project. All technology choices should align with this stack unless explicitly approved.
+This section defines the **default approved technologies** for applications in this portfolio. All technology choices should align with this stack unless the Architect approves a documented deviation.
 
 ---
 
@@ -213,12 +215,12 @@ src/
 
 ### 2.3 Component Organization (B)
 
-Group related components into subdirectories by feature:
+Group related components into subdirectories by **feature or bounded context** (domain name, admin, marketing, etc.):
 
 ```
 components/
-├── bracket/       # Bracket-specific components
-├── admin/         # Admin panel components
+├── <feature>/     # e.g. orders/, reports/, bracket/ in a bracket product
+├── admin/         # Admin panel components (when applicable)
 └── [shared]/      # Shared components at root
 ```
 
@@ -236,17 +238,19 @@ Each library module should have a single, focused responsibility.
 
 | Module | Responsibility |
 |--------|----------------|
-| `lib/repositories/userRepository.ts` | User CRUD operations |
-| `lib/repositories/bracketRepository.ts` | Bracket CRUD operations |
-| `lib/repositories/teamDataRepository.ts` | Team reference data |
-| `lib/services/tokenService.ts` | Token operations (confirm, reset) |
+| `lib/repositories/userRepository.ts` | User / identity CRUD (typical) |
+| `lib/repositories/<domain>Repository.ts` | CRUD for one aggregate or bounded context |
+| `lib/repositories/*Reference*` (optional) | Shared reference or lookup data |
+| `lib/services/tokenService.ts` | Token operations (confirm, reset) when email auth is used |
 | `lib/services/authService.ts` | Password verification |
 | `lib/database/migrations.ts` | Database schema management |
 | `lib/api/responses.ts` | Standardized API responses |
 | `lib/validation/validators.ts` | Input validation utilities |
 | `lib/constants.ts` | Application constants |
 
-**Note:** `secureDatabase.ts` remains as a backward-compatibility re-export layer. New code should import from specific modules directly.
+**Example (WMM2026):** `bracketRepository`, `teamDataRepository` implement the domain and reference rows above.
+
+**Note:** Legacy aggregate import files may remain during migration; **new code** should import from specific modules directly.
 
 ---
 
@@ -256,7 +260,7 @@ Each library module should have a single, focused responsibility.
 > **Last Reviewed:** February 21, 2026  
 > **Compliance Status:** All standards (A) - Fully compliant
 
-This section defines all security standards for the application. The Security Auditor is responsible for maintaining these standards and ensuring compliance across the codebase.
+This section defines security standards for **applications in this portfolio**. The Security Auditor is responsible for maintaining these standards and ensuring compliance across each codebase.
 
 ---
 
@@ -819,7 +823,7 @@ if (!body.email || !body.password) {
 > **Last Reviewed:** February 21, 2026  
 > **Compliance Status:** 10 standards (A), 2 standards (B)
 
-This section defines all testing standards for the application. The QA Engineer is responsible for maintaining these standards, test coverage, and test quality.
+This section defines testing standards for **applications in this portfolio**. The QA Engineer is responsible for maintaining these standards, test coverage, and test quality per project.
 
 ---
 
@@ -1525,34 +1529,35 @@ Log all email events to `email_logs` table:
 
 ## 10. Configuration
 
-### 10.1 Environment Variables (A)
+### 10.1 Environment variables and secrets (A)
 
-All configuration via environment variables:
+- **Secrets** (database URLs, `NEXTAUTH_SECRET`, private API keys, signing keys) **must** come from environment variables or the host secret store (e.g. Vercel **Environment Variables**), not from source control.
+- **Non-secret**, operator-editable values (branding copy, feature flags readable by the server) may be loaded from a **Config Sheet** or equivalent when the product specifies it—see **[docs/templates/BASE_APP_REQUIREMENTS.md](docs/templates/BASE_APP_REQUIREMENTS.md)** for the portfolio **greenfield** pattern (tab selection, required keys, no silent defaults).
+- Reference identifiers for external systems (e.g. spreadsheet ID, tab GID) should live in **env** if they are not secrets but must differ per environment.
 
 ```typescript
-process.env.NEXTAUTH_SECRET
-process.env.DATABASE_URL
-process.env.ADMIN_EMAIL
+// Examples only—names vary by project
+process.env.NEXTAUTH_SECRET;
+process.env.POSTGRES_URL; // or PRODUCTION_POSTGRES_URL / PREVIEW_POSTGRES_URL / LOCAL_POSTGRES_URL
 ```
 
 ---
 
-### 10.2 Fallback Configuration (A)
+### 10.2 External configuration: no silent fallbacks (A)
 
-Provide fallbacks when external config fails:
+**Standard (portfolio):**
 
-```typescript
-const config = await getSiteConfigFromGoogleSheets();
-const value = config?.entryCost ?? FALLBACK_CONFIG.entryCost;
-```
+- When loading **typed** configuration from Google Sheets, a database table, or another remote source: **do not** substitute **undocumented** default values when a **required** key is missing, empty, or fails validation.
+- Fail loudly: identify the **config key** (or variable name) and the **reason** (missing, empty, wrong type, timeout, HTTP error). Prefer a **blocking** error UI or safe degraded mode that **explicitly** states configuration is invalid—never silent substitution.
+- **Greenfield applications** must implement the strict Config Sheet rules in **[BASE_APP_REQUIREMENTS.md](docs/templates/BASE_APP_REQUIREMENTS.md)**.
 
-**Location:** `src/lib/fallbackConfig.ts`
+**WMM2026 note (technical debt, not required now):** The current WMM codebase uses `src/lib/fallbackConfig.ts` and permissive parsing in `siteConfig.ts`. Aligning WMM with this standard (removing silent fallbacks) is **recommended future hardening**; it is **not** a gate for routine WMM feature work until prioritized.
 
 ---
 
-### 10.3 Build vs Runtime Config (B)
+### 10.3 Build vs runtime configuration (B)
 
-Handle build-time vs runtime differently:
+Handle build-time vs runtime differently where Next.js or the host requires placeholders during `next build`:
 
 ```typescript
 if (process.env.NEXT_PHASE === 'phase-production-build') {
@@ -1562,7 +1567,7 @@ if (process.env.NEXT_PHASE === 'phase-production-build') {
 if (!secret) throw new Error('NEXTAUTH_SECRET required');
 ```
 
-**Status:** Applied for auth, needs systematic application elsewhere.
+**Status:** Apply consistently for any value that must exist at runtime but cannot be resolved at build time.
 
 ---
 
@@ -1615,7 +1620,7 @@ Cache appropriate responses:
 3. ~~**[B] Create validation utilities**~~ - Created `lib/validation/validators.ts`
 4. ~~**[B] Define constants**~~ - Created `lib/constants.ts`
 5. ~~**[B] Rate limiting**~~ - Implemented on all auth endpoints
-6. ~~**[B] CSRF protection**~~ - Implemented for bracket operations
+6. ~~**[B] CSRF protection**~~ - Implemented for state-changing operations (WMM: includes bracket flows)
 7. ~~**[B] XSS prevention**~~ - Added escaping in email templates
 8. ~~**[B] Test helpers centralization**~~ - Consolidated into `tests/fixtures/` with documented utilities
 9. ~~**[B] Security testing**~~ - Added comprehensive penetration test suite (`security.spec.ts`)
@@ -1653,42 +1658,37 @@ Cache appropriate responses:
 | 2026-02-21 | **Test ID Coverage:** Added data-testid attributes for stable Playwright locators (logout, new-bracket, entry-name, tiebreaker, copy/email/delete buttons, delete dialog) | Architect |
 | 2026-02-22 | **Test Updates:** Migrated E2E tests to use data-testid locators (sign-out.spec.ts, bracket-full-workflow.spec.ts, bracket-interaction.spec.ts); Added data-testid to Testing Checklist | QA Engineer |
 | 2026-02-22 | **Responsive Test ID Standard:** Formalized requirement for unique `-desktop` / `-mobile` suffixes on responsive elements; Updated test usage examples in Section 7.7 | QA Engineer |
+| 2026-04-04 | **Portfolio scope:** Document applies to all org applications; linked Base App Requirements + checklist; widened “How to Use” (apply relevant sections); configuration §10 rewritten—**no silent fallbacks** as standard; WMM fallbacks noted as optional future hardening; generalized architecture examples and module reference | Architect |
 
 ---
 
-## New Module Reference
+## New module reference
 
-Quick reference for new imports:
+**Generic pattern** (any app in the portfolio):
 
 ```typescript
 // Types
-import type { User, Bracket, BracketWithUser } from '@/lib/types/database';
+import type { User /*, YourEntity */ } from '@/lib/types/database';
 
-// Repositories
+// Repositories — one file per aggregate / bounded context
 import { createUser, getUserByEmail } from '@/lib/repositories/userRepository';
-import { createBracket, getBracketById } from '@/lib/repositories/bracketRepository';
-import { getAllTeamReferenceData } from '@/lib/repositories/teamDataRepository';
+// import { getOrderById } from '@/lib/repositories/orderRepository';
 
-// Services
+// Services — orchestration, tokens, auth helpers
 import { verifyPassword } from '@/lib/services/authService';
-import { confirmUserEmail, resetPassword } from '@/lib/services/tokenService';
 
-// API Helpers
+// API helpers
 import { successResponse, errorResponse, ApiErrors } from '@/lib/api/responses';
 
 // Validation
-import { validateRegistration, validateBracketInput } from '@/lib/validation/validators';
+import { validateRegistration /*, validateYourInput */ } from '@/lib/validation/validators';
 
-// Constants
-import { BracketStatus, Environment, ErrorCode } from '@/lib/constants';
-
-// Database (migrations only)
+// Database (migrations / init only)
 import { initializeDatabase } from '@/lib/database/migrations';
-
-// Backward compatibility (deprecated - use specific imports above)
-import { createUser, createBracket } from '@/lib/secureDatabase';
 ```
+
+**Concrete example (WMM2026 repository):** additionally uses `bracketRepository`, `teamDataRepository`, `validateBracketInput`, `BracketStatus`, and related imports. Copy the **shape**, not the domain names, into new products.
 
 ---
 
-*This is a living document. Update it when standards change.*
+*This is a living document. Update it when portfolio standards change.*

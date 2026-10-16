@@ -27,3 +27,16 @@ export function getAppEnvironment(): AppEnvironment {
 export function isProductionEnvironment(): boolean {
   return getAppEnvironment() === 'production';
 }
+
+/**
+ * Browser-tab title prefix so Local / Staging are distinguishable without clicking.
+ * Production returns an empty string (no change to the public title).
+ *
+ * @param appEnv - Resolved app environment
+ * @returns `[L] ` for local, `[S] ` for staging/preview, otherwise `''`
+ */
+export function getEnvironmentTitlePrefix(appEnv: AppEnvironment = getAppEnvironment()): string {
+  if (appEnv === 'local') return '[L] ';
+  if (appEnv === 'preview') return '[S] ';
+  return '';
+}

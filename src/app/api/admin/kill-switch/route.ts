@@ -21,7 +21,7 @@ export async function GET() {
       success: true,
       data: {
         enabled,
-        message: config?.killSwitchOn || FALLBACK_CONFIG.killSwitchOn,
+        message: config?.masterLockMessage || FALLBACK_CONFIG.masterLockMessage,
       },
     }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {

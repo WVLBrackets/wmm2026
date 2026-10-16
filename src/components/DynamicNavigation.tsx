@@ -67,29 +67,6 @@ export default function DynamicNavigation({ hideInBracketMode = false }: Dynamic
   /** Standings section includes daily (`/standings`) and live (`/standings/live`) from the in-page toggle. */
   const isStandingsNavActive = pathname === '/standings' || pathname === '/standings/live';
 
-  // Determine if My Picks should be shown based on environment and feature flags
-  const shouldShowMyPicks = () => {
-    if (!siteConfig) return false;
-    
-    // Detect preview/staging by checking if we're on a Vercel preview URL
-    // Vercel preview URLs follow the pattern: project-name-git-branch-owner-projects.vercel.app
-    // Production is typically on a custom domain (wmm2026.com) or the main vercel.app domain
-    const isPreview = typeof window !== 'undefined' && (
-      window.location.hostname.includes('-git-') || 
-      (window.location.hostname.includes('vercel.app') && 
-       !window.location.hostname.startsWith('wmm2026') &&
-       window.location.hostname.includes('.'))
-    );
-    
-    // Use dev flag for preview/staging deployments
-    if (isPreview) {
-      return siteConfig.showPicksDev === 'Yes';
-    }
-    
-    // Use prod flag for production deployments only
-    return siteConfig.showPicksProd === 'Yes';
-  };
-
   if (!siteConfig) {
     // Show loading state or fallback
     return (
@@ -181,20 +158,19 @@ export default function DynamicNavigation({ hideInBracketMode = false }: Dynamic
               );
             })}
             
-            {/* My Picks - Far Right (conditional) */}
-            {shouldShowMyPicks() && (
-              <Link
-                href="/bracket"
-                className={`inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium transition-colors ${
-                  pathname === '/bracket'
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                }`}
-              >
-                <Vote className="h-5 w-5 mr-2" />
-                My Picks
-              </Link>
-            )}
+            {/* My Picks - always shown; mutation gates live on the page/API */}
+            <Link
+              href="/bracket"
+              className={`inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium transition-colors ${
+                pathname === '/bracket'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+              }`}
+              data-testid="nav-my-picks"
+            >
+              <Vote className="h-5 w-5 mr-2" />
+              My Picks
+            </Link>
             
             {/* Admin - Far Right (admin only) */}
             {isAdmin && (
@@ -235,20 +211,18 @@ export default function DynamicNavigation({ hideInBracketMode = false }: Dynamic
               );
             })}
             
-            {/* My Picks for mobile (conditional) */}
-            {shouldShowMyPicks() && (
-              <Link
-                href="/bracket"
-                className={`p-2 rounded-md transition-colors ${
-                  pathname === '/bracket'
-                    ? 'bg-blue-100 text-blue-600'
-                    : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
-                }`}
-                title="My Picks"
-              >
-                <Vote className="h-5 w-5" />
-              </Link>
-            )}
+            <Link
+              href="/bracket"
+              className={`p-2 rounded-md transition-colors ${
+                pathname === '/bracket'
+                  ? 'bg-blue-100 text-blue-600'
+                  : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
+              }`}
+              title="My Picks"
+              data-testid="nav-my-picks-mobile-icon"
+            >
+              <Vote className="h-5 w-5" />
+            </Link>
             
             {/* Mobile menu button */}
             <button
@@ -296,21 +270,19 @@ export default function DynamicNavigation({ hideInBracketMode = false }: Dynamic
                   );
                 })}
                 
-                {/* My Picks for mobile menu (conditional) */}
-                {shouldShowMyPicks() && (
-                  <Link
-                    href="/bracket"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className={`flex items-center space-x-3 px-3 py-2 rounded-md text-base font-medium transition-colors ${
-                      pathname === '/bracket'
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    <Vote className="h-5 w-5" />
-                    <span>My Picks</span>
-                  </Link>
-                )}
+                <Link
+                  href="/bracket"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`flex items-center space-x-3 px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                    pathname === '/bracket'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
+                  }`}
+                  data-testid="nav-my-picks-mobile-menu"
+                >
+                  <Vote className="h-5 w-5" />
+                  <span>My Picks</span>
+                </Link>
                 
                 {/* Admin for mobile menu (admin only) */}
                 {isAdmin && (

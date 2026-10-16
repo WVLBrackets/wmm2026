@@ -2,17 +2,20 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSiteConfigFromGoogleSheetsFresh } from '@/lib/siteConfig';
-import { checkSubmissionAllowed } from '@/lib/bracketSubmissionValidator';
-import { getKillSwitchState } from '@/lib/killSwitch';
+import { getMasterLockState } from '@/lib/killSwitch';
+import { tryLoadTournamentData } from '@/lib/tournamentLoader';
+import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
+import { evaluatePicksAccess } from '@/lib/services/picksAccessPolicy';
 
 /**
- * GET /api/bracket/check-creation - Check if bracket creation is currently allowed
- * Returns whether bracket creation is allowed based on stop_submit_toggle and stop_submit_date_time
+ * GET /api/bracket/check-creation - Check if bracket creation is currently allowed.
+ *
+ * Priority: brackets_available (+ JSON error) → stop_submit → Application Master Lock.
  */
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.email) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
@@ -20,43 +23,41 @@ export async function GET() {
       );
     }
 
-    const killSwitchState = await getKillSwitchState();
-    if (!killSwitchState.enabled) {
-      return NextResponse.json({
-        success: true,
-        allowed: false,
-        reason: killSwitchState.message,
-      });
-    }
-
-    // Get fresh site config to check submission rules (bypass cache for real-time validation)
     let siteConfig = null;
     try {
       siteConfig = await getSiteConfigFromGoogleSheetsFresh();
     } catch {
-      // Use fallback config if Google Sheets fails
-      const { FALLBACK_CONFIG } = await import('@/lib/fallbackConfig');
       siteConfig = FALLBACK_CONFIG;
     }
 
-    // Check if bracket creation is allowed
-    const submissionCheck = checkSubmissionAllowed(siteConfig);
-    
+    const year = String(
+      siteConfig?.tournamentYear || FALLBACK_CONFIG.tournamentYear || new Date().getFullYear()
+    );
+    const [tournamentData, masterLock] = await Promise.all([
+      tryLoadTournamentData(year),
+      getMasterLockState(),
+    ]);
+
+    const access = evaluatePicksAccess(siteConfig, {
+      tournamentJsonPresent: Boolean(tournamentData),
+      masterLockUnlocked: masterLock.unlocked,
+    });
+
     return NextResponse.json({
       success: true,
-      allowed: submissionCheck.allowed,
-      reason: submissionCheck.reason || undefined
+      allowed: !access.blocked,
+      reason: access.blocked ? access.message : undefined,
+      reasonCode: access.reasonCode,
     });
   } catch (error) {
     console.error('Error checking bracket creation status:', error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Failed to check bracket creation status',
-        allowed: false // Default to not allowed on error
+        allowed: false,
       },
       { status: 500 }
     );
   }
 }
-

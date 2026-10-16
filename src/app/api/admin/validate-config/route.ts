@@ -92,6 +92,72 @@ export async function GET() {
       pushIssue(issues, 'warning', 'last_year_winner', 'Missing "last_year_winner".');
     }
 
+    const bracketsAvailableRaw = (config.bracketsAvailable || '').trim().toUpperCase();
+    if (!bracketsAvailableRaw) {
+      pushIssue(
+        issues,
+        'warning',
+        'brackets_available',
+        'Missing "brackets_available" (expected YES or NO). Defaulting behavior treats blank as NO.'
+      );
+    } else if (bracketsAvailableRaw !== 'YES' && bracketsAvailableRaw !== 'NO') {
+      pushIssue(
+        issues,
+        'error',
+        'brackets_available',
+        `Invalid brackets_available value "${config.bracketsAvailable}". Use YES or NO.`
+      );
+    }
+
+    if (!config.masterLockMessage?.trim()) {
+      pushIssue(
+        issues,
+        'warning',
+        'master_lock_message',
+        'Missing "master_lock_message" (shown when Application Master Lock is Locked).'
+      );
+    }
+
+    if (bracketsAvailableRaw === 'YES') {
+      const year = String(config.tournamentYear || '').trim();
+      if (year) {
+        const tournamentPath = join(process.cwd(), 'public', 'data', `tournament-${year}.json`);
+        if (!existsSync(tournamentPath)) {
+          pushIssue(
+            issues,
+            'error',
+            'brackets_available',
+            `brackets_available is YES but tournament-${year}.json is missing under public/data.`
+          );
+        }
+      }
+      if (!config.bracketsMissingErrorMessage?.trim()) {
+        pushIssue(
+          issues,
+          'warning',
+          'brackets_missing_error_message',
+          'Missing "brackets_missing_error_message" (used when YES but JSON is absent).'
+        );
+      }
+    } else if (bracketsAvailableRaw === 'NO') {
+      if (!config.bracketsNotAvailableMessage?.trim()) {
+        pushIssue(
+          issues,
+          'warning',
+          'brackets_not_available_message',
+          'Missing "brackets_not_available_message" (may include <date time>).'
+        );
+      }
+      if (!config.bracketsAvailableDateTime?.trim()) {
+        pushIssue(
+          issues,
+          'info',
+          'brackets_available_date_time',
+          'Missing "brackets_available_date_time" used to fill <date time> in the not-available message.'
+        );
+      }
+    }
+
     const wmmLogoFilename = normalizeLocalImageFilename(config.wmmLogo);
     if (!wmmLogoFilename) {
       pushIssue(issues, 'warning', 'wmm_logo', 'wmm_logo is not set. Bracket and print logo areas will be empty.');
