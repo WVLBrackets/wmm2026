@@ -5,7 +5,10 @@ import {
   validateVintageContent,
   safeHref,
 } from "../src/lib/vintage/content";
-import { isVintageEnabled } from "../src/lib/vintage/access";
+import {
+  isVintageEnabled,
+  isPrimaryVintageAdmin,
+} from "../src/lib/vintage/access";
 import { assertDedicatedVintageDatabase } from "../src/lib/vintage/databaseSafety";
 test("default content validates; URLs cannot execute scripts or escape to protocol-relative hosts", () => {
   validateVintageContent(DEFAULT_VINTAGE_CONTENT);
@@ -57,12 +60,18 @@ test("requires image descriptions and rejects bad dates, URLs, crop values and m
   }
   assert.throws(() => validateVintageContent({}));
 });
-test("production blocks Vintage V1 even when the enable flag is set", () => {
+test("production requires the explicit vintage availability flag", () => {
   const env = { ...process.env };
   try {
-    process.env.VERCEL_ENV = "production";
+    Object.assign(process.env, {
+      NODE_ENV: "production",
+      VERCEL_ENV: "production",
+    });
     process.env.VINTAGE_HOMEPAGE_ENABLED = "true";
+    assert.equal(isVintageEnabled(), true);
+    delete process.env.VINTAGE_HOMEPAGE_ENABLED;
     assert.equal(isVintageEnabled(), false);
+    process.env.VINTAGE_HOMEPAGE_ENABLED = "true";
     process.env.VERCEL_ENV = "preview";
     assert.equal(isVintageEnabled(), true);
     delete process.env.VINTAGE_HOMEPAGE_ENABLED;
@@ -88,4 +97,19 @@ test("dedicated database guard detects equivalent pooled URLs with different cre
       env,
     ),
   );
+});
+
+test("only the primary administrator's exact authenticated email selects vintage", () => {
+  assert.equal(isPrimaryVintageAdmin("wvanderlaan@gmail.com"), true);
+  assert.equal(isPrimaryVintageAdmin("WVANDERLAAN@gmail.com"), true);
+  for (const email of [
+    undefined,
+    null,
+    "",
+    "wvanderlaan",
+    "other-admin@example.invalid",
+    "wvanderlaan+test@gmail.com",
+    "wvanderlaan@gmail.com.attacker.invalid",
+  ])
+    assert.equal(isPrimaryVintageAdmin(email), false);
 });

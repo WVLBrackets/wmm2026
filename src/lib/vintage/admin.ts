@@ -1,16 +1,16 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { isAdmin } from "@/lib/adminAuth";
-import { isVintageEnabled } from "./access";
+import { cache } from "react";
+import { isVintageEnabled, isPrimaryVintageAdmin } from "./access";
 import { NextRequest, NextResponse } from "next/server";
 import { csrfProtection } from "@/lib/csrf";
 import { rateLimitMiddleware } from "@/lib/rateLimit";
-export async function vintageAdminEmail(): Promise<string | null> {
+export const vintageAdminEmail = cache(async (): Promise<string | null> => {
   if (!isVintageEnabled()) return null;
   const session = await getServerSession(authOptions);
   const email = session?.user?.email;
-  return email && (await isAdmin(email)) ? email : null;
-}
+  return isPrimaryVintageAdmin(email) ? email : null;
+});
 export async function authorizeVintageRequest(
   request: NextRequest,
 ): Promise<{ email: string } | Response> {

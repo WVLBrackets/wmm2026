@@ -1,9 +1,14 @@
-/** Vintage V1 is deliberately unavailable in production. */
+/** Availability is separate from identity: every page/API also verifies the primary admin. */
 export function isVintageEnabled(): boolean {
-  if (process.env.VERCEL_ENV === "production") return false;
   return (
     process.env.NODE_ENV === "development" ||
-    (process.env.VERCEL_ENV === "preview" &&
+    (["preview", "production"].includes(process.env.VERCEL_ENV || "") &&
       process.env.VINTAGE_HOMEPAGE_ENABLED === "true")
+  );
+}
+
+export function isPrimaryVintageAdmin(email: unknown): email is string {
+  return (
+    typeof email === "string" && email.toLowerCase() === "wvanderlaan@gmail.com"
   );
 }

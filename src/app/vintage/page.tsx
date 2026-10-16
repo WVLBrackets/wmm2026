@@ -10,9 +10,6 @@ export const metadata = {
 };
 export default async function VintagePage() {
   if (!isVintageEnabled()) notFound();
-  const [content, adminEmail] = await Promise.all([
-    getPublishedVintageContent(),
-    vintageAdminEmail(),
-  ]);
-  return <VintageHomepage content={content} admin={!!adminEmail} />;
+  if (!(await vintageAdminEmail())) notFound();
+  return <VintageHomepage content={await getPublishedVintageContent()} admin />;
 }

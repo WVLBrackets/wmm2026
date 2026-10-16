@@ -13,7 +13,6 @@ import {
   CircleUserRound,
 } from "lucide-react";
 import type { VintageContent, VintagePromotion } from "@/lib/vintage/content";
-import HomeViewToggle from "@/components/HomeViewToggle";
 import VintageCountdown from "./VintageCountdown";
 import VintageMasthead from "./VintageMasthead";
 import BasketballMark from "./BasketballMark";
@@ -109,7 +108,7 @@ export default function VintageHomepage({
             <Link
               data-testid="vintage-nav-home"
               className="v-shortcut-active"
-              href="/vintage"
+              href="/"
               aria-current="page"
             >
               <House aria-hidden="true" />
@@ -355,7 +354,6 @@ export default function VintageHomepage({
             Homepage editor
           </Link>
         </footer>
-        <HomeViewToggle vintage />
       </div>
     </div>
   );

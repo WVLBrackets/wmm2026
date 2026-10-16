@@ -232,7 +232,7 @@ export default function VintageEditor() {
       setDirty(false);
       setMessage(
         action === "publish"
-          ? "Published to the Preview homepage."
+          ? "Published to your private homepage."
           : action === "restore"
             ? "Revision restored as a draft. Preview it before publishing."
             : "Draft saved. It is ready to preview.",
@@ -282,7 +282,7 @@ export default function VintageEditor() {
       <main className="vintage-editor" aria-busy={!error}>
         <header className="ve-header">
           <div>
-            <p className="ve-eyebrow">WARREN’S MARCH MADNESS · PREVIEW</p>
+            <p className="ve-eyebrow">WARREN’S MARCH MADNESS · PRIVATE ADMIN</p>
             <h1>The editor’s desk.</h1>
           </div>
         </header>
@@ -299,7 +299,7 @@ export default function VintageEditor() {
           </p>
         )}
         <Link
-          href="/vintage"
+          href="/"
           className="ve-back"
           data-testid="vintage-editor-loading-back"
         >
@@ -312,14 +312,10 @@ export default function VintageEditor() {
     <main className="vintage-editor">
       <header className="ve-header">
         <div>
-          <Link
-            href="/vintage"
-            className="ve-back"
-            data-testid="vintage-editor-back"
-          >
+          <Link href="/" className="ve-back" data-testid="vintage-editor-back">
             <ArrowLeft size={14} /> Back to the newspaper
           </Link>
-          <p className="ve-eyebrow">WARREN’S MARCH MADNESS · PREVIEW</p>
+          <p className="ve-eyebrow">WARREN’S MARCH MADNESS · PRIVATE ADMIN</p>
           <h1>The editor’s desk.</h1>
           <p>Make the front page your own.</p>
         </div>
@@ -358,7 +354,7 @@ export default function VintageEditor() {
           onClick={() => void save("publish")}
           data-testid="vintage-publish"
         >
-          <Upload size={16} /> Publish to Preview
+          <Upload size={16} /> Publish homepage
         </button>
       </div>
       {error && (
@@ -381,8 +377,8 @@ export default function VintageEditor() {
       )}
       {dirty && (
         <p className="ve-draft-note">
-          Save your draft before opening its preview. The public Preview
-          homepage keeps showing the last published edition.
+          Save your draft before opening its preview. Your private homepage
+          keeps showing the last published edition.
         </p>
       )}
       <div className="ve-workspace">
@@ -483,7 +479,7 @@ export default function VintageEditor() {
                 <small id="vintage-countdown-timezone">
                   Time zone: {timeZone || "your device’s local time zone"}.
                   Saved as one exact moment for all visitors. Save Draft to
-                  preview; Publish to Preview to update the homepage.
+                  preview; Publish homepage to update the homepage.
                 </small>
               </label>
               <h3>Tournament details</h3>

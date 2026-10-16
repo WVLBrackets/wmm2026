@@ -12,7 +12,8 @@ async function main() {
   await mkdir(screenshotDir, { recursive: true });
   const baseURL = "http://127.0.0.1:3107";
   const secret = "vintage-local-verification-secret-not-for-deployment";
-  const admin = "vintage-admin@example.invalid";
+  const admin = "wvanderlaan@gmail.com";
+  const bannerHeight = process.env.VINTAGE_TEST_ENV === "production" ? 0 : 28;
   const server = spawn(
     process.execPath,
     [
@@ -28,7 +29,10 @@ async function main() {
         ...process.env,
         NEXTAUTH_SECRET: secret,
         NEXTAUTH_URL: baseURL,
-        ADMIN_EMAIL: admin,
+        ADMIN_EMAIL: "other-admin@example.invalid",
+        VERCEL_ENV: process.env.VINTAGE_TEST_ENV || "preview",
+        VINTAGE_HOMEPAGE_ENABLED: "true",
+        NODE_OPTIONS: `${process.env.NODE_OPTIONS || ""} --require ${path.resolve("tests/fixtures/vintage-network-stubs.cjs")}`,
         APP_ENV: "local",
         VINTAGE_DATABASE_URL: "",
         DEV_AUTH_BYPASS: "false",
@@ -90,6 +94,78 @@ async function main() {
     const requests: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
     page.on("request", (request) => requests.push(request.url()));
+    await page.goto(baseURL + "/", { waitUntil: "networkidle" });
+    assert.equal(await page.getByTestId("legacy-homepage").count(), 1);
+    assert.equal(await page.getByTestId("vintage-homepage").count(), 0);
+    assert.equal(await page.locator('[data-testid^="home-view-"]').count(), 0);
+    assert.equal((await page.request.get(baseURL + "/vintage")).status(), 404);
+    assert.equal(
+      (await page.request.get(baseURL + "/vintage/admin")).status(),
+      404,
+    );
+    assert.equal(
+      (await page.request.get(baseURL + "/vintage/admin/preview")).status(),
+      404,
+    );
+    assert.equal(
+      (
+        await page.request.get(baseURL + "/api/admin/vintage-homepage")
+      ).status(),
+      403,
+    );
+    assert.equal(
+      (
+        await page.request.get(baseURL + "/api/admin/vintage-homepage/media")
+      ).status(),
+      403,
+    );
+    await page.goto(baseURL + "/?view=new", { waitUntil: "networkidle" });
+    assert.equal(await page.getByTestId("legacy-homepage").count(), 1);
+    const ordinaryToken = await encode({
+      secret,
+      token: {
+        email: "ordinary-user@example.invalid",
+        name: "A participant",
+        sub: "ordinary-user",
+      },
+    });
+    await context.addCookies([
+      { name: "next-auth.session-token", value: ordinaryToken, url: baseURL },
+    ]);
+    await page.goto(baseURL + "/", { waitUntil: "networkidle" });
+    assert.equal(await page.getByTestId("legacy-homepage").count(), 1);
+    assert.equal((await page.request.get(baseURL + "/vintage")).status(), 404);
+    assert.equal(
+      (
+        await page.request.get(baseURL + "/api/admin/vintage-homepage")
+      ).status(),
+      403,
+    );
+    const primaryToken = await encode({
+      secret,
+      token: {
+        email: admin,
+        name: "Warren",
+        sub: "local-primary-admin",
+        id: "local-primary-admin",
+      },
+    });
+    await context.addCookies([
+      { name: "next-auth.session-token", value: primaryToken, url: baseURL },
+    ]);
+    requests.length = 0;
+    await page.goto(baseURL + "/", { waitUntil: "networkidle" });
+    assert.equal(await page.getByTestId("legacy-homepage").count(), 0);
+    assert.equal(await page.getByTestId("vintage-homepage").count(), 1);
+    assert.equal(await page.locator('[data-testid^="home-view-"]').count(), 0);
+    const primaryResponse = await page.request.get(baseURL + "/");
+    assert.match(primaryResponse.headers()["cache-control"] || "", /no-store/);
+    assert.ok(
+      (await primaryResponse.text()).includes('data-testid="vintage-homepage"'),
+    );
+    console.log(
+      "PASS home selection: anonymous users keep the original homepage; only the authenticated primary email receives the new homepage; no toggles or query overrides",
+    );
     await page.goto(baseURL + "/vintage", { waitUntil: "networkidle" });
     await page.evaluate(() => document.fonts.ready);
     assert.equal(await page.getByTestId("vintage-homepage").count(), 1);
@@ -106,14 +182,6 @@ async function main() {
         )?.includes("Download coming soon."),
       );
     }
-    assert.equal(
-      await page.getByTestId("home-view-old").getAttribute("href"),
-      "/",
-    );
-    assert.equal(
-      await page.getByTestId("home-view-new").getAttribute("aria-current"),
-      "page",
-    );
     assert.equal(
       requests.some((url) => /site-config|google\.com\/spreadsheets/.test(url)),
       false,
@@ -189,22 +257,22 @@ async function main() {
       assert.ok(toolbar && scrolledHeading);
       if (width <= 900) {
         assert.ok(
-          Math.abs(toolbar.y - 28) <= 1,
-          `Mobile toolbar must stick below Preview banner at ${width}px`,
+          Math.abs(toolbar.y - bannerHeight) <= 1,
+          `Mobile toolbar must stick below the environment banner at ${width}px`,
         );
         assert.ok(
-          scrolledHeading.y + scrolledHeading.height < 28,
+          scrolledHeading.y + scrolledHeading.height < bannerHeight,
           "Mobile masthead should scroll away",
         );
         assert.ok(toolbar.height <= 52, "Mobile toolbar should stay narrow");
       } else {
         const header = await page.getByTestId("vintage-header").boundingBox();
         assert.ok(
-          header && Math.abs(header.y - 28) <= 1,
+          header && Math.abs(header.y - bannerHeight) <= 1,
           "Combined desktop header must stick",
         );
         assert.ok(
-          scrolledHeading.y >= 28,
+          scrolledHeading.y >= bannerHeight,
           "Desktop masthead stays with navigation",
         );
       }
@@ -230,71 +298,21 @@ async function main() {
       path: path.join(screenshotDir, "mobile.png"),
       fullPage: true,
     });
-    assert.equal(
-      (
-        await page.request.get(baseURL + "/api/admin/vintage-homepage")
-      ).status(),
-      403,
-    );
-    assert.equal(
-      (
-        await page.request.get(baseURL + "/api/admin/vintage-homepage/media")
-      ).status(),
-      403,
-    );
-    const privatePreview = await page.request.get(
-      baseURL + "/vintage/admin/preview",
-      { maxRedirects: 0 },
-    );
-    assert.ok([307, 404].includes(privatePreview.status()));
     console.log(
-      "PASS public homepage: desktop/mobile, two promotions, toggles, no Sheets requests, private draft/admin protection",
+      "PASS primary-admin homepage: responsive desktop/mobile, two promotions, pending workbooks, no Sheets requests",
     );
     if (process.env.VINTAGE_PUBLIC_ONLY === "true") {
       assert.equal(errors.length, 0, errors.join("\n"));
       await context.close();
       return;
     }
-    await page.goto(baseURL + "/vintage/admin", {
-      waitUntil: "networkidle",
-    });
-    assert.equal(await page.getByTestId("vintage-admin-signin").count(), 1);
-    assert.equal(
-      await page.locator("#vintage-admin-password").getAttribute("type"),
-      "password",
-    );
-    await page.route("**/api/auth/callback/credentials", (route) =>
-      route.fulfill({
-        json: {
-          url: baseURL + "/vintage/admin?error=CredentialsSignin",
-        },
-      }),
-    );
-    await page
-      .getByLabel("Email", { exact: true })
-      .fill("invalid@example.invalid");
-    await page
-      .getByLabel("Password", { exact: true })
-      .fill("not-a-real-password");
-    await page.getByRole("button", { name: "Sign in to admin" }).click();
-    await page
-      .getByText(
-        "Unable to sign in. Check your administrator email and password.",
-        { exact: true },
-      )
-      .waitFor();
-    await page.unroute("**/api/auth/callback/credentials");
-    assert.equal(
-      requests.some((url) => /site-config|google\.com\/spreadsheets/.test(url)),
-      false,
-      "Admin sign-in must not load Sheets configuration",
-    );
-    console.log(
-      "PASS dedicated admin sign-in: masked credentials, failed sign-in feedback, no Sheets configuration requests (mocked credentials response)",
-    );
     const outsider = await encode({
       secret,
-      token: { email: "not-admin@example.invalid", sub: "outsider" },
+      token: {
+        email: "other-admin@example.invalid",
+        name: "wvanderlaan",
+        sub: "outsider",
+      },
     });
     await context.addCookies([
       { name: "next-auth.session-token", value: outsider, url: baseURL },
@@ -306,14 +324,31 @@ async function main() {
       403,
     );
     console.log(
-      "PASS authorization: signed-in non-admin cannot read homepage drafts",
+      "PASS authorization: another configured administrator cannot read private homepage drafts",
     );
-    await page.goto(baseURL + "/vintage", { waitUntil: "networkidle" });
+    assert.equal((await page.request.get(baseURL + "/vintage")).status(), 404);
     assert.equal(
-      await page.getByTestId("vintage-admin-tools").count(),
-      0,
-      "Non-admin must not see admin controls",
+      (await page.request.get(baseURL + "/vintage/admin")).status(),
+      404,
     );
+    assert.equal(
+      (await page.request.get(baseURL + "/vintage/admin/preview")).status(),
+      404,
+    );
+    assert.equal(
+      (
+        await page.request.get(baseURL + "/api/admin/vintage-homepage/media")
+      ).status(),
+      403,
+    );
+    await page.goto(baseURL + "/", { waitUntil: "networkidle" });
+    assert.equal(await page.getByTestId("legacy-homepage").count(), 1);
+    assert.equal(await page.getByTestId("vintage-homepage").count(), 0);
+    assert.equal(await page.locator('[data-testid^="home-view-"]').count(), 0);
+    console.log(
+      "PASS isolation: another configured admin named wvanderlaan receives only the original homepage and cannot open vintage routes or APIs, after a primary-admin request",
+    );
+    requests.length = 0;
     const token = await encode({
       secret,
       token: {
