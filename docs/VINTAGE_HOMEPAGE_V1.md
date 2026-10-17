@@ -1,0 +1,69 @@
+# Vintage Homepage V1 — private production release
+
+## Audience and routing
+
+`/` selects the homepage on the server using the existing authenticated NextAuth session. The original production homepage implementation is preserved unchanged in `src/components/LegacyHomepage.tsx`.
+
+| Visitor | Homepage | New routes and editor APIs |
+| --- | --- | --- |
+| Signed out | Original | Denied |
+| Any other signed-in user, including another configured admin | Original | Denied |
+| Authenticated `wvanderlaan@gmail.com` | Vintage newspaper | Allowed |
+
+Only the exact email identity qualifies (case-insensitive). Display names, usernames, query parameters, browser storage, and the global `ADMIN_EMAIL` setting cannot grant vintage access. The Old / New toggle is removed. `/vintage`, `/vintage/admin`, the saved-draft route, and compatibility editor routes verify authorization server-side before returning content. The primary administrator signs in through the existing `/auth/signin` flow, then opens Home. No authentication provider, password, or account record is changed.
+
+The homepage uses `force-dynamic` and private/no-store response headers. Primary-admin HTML is never placed into a shared homepage cache. Metadata for private views requests no indexing. Other site routes retain the original navigation, footer, bracket providers, and functionality. Existing Google Sheets configuration and its original consumers are unchanged; the new homepage and editor never load that configuration.
+
+## Production storage
+
+Production uses a dedicated `vintage-content-production` Neon branch (`br-divine-salad-ad5eiaj7`) in the existing `lively-unit-34313220` project. The provider project retains its legacy Preview name; the production CMS branch and endpoint are separate from both the app database and the feature Preview CMS branch.
+
+The production branch was copied from the working `vintage-content-preview` branch (`br-shy-thunder-adxk07yz`) after the user authorized the private production release. It includes the published edition and countdown, draft, revision history, and inherited `vintage-homepage-media` bucket. Its application role is `vintage_production_app`, with the required grants on the three vintage tables. Its storage credential is newly issued and anchored to the production CMS branch. Neither bracket data nor existing application database settings are modified. No bracket initializer or production schema migration runs during release.
+
+Set the following variables only in the matching Vercel environment. Production and feature Preview use different database endpoints and image credentials.
+
+| Variable | Purpose |
+| --- | --- |
+| `VINTAGE_HOMEPAGE_ENABLED=true` | Availability switch; identity checks still apply |
+| `VINTAGE_DATABASE_URL` | Dedicated vintage database, never an app/bracket database |
+| `VINTAGE_S3_ENDPOINT`, `VINTAGE_S3_REGION`, `VINTAGE_S3_BUCKET` | Dedicated Neon image bucket |
+| `VINTAGE_S3_ACCESS_KEY_ID`, `VINTAGE_S3_SECRET_ACCESS_KEY` | Server-only, branch-scoped storage credentials |
+| `VINTAGE_BLOB_READ_WRITE_TOKEN` | Optional alternative; unused by this release |
+
+The production CMS role and image credential were verified with the actual application content reader and a signed storage listing from an ephemeral Vercel sandbox. The published countdown remained enabled and content version remained 1 at copy time. The new configuration does not share future Preview content edits with production.
+
+## Editor
+
+Open `/vintage/admin` while signed in as the primary administrator. Edit images, headlines, countdown, announcements, history, two promotional placements, Excel resources, and footer. All mutations require server-side primary-admin authorization, CSRF validation, and rate limiting.
+
+- **Save draft** persists a new revision while retaining the last published edition.
+- **Preview saved draft** opens the primary-admin-only draft page.
+- **Publish homepage** updates the new experience seen only by the primary administrator. It does not alter the original homepage shown to everyone else.
+- **Restore as draft** retrieves an older revision without publishing it.
+- Optimistic versions reject stale edits rather than overwriting newer saves.
+- Images accept JPEG, PNG, and WebP under 3 MB with validated signatures and required alt text. Image assets are public-read even while draft page copy stays private. Uploads use unique immutable keys; failed metadata saves attempt to remove their new object.
+
+The **Tournament & countdown** tab begins with **Show countdown** and a native date/time picker. Its timezone is the administrator's device timezone; the stored timestamp identifies one exact moment for every visitor. With no enabled date the homepage displays dashes and “Tipoff date to be announced.” The countdown changes homepage display only, never bracket deadlines or submission rules.
+
+Both Excel workbook entries remain present near the bottom of the page. Their URLs are optional: a blank URL displays “Download coming soon.” Picks and Tracker become available independently. Pending workbooks never block publication of other content.
+
+## Validation and release
+
+`npm run test:vintage` covers schema validation, unsafe URLs, exact primary identity, availability flags, database isolation, safe error messages, and draft/publication/revision behavior in isolated SQL tests.
+
+`npm run test:vintage:browser` starts a local server. It checks signed-out and ordinary users, another configured admin, the primary administrator, direct-route/API denial, no toggles or query overrides, no-store headers, responsive layout, countdown timezone conversion, pending workbooks, and editor save/publish contracts. HTTP storage is mocked in UI contract tests; SQL behavior is checked separately. The explicit test subprocess preload stubs Sheets failures and blocks other external requests, so the old homepage exercises its existing fallback without contacting Google or any live app database.
+
+Use `VINTAGE_TEST_ENV=production` for the production-mode access and banner checks. A local Chromium executable may be supplied through `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`.
+
+Before release: run unit/browser/type/lint checks, build the reviewed feature SHA in Vercel Preview, then merge the exact reviewed head to `main` for the authorized production deployment. Confirm the `warrensmm.com` alias points to the successful production build and verify signed-out root plus protected URLs. Deployed signed-in testing uses the user's real session; tests never forge a production session or retrieve the production authentication secret.
+
+## Rollback
+
+Set the production vintage availability flag to false and redeploy to return everyone, including the primary administrator, to the original homepage. All vintage routes/APIs close when disabled. Alternatively restore the previous production deployment. Keep server authorization and database-isolation checks enabled.
+
+## Assets
+
+
+`public/images/vintage/basketball-editorial.webp` was generated using the built-in image tool. Final prompt: authentic-looking 1960s college basketball newspaper photograph; anonymous adult player in a plain vintage sleeveless jersey reaching toward a hoop; low courtside angle; navy/ivory duotone with halftone grain; player on the right and dark space on the left for editable HTML; no brands, lettering, watermark, or UI. The image is illustrative, not an archival photograph.
+
+Oswald and Roboto Slab are self-hosted under `public/fonts/vintage` with their accompanying OFL/Apache license files. No external font request is required.

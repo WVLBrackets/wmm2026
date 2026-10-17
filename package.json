@@ -34,7 +34,9 @@
     "download-logos": "node scripts/download-logos.js",
     "sync-teams": "tsx scripts/sync-teams-from-espn.ts",
     "preview-uniform": "tsx scripts/preview-uniform.ts",
-    "generate-players": "tsx scripts/generate-players-batch.ts"
+    "generate-players": "tsx scripts/generate-players-batch.ts",
+    "test:vintage": "node --import tsx --test tests/vintage-*.unit.ts",
+    "test:vintage:browser": "node --import tsx tests/vintage-browser.ts"
   },
   "dependencies": {
     "@sparticuz/chromium": "^141.0.0",
@@ -56,7 +58,9 @@
     "puppeteer-core": "^24.29.0",
     "react": "^19.1.2",
     "react-dom": "^19.1.2",
-    "resend": "^6.5.2"
+    "resend": "^6.5.2",
+    "@aws-sdk/client-s3": "^3.1152.0",
+    "@vercel/blob": "^2.8.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -70,7 +74,8 @@
     "eslint-config-next": "15.5.14",
     "tailwindcss": "^4",
     "tsx": "^4.20.6",
-    "typescript": "^5"
+    "typescript": "^5",
+    "pg-mem": "^3.0.14"
   },
   "overrides": {
     "cookie": "^0.7.0",
