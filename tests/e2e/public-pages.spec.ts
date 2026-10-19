@@ -125,28 +125,27 @@ test.describe('Public Pages', () => {
       await expect(page.getByText(/reigning champion/i)).toBeVisible({ timeout: 10000 });
     });
 
-    test('should display tournament statistics', async ({ page }) => {
+    test('should display lifetime / tournament statistics', async ({ page }) => {
       await page.goto('/hall-of-fame', { waitUntil: 'domcontentloaded' });
-      
-      // Check for tournament statistics section (Playwright auto-waits for visibility)
-      await expect(page.getByText(/tournament statistics/i)).toBeVisible({ timeout: 10000 });
-      
-      // Check for tournaments completed count
-      await expect(page.getByText(/tournaments completed/i)).toBeVisible();
+
+      await expect(page.getByText(/tournaments completed/i)).toBeVisible({
+        timeout: 10000,
+      });
     });
 
-    test('should display tournament history', async ({ page }) => {
+    test('should display year archive and all-time leaders', async ({ page }) => {
       await page.goto('/hall-of-fame', { waitUntil: 'domcontentloaded' });
-      
-      // Check for tournament history section (Playwright auto-waits for visibility)
-      await expect(page.getByText(/tournament history/i)).toBeVisible({ timeout: 10000 });
-    });
 
-    test('should display all-time leaders', async ({ page }) => {
-      await page.goto('/hall-of-fame', { waitUntil: 'domcontentloaded' });
-      
-      // Check for all-time leaders section (Playwright auto-waits for visibility)
-      await expect(page.getByText(/all time leaders/i)).toBeVisible({ timeout: 10000 });
+      // Legacy: Tournament History; vintage (gated): Champions by Year
+      await expect(
+        page
+          .getByText(/tournament history|champions by year/i)
+          .first(),
+      ).toBeVisible({ timeout: 10000 });
+
+      await expect(
+        page.getByText(/all[- ]?time leaders/i).first(),
+      ).toBeVisible({ timeout: 10000 });
     });
   });
 

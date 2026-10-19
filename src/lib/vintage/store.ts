@@ -9,14 +9,24 @@ import {
 import { isVintageEnabled } from "./access";
 import { assertDedicatedVintageDatabase } from "./databaseSafety";
 import {
+  isHofRevisionContent,
   isInfoRevisionContent,
+  isPicksRevisionContent,
   mergeHomepageDocument,
   splitHomepageDocument,
 } from "./homepageDocument";
 import {
+  normalizeVintageHofContent,
+  type VintageHofContent,
+} from "./hofContent";
+import {
   normalizeVintageInfoContent,
   type VintageInfoContent,
 } from "./infoContent";
+import {
+  normalizeVintagePicksContent,
+  type VintagePicksContent,
+} from "./picksContent";
 
 export interface VintageRevision {
   id: string;
@@ -74,6 +84,24 @@ function infoFromRow(raw: unknown): VintageInfoContent | undefined {
   return normalizeVintageInfoContent(info);
 }
 
+/**
+ * Hall of Fame copy sidecar from a stored homepage document, if present.
+ */
+function hofFromRow(raw: unknown): VintageHofContent | undefined {
+  const { hof } = splitHomepageDocument(raw);
+  if (hof == null) return undefined;
+  return normalizeVintageHofContent(hof);
+}
+
+/**
+ * My Picks copy sidecar from a stored homepage document, if present.
+ */
+function picksFromRow(raw: unknown): VintagePicksContent | undefined {
+  const { picks } = splitHomepageDocument(raw);
+  if (picks == null) return undefined;
+  return normalizeVintagePicksContent(picks);
+}
+
 export async function readVintageState(): Promise<VintageState> {
   if (!hasVintageDatabase()) return EMPTY();
   const result = await database().query(
@@ -89,7 +117,12 @@ export async function readVintageState(): Promise<VintageState> {
   validateVintageContent(draft);
   validateVintageContent(published);
   const homepageRevisions = revisions.rows
-    .filter((item) => !isInfoRevisionContent(item.content))
+    .filter(
+      (item) =>
+        !isInfoRevisionContent(item.content) &&
+        !isHofRevisionContent(item.content) &&
+        !isPicksRevisionContent(item.content),
+    )
     .slice(0, 20)
     .map(({ id, createdAt, author, action }) => ({
       id,
@@ -148,6 +181,16 @@ export async function writeVintageContent(
           "That revision belongs to the handbook editor. Restore it there.",
         );
       }
+      if (isHofRevisionContent(revision.rows[0].content)) {
+        throw new Error(
+          "That revision belongs to the Hall of Fame editor. Restore it there.",
+        );
+      }
+      if (isPicksRevisionContent(revision.rows[0].content)) {
+        throw new Error(
+          "That revision belongs to the My Picks editor. Restore it there.",
+        );
+      }
       content = splitHomepageDocument(revision.rows[0].content).homepage as
         | VintageContent
         | undefined;
@@ -156,12 +199,26 @@ export async function writeVintageContent(
     validateVintageContent(normalized);
     const draftInfo = infoFromRow(current.draft);
     const publishedInfo = infoFromRow(current.published);
+    const draftHof = hofFromRow(current.draft);
+    const publishedHof = hofFromRow(current.published);
+    const draftPicks = picksFromRow(current.draft);
+    const publishedPicks = picksFromRow(current.published);
     const publishedHome =
       input.action === "publish"
         ? normalized
         : homepageFromRow(current.published);
-    const draftOut = mergeHomepageDocument(normalized, draftInfo);
-    const publishedOut = mergeHomepageDocument(publishedHome, publishedInfo);
+    const draftOut = mergeHomepageDocument(
+      normalized,
+      draftInfo,
+      draftHof,
+      draftPicks,
+    );
+    const publishedOut = mergeHomepageDocument(
+      publishedHome,
+      publishedInfo,
+      publishedHof,
+      publishedPicks,
+    );
     await client.query(
       "UPDATE vintage_homepage SET version = version + 1, draft = $1, published = $2 WHERE id = 1",
       [JSON.stringify(draftOut), JSON.stringify(publishedOut)],
@@ -172,7 +229,9 @@ export async function writeVintageContent(
         randomUUID(),
         author,
         input.action,
-        JSON.stringify(mergeHomepageDocument(normalized, draftInfo)),
+        JSON.stringify(
+          mergeHomepageDocument(normalized, draftInfo, draftHof, draftPicks),
+        ),
       ],
     );
     await client.query("COMMIT");

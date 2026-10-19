@@ -1,0 +1,1277 @@
+/*
+ * My Picks — vintage editorial layout (cream paper, navy rules, square corners).
+ * Rendered under the shared VintageShell; tokens come from `.vintage-page`
+ * (--v-ink, --v-red, --v-paper, --v-rule, --v-first, --v-font-*).
+ *
+ * Row action controls are shared with the legacy markup (Tailwind utility classes),
+ * so `.v-picks__actions` restyles them. This stylesheet is unlayered, so it wins over
+ * Tailwind's layered utilities without needing !important.
+ */
+
+.v-picks {
+  --vp-ink: var(--v-ink, #152c3a);
+  --vp-red: var(--v-red, #b52c26);
+  --vp-paper: var(--v-paper, #f2ead8);
+  --vp-rule: var(--v-rule, #b7b09f);
+  --vp-gold: var(--v-first, #c9a227);
+  --vp-gold-deep: color-mix(in srgb, var(--vp-gold) 62%, #000);
+  --vp-muted: color-mix(in srgb, var(--vp-ink) 66%, transparent);
+  --vp-tint: color-mix(in srgb, var(--vp-ink) 5%, transparent);
+  --vp-gold-tint: color-mix(in srgb, var(--vp-gold) 22%, transparent);
+  --vp-card: rgb(255 255 255 / 0.38);
+  /* Shared status-chip geometry (count pills, filters, row badges). */
+  --vp-chip-height: 30px;
+  --vp-chip-pad-x: 7.5px;
+  --vp-chip-font: 11px;
+  --vp-chip-icon: 14px;
+  /* Fixed width for every status chip — sized to "IN PROGRESS" + icon + light padding. */
+  --vp-status-chip-width: 7.65rem;
+  /* Darker theme-green (not neon) for submitted. */
+  --vp-submitted-border: #3f6b4a;
+  --vp-submitted-bg: #d9e6dc;
+  --vp-submitted-fg: #243f2c;
+  /* Deleted: dashed gray ~20% darker than the light reference chip. */
+  --vp-deleted-border: #6b7280;
+  --vp-deleted-bg: #d5d8de;
+  --vp-deleted-fg: #374151;
+
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  padding: 4px 0 48px;
+  color: var(--vp-ink);
+  font-family: var(--v-font-body, Arial, Helvetica, sans-serif);
+  overflow-x: clip;
+}
+
+.v-picks__admin-bar {
+  position: relative;
+  min-height: 0;
+  margin: 0 0 4px;
+}
+
+.v-picks__admin-bar > .v-edit-gear {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.v-picks *,
+.v-picks *::before,
+.v-picks *::after {
+  box-sizing: border-box;
+}
+
+.v-picks__inner {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.v-picks__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.v-picks__icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* ---------- Intro ---------- */
+
+.v-picks__intro {
+  margin: 0 0 22px;
+  padding: 8px 8px 0;
+  text-align: center;
+}
+
+.v-picks__title {
+  margin: 0 0 10px;
+  font-family: var(--v-font-headline, "Alfa Slab One", Georgia, serif);
+  font-weight: 400;
+  font-size: clamp(34px, 6vw, 60px);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: var(--vp-ink);
+}
+
+.v-picks__subtitle {
+  margin: 0 auto;
+  max-width: 36rem;
+  font-family: var(--v-font-specialty, Georgia, "Times New Roman", serif);
+  font-size: 17px;
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--vp-ink) 82%, transparent);
+}
+
+/* ---------- Historical banner ---------- */
+
+.v-picks__banner {
+  margin: 0 0 18px;
+  padding: 10px 14px;
+  border: 1px solid var(--vp-ink);
+  border-left: 6px solid var(--vp-red);
+  background: var(--vp-gold-tint);
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+}
+
+/* ---------- Summary panel ---------- */
+
+.v-picks__panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px 28px;
+  align-items: start;
+  margin: 0 0 20px;
+  padding: 4px 0 16px;
+  /* Header already has the edition double rule — do not stack a second one. */
+  border-bottom: 1px solid var(--vp-ink);
+}
+
+.v-picks__summary {
+  min-width: 0;
+}
+
+.v-picks__welcome {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 0;
+  font-family: var(--v-font-headline, "Alfa Slab One", Georgia, serif);
+  font-weight: 400;
+  font-size: clamp(20px, 3vw, 28px);
+  line-height: 1.15;
+  color: var(--vp-ink);
+  overflow-wrap: anywhere;
+}
+
+/* Edit-profile pencil (shared helper emits Tailwind blue classes). */
+.v-picks [data-testid^="edit-profile-button"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 6px;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--vp-red);
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.v-picks [data-testid^="edit-profile-button"]:hover {
+  border-color: var(--vp-ink);
+  background: var(--vp-tint);
+}
+
+.v-picks__note,
+.v-picks__notice {
+  margin: 10px 0 0;
+  font-family: var(--v-font-specialty, Georgia, "Times New Roman", serif);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.v-picks__notice {
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+
+.v-picks__notice--error {
+  color: var(--vp-red);
+}
+
+.v-picks__notice--warn {
+  color: var(--vp-gold-deep);
+}
+
+.v-picks__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * One fixed box for every status chip — count pills, Show-filters, and row/card badges.
+ * Do not override width/min-width/max-width on these classes elsewhere.
+ */
+.v-picks__pill,
+.v-picks__status,
+.v-picks__chip--submitted,
+.v-picks__chip--progress,
+.v-picks__chip--deleted {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  width: var(--vp-status-chip-width);
+  min-width: var(--vp-status-chip-width);
+  max-width: var(--vp-status-chip-width);
+  min-height: var(--vp-chip-height);
+  height: var(--vp-chip-height);
+  padding: 0 var(--vp-chip-pad-x);
+  border: 1px solid var(--vp-ink);
+  border-radius: 0;
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: var(--vp-chip-font);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.v-picks__pill .v-picks__icon,
+.v-picks__status .v-picks__icon,
+.v-picks__chip .v-picks__icon {
+  width: var(--vp-chip-icon);
+  height: var(--vp-chip-icon);
+}
+
+.v-picks__pill--submitted,
+.v-picks__status--submitted,
+.v-picks__chip--submitted.is-on {
+  border-color: var(--vp-submitted-border);
+  background: var(--vp-submitted-bg);
+  color: var(--vp-submitted-fg);
+}
+
+.v-picks__pill--progress,
+.v-picks__status--progress,
+.v-picks__chip--progress.is-on {
+  border-color: var(--vp-gold-deep);
+  background: color-mix(in srgb, var(--vp-gold) 28%, #fff);
+  color: var(--vp-ink);
+}
+
+.v-picks__pill--deleted,
+.v-picks__status--deleted,
+.v-picks__chip--deleted.is-on {
+  border-style: dashed;
+  border-color: var(--vp-deleted-border);
+  background: var(--vp-deleted-bg);
+  color: var(--vp-deleted-fg);
+}
+
+.v-picks__status--button {
+  cursor: pointer;
+}
+
+.v-picks__status--button:hover {
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--vp-ink) 35%, transparent);
+}
+
+.v-picks__cost {
+  margin: 14px 0 0;
+  max-width: 46rem;
+  font-family: var(--v-font-specialty, Georgia, "Times New Roman", serif);
+  font-size: 15px;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--vp-ink) 88%, transparent);
+}
+
+/* ---------- Side column: year, actions, timer ---------- */
+
+.v-picks__side {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  min-width: 0;
+}
+
+.v-picks__year {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.v-picks__label,
+.v-picks__filter-label {
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--vp-red);
+}
+
+.v-picks__select-wrap {
+  position: relative;
+  display: block;
+  height: 100%;
+}
+
+.v-picks__select {
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  width: auto;
+  min-width: 5.5rem;
+  max-width: 9.5rem;
+  height: 100%;
+  min-height: 40px;
+  padding: 0 28px 0 10px;
+  border: 1px solid var(--vp-ink);
+  border-radius: 0;
+  background: rgb(255 255 255 / 0.7);
+  color: var(--vp-ink);
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.v-picks__select:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.v-picks__select-icon {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  width: 14px;
+  height: 14px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--vp-ink);
+}
+
+.v-picks__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.v-picks__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--vp-ink);
+  border-radius: 0;
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.v-picks__btn--icon {
+  min-width: 40px;
+  padding: 0;
+}
+
+.v-picks__btn--primary {
+  background: var(--vp-red);
+  border-color: var(--vp-red);
+  color: var(--vp-paper);
+}
+
+.v-picks__btn--primary:hover:not(:disabled) {
+  background: var(--vp-ink);
+  border-color: var(--vp-ink);
+}
+
+.v-picks__btn--secondary {
+  background: var(--vp-gold);
+  color: var(--vp-ink);
+}
+
+.v-picks__btn--secondary:hover:not(:disabled) {
+  background: var(--vp-ink);
+  color: var(--vp-paper);
+}
+
+.v-picks__btn--ghost {
+  background: transparent;
+  color: var(--vp-ink);
+}
+
+.v-picks__btn--ghost:hover:not(:disabled) {
+  background: var(--vp-ink);
+  color: var(--vp-paper);
+}
+
+.v-picks__btn:disabled {
+  border-color: var(--vp-rule);
+  background: var(--vp-tint);
+  color: var(--vp-muted);
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+/* ---------- Countdown timer ---------- */
+
+.v-picks__timer,
+.v-picks__year-switch {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  min-width: 11.5rem;
+  min-height: 4.75rem;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--vp-ink);
+  text-align: center;
+}
+
+.v-picks__timer {
+  outline: 1px solid color-mix(in srgb, var(--vp-gold) 55%, transparent);
+  outline-offset: -5px;
+  background: var(--vp-ink);
+  color: var(--vp-gold);
+}
+
+.v-picks__timer-label {
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--vp-paper) 72%, transparent);
+}
+
+.v-picks__timer-value {
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Prior-year control — same footprint as the countdown timer. */
+.v-picks__year-switch {
+  border-left: 6px solid var(--vp-red);
+  background: var(--vp-gold-tint);
+  color: var(--vp-ink);
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.v-picks__year-switch:hover,
+.v-picks__year-switch:focus-visible {
+  background: color-mix(in srgb, var(--vp-gold) 34%, transparent);
+  outline: 2px solid var(--vp-red);
+  outline-offset: 1px;
+}
+
+/* ---------- Filters ---------- */
+
+.v-picks__list {
+  min-width: 0;
+}
+
+.v-picks__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  margin: 0 0 8px;
+  padding: 0 0 16px;
+  border-bottom: 1px solid var(--vp-rule);
+}
+
+.v-picks__filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  min-width: 0;
+}
+
+.v-picks__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.v-picks__chip {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--vp-chip-height);
+  height: var(--vp-chip-height);
+  padding: 0 var(--vp-chip-pad-x);
+  border: 1px solid var(--vp-rule);
+  border-radius: 0;
+  background: transparent;
+  color: var(--vp-muted);
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: var(--vp-chip-font);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* All stays content-sized; status filters use --vp-status-chip-width above. */
+.v-picks__chip--all {
+  width: auto;
+  min-width: 0;
+  max-width: none;
+}
+
+.v-picks__chip:hover {
+  border-color: var(--vp-ink);
+  color: var(--vp-ink);
+}
+
+/* All keeps a clear blue selected state. Status filters use the shared
+   submitted/progress/deleted treatments defined with the count pills above. */
+.v-picks__chip--all.is-on {
+  border-color: #1d4ed8;
+  background: #2563eb;
+  color: #fff;
+}
+
+/* Off-state status filters stay muted; on-state matches count/row badges. */
+.v-picks__chip--submitted:not(.is-on),
+.v-picks__chip--progress:not(.is-on),
+.v-picks__chip--deleted:not(.is-on) {
+  opacity: 0.72;
+}
+
+.v-picks__chip--deleted:not(.is-on) {
+  border-style: dashed;
+}
+
+.v-picks__search {
+  position: relative;
+  flex: 1 1 240px;
+  max-width: 28rem;
+  min-width: 0;
+}
+
+.v-picks__search-icon {
+  position: absolute;
+  top: 50%;
+  left: 11px;
+  width: 16px;
+  height: 16px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--vp-muted);
+}
+
+.v-picks__search-input {
+  width: 100%;
+  min-height: 40px;
+  padding: 6px 12px 6px 36px;
+  border: 1px solid var(--vp-ink);
+  border-radius: 0;
+  background: rgb(255 255 255 / 0.55);
+  color: var(--vp-ink);
+  font-family: var(--v-font-body, Arial, Helvetica, sans-serif);
+  font-size: 16px;
+}
+
+.v-picks__search-input::placeholder {
+  color: var(--vp-muted);
+}
+
+/* ---------- Table (md+) ---------- */
+
+.v-picks__table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.v-picks__table {
+  width: 100%;
+  border-collapse: collapse;
+  border-bottom: 1px solid var(--vp-ink);
+}
+
+.v-picks__th {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--vp-ink);
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--vp-ink);
+  white-space: nowrap;
+}
+
+.v-picks__th--entry {
+  text-align: left;
+}
+
+.v-picks__th--id {
+  color: var(--vp-muted);
+}
+
+.v-picks__th--champ {
+  color: var(--vp-ink);
+  background: var(--vp-paper);
+}
+
+.v-picks__row > td {
+  padding: 12px;
+  border-bottom: 1px solid var(--vp-rule);
+  text-align: center;
+  vertical-align: middle;
+}
+
+.v-picks__row:hover > td {
+  background: var(--vp-tint);
+}
+
+.v-picks__row--deleted .v-picks__entry-name {
+  color: var(--vp-muted);
+}
+
+.v-picks__row > td.v-picks__cell--entry {
+  text-align: left;
+  min-width: 12rem;
+}
+
+.v-picks__cell--id {
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  font-variant-numeric: tabular-nums;
+  color: var(--vp-muted);
+  white-space: nowrap;
+}
+
+.v-picks__cell--champ {
+  border-left: 1px solid var(--vp-rule);
+  border-right: 1px solid var(--vp-rule);
+  /* Column gutter stays cream; logo tiles themselves stay white. */
+  background: var(--vp-paper);
+}
+
+.v-picks__row:hover > td.v-picks__cell--champ {
+  background: color-mix(in srgb, var(--vp-paper) 88%, var(--vp-ink));
+}
+
+.v-picks__cell--actions {
+  min-width: 11rem;
+}
+
+.v-picks__entry-name {
+  display: inline;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+  text-align: left;
+  color: var(--vp-ink);
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.v-picks__entry-name:hover {
+  color: var(--vp-red);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---------- Pool section headings ---------- */
+
+.v-picks__section-row > td {
+  padding: 20px 12px 8px;
+  border-bottom: 1px solid var(--vp-ink);
+  text-align: left;
+}
+
+.v-picks__section-row.is-after-in > td {
+  padding-top: 32px;
+  border-top: 3px double var(--vp-ink);
+}
+
+.v-picks__section-inner {
+  --pool-font-mobile: 12px;
+  --pool-font-desktop: 14px;
+  font-size: var(--pool-font-mobile);
+  color: var(--vp-ink);
+}
+
+.v-picks__section-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.v-picks__section-icon {
+  width: 1.15em;
+  height: 1.15em;
+  flex-shrink: 0;
+}
+
+.v-picks__section-icon--in {
+  color: var(--vp-ink);
+}
+
+.v-picks__section-icon--out {
+  color: var(--vp-gold-deep);
+}
+
+.v-picks__section-title {
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.v-picks__section-detail {
+  font-family: var(--v-font-specialty, Georgia, "Times New Roman", serif);
+  color: var(--vp-muted);
+}
+
+.v-picks__section-info,
+.v-picks__section-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--vp-ink);
+  cursor: pointer;
+}
+
+.v-picks__section-note {
+  position: relative;
+  margin-top: 6px;
+  padding: 10px 40px 10px 12px;
+  border: 1px solid var(--vp-rule);
+  background: var(--vp-gold-tint);
+  font-family: var(--v-font-specialty, Georgia, "Times New Roman", serif);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.v-picks__section-close {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+/* ---------- Progress / payment ---------- */
+
+.v-picks__progress {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--vp-ink);
+}
+
+.v-picks__progress--done {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 12px;
+}
+
+.v-picks__progress-text {
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
+.v-picks__bar {
+  display: block;
+  width: 72px;
+  height: 7px;
+  border: 1px solid var(--vp-ink);
+  background: transparent;
+}
+
+.v-picks__bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--vp-gold);
+}
+
+.v-picks__bar-fill--deleted {
+  background: var(--vp-muted);
+}
+
+.v-picks__done,
+.v-picks__pay {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.v-picks__pay--paid {
+  color: var(--vp-ink);
+}
+
+.v-picks__pay--pending {
+  color: var(--vp-gold-deep);
+}
+
+.v-picks__pay--unpaid {
+  color: var(--vp-red);
+}
+
+/* ---------- Final Four + champion ---------- */
+
+.v-picks__ff {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.v-picks__ff-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid var(--vp-rule);
+  border-radius: 0;
+  background: #fff;
+}
+
+.v-picks__ff-cell.is-finalist {
+  border: 2px solid var(--vp-ink);
+}
+
+/* Results-based champ shading deferred — keep white for now. */
+.v-picks__ff-cell.is-champ {
+  background: #fff;
+}
+
+.v-picks__champ {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.v-picks__champ-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 2px solid var(--vp-ink);
+  border-radius: 0;
+  background: #fff;
+}
+
+.v-picks__champ-cell.is-set {
+  border-color: var(--vp-ink);
+  background: #fff;
+}
+
+.v-picks__champ-name {
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  color: var(--vp-ink);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Row actions (shared Tailwind-styled controls) ---------- */
+
+.v-picks__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.v-picks__actions button:has(> svg) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--vp-ink);
+  border-radius: 0;
+  background: transparent;
+  color: var(--vp-ink);
+  box-shadow: none;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.v-picks__actions button:has(> svg):hover:not(:disabled) {
+  background: var(--vp-ink);
+  color: var(--vp-paper);
+}
+
+.v-picks__actions button[data-testid="submit-bracket-landing-button"]:not(:disabled) {
+  border-color: var(--vp-red);
+  background: var(--vp-red);
+  color: var(--vp-paper);
+}
+
+.v-picks__actions button[data-testid="submit-bracket-landing-button"]:hover:not(:disabled) {
+  border-color: var(--vp-ink);
+  background: var(--vp-ink);
+}
+
+.v-picks__actions button[data-testid*="delete"]:not(:disabled) {
+  border-color: var(--vp-red);
+  color: var(--vp-red);
+}
+
+.v-picks__actions button[data-testid*="delete"]:hover:not(:disabled) {
+  background: var(--vp-red);
+  color: var(--vp-paper);
+}
+
+.v-picks__actions button:has(> svg):disabled {
+  border-color: var(--vp-rule);
+  border-style: dashed;
+  background: transparent;
+  color: var(--vp-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Inline confirmations (delete / permanent delete / return). */
+.v-picks__actions [data-testid="delete-confirmation-dialog"],
+.v-picks__actions [data-testid="permanent-delete-confirmation"],
+.v-picks__actions [data-testid="return-bracket-confirmation"] {
+  flex: 1 1 100%;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--vp-red);
+  border-radius: 0;
+  background: color-mix(in srgb, var(--vp-red) 8%, var(--vp-paper));
+  color: var(--vp-ink);
+  font-family: var(--v-font-specialty, Georgia, "Times New Roman", serif);
+}
+
+.v-picks__actions [data-testid="return-bracket-confirmation"] {
+  border-color: var(--vp-gold-deep);
+  background: var(--vp-gold-tint);
+}
+
+.v-picks__actions [data-testid="delete-confirmation-dialog"] span,
+.v-picks__actions [data-testid="permanent-delete-confirmation"] div,
+.v-picks__actions [data-testid="return-bracket-confirmation"] div {
+  color: var(--vp-ink);
+}
+
+.v-picks__actions button:not(:has(> svg)) {
+  min-width: 52px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--vp-ink);
+  border-radius: 0;
+  background: transparent;
+  color: var(--vp-ink);
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.v-picks__actions button:not(:has(> svg)):first-of-type {
+  border-color: var(--vp-red);
+  background: var(--vp-red);
+  color: var(--vp-paper);
+}
+
+.v-picks__actions button:not(:has(> svg)):disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---------- Mobile entry cards ---------- */
+
+.v-picks__cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.v-picks__card {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--vp-ink);
+  background: var(--vp-card);
+}
+
+.v-picks__card.v-picks__row--deleted {
+  border-style: dashed;
+}
+
+.v-picks__card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--vp-rule);
+}
+
+.v-picks__card-id {
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  font-variant-numeric: tabular-nums;
+  color: var(--vp-muted);
+}
+
+.v-picks__card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-top: 10px;
+}
+
+.v-picks__card-meta .v-picks__progress {
+  align-items: flex-start;
+}
+
+.v-picks__card-picks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px 24px;
+  margin-top: 12px;
+}
+
+.v-picks__card-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.v-picks__card .v-picks__actions {
+  justify-content: flex-start;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--vp-rule);
+}
+
+.v-picks__card .v-picks__actions button:has(> svg) {
+  width: 44px;
+  height: 44px;
+}
+
+.v-picks__card .v-picks__actions button:not(:has(> svg)) {
+  min-height: 44px;
+  min-width: 64px;
+}
+
+.v-picks__cards .v-picks__section-row {
+  padding: 18px 0 6px;
+  border-bottom: 1px solid var(--vp-ink);
+}
+
+.v-picks__cards .v-picks__section-row.is-after-in {
+  margin-top: 14px;
+  padding-top: 26px;
+  border-top: 3px double var(--vp-ink);
+}
+
+/* ---------- Empty state ---------- */
+
+.v-picks__empty {
+  margin: 8px 0 0;
+  padding: 40px 20px;
+  border: 2px double var(--vp-ink);
+  text-align: center;
+}
+
+.v-picks__empty--filtered {
+  border-style: solid;
+  border-width: 1px;
+  padding: 32px 20px;
+}
+
+.v-picks__empty-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 14px;
+  color: var(--vp-muted);
+}
+
+.v-picks__empty-title {
+  margin: 0 0 8px;
+  font-family: var(--v-font-headline, "Alfa Slab One", Georgia, serif);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--vp-ink);
+}
+
+.v-picks__empty-text {
+  margin: 0 auto 14px;
+  max-width: 34rem;
+  font-family: var(--v-font-specialty, Georgia, "Times New Roman", serif);
+  font-size: 16px;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--vp-ink) 85%, transparent);
+}
+
+.v-picks__empty-text:last-child {
+  margin-bottom: 0;
+}
+
+.v-picks__empty-lead {
+  margin: 0 auto;
+  max-width: 40rem;
+  font-family: var(--v-font-headline, "Alfa Slab One", Georgia, serif);
+  font-size: clamp(18px, 3vw, 26px);
+  line-height: 1.3;
+  color: var(--vp-ink);
+}
+
+/* ---------- Breakpoints ---------- */
+
+@media (min-width: 768px) {
+  .v-picks__section-inner {
+    font-size: var(--pool-font-desktop);
+  }
+}
+
+@media (max-width: 899px) {
+  .v-picks__panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .v-picks__side {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+
+  .v-picks__timer,
+  .v-picks__year-switch {
+    flex: 1 1 100%;
+  }
+}
+
+@media (max-width: 767px) {
+  .v-picks {
+    padding-bottom: 32px;
+  }
+
+  .v-picks__subtitle {
+    font-size: 15px;
+  }
+
+  .v-picks__side {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .v-picks__btn {
+    flex: 1 1 auto;
+    min-height: 44px;
+  }
+
+  .v-picks__btn--icon {
+    flex: 0 0 auto;
+  }
+
+  .v-picks__year {
+    flex: 1 1 auto;
+  }
+
+  .v-picks__select {
+    max-width: none;
+    width: 100%;
+  }
+
+  .v-picks__select,
+  .v-picks__search-input {
+    min-height: 44px;
+  }
+
+
+  .v-picks__search {
+    flex-basis: 100%;
+    max-width: none;
+  }
+
+  .v-picks__timer,
+  .v-picks__year-switch {
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+
+  .v-picks__timer-value {
+    font-size: 24px;
+  }
+}

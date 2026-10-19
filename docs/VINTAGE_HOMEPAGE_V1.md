@@ -131,4 +131,5 @@ Primary-admin visitors see a vintage **Tournament Handbook** at `/info` (same ga
 - Standings entry on the vintage homepage
 - Live scores
 - This Week in Fun (TWIF) ads
-- Full public rollout of vintage homepage + handbook (drop primary-admin gate)
+- Vintage Hall of Fame redesign at `/hall-of-fame` (primary-admin gated; Sheets-backed; shared VintageShell)
+- Full public rollout of vintage homepage + handbook + HoF (drop primary-admin gate)

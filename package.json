@@ -35,7 +35,7 @@
     "sync-teams": "tsx scripts/sync-teams-from-espn.ts",
     "preview-uniform": "tsx scripts/preview-uniform.ts",
     "generate-players": "tsx scripts/generate-players-batch.ts",
-    "test:vintage": "node --import tsx --test tests/vintage-*.unit.ts",
+    "test:vintage": "node --import tsx --test tests/vintage-*.unit.ts tests/hall-of-fame-stats.unit.ts",
     "test:vintage:browser": "node --import tsx tests/vintage-browser.ts"
   },
   "dependencies": {

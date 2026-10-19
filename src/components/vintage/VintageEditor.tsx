@@ -487,6 +487,14 @@ export default function VintageEditor() {
             <Link href="/vintage/admin/info" data-testid="vintage-open-info-editor">
               Edit the Tournament Handbook
             </Link>
+            {" · "}
+            <Link href="/vintage/admin/hof" data-testid="vintage-open-hof-editor">
+              Edit Hall of Fame titles
+            </Link>
+            {" · "}
+            <Link href="/vintage/admin/picks" data-testid="vintage-open-picks-editor">
+              Edit My Picks copy
+            </Link>
             .
           </p>
         </div>

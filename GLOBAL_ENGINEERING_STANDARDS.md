@@ -2,7 +2,7 @@
 
 **Scope:** All web applications in this organization’s portfolio (Next.js / Vercel / Neon stack and aligned patterns).  
 **Created:** February 21, 2026  
-**Last Updated:** October 18, 2026 (Vintage Info handbook CMS + shared VintageShell)  
+**Last Updated:** October 19, 2026 (Vintage My Picks landing + Info/HoF/Picks CMS sidecars + shared VintageShell)  
 **Purpose:** Living document defining **how we implement solutions**—security, architecture, testing, APIs, and operational patterns teams should follow or consciously deviate from with Architect review.
 
 ---

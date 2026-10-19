@@ -145,27 +145,50 @@ test("only the primary administrator's exact authenticated email selects vintage
     assert.equal(isPrimaryVintageAdmin(email), false);
 });
 
-test("homepage document split/merge preserves handbook sidecar", async () => {
+test("homepage document split/merge preserves handbook, HoF, and My Picks sidecars", async () => {
   const {
     INFO_HANDBOOK_KEY,
+    HOF_CONTENT_KEY,
+    PICKS_CONTENT_KEY,
     mergeHomepageDocument,
     splitHomepageDocument,
     isInfoRevisionContent,
+    isHofRevisionContent,
+    isPicksRevisionContent,
     wrapInfoRevisionContent,
+    wrapHofRevisionContent,
+    wrapPicksRevisionContent,
   } = await import("../src/lib/vintage/homepageDocument");
   const { DEFAULT_VINTAGE_CONTENT } = await import("../src/lib/vintage/content");
   const { DEFAULT_VINTAGE_INFO_CONTENT } = await import(
     "../src/lib/vintage/infoContent"
   );
+  const { DEFAULT_VINTAGE_HOF_CONTENT } = await import(
+    "../src/lib/vintage/hofContent"
+  );
+  const { DEFAULT_VINTAGE_PICKS_CONTENT, formatVintagePicksLabel } =
+    await import("../src/lib/vintage/picksContent");
   const merged = mergeHomepageDocument(
     DEFAULT_VINTAGE_CONTENT,
     DEFAULT_VINTAGE_INFO_CONTENT,
+    DEFAULT_VINTAGE_HOF_CONTENT,
+    DEFAULT_VINTAGE_PICKS_CONTENT,
   );
   assert.ok(INFO_HANDBOOK_KEY in merged);
+  assert.ok(HOF_CONTENT_KEY in merged);
+  assert.ok(PICKS_CONTENT_KEY in merged);
   const split = splitHomepageDocument(merged);
   assert.equal(
     (split.info as typeof DEFAULT_VINTAGE_INFO_CONTENT).intro.heading,
     DEFAULT_VINTAGE_INFO_CONTENT.intro.heading,
+  );
+  assert.equal(
+    (split.hof as typeof DEFAULT_VINTAGE_HOF_CONTENT).heading,
+    DEFAULT_VINTAGE_HOF_CONTENT.heading,
+  );
+  assert.equal(
+    (split.picks as typeof DEFAULT_VINTAGE_PICKS_CONTENT).countdownToTipoffLabel,
+    DEFAULT_VINTAGE_PICKS_CONTENT.countdownToTipoffLabel,
   );
   assert.equal(
     (split.homepage as typeof DEFAULT_VINTAGE_CONTENT).masthead.first,
@@ -173,6 +196,24 @@ test("homepage document split/merge preserves handbook sidecar", async () => {
   );
   assert.equal(isInfoRevisionContent(wrapInfoRevisionContent(DEFAULT_VINTAGE_INFO_CONTENT)), true);
   assert.equal(isInfoRevisionContent(DEFAULT_VINTAGE_CONTENT), false);
+  assert.equal(isHofRevisionContent(wrapHofRevisionContent(DEFAULT_VINTAGE_HOF_CONTENT)), true);
+  assert.equal(isHofRevisionContent(DEFAULT_VINTAGE_CONTENT), false);
+  assert.equal(
+    isPicksRevisionContent(wrapPicksRevisionContent(DEFAULT_VINTAGE_PICKS_CONTENT)),
+    true,
+  );
+  assert.equal(isPicksRevisionContent(DEFAULT_VINTAGE_CONTENT), false);
+  assert.equal(
+    formatVintagePicksLabel("Countdown to {year} tipoff", { year: 2027 }),
+    "Countdown to 2027 tipoff",
+  );
+  assert.equal(
+    formatVintagePicksLabel("Viewing {year}. Click here to switch back to {activeYear}", {
+      year: 2026,
+      activeYear: 2027,
+    }),
+    "Viewing 2026. Click here to switch back to 2027",
+  );
 });
 
 test("Info toolbar icon defaults to BookOpen and migrates FileText", () => {

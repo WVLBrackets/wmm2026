@@ -131,19 +131,18 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
         throw new Error('Team reference data is unavailable. Please contact support.');
         
       } catch (apiError) {
-        // Only use fallback for critical system errors (database completely down)
-        // For missing teams, we should show errors in UI, not use fallback
-        const errorMessage = apiError instanceof Error ? apiError.message : String(apiError);
-        
-        // If it's a network/connection error, we might want to retry or show a different message
-        if (errorMessage.includes('fetch') || errorMessage.includes('network') || errorMessage.includes('Failed to fetch')) {
-          console.error('[TeamData] Network error:', errorMessage);
-          throw new Error('Unable to connect to server. Please check your connection and try again.');
-        }
-        
-        // For other errors, throw them up - let the UI handle it
-        console.error('[TeamData] Error:', errorMessage);
-        throw apiError;
+        // Match server-side behavior: when the API/DB is unavailable, use the
+        // hardcoded fallback so public logos (e.g. Hall of Fame) still render.
+        const errorMessage =
+          apiError instanceof Error ? apiError.message : String(apiError);
+        console.warn(
+          '[TeamData] API unavailable, using fallback team data:',
+          errorMessage,
+        );
+        const fallbackData = getFallbackTeamData();
+        cachedTeamData = fallbackData;
+        lastFetchTime = Date.now();
+        return fallbackData;
       }
     } finally {
       // Clear the in-flight request so future calls can make new requests if cache expires
@@ -529,49 +528,51 @@ export async function getTeamIdByName(teamName: string): Promise<string | null> 
 }
 
 /**
- * Fallback team data if local JSON is unavailable
+ * Fallback team data when the team-reference DB/API is unavailable.
+ * Keep in sync with common NCAA champions shown on Hall of Fame cards.
  */
-function getFallbackTeamData(): TeamRefData[] {
+export function getFallbackTeamData(): TeamRefData[] {
   return [
     // Common tournament teams
-    { abbr: 'UConn', id: '41', name: 'Connecticut', displayName: 'Connecticut' },      // Connecticut Huskies
-    { abbr: 'UNC', id: '153', name: 'North Carolina', displayName: 'North Carolina' },       // North Carolina Tar Heels  
-    { abbr: 'UK', id: '96', name: 'Kentucky', displayName: 'Kentucky' },         // Kentucky Wildcats
-    { abbr: 'KU', id: '2305', name: 'Kansas', displayName: 'Kansas' },       // Kansas Jayhawks
-    { abbr: 'Tenn', id: '2633', name: 'Tennessee', displayName: 'Tennessee' },     // Tennessee Volunteers
-    { abbr: 'Duke', id: '150', name: 'Duke', displayName: 'Duke' },      // Duke Blue Devils
-    { abbr: 'Purd', id: '2509', name: 'Purdue', displayName: 'Purdue' },     // Purdue Boilermakers
-    { abbr: 'Hou', id: '248', name: 'Houston', displayName: 'Houston' },       // Houston Cougars
-    { abbr: 'Cre', id: '156', name: 'Creighton', displayName: 'Creighton' },       // Creighton Bluejays
-    { abbr: 'IoSt', id: '66', name: 'Iowa State', displayName: 'Iowa State' },       // Iowa State Cyclones
-    { abbr: 'Zona', id: '12', name: 'Arizona', displayName: 'Arizona' },       // Arizona Wildcats
-    { abbr: 'MicSt', id: '127', name: 'Michigan State', displayName: 'Michigan State' },     // Michigan State Spartans
-    { abbr: 'Flo', id: '57', name: 'Florida', displayName: 'Florida' },        // Florida Gators
-    { abbr: 'Bama', id: '333', name: 'Alabama', displayName: 'Alabama' },      // Alabama Crimson Tide
-    { abbr: 'Aub', id: '2', name: 'Auburn', displayName: 'Auburn' },        // Auburn Tigers (ESPN ID: 2)
-    { abbr: 'NCSt', id: '152', name: 'NC State', displayName: 'NC State' },      // NC State Wolfpack
-    { abbr: 'Gonz', id: '2250', name: 'Gonzaga', displayName: 'Gonzaga' },     // Gonzaga Bulldogs
-    { abbr: 'Marq', id: '269', name: 'Marquette', displayName: 'Marquette' },      // Marquette Golden Eagles
-    { abbr: 'Bylr', id: '239', name: 'Baylor', displayName: 'Baylor' },      // Baylor Bears
-    { abbr: 'Ill', id: '356', name: 'Illinois', displayName: 'Illinois' },       // Illinois Fighting Illini
-    { abbr: 'Clem', id: '228', name: 'Clemson', displayName: 'Clemson' },      // Clemson Tigers
-    { abbr: 'Wisc', id: '275', name: 'Wisconsin', displayName: 'Wisconsin' },      // Wisconsin Badgers
-    { abbr: 'SoCar', id: '2579', name: 'South Carolina', displayName: 'South Carolina' },    // South Carolina Gamecocks
-    { abbr: 'Ore', id: '2483', name: 'Oregon', displayName: 'Oregon' },      // Oregon Ducks
-    { abbr: 'Neb', id: '158', name: 'Nebraska', displayName: 'Nebraska' },       // Nebraska Cornhuskers
-    { abbr: 'WaSt', id: '265', name: 'Washington State', displayName: 'Washington State' },      // Washington State Cougars
-    { abbr: 'StMary', id: '2608', name: 'Saint Mary\'s', displayName: 'Saint Mary\'s' },   // Saint Mary's Gaels
-    { abbr: 'Mary', id: '120', name: 'Maryland', displayName: 'Maryland' },     // Maryland Terrapins
-    { abbr: 'StJ', id: '2599', name: 'St. John\'s', displayName: 'St. John\'s' },      // St. John's Red Storm
-    { abbr: 'MeM', id: '235', name: 'Memphis', displayName: 'Memphis' },       // Memphis Tigers
-    
-    // Missing abbreviations from standings data
-    { abbr: 'JM', id: '256', name: 'James Madison', displayName: 'James Madison' },        // James Madison Dukes
-    { abbr: 'TA&M', id: '245', name: 'Texas A&M', displayName: 'Texas A&M' },      // Texas A&M Aggies
-    { abbr: 'Drk', id: '2181', name: 'Drake', displayName: 'Drake' },      // Drake Bulldogs
-    { abbr: 'FLO', id: '57', name: 'Florida', displayName: 'Florida' },        // Florida Gators
-    { abbr: 'Texas', id: '251', name: 'Texas', displayName: 'Texas' },     // Texas Longhorns
-    { abbr: 'TTech', id: '2641', name: 'Texas Tech', displayName: 'Texas Tech' },    // Texas Tech Red Raiders
-    { abbr: 'FAU', id: '2226', name: 'Florida Atlantic', displayName: 'Florida Atlantic' },      // Florida Atlantic Owls
+    { abbr: 'UConn', id: '41', name: 'Connecticut', displayName: 'Connecticut' },
+    { abbr: 'UNC', id: '153', name: 'North Carolina', displayName: 'North Carolina' },
+    { abbr: 'UK', id: '96', name: 'Kentucky', displayName: 'Kentucky' },
+    { abbr: 'KU', id: '2305', name: 'Kansas', displayName: 'Kansas' },
+    { abbr: 'Tenn', id: '2633', name: 'Tennessee', displayName: 'Tennessee' },
+    { abbr: 'Duke', id: '150', name: 'Duke', displayName: 'Duke' },
+    { abbr: 'Purd', id: '2509', name: 'Purdue', displayName: 'Purdue' },
+    { abbr: 'Hou', id: '248', name: 'Houston', displayName: 'Houston' },
+    { abbr: 'Cre', id: '156', name: 'Creighton', displayName: 'Creighton' },
+    { abbr: 'IoSt', id: '66', name: 'Iowa State', displayName: 'Iowa State' },
+    { abbr: 'Zona', id: '12', name: 'Arizona', displayName: 'Arizona' },
+    { abbr: 'MicSt', id: '127', name: 'Michigan State', displayName: 'Michigan State' },
+    { abbr: 'Mich', id: '130', name: 'Michigan', displayName: 'Michigan' },
+    { abbr: 'Nova', id: '222', name: 'Villanova', displayName: 'Villanova' },
+    { abbr: 'Flo', id: '57', name: 'Florida', displayName: 'Florida' },
+    { abbr: 'Bama', id: '333', name: 'Alabama', displayName: 'Alabama' },
+    { abbr: 'Aub', id: '2', name: 'Auburn', displayName: 'Auburn' },
+    { abbr: 'NCSt', id: '152', name: 'NC State', displayName: 'NC State' },
+    { abbr: 'Gonz', id: '2250', name: 'Gonzaga', displayName: 'Gonzaga' },
+    { abbr: 'Marq', id: '269', name: 'Marquette', displayName: 'Marquette' },
+    { abbr: 'Bylr', id: '239', name: 'Baylor', displayName: 'Baylor' },
+    { abbr: 'Ill', id: '356', name: 'Illinois', displayName: 'Illinois' },
+    { abbr: 'Clem', id: '228', name: 'Clemson', displayName: 'Clemson' },
+    { abbr: 'Wisc', id: '275', name: 'Wisconsin', displayName: 'Wisconsin' },
+    { abbr: 'SoCar', id: '2579', name: 'South Carolina', displayName: 'South Carolina' },
+    { abbr: 'Ore', id: '2483', name: 'Oregon', displayName: 'Oregon' },
+    { abbr: 'Neb', id: '158', name: 'Nebraska', displayName: 'Nebraska' },
+    { abbr: 'WaSt', id: '265', name: 'Washington State', displayName: 'Washington State' },
+    { abbr: 'StMary', id: '2608', name: "Saint Mary's", displayName: "Saint Mary's" },
+    { abbr: 'Mary', id: '120', name: 'Maryland', displayName: 'Maryland' },
+    { abbr: 'StJ', id: '2599', name: "St. John's", displayName: "St. John's" },
+    { abbr: 'MeM', id: '235', name: 'Memphis', displayName: 'Memphis' },
+    { abbr: 'JM', id: '256', name: 'James Madison', displayName: 'James Madison' },
+    { abbr: 'TA&M', id: '245', name: 'Texas A&M', displayName: 'Texas A&M' },
+    { abbr: 'Drk', id: '2181', name: 'Drake', displayName: 'Drake' },
+    { abbr: 'FLO', id: '57', name: 'Florida', displayName: 'Florida' },
+    { abbr: 'Texas', id: '251', name: 'Texas', displayName: 'Texas' },
+    { abbr: 'TTech', id: '2641', name: 'Texas Tech', displayName: 'Texas Tech' },
+    { abbr: 'FAU', id: '2226', name: 'Florida Atlantic', displayName: 'Florida Atlantic' },
+    { abbr: 'UVA', id: '258', name: 'Virginia', displayName: 'Virginia' },
   ];
 }
