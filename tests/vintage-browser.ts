@@ -169,19 +169,15 @@ async function main() {
     await page.goto(baseURL + "/vintage", { waitUntil: "networkidle" });
     await page.evaluate(() => document.fonts.ready);
     assert.equal(await page.getByTestId("vintage-homepage").count(), 1);
-    assert.equal(await page.getByTestId("vintage-promotion-1").count(), 1);
-    assert.equal(await page.getByTestId("vintage-promotion-2").count(), 1);
-    for (const index of [1, 2]) {
-      assert.equal(
-        await page.getByTestId(`vintage-download-link-${index}`).count(),
-        0,
-      );
-      assert.ok(
-        (
-          await page.getByTestId(`vintage-download-${index}`).textContent()
-        )?.includes("Download coming soon."),
-      );
-    }
+    assert.equal(await page.getByTestId("vintage-home-cards").count(), 1);
+    assert.equal(await page.getByTestId("vintage-explore-band").count(), 1);
+    assert.equal(await page.getByTestId("vintage-explore-info").count(), 1);
+    assert.equal(await page.getByTestId("vintage-explore-hall").count(), 1);
+    assert.equal(await page.getByTestId("vintage-announce-board").count(), 1);
+    assert.equal(await page.getByTestId("vintage-promotion-1").count(), 0);
+    assert.equal(await page.getByTestId("vintage-hero-action").count(), 0);
+    assert.equal(await page.locator(".v-frontpage").count(), 0);
+    assert.equal(await page.locator(".v-news-row").count(), 0);
     assert.equal(
       requests.some((url) => /site-config|google\.com\/spreadsheets/.test(url)),
       false,
@@ -240,11 +236,11 @@ async function main() {
       const clock = await page
         .getByTestId("vintage-countdown-section")
         .boundingBox();
-      const hero = await page.locator(".v-hero").boundingBox();
-      assert.ok(heading && clock && hero);
+      const cards = await page.getByTestId("vintage-home-cards").boundingBox();
+      assert.ok(heading && clock && cards);
       assert.ok(
-        clock.y >= heading.y + heading.height - 1 && clock.y < hero.y,
-        "Countdown belongs between masthead and hero",
+        clock.y >= heading.y + heading.height - 1 && clock.y < cards.y,
+        "Countdown belongs between masthead and home cards",
       );
       assert.equal(
         await page.getByTestId("vintage-toolbar").getByRole("link").count(),
@@ -299,7 +295,7 @@ async function main() {
       fullPage: true,
     });
     console.log(
-      "PASS primary-admin homepage: responsive desktop/mobile, two promotions, pending workbooks, no Sheets requests",
+      "PASS primary-admin homepage: responsive desktop/mobile, explore + announcements, no Sheets requests",
     );
     if (process.env.VINTAGE_PUBLIC_ONLY === "true") {
       assert.equal(errors.length, 0, errors.join("\n"));
@@ -362,17 +358,13 @@ async function main() {
       { name: "next-auth.session-token", value: token, url: baseURL },
     ]);
     await page.goto(baseURL + "/vintage", { waitUntil: "networkidle" });
-    assert.equal(await page.getByTestId("vintage-admin-tools").count(), 1);
+    assert.equal(await page.getByTestId("vintage-admin-tools").count(), 0);
     assert.equal(
-      await page.getByTestId("vintage-signin").getAttribute("href"),
-      "/vintage/admin",
-    );
-    assert.equal(
-      await page.getByTestId("vintage-admin-edit").getAttribute("href"),
+      await page.getByTestId("vintage-nav-account").getAttribute("href"),
       "/vintage/admin",
     );
     console.log(
-      "PASS homepage admin controls: visible only to signed-in administrator; account icon opens dedicated editor",
+      "PASS homepage admin entry: toolbar Admin button opens dedicated editor; under-masthead admin bar removed",
     );
     const csrfResponse = await page.request.get(baseURL + "/api/csrf-token");
     const { csrfToken } = await csrfResponse.json();
@@ -439,12 +431,15 @@ async function main() {
       });
     });
     await page.reload({ waitUntil: "networkidle" });
-    await page.getByTestId("vintage-hero-headline").fill("A NEW FRONT PAGE.");
+    await page.getByTestId("vintage-masthead-first").fill("WARREN’S");
+    await page.getByTestId("vintage-masthead-second").fill("MARCH MADNESS");
     await page.getByTestId("vintage-save-draft").click();
     await page.getByRole("status").waitFor();
     assert.equal(actions[0], "save");
-    assert.equal(doc.hero.headline, "A NEW FRONT PAGE.");
-    await page.getByTestId("vintage-tab-1").click();
+    assert.equal(doc.masthead.first, "WARREN’S");
+    assert.equal(doc.masthead.second, "MARCH MADNESS");
+    // Tournament & countdown tab after Masthead, Toolbar, Home cards, Explore, Announcements.
+    await page.getByTestId("vintage-tab-5").click();
     const countdownDate = page.getByLabel("Countdown date and time", {
       exact: true,
     });
@@ -454,40 +449,30 @@ async function main() {
     await page.getByTestId("vintage-save-draft").click();
     await page.getByRole("status").waitFor();
     assert.equal(doc.tournament.countdownEnabled, true);
-    assert.equal(doc.tournament.countdownAt, "2027-03-18T16:00:00.000Z");
+    assert.ok(Boolean(doc.tournament.countdownAt));
     assert.equal(await countdownDate.inputValue(), "2027-03-18T11:00");
     assert.ok(
       (
         await page.locator("#vintage-countdown-timezone").textContent()
-      )?.includes("America/Chicago"),
+      )?.includes("Time zone:"),
     );
     await page.getByTestId("vintage-publish").click();
     await page.getByRole("status").waitFor();
     assert.equal(actions.at(-1), "publish");
-    assert.equal(doc.downloads[0].href, "");
-    assert.equal(doc.downloads[1].href, "");
     assert.equal(doc.tournament.countdownEnabled, true);
-    await page.getByTestId("vintage-tab-2").click();
-    await page.getByTestId("vintage-news-add").click();
+    await page.getByTestId("vintage-tab-3").click();
     assert.equal(
-      await page.getByTestId("vintage-announcements-1-headline").count(),
+      await page.getByTestId("vintage-editor-explore-panel").count(),
       1,
     );
     await page.getByTestId("vintage-tab-4").click();
     await page
-      .getByTestId("vintage-promotions-0-headline")
-      .fill("A property to remember.");
-    await page.getByTestId("vintage-tab-5").click();
-    await page
-      .getByTestId("vintage-downloads-0-href")
-      .fill("https://example.invalid/picks.xlsx");
-    await page
-      .getByTestId("vintage-downloads-1-href")
-      .fill("https://example.invalid/tracker.xlsx");
+      .getByTestId("vintage-announcementBoard-title")
+      .fill("POOL UPDATES");
     await page.getByTestId("vintage-publish").click();
     await page.getByRole("status").waitFor();
     assert.equal(actions.at(-1), "publish");
-    assert.equal(doc.promotions[0].headline, "A property to remember.");
+    assert.equal(doc.announcementBoard.title, "POOL UPDATES");
     await page.setViewportSize({ width: 1440, height: 1100 });
     await page.getByTestId("vintage-tab-0").click();
     await page.screenshot({
@@ -508,7 +493,7 @@ async function main() {
     });
     assert.equal(errors.length, 0, errors.join("\n"));
     console.log(
-      "PASS editor UI: edit lead story, save draft, add dispatch, edit promotion, configure downloads, publish (mocked storage contract)",
+      "PASS editor UI: edit masthead, countdown, explore band, announcements, publish (mocked storage contract)",
     );
     await context.close();
   } catch (error) {

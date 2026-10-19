@@ -26,24 +26,24 @@ test("draft, publication and revision restoration persist independently in SQL",
     const original = await readVintageState();
     assert.equal(original.version, 0);
     const draft = structuredClone(DEFAULT_VINTAGE_CONTENT);
-    draft.hero.headline = "DRAFT HEADLINE";
+    draft.masthead.second = "DRAFT EDITION";
     const saved = await writeVintageContent(
       { action: "save", version: 0, content: draft },
       "test@example.invalid",
     );
     assert.equal(saved.version, 1);
-    assert.equal(saved.draft.hero.headline, "DRAFT HEADLINE");
+    assert.equal(saved.draft.masthead.second, "DRAFT EDITION");
     assert.equal(
-      saved.published.hero.headline,
-      DEFAULT_VINTAGE_CONTENT.hero.headline,
+      saved.published.masthead.second,
+      DEFAULT_VINTAGE_CONTENT.masthead.second,
     );
     const published = await writeVintageContent(
       { action: "publish", version: 1, content: draft },
       "test@example.invalid",
     );
-    assert.equal(published.published.hero.headline, "DRAFT HEADLINE");
-    assert.equal(published.published.downloads[0].href, "");
-    assert.equal(published.published.downloads[1].href, "");
+    assert.equal(published.published.masthead.second, "DRAFT EDITION");
+    assert.equal(published.published.homeCards[2].excelPicksHref, "");
+    assert.equal(published.published.homeCards[2].excelTrackerHref, "");
     await assert.rejects(
       writeVintageContent(
         { action: "save", version: 0, content: draft },
@@ -52,7 +52,7 @@ test("draft, publication and revision restoration persist independently in SQL",
       /CONFLICT/,
     );
     const next = structuredClone(draft);
-    next.hero.headline = "NEXT DRAFT";
+    next.masthead.second = "NEXT DRAFT";
     await writeVintageContent(
       { action: "save", version: 2, content: next },
       "test@example.invalid",
@@ -61,27 +61,36 @@ test("draft, publication and revision restoration persist independently in SQL",
       { action: "restore", version: 3, revisionId: saved.revisions[0].id },
       "test@example.invalid",
     );
-    assert.equal(restored.draft.hero.headline, "DRAFT HEADLINE");
-    assert.equal(restored.published.hero.headline, "DRAFT HEADLINE");
+    assert.equal(restored.draft.masthead.second, "DRAFT EDITION");
+    assert.equal(restored.published.masthead.second, "DRAFT EDITION");
     assert.equal(restored.revisions.length, 4);
     const picksReady = structuredClone(restored.draft);
-    picksReady.downloads[0].href = "https://example.invalid/picks.xlsx";
+    picksReady.homeCards[2].excelPicksHref =
+      "https://example.invalid/picks.xlsx";
     const picksPublished = await writeVintageContent(
       { action: "publish", version: 4, content: picksReady },
       "test@example.invalid",
     );
     assert.equal(
-      picksPublished.published.downloads[0].href,
-      picksReady.downloads[0].href,
+      picksPublished.published.homeCards[2].excelPicksHref,
+      picksReady.homeCards[2].excelPicksHref,
     );
-    assert.equal(picksPublished.published.downloads[1].href, "");
+    assert.equal(picksPublished.published.homeCards[2].excelTrackerHref, "");
     const trackerReady = structuredClone(picksReady);
-    trackerReady.downloads[1].href = "https://example.invalid/tracker.xlsx";
+    trackerReady.homeCards[2].excelTrackerHref =
+      "https://example.invalid/tracker.xlsx";
     const bothPublished = await writeVintageContent(
       { action: "publish", version: 5, content: trackerReady },
       "test@example.invalid",
     );
-    assert.deepEqual(bothPublished.published.downloads, trackerReady.downloads);
+    assert.equal(
+      bothPublished.published.homeCards[2].excelPicksHref,
+      trackerReady.homeCards[2].excelPicksHref,
+    );
+    assert.equal(
+      bothPublished.published.homeCards[2].excelTrackerHref,
+      trackerReady.homeCards[2].excelTrackerHref,
+    );
   } finally {
     pg.Pool = originalPool;
     process.env = originalEnv;

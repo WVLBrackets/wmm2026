@@ -2,7 +2,7 @@
 
 **Scope:** All web applications in this organization’s portfolio (Next.js / Vercel / Neon stack and aligned patterns).  
 **Created:** February 21, 2026  
-**Last Updated:** April 4, 2026 (Organization-wide scope; configuration standards; Base App alignment)  
+**Last Updated:** October 18, 2026 (Vintage Info handbook CMS + shared VintageShell)  
 **Purpose:** Living document defining **how we implement solutions**—security, architecture, testing, APIs, and operational patterns teams should follow or consciously deviate from with Architect review.
 
 ---
@@ -227,6 +227,8 @@ components/
 **Testability:** All interactive UI components (buttons, inputs, dialogs) MUST include `data-testid` attributes for stable test automation. **For responsive components with desktop/mobile variants, use `-desktop` / `-mobile` suffixes** to ensure unique locators. See **Section 7.7** for naming conventions and the established test ID table.
 
 **Status:** Partially applied. Feature directories exist but shared components lack clear organization.
+
+**WMM2026 vintage homepage (illustrative):** Countdown → three locked plate cards (Play / Champ / Excel) → explore band (Info + Hall) → announcements board. Cards share `CardFooterCaption` (Oswald Bold, ALL CAPS; `||` = two-line break). Primary-admin edit gears deep-link via `lib/vintage/adminFocus.ts`. Details: `docs/VINTAGE_HOMEPAGE_V1.md`.
 
 ---
 

@@ -12,22 +12,22 @@
   font-weight: 200 700;
   font-display: swap;
 }
-@font-face {
-  font-family: "Roboto Slab";
-  src: url("/fonts/vintage/RobotoSlab.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-}
 .vintage-page {
   --v-ink: #152c3a;
   --v-red: #b52c26;
   --v-paper: #f2ead8;
   --v-rule: #b7b09f;
+  --v-first: #c9a227;
+  --v-second: #a8a9ad;
+  --v-third: #cd7f32;
+  --v-font-headline: "Alfa Slab One", Georgia, serif;
+  --v-font-icons: Oswald, Impact, sans-serif;
+  --v-font-body: Arial, Helvetica, sans-serif;
+  --v-font-specialty: Georgia, "Times New Roman", serif;
   color: var(--v-ink);
   background: #dcd5c6;
   padding: 26px 30px 40px;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--v-font-body);
   min-height: 100vh;
   color-scheme: light;
 }
@@ -96,7 +96,7 @@
   color: #fff5dd;
 }
 .v-eyebrow {
-  font-family: Oswald, sans-serif;
+  font-family: var(--v-font-icons);
   letter-spacing: 1.3px;
   font-size: 11px;
   font-weight: 500;
@@ -109,7 +109,7 @@
 }
 .v-hero h2 {
   white-space: pre-line;
-  font-family: Oswald, Impact, sans-serif;
+  font-family: var(--v-font-icons);
   font-size: clamp(36px, 4vw, 58px);
   font-weight: 700;
   line-height: 1.08;
@@ -118,7 +118,7 @@
   max-width: 90%;
 }
 .v-hero-copy p {
-  font-family: Oswald, sans-serif;
+  font-family: var(--v-font-icons);
   text-transform: uppercase;
   font-size: 15px;
   font-style: italic;
@@ -127,7 +127,7 @@
   margin: 0 0 20px;
 }
 .v-hero-cta {
-  font-family: Oswald, sans-serif;
+  font-family: var(--v-font-icons);
   text-transform: uppercase;
   display: flex;
   align-items: center;
@@ -153,7 +153,7 @@
   padding-top: 5px;
 }
 .v-tipoff h2 {
-  font-family: Oswald, sans-serif;
+  font-family: var(--v-font-icons);
   font-size: 42px;
   line-height: 1.15;
   font-weight: 600;
@@ -182,18 +182,18 @@
   font-size: 23px;
 }
 .v-datebox strong {
-  font-family: Oswald, sans-serif;
+  font-family: var(--v-font-icons);
   font-size: 40px;
   line-height: 1.1;
 }
 .v-datebox b {
-  font-family: Oswald, sans-serif;
+  font-family: var(--v-font-icons);
   font-size: 18px;
   line-height: 1.2;
   margin: 6px 0;
 }
 .v-datebox p {
-  font-family: Oswald, sans-serif;
+  font-family: var(--v-font-icons);
   font-size: 11px;
   line-height: 1.6;
   margin: 0;
@@ -206,7 +206,7 @@
   color: var(--v-red);
 }
 .v-editorial h2 {
-  font-family: Oswald, sans-serif;
+  font-family: var(--v-font-icons);
   font-weight: 600;
   font-size: 47px;
   line-height: 1.12;
@@ -215,7 +215,7 @@
   margin: 10px 0 18px;
 }
 .v-editorial > p {
-  font-family: Georgia, serif;
+  font-family: var(--v-font-specialty);
   font-size: 16px;
   line-height: 1.8;
   max-width: 515px;
@@ -225,7 +225,7 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  font-family: Oswald, sans-serif;
+  font-family: var(--v-font-icons);
   font-size: 12px;
   text-transform: uppercase;
   text-decoration: none;
@@ -241,7 +241,7 @@
   gap: 12px;
   border-top: 1px solid var(--v-rule);
   padding-top: 12px;
-  font-family: Oswald, sans-serif;
+  font-family: var(--v-font-icons);
   font-size: 9px;
   letter-spacing: 1px;
 }
@@ -262,7 +262,7 @@
   padding: 0 0 12px;
 }
 .v-section-heading h2 {
-  font-family: Oswald, sans-serif;
+  font-family: var(--v-font-icons);
   font-size: 22px;
   text-transform: uppercase;
   display: flex;
@@ -272,7 +272,7 @@
   font-weight: 600;
 }
 .v-section-heading > span {
-  font-family: Oswald, sans-serif;
+  font-family: var(--v-font-icons);
   font-size: 9px;
   letter-spacing: 1px;
 }
@@ -284,25 +284,25 @@
   padding: 18px 0;
 }
 .v-news-item time {
-  font-family: Oswald, sans-serif;
+  font-family: var(--v-font-icons);
   font-size: 11px;
   text-transform: uppercase;
   padding-top: 3px;
 }
 .v-news-item h3 {
-  font-family: Georgia, serif;
+  font-family: var(--v-font-specialty);
   font-size: 17px;
   font-weight: bold;
   margin: 0 0 7px;
 }
 .v-news-item p {
-  font-family: Georgia, serif;
+  font-family: var(--v-font-specialty);
   font-size: 13px;
   line-height: 1.7;
   margin: 0;
 }
 .v-empty {
-  font-family: Georgia, serif;
+  font-family: var(--v-font-specialty);
   padding: 25px 0;
   font-size: 14px;
 }
@@ -312,21 +312,30 @@
   padding: 0 10px 8px 30px;
 }
 .v-history > svg {
-  color: #a38146;
+  color: var(--v-first);
   margin: 0 auto 8px;
+}
+.v-place-first {
+  color: var(--v-first);
+}
+.v-place-second {
+  color: var(--v-second);
+}
+.v-place-third {
+  color: var(--v-third);
 }
 .v-history > .v-eyebrow {
   font-size: 10px;
 }
 .v-history h2 {
-  font-family: Oswald, sans-serif;
+  font-family: var(--v-font-icons);
   font-size: 27px;
   line-height: 1.2;
   margin: 9px 0 13px;
   font-weight: 600;
 }
 .v-history > p {
-  font-family: Georgia, serif;
+  font-family: var(--v-font-specialty);
   font-size: 13px;
   line-height: 1.7;
   margin: 0 0 16px;
@@ -338,12 +347,12 @@
 .v-history .v-winner span,
 .v-entry-count span {
   display: block;
-  font-family: Oswald, sans-serif;
+  font-family: var(--v-font-icons);
   font-size: 9px;
   letter-spacing: 1px;
 }
 .v-history .v-entry-count {
-  font-family: Oswald, sans-serif;
+  font-family: var(--v-font-icons);
   font-size: 34px;
   font-weight: bold;
 }
@@ -374,7 +383,7 @@
   letter-spacing: 1.4px;
 }
 .v-ad h3 {
-  font-family: Oswald, sans-serif;
+  font-family: var(--v-font-icons);
   font-size: 32px;
   white-space: pre-line;
   line-height: 1.1;
@@ -382,7 +391,7 @@
   margin: 14px 0 12px;
 }
 .v-ad p {
-  font-family: Georgia, serif;
+  font-family: var(--v-font-specialty);
   font-size: 12px;
   line-height: 1.7;
   margin: 0 0 14px;
@@ -390,7 +399,7 @@
 }
 .v-ad small {
   display: block;
-  font-family: Oswald, sans-serif;
+  font-family: var(--v-font-icons);
   font-size: 8px;
   letter-spacing: 1.6px;
   margin-top: 20px;
@@ -434,7 +443,7 @@
   display: flex;
   gap: 12px;
   align-items: center;
-  font-family: Oswald, sans-serif;
+  font-family: var(--v-font-icons);
   font-size: 12px;
 }
 .v-resource a {
@@ -445,7 +454,7 @@
   text-underline-offset: 3px;
 }
 .v-resource p {
-  font-family: Georgia, serif;
+  font-family: var(--v-font-specialty);
   font-size: 10px;
   margin: 5px 0 0;
   color: #555348;
@@ -457,7 +466,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 15px;
-  font-family: Georgia, serif;
+  font-family: var(--v-font-specialty);
   font-size: 10px;
 }
 .v-footer a {
@@ -472,7 +481,7 @@
   align-items: center;
   gap: 8px;
   padding: 16px 0;
-  font-family: Oswald, sans-serif;
+  font-family: var(--v-font-icons);
   font-size: 10px;
   letter-spacing: 0.8px;
 }
@@ -488,11 +497,6 @@
 .v-view-toggle > a[aria-current="page"] {
   background: var(--v-ink);
   color: var(--v-paper);
-}
-.v-countdown-started {
-  font-family: Oswald, sans-serif;
-  font-size: 26px;
-  margin-top: 14px;
 }
 .v-draft-banner {
   padding: 12px;
@@ -733,7 +737,7 @@
   display: inline-block;
   width: max-content;
   white-space: nowrap;
-  font-family: "Alfa Slab One", Georgia, serif;
+  font-family: var(--v-font-headline);
   font-size: 48px;
   font-weight: 400;
   line-height: 1.2;
@@ -765,17 +769,25 @@
   padding: 5px 8px;
   color: inherit;
   text-decoration: none;
-  font-family: Oswald, sans-serif;
+  font-family: var(--v-font-icons);
   font-size: 10px;
   line-height: 1.2;
   text-transform: uppercase;
   white-space: nowrap;
 }
-.v-shortcuts svg {
+.v-shortcuts svg,
+.v-shortcuts .v-shortcut-custom-icon {
   width: 21px;
   height: 21px;
   stroke-width: 1.7;
   flex-shrink: 0;
+}
+.v-shortcuts .v-shortcut-custom-icon {
+  display: block;
+  object-fit: contain;
+  /* Neon-hosted SVGs are cross-origin, so mask-image fails; recolor instead. */
+  filter: brightness(0) invert(1);
+  opacity: 0.88;
 }
 .v-shortcuts .v-shortcut-active::after {
   content: "";
@@ -801,16 +813,598 @@
   bottom: 20%;
   border-left: 1px solid #f2ead866;
 }
-.v-countdown-section {
-  max-width: 650px;
-  margin: 0 auto;
-  padding: 20px 0 15px;
+.v-home-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* Auto rows so the Play Now master isn’t cropped by a fixed row height. */
+  grid-auto-rows: auto;
+  align-items: start;
+  gap: 18px;
+  margin: 22px 0 8px;
+  padding-bottom: 18px;
+}
+/* Info + Hall of Fame band under the main three cards. */
+.v-explore-band {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin: 0 0 8px;
+  padding: 4px 0 22px;
+  border-bottom: 1px solid var(--v-rule);
+}
+.v-explore-band > .v-edit-gear {
+  top: 2px;
+  right: 0;
+}
+.v-explore-panel {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  align-items: start;
+  min-width: 0;
+  padding: 18px 18px 16px;
+  border: 1px solid var(--v-ink);
+  background: color-mix(in srgb, var(--v-paper) 92%, white);
+}
+.v-explore-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  color: var(--v-red);
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+.v-explore-panel-hall .v-explore-icon {
+  color: var(--v-first);
+}
+.v-explore-trophy {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.v-explore-trophy-star {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fffef8;
+  width: 11px;
+  height: 11px;
+}
+.v-explore-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.v-explore-copy h3 {
+  margin: 0;
+  font-family: var(--v-font-icons);
+  font-weight: 700;
+  font-size: clamp(15px, 1.7vw, 18px);
+  line-height: 1.15;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--v-ink);
+}
+.v-explore-copy p {
+  margin: 0;
+  font-family: var(--v-font-body);
+  font-size: 14px;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--v-ink) 88%, transparent);
+}
+.v-explore-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  align-self: flex-start;
+  font-family: var(--v-font-icons);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  color: var(--v-ink);
+}
+.v-explore-cta svg {
+  color: var(--v-red);
+  flex-shrink: 0;
+}
+.v-explore-cta:hover,
+.v-explore-cta:focus-visible {
+  color: var(--v-red);
+}
+/* Full-width announcements board under the explore band.
+ * Same icon column geometry as explore panels so titles line up. */
+.v-announce-board {
+  position: relative;
+  margin: 0 0 8px;
+  padding: 0 0 22px;
+  border-bottom: 1px solid var(--v-rule);
+}
+.v-announce-board > .v-edit-gear {
+  top: 8px;
+  right: 8px;
+}
+.v-announce-panel {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  align-items: start;
+  min-width: 0;
+  padding: 18px 18px 16px;
+  border: 1px solid var(--v-ink);
+  background: color-mix(in srgb, var(--v-paper) 92%, white);
+}
+.v-announce-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  color: var(--v-red);
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+.v-announce-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.v-announce-body h2 {
+  margin: 0;
+  font-family: var(--v-font-icons);
+  font-weight: 700;
+  font-size: clamp(15px, 1.7vw, 18px);
+  line-height: 1.15;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--v-ink);
+}
+.v-announce-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.v-announce-item {
+  display: grid;
+  grid-template-columns: minmax(9.5rem, auto) 1fr;
+  gap: 12px 16px;
+  align-items: baseline;
+}
+.v-announce-item time {
+  font-family: var(--v-font-icons);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  line-height: 1.35;
+  color: var(--v-red);
+  white-space: nowrap;
+}
+.v-announce-item p {
+  margin: 0;
+  font-family: var(--v-font-body);
+  font-size: 14px;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--v-ink) 88%, transparent);
+}
+.v-announce-empty {
+  margin: 0;
+  font-family: var(--v-font-body);
+  font-size: 14px;
+  color: color-mix(in srgb, var(--v-ink) 65%, transparent);
+}
+@media (max-width: 600px) {
+  .v-announce-item {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+/* Wraps a card when admin edit gears are shown (keeps gear outside card links). */
+.v-card-shell {
+  position: relative;
+  min-width: 0;
+}
+.v-home-card {
+  height: auto;
+  min-height: 280px;
+  padding: 18px 16px;
+  border: 1px solid var(--v-ink);
+  background: color-mix(in srgb, var(--v-paper) 92%, white);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+}
+/*
+ * Primary-admin edit gear — tiny, top-right, does not compete with card art.
+ * Deep-links to /vintage/admin?focus=… for the clicked element.
+ */
+.v-edit-gear {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--v-ink) 35%, transparent);
+  background: color-mix(in srgb, var(--v-paper) 88%, white);
+  color: color-mix(in srgb, var(--v-ink) 72%, transparent);
+  opacity: 0.72;
+  text-decoration: none;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--v-ink) 12%, transparent);
+  transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+.v-edit-gear:hover,
+.v-edit-gear:focus-visible {
+  opacity: 1;
+  color: var(--v-ink);
+  background: var(--v-paper);
+  outline: 2px solid var(--v-red);
+  outline-offset: 1px;
+}
+.v-home-card h3,
+.v-home-card h4 {
+  margin: 0;
+  font-family: var(--v-font-icons);
+  font-weight: 600;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.v-home-card > p,
+.v-card-news-body p,
+.v-card-excel-list p {
+  margin: 0;
+  font-family: var(--v-font-specialty);
+  font-size: 13px;
+  line-height: 1.55;
+}
+/* Play Now — master art + shared footer caption hole. */
+.v-home-card.v-card-play {
+  --v-play-red: #a8342c;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  height: auto;
+  min-height: 0;
+  align-self: start;
+  overflow: visible;
+}
+.v-card-play-frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  line-height: 0;
+  border: 0;
+  outline: 0;
+  text-decoration: none;
+  background: transparent;
+}
+.v-card-play-plate {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+  pointer-events: none;
+}
+/*
+ * Reigning Champ — exact master art + three holes (name, year on wreath, motto).
+ * Soft ink/red so overlays sit on the newsprint without looking UI-flat.
+ */
+.v-home-card.v-card-champ {
+  --v-champ-ink: #1a2430;
+  --v-champ-red: #a8342c;
+  --v-champ-cream: #f3ead7;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  height: auto;
+  min-height: 0;
+  align-self: start;
+  overflow: visible;
+}
+.v-card-champ-frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  line-height: 0;
+}
+.v-card-champ-plate {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+  pointer-events: none;
+}
+.v-card-champ-holes {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+/* Beat `.v-home-card > p` / shared type rules. Font size set by ChampCardHoles fit. */
+.v-home-card.v-card-champ .v-card-champ-name {
+  position: absolute;
+  /* Main cream field, left of the baked-in wreath. */
+  top: 19%;
+  left: 4.5%;
+  width: 56%;
+  height: 58%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0.01em;
+  font-family: var(--v-font-headline);
+  font-size: 31px; /* JS fit overrides (~10% larger baseline) */
+  font-weight: 400;
+  line-height: 0.9;
+  letter-spacing: -0.55px;
+  color: var(--v-champ-ink);
+  text-transform: uppercase;
+  text-align: left;
+  opacity: 0.94;
+  overflow: hidden;
+}
+.v-home-card.v-card-champ.v-card-champ-no-motto .v-card-champ-name {
+  height: 64%;
+}
+.v-card-champ-name span {
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
+}
+/* Locked straight-slab year — centered on the gold wreath. */
+.v-home-card.v-card-champ .v-card-champ-year {
+  position: absolute;
+  top: 28%;
+  left: 69%;
+  width: 27%;
+  height: 42%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  border-bottom: 4px double var(--v-ink);
+  line-height: 1;
+  color: var(--v-champ-ink);
+}
+.v-card-champ-year-inner {
+  position: relative;
+  z-index: 1;
+}
+.v-card-champ-year--straight .v-card-champ-year-inner {
+  font-family: "Alfa Slab One", Impact, Georgia, serif;
+  /* ~10% smaller than the original straight mockup. */
+  font-size: clamp(20px, 3.8vw, 31px);
+  letter-spacing: 0.04em;
+  opacity: 0.95;
+}
+/*
+ * Shared home-card footer caption (Play Now / Champ / Excel / future plates).
+ * Oswald Bold, ALL CAPS, plate red; vertically centered in the footer band.
+ * One line = full caption scale; two lines (`||`) = slightly smaller.
+ * Hole geometry is shared so all three cards stay aligned.
+ */
+.v-card-footer-caption {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.06em;
+  font-family: Oswald, Impact, sans-serif;
+  font-style: normal;
+  font-size: 22px; /* JS fit overrides */
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: 0.85px;
+  text-align: center;
+  text-transform: uppercase;
+  overflow: hidden;
+  opacity: 0.96;
+  pointer-events: none;
+}
+.v-card-footer-caption span {
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Shared footer band geometry (below double rule on each master plate). */
+.v-home-card.v-card-play .v-card-play-caption,
+.v-home-card.v-card-champ .v-card-champ-motto,
+.v-home-card.v-card-excel .v-card-excel-caption {
+  position: absolute;
+  /* Slightly above geometric center — Oswald caps read low in the line box. */
+  top: 79.5%;
+  left: 4%;
+  width: 92%;
+  height: 14.5%;
+}
+.v-home-card.v-card-play .v-card-play-caption {
+  color: var(--v-play-red);
+}
+.v-home-card.v-card-champ .v-card-champ-motto {
+  color: var(--v-champ-red);
+}
+/* Excel Downloads — scenario plate + caption / dates / download hotspots. */
+.v-home-card.v-card-excel {
+  --v-excel-ink: #1a2430;
+  --v-excel-red: #a8342c;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  height: auto;
+  min-height: 0;
+  align-self: start;
+  overflow: visible;
+}
+.v-card-excel-frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  line-height: 0;
+}
+.v-card-excel-plate {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+  pointer-events: none;
+}
+.v-card-excel-holes {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+.v-card-excel-hotspot {
+  position: absolute;
+  pointer-events: auto;
+  /* Sit over the baked-in DOWNLOAD .XLSX buttons. */
+  top: 48%;
+  width: 38%;
+  height: 18%;
+  border-radius: 2px;
+}
+.v-card-excel-hotspot-picks {
+  left: 6%;
+}
+.v-card-excel-hotspot-tracker {
+  left: 56%;
+}
+.v-card-excel-hotspot:focus-visible {
+  outline: 3px solid var(--v-excel-red);
+  outline-offset: 2px;
+}
+.v-home-card.v-card-excel .v-card-excel-soon-date {
+  position: absolute;
+  top: 62%;
+  width: 42%;
+  margin: 0;
+  font-family: Oswald, Impact, sans-serif;
+  font-size: clamp(9px, 1.7vw, 12px);
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--v-excel-ink);
+  opacity: 0.92;
+}
+.v-card-excel-soon-picks {
+  left: 4%;
+}
+.v-card-excel-soon-tracker {
+  left: 54%;
+}
+.v-home-card.v-card-excel .v-card-excel-caption {
+  color: var(--v-excel-red);
+}
+.v-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.v-card-excel-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.v-card-excel-list li {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 8px;
+  align-items: start;
+}
+.v-card-excel-list a {
+  color: inherit;
+  font-family: var(--v-font-icons);
+  font-size: 13px;
+  text-transform: uppercase;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.v-card-excel-list span {
+  font-family: var(--v-font-icons);
+  font-size: 13px;
+  text-transform: uppercase;
+}
+.v-card-hof,
+.v-card-news,
+.v-card-placeholder {
+  text-align: left;
+}
+.v-card-inline-heading {
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+.v-card-inline-heading h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+}
+.v-card-news-body {
+  display: grid;
+  gap: 6px;
+}
+.v-card-news-body time {
+  font-family: var(--v-font-icons);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--v-red);
+}
+.v-card-news-more {
+  margin-top: 4px !important;
+  font-size: 12px !important;
+  color: color-mix(in srgb, var(--v-ink) 65%, transparent);
+}
+.v-countdown-section {
+  position: relative;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 14px 0 10px;
+  text-align: center;
+}
+.v-countdown-section > .v-edit-gear {
+  top: 4px;
+  right: 0;
 }
 .v-countdown-section h2 {
   margin: 0 0 12px;
-  font-family: Oswald, Impact, sans-serif;
+  font-family: var(--v-font-icons);
   font-weight: 600;
   font-size: 20px;
   line-height: 1.2;
@@ -821,7 +1415,8 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
-  margin: 0;
+  max-width: 650px;
+  margin: 0 auto;
 }
 .v-countdown-section .v-countdown > div {
   min-width: 0;
@@ -833,7 +1428,7 @@
 }
 .v-countdown-section .v-countdown strong {
   display: block;
-  font-family: Oswald, Impact, sans-serif;
+  font-family: var(--v-font-icons);
   font-size: 60px;
   font-weight: 700;
   line-height: 1;
@@ -842,7 +1437,7 @@
 }
 .v-countdown-section .v-countdown span {
   display: block;
-  font-family: Oswald, sans-serif;
+  font-family: var(--v-font-icons);
   text-transform: uppercase;
   margin-top: 8px;
   font-size: 12px;
@@ -851,14 +1446,37 @@
 }
 .v-countdown-pending {
   margin: 10px 0 0;
-  font-family: Oswald, sans-serif;
+  font-family: var(--v-font-icons);
   font-size: 11px;
   letter-spacing: 0.4px;
 }
-.v-countdown-section .v-countdown-started {
-  margin: 12px 0;
+/* Live / underway message — full content width on desktop, one line. */
+.v-countdown-section .v-live-tourney-message {
+  margin: 4px 0;
+  font-family: var(--v-font-headline);
+  font-weight: 400;
+  font-size: clamp(36px, 5.5vw, 64px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: var(--v-ink);
+}
+@media (min-width: 901px) {
+  .v-countdown-section .v-live-tourney-message {
+    white-space: nowrap;
+  }
 }
 @media (max-width: 900px) {
+  .v-home-cards {
+    grid-template-columns: 1fr;
+    grid-auto-rows: auto;
+    gap: 14px;
+  }
+  .v-explore-band {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding-bottom: 18px;
+  }
   .vintage-page {
     padding: 0;
     background: var(--v-paper);
@@ -905,8 +1523,10 @@
     font-size: 40px;
   }
   .v-countdown-section {
+    padding: 10px 0 8px;
+  }
+  .v-countdown-section .v-countdown {
     max-width: 530px;
-    padding: 14px 0 12px;
   }
   .v-countdown-section h2 {
     font-size: 17px;
@@ -916,6 +1536,9 @@
   .v-countdown-section .v-countdown strong {
     font-size: clamp(36px, 12vw, 58px);
   }
+  .v-countdown-section .v-live-tourney-message {
+    font-size: clamp(30px, 9vw, 52px);
+  }
   .v-countdown-section .v-countdown span {
     font-size: 10px;
     letter-spacing: 0.7px;
@@ -923,23 +1546,3 @@
   }
 }
 
-.v-admin-tools {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  flex-wrap: wrap;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--v-rule);
-  font-family: Oswald, sans-serif;
-  font-size: 12px;
-}
-.v-admin-tools > span {
-  color: var(--v-red);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-.v-admin-tools a {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}

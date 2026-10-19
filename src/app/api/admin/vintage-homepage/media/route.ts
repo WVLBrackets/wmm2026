@@ -71,16 +71,38 @@ export async function POST(request: NextRequest) {
   const isWebp =
     bytes.subarray(0, 4).toString() === "RIFF" &&
     bytes.subarray(8, 12).toString() === "WEBP";
+  const textHead = bytes.subarray(0, Math.min(bytes.length, 400)).toString("utf8");
+  const trimmedHead = textHead.replace(/^\uFEFF/, "").trimStart();
+  const isSvg =
+    bytes.length <= 500000 &&
+    (trimmedHead.startsWith("<svg") ||
+      (trimmedHead.startsWith("<?xml") && /<svg[\s>]/i.test(textHead))) &&
+    !/<script[\s>]/i.test(bytes.toString("utf8")) &&
+    !/\bon\w+\s*=/i.test(bytes.toString("utf8"));
   const type = isJpeg
     ? "image/jpeg"
     : isPng
       ? "image/png"
       : isWebp
         ? "image/webp"
-        : "";
-  if (!type || file.type !== type)
+        : isSvg
+          ? "image/svg+xml"
+          : "";
+  const declaredOk =
+    type &&
+    (file.type === type ||
+      (isSvg &&
+        (file.type === "image/svg+xml" ||
+          file.type === "text/xml" ||
+          file.type === "application/xml" ||
+          file.type === "" ||
+          file.name.toLowerCase().endsWith(".svg"))));
+  if (!declaredOk)
     return NextResponse.json(
-      { error: "Only JPEG, PNG and WebP images are supported." },
+      {
+        error:
+          "Only JPEG, PNG, WebP, and SVG (no scripts) files are supported. SVGs must be under 500 KB.",
+      },
       { status: 400, headers },
     );
   let uploaded: Awaited<ReturnType<typeof uploadVintageImage>> | undefined;
@@ -88,7 +110,13 @@ export async function POST(request: NextRequest) {
   try {
     pool = await mediaDatabase();
     const id = randomUUID();
-    const extension = isJpeg ? "jpg" : isPng ? "png" : "webp";
+    const extension = isJpeg
+      ? "jpg"
+      : isPng
+        ? "png"
+        : isWebp
+          ? "webp"
+          : "svg";
     uploaded = await uploadVintageImage(
       `vintage/${id}.${extension}`,
       bytes,

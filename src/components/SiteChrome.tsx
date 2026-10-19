@@ -12,10 +12,12 @@ export default function SiteChrome({
   const pathname = usePathname() || "";
   const standalone =
     pathname === "/" ||
+    pathname === "/info" ||
     pathname === "/vintage" ||
     pathname === "/vintage/admin" ||
     pathname.startsWith("/vintage/admin/") ||
-    pathname.startsWith("/admin/vintage-homepage");
+    pathname.startsWith("/admin/vintage-homepage") ||
+    pathname.startsWith("/admin/vintage-info");
   if (standalone) return <>{children}</>;
   return (
     <LegacySiteChrome buildStamp={buildStamp}>{children}</LegacySiteChrome>

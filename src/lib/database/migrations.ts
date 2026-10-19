@@ -550,5 +550,18 @@ export async function initializeVintageHomepageDatabase(pool: import('pg').Pool)
       alt TEXT NOT NULL,
       author TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS vintage_info (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      version BIGINT NOT NULL DEFAULT 0,
+      draft JSONB NOT NULL,
+      published JSONB NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS vintage_info_revisions (
+      id UUID PRIMARY KEY,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      author TEXT NOT NULL,
+      action TEXT NOT NULL CHECK (action IN ('save', 'publish', 'restore')),
+      content JSONB NOT NULL
+    );
   `);
 }
