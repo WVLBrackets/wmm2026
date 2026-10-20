@@ -3,7 +3,7 @@ import { getActiveTournamentYear, isHistoricalYear } from '@/lib/services/tourna
 import { getSiteConfigFromGoogleSheetsFresh } from '@/lib/siteConfig';
 import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 import { evaluatePicksAccess } from '@/lib/services/picksAccessPolicy';
-import { tryLoadTournamentData } from '@/lib/tournamentLoader';
+import { tryLoadTournamentData } from '@/lib/tournamentLoaderServer';
 import { getMasterLockState } from '@/lib/killSwitch';
 import { vintageAdminEmail } from '@/lib/vintage/admin';
 import type { VintageActionKind } from '@/lib/services/vintageActionLock';

@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/lib/adminAuth';
 import * as fs from 'fs';
 import * as path from 'path';
+import { listManagedTournamentYears } from '@/lib/repositories/tournamentRepository';
 
 /**
  * GET /api/admin/tournament-files - List available tournament JSON files
@@ -47,9 +48,11 @@ export async function GET() {
       // Continue with empty list - this is okay for Vercel where filesystem access is limited
     }
 
+    const managedYears = await listManagedTournamentYears();
+    const files = [...new Set([...tournamentFiles, ...managedYears.map(y => `tournament-${y}.json`)])].sort().reverse();
     return NextResponse.json({
       success: true,
-      files: tournamentFiles,
+      files,
     });
   } catch (error) {
     console.error('Error listing tournament files:', error);

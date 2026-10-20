@@ -64,6 +64,7 @@ function StandingsLogo({
   champ = false,
   title,
   tilePx,
+  directLogo,
 }: {
   teamName: string;
   teamIdLookup: Map<string, string>;
@@ -76,6 +77,7 @@ function StandingsLogo({
   title?: string;
   /** Resolved tile size for next/image dimensions. */
   tilePx: number;
+  directLogo?: string;
 }) {
   const [src, setSrc] = useState<string | null>(null);
   const [imageError, setImageError] = useState(false);
@@ -84,6 +86,7 @@ function StandingsLogo({
   useEffect(() => {
     let cancelled = false;
     setImageError(false);
+    if (directLogo) { setSrc(directLogo); return; }
     const key = teamName.trim();
     if (!key) {
       setSrc(null);
@@ -105,7 +108,7 @@ function StandingsLogo({
     return () => {
       cancelled = true;
     };
-  }, [teamName, teamIdLookup]);
+  }, [teamName, teamIdLookup, directLogo]);
 
   return (
     <div
@@ -392,6 +395,7 @@ export default function VintageLiveStandings({
             <StandingsLogo
               key={`${team}-${sheetIndex}`}
               teamName={team}
+              directLogo={data.teamLogos?.[team]}
               teamIdLookup={teamIdLookup}
               isFinalist={isFinalist}
               shadeTone={shadeTone}
@@ -413,6 +417,7 @@ export default function VintageLiveStandings({
     return (
       <StandingsLogo
         teamName={entry.champion}
+        directLogo={data.teamLogos?.[entry.champion]}
         teamIdLookup={teamIdLookup}
         champ
         tilePx={logoSizing.champDesktopPx}

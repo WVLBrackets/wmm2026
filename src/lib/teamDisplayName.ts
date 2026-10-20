@@ -60,7 +60,10 @@ export function applyDisplayNamesToTournamentData(
 ): TournamentData {
   const mapTeam = (team: TournamentTeam): TournamentTeam => ({
     ...team,
-    name: idToDisplay.get(team.id) ?? team.name,
+    name: team.playIn ? (team.playIn.winnerId
+      ? idToDisplay.get(team.playIn.winnerId) ?? team.name
+      : team.playIn.teams.map(t => idToDisplay.get(t.id) ?? t.name).join(' / '))
+      : idToDisplay.get(team.id) ?? team.name,
   });
   return {
     ...data,

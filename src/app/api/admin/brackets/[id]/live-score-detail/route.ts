@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
 import { getBracketById, getKeyBracketByYear } from '@/lib/repositories/bracketRepository';
-import { loadTournamentData } from '@/lib/tournamentLoader';
+import { loadTournamentData } from '@/lib/tournamentLoaderServer';
 import { buildLiveScoreDetailLines } from '@/lib/liveStandingsScoring';
 
 /**

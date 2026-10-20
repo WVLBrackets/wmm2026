@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { tryLoadTournamentData } from '@/lib/tournamentLoaderServer';
 import { getServerSession } from 'next-auth';
 import { existsSync } from 'fs';
 import { join } from 'path';
@@ -121,13 +122,13 @@ export async function GET() {
     if (bracketsAvailableRaw === 'YES') {
       const year = String(config.tournamentYear || '').trim();
       if (year) {
-        const tournamentPath = join(process.cwd(), 'public', 'data', `tournament-${year}.json`);
-        if (!existsSync(tournamentPath)) {
+        const tournament = await tryLoadTournamentData(year);
+        if (!tournament) {
           pushIssue(
             issues,
             'error',
             'brackets_available',
-            `brackets_available is YES but tournament-${year}.json is missing under public/data.`
+            `brackets_available is YES but tournament-${year}.json has not been published and has no legacy JSON file.`
           );
         }
       }

@@ -28,6 +28,7 @@ function TeamLogo({
   borderColor,
   heavyRing = false,
   teamIndex,
+  directLogo,
 }: {
   teamName: string;
   size: number;
@@ -38,6 +39,7 @@ function TeamLogo({
   /** Emphasized ring (ring-2) for finalist / champ picks. */
   heavyRing?: boolean;
   teamIndex?: number;
+  directLogo?: string;
 }) {
   const [teamInfo, setTeamInfo] = useState<{ id: string; name: string; logoUrl: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,6 +49,10 @@ function TeamLogo({
   useEffect(() => {
     const loadTeamInfo = async () => {
       try {
+        if (directLogo) {
+          setTeamInfo({ id: 'tournament-slot', name: teamName, logoUrl: directLogo });
+          setTeamError(null); setImageError(false); setLoading(false); return;
+        }
         // Check cache first for instant loading
         if (teamCache && teamCache.has(teamName)) {
           const cachedInfo = teamCache.get(teamName)!;
@@ -71,7 +77,7 @@ function TeamLogo({
       }
     };
     loadTeamInfo();
-  }, [teamName, size, teamCache]);
+  }, [teamName, size, teamCache, directLogo]);
 
   if (loading) {
     return (
@@ -621,6 +627,7 @@ export default function StandingsTable({ viewModeToggle, variant = 'daily' }: St
           return (
             <div key={`${team}-${sheetIndex}`} title={team} className="cursor-help">
               <TeamLogo
+                directLogo={standingsData.teamLogos?.[team]}
                 teamName={team}
                 size={24}
                 teamCache={teamCache}
@@ -649,6 +656,7 @@ export default function StandingsTable({ viewModeToggle, variant = 'daily' }: St
       <div className="flex flex-col items-center" title={champion}>
         <div className="cursor-help">
           <TeamLogo
+            directLogo={standingsData.teamLogos?.[champion]}
             teamName={champion}
             size={60}
             teamCache={teamCache}

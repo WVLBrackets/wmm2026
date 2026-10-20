@@ -2,11 +2,13 @@
  * Recomputes live standings from KEY + submitted brackets and persists a snapshot.
  */
 
-import { loadTournamentData } from '@/lib/tournamentLoader';
+import { loadTournamentData } from '@/lib/tournamentLoaderServer';
 import { assembleLiveStandingsData } from '@/lib/liveStandingsStandingsAssembly';
 import { getSubmittedBracketsForLiveStandingsYear, getBracketById } from '@/lib/repositories/bracketRepository';
 import { upsertLiveStandingsSnapshot } from '@/lib/repositories/liveStandingsSnapshotRepository';
 import { notifyAdminOfError } from '@/lib/adminNotifications';
+import { getTournamentWorkspace } from '@/lib/repositories/tournamentRepository';
+import { FIRST_MANAGED_YEAR } from '@/lib/tournamentDefinition';
 
 /**
  * Recompute live standings for a tournament year after the KEY bracket was saved.
@@ -22,6 +24,7 @@ export async function recomputeLiveStandingsAfterKeySave(
       return { ok: false, error: 'Invalid KEY bracket for live standings recompute' };
     }
 
+    const tournamentRevision = year >= FIRST_MANAGED_YEAR ? (await getTournamentWorkspace(year)).revision : undefined;
     const tournamentData = await loadTournamentData(String(year));
     const submitted = await getSubmittedBracketsForLiveStandingsYear(year);
     const computedAtIso = new Date().toISOString();
@@ -38,6 +41,7 @@ export async function recomputeLiveStandingsAfterKeySave(
     );
 
     const keyUpdatedAt = keyBracket.updatedAt ?? new Date();
+    standingsData.tournamentRevision = tournamentRevision;
 
     await upsertLiveStandingsSnapshot(year, keyBracketId, keyUpdatedAt, standingsData);
 

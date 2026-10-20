@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "test:tournament": "node --import tsx --test tests/tournament-first-four.unit.ts",
+    "test:tournament:browser": "node --import tsx tests/tournament-builder.browser.ts",
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
