@@ -9,6 +9,45 @@
 .vintage-editor * {
   box-sizing: border-box;
 }
+.ve-admin-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 22px;
+}
+
+.ve-admin-nav__chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid #182e3b;
+  border-radius: 0;
+  background: #fff;
+  color: #182e3b;
+  font-family: Oswald, Impact, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.ve-admin-nav__chip:hover {
+  background: #ece8df;
+}
+
+.ve-admin-nav__chip.is-active {
+  background: #182e3b;
+  color: #fff;
+}
+
+.ve-admin-nav__chip:focus-visible {
+  outline: 3px solid #a4322b;
+  outline-offset: 2px;
+}
+
 .ve-header {
   display: flex;
   justify-content: space-between;
@@ -97,6 +136,55 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+/* My Picks master lock — Unlocked green / Locked red */
+.ve-lock-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 8px 0 16px;
+}
+
+.ve-lock-btn {
+  min-width: 9rem;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 2px solid transparent;
+  border-radius: 0;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  opacity: 0.55;
+}
+
+.ve-lock-btn.is-on {
+  opacity: 1;
+}
+
+.ve-lock-btn--unlocked {
+  background: #d9e6dc;
+  border-color: #3f6b4a;
+  color: #243f2c;
+}
+
+.ve-lock-btn--unlocked.is-on {
+  background: #3f6b4a;
+  color: #f2ead8;
+}
+
+.ve-lock-btn--locked {
+  background: #f0d9d7;
+  border-color: #b52c26;
+  color: #5c1815;
+}
+
+.ve-lock-btn--locked.is-on {
+  background: #b52c26;
+  color: #f2ead8;
+}
+
 .ve-primary {
   background: #a4322b;
   color: #fff;

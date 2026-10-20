@@ -28,7 +28,7 @@ export default function VintageInfoPage({
   /** When true, show edit gears that deep-link into the handbook editor. */
   admin?: boolean;
 }) {
-  const deadline = formatInfoDeadline(home.tournament.countdownAt);
+  const deadline = formatInfoDeadline(home.tournament.tipoffAt);
   const prizeDisplay = resolveInfoPrizeDisplay(content.prizes);
   const trackerNotes = parseInfoNotesLines(content.tracker.notes);
 

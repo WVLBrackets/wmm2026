@@ -21,7 +21,7 @@ export interface VintageHofContent {
 
 export const DEFAULT_VINTAGE_HOF_CONTENT: VintageHofContent = {
   heading: "Hall of Fame",
-  supporting: "The champions. The records. The bragging rights.",
+  supporting: "",
   reigningLabel: "Reigning Champion",
   archiveHeading: "Champions by Year",
   leadersHeading: "All-Time Leaders",

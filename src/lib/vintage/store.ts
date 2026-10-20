@@ -12,21 +12,11 @@ import {
   isHofRevisionContent,
   isInfoRevisionContent,
   isPicksRevisionContent,
+  isStandingsRevisionContent,
   mergeHomepageDocument,
   splitHomepageDocument,
 } from "./homepageDocument";
-import {
-  normalizeVintageHofContent,
-  type VintageHofContent,
-} from "./hofContent";
-import {
-  normalizeVintageInfoContent,
-  type VintageInfoContent,
-} from "./infoContent";
-import {
-  normalizeVintagePicksContent,
-  type VintagePicksContent,
-} from "./picksContent";
+import { sidecarsFromRow } from "./sidecarPreserve";
 
 export interface VintageRevision {
   id: string;
@@ -69,37 +59,10 @@ export function hasVintageDatabase(): boolean {
 }
 
 /**
- * Normalize homepage JSON while ignoring the handbook sidecar.
+ * Normalize homepage JSON while ignoring CMS sidecars.
  */
 function homepageFromRow(raw: unknown): VintageContent {
   return normalizeVintageContent(splitHomepageDocument(raw).homepage);
-}
-
-/**
- * Handbook sidecar from a stored homepage document, if present.
- */
-function infoFromRow(raw: unknown): VintageInfoContent | undefined {
-  const { info } = splitHomepageDocument(raw);
-  if (info == null) return undefined;
-  return normalizeVintageInfoContent(info);
-}
-
-/**
- * Hall of Fame copy sidecar from a stored homepage document, if present.
- */
-function hofFromRow(raw: unknown): VintageHofContent | undefined {
-  const { hof } = splitHomepageDocument(raw);
-  if (hof == null) return undefined;
-  return normalizeVintageHofContent(hof);
-}
-
-/**
- * My Picks copy sidecar from a stored homepage document, if present.
- */
-function picksFromRow(raw: unknown): VintagePicksContent | undefined {
-  const { picks } = splitHomepageDocument(raw);
-  if (picks == null) return undefined;
-  return normalizeVintagePicksContent(picks);
 }
 
 export async function readVintageState(): Promise<VintageState> {
@@ -191,33 +154,36 @@ export async function writeVintageContent(
           "That revision belongs to the My Picks editor. Restore it there.",
         );
       }
+      if (isStandingsRevisionContent(revision.rows[0].content)) {
+        throw new Error(
+          "That revision belongs to the Standings editor. Restore it there.",
+        );
+      }
       content = splitHomepageDocument(revision.rows[0].content).homepage as
         | VintageContent
         | undefined;
     }
     const normalized = normalizeVintageContent(content);
     validateVintageContent(normalized);
-    const draftInfo = infoFromRow(current.draft);
-    const publishedInfo = infoFromRow(current.published);
-    const draftHof = hofFromRow(current.draft);
-    const publishedHof = hofFromRow(current.published);
-    const draftPicks = picksFromRow(current.draft);
-    const publishedPicks = picksFromRow(current.published);
+    const draftSides = sidecarsFromRow(current.draft);
+    const publishedSides = sidecarsFromRow(current.published);
     const publishedHome =
       input.action === "publish"
         ? normalized
         : homepageFromRow(current.published);
     const draftOut = mergeHomepageDocument(
       normalized,
-      draftInfo,
-      draftHof,
-      draftPicks,
+      draftSides.info,
+      draftSides.hof,
+      draftSides.picks,
+      draftSides.standings,
     );
     const publishedOut = mergeHomepageDocument(
       publishedHome,
-      publishedInfo,
-      publishedHof,
-      publishedPicks,
+      publishedSides.info,
+      publishedSides.hof,
+      publishedSides.picks,
+      publishedSides.standings,
     );
     await client.query(
       "UPDATE vintage_homepage SET version = version + 1, draft = $1, published = $2 WHERE id = 1",
@@ -230,7 +196,13 @@ export async function writeVintageContent(
         author,
         input.action,
         JSON.stringify(
-          mergeHomepageDocument(normalized, draftInfo, draftHof, draftPicks),
+          mergeHomepageDocument(
+            normalized,
+            draftSides.info,
+            draftSides.hof,
+            draftSides.picks,
+            draftSides.standings,
+          ),
         ),
       ],
     );

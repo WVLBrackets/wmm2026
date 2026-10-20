@@ -170,40 +170,23 @@ export async function writeVintageInfoContent(
     const previousPublishedInfo = normalizeVintageInfoContent(
       splitHomepageDocument(current.published).info,
     );
-    const { normalizeVintageHofContent } = await import("./hofContent");
-    const { normalizeVintagePicksContent } = await import("./picksContent");
-    const draftHofRaw = splitHomepageDocument(current.draft).hof;
-    const publishedHofRaw = splitHomepageDocument(current.published).hof;
-    const draftHof =
-      draftHofRaw != null
-        ? normalizeVintageHofContent(draftHofRaw)
-        : undefined;
-    const publishedHof =
-      publishedHofRaw != null
-        ? normalizeVintageHofContent(publishedHofRaw)
-        : undefined;
-    const draftPicksRaw = splitHomepageDocument(current.draft).picks;
-    const publishedPicksRaw = splitHomepageDocument(current.published).picks;
-    const draftPicks =
-      draftPicksRaw != null
-        ? normalizeVintagePicksContent(draftPicksRaw)
-        : undefined;
-    const publishedPicks =
-      publishedPicksRaw != null
-        ? normalizeVintagePicksContent(publishedPicksRaw)
-        : undefined;
+    const { sidecarsFromRow } = await import("./sidecarPreserve");
+    const draftSides = sidecarsFromRow(current.draft);
+    const publishedSides = sidecarsFromRow(current.published);
 
     const draftOut = mergeHomepageDocument(
       draftHome,
       normalizedInfo,
-      draftHof,
-      draftPicks,
+      draftSides.hof,
+      draftSides.picks,
+      draftSides.standings,
     );
     const publishedOut = mergeHomepageDocument(
       publishedHome,
       input.action === "publish" ? normalizedInfo : previousPublishedInfo,
-      publishedHof,
-      publishedPicks,
+      publishedSides.hof,
+      publishedSides.picks,
+      publishedSides.standings,
     );
 
     await client.query(

@@ -604,14 +604,15 @@ export const DEFAULT_VINTAGE_INFO_CONTENT: VintageInfoContent = {
       "How to enter. How scoring works. What you’re playing for.",
   },
   quickFacts: {
-    feeTitle: "Entry Fee",
-    feeValue: "$5",
-    feeIcon: "DollarSign",
-    deadlineTitle: "Deadline",
+    feeTitle: "Entry fee",
+    feeValue: "$5 each",
+    feeIcon:
+      "custom:https://br-odd-rice-ad9n8mtb.storage.c-2.us-east-1.aws.neon.tech/vintage-homepage-media/vintage/b1f7c79f-8317-4be2-a2b7-98236d4a99ce.svg",
+    deadlineTitle: "DEADLINE",
     deadlineIcon: "Calendar",
     ctaTitle: "Play",
     ctaIcon: "ArrowRight",
-    ctaLabel: "Make Your Picks",
+    ctaLabel: "MAKE YOUR PICKS",
   },
   toc: {
     heading: "IN THIS GUIDE",
@@ -641,8 +642,7 @@ export const DEFAULT_VINTAGE_INFO_CONTENT: VintageInfoContent = {
           "Include the list of entry names when paying for several brackets.",
       },
     ],
-    multiEntryNote:
-      "If you are paying for multiple entries, please include the list of entries covered with your payment.",
+    multiEntryNote: "",
     electronicHeading: "Electronic Payments",
     electronicBody:
       "Electronic payments are preferred. Just be sure you are following the Terms & Conditions of the platform you are using.",
@@ -675,15 +675,15 @@ export const DEFAULT_VINTAGE_INFO_CONTENT: VintageInfoContent = {
   prizes: {
     heading: "03 WHAT YOU’RE PLAYING FOR",
     status: "projected",
-    entryCount: 550,
+    entryCount: 572,
     projectedPoolLabel: "PROJECTED PRIZE POOL",
-    finalizedPoolLabel: "FINAL PRIZE POOL",
+    finalizedPoolLabel: "PRIZE POOL",
     projectedPoolExplanation:
-      "Projected based on <entries> entries. Final amounts are set from confirmed entries.",
+      "Projected based on last year's entry count (<entries>). Final amounts will be set based on final entry count.",
     finalizedPoolExplanation:
-      "Based on <entries> confirmed paid entries.",
+      "Prize amounts are based on <entries> entries this year.",
     footnote:
-      "* Prize amounts will be finalized based on the actual number of entries.",
+      "*Prize amounts will be finalized based on the actual number of entries.",
     places: [
       { place: "1st Place", percent: 60 },
       { place: "2nd Place", percent: 30 },
@@ -693,12 +693,12 @@ export const DEFAULT_VINTAGE_INFO_CONTENT: VintageInfoContent = {
   tracker: {
     heading: "04 THE TRACKER & RESULTS",
     notes:
-      "The Tracker spreadsheet gives detailed visibility into everyone’s picks as the tournament unfolds.||Using the spreadsheet is optional — website standings are updated on the site.",
+      "The Tracker spreadsheet gives detailed visibility into everyone’s picks as the tournament unfolds.||Using the spreadsheet is optional — website standings are updated on the site.||Excel downloads will be available on the homepage when the files are available.",
   },
   questions: {
     heading: "QUESTIONS?",
-    body: "Reach the commissioner with entry, payment, or rules questions.",
-    actionLabel: "A note to the commissioner",
+    body: "Email the commissioner with entry, payment, or rules questions.",
+    actionLabel: "Send Email",
     contactEmail: "NCAATourney@gmail.com",
   },
 };

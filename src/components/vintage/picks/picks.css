@@ -19,6 +19,9 @@
   --vp-tint: color-mix(in srgb, var(--vp-ink) 5%, transparent);
   --vp-gold-tint: color-mix(in srgb, var(--vp-gold) 22%, transparent);
   --vp-card: rgb(255 255 255 / 0.38);
+  /* Result chrome sizes from Standings CMS (desktop default; mobile override below). */
+  --vs-ff-size: var(--vs-ff-size-desktop, 34px);
+  --vs-champ-size: var(--vs-champ-size-desktop, 34px);
   /* Shared status-chip geometry (count pills, filters, row badges). */
   --vp-chip-height: 30px;
   --vp-chip-pad-x: 7.5px;
@@ -298,6 +301,9 @@
   flex-direction: column;
   align-items: stretch;
   gap: 14px;
+  /* Size to the New / Year / Logout row — not the status-box copy. */
+  width: max-content;
+  max-width: 100%;
   min-width: 0;
 }
 
@@ -328,15 +334,15 @@
   appearance: none;
   -webkit-appearance: none;
   box-sizing: border-box;
-  width: auto;
-  min-width: 5.5rem;
-  max-width: 9.5rem;
+  width: 5.25rem;
+  min-width: 5.25rem;
+  max-width: 5.25rem;
   height: 100%;
   min-height: 40px;
-  padding: 0 28px 0 10px;
+  padding: 0 26px 0 8px;
   border: 1px solid var(--vp-ink);
   border-radius: 0;
-  background: rgb(255 255 255 / 0.7);
+  background: var(--vp-paper);
   color: var(--vp-ink);
   font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
   font-size: 14px;
@@ -360,6 +366,56 @@
   transform: translateY(-50%);
   pointer-events: none;
   color: var(--vp-ink);
+}
+
+/* ---------- Full-page / year-switch loading ---------- */
+
+.v-picks--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: min(52vh, 420px);
+  padding: 48px 16px 64px;
+}
+
+.v-picks__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+}
+
+.v-picks__loading--year {
+  min-height: min(40vh, 320px);
+  padding: 36px 16px 48px;
+}
+
+.v-picks__loading-spinner {
+  box-sizing: border-box;
+  width: 44px;
+  height: 44px;
+  border: 2px solid color-mix(in srgb, var(--vp-ink) 18%, transparent);
+  border-top-color: var(--vp-red);
+  border-right-color: var(--vp-ink);
+  border-radius: 0;
+  animation: v-picks-spin 0.85s linear infinite;
+}
+
+.v-picks__loading-text {
+  margin: 0;
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--vp-muted);
+}
+
+@keyframes v-picks-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .v-picks__buttons {
@@ -432,22 +488,30 @@
   opacity: 0.75;
 }
 
-/* ---------- Countdown timer ---------- */
+/* ---------- Countdown timer / prior-year switch (locked footprint) ---------- */
 
 .v-picks__timer,
 .v-picks__year-switch {
+  /* Shared box so year toggles don’t hop. Height fits the two-line countdown;
+     width tracks the buttons row (width:0 / min-width:100% ignores long copy). */
+  --vp-status-box-height: 5rem;
+
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  width: 100%;
-  min-width: 11.5rem;
-  min-height: 4.75rem;
+  width: 0;
+  min-width: 100%;
+  max-width: 100%;
+  height: var(--vp-status-box-height);
+  min-height: var(--vp-status-box-height);
+  max-height: var(--vp-status-box-height);
   margin: 0;
   padding: 10px 14px;
   border: 1px solid var(--vp-ink);
+  overflow: hidden;
   text-align: center;
 }
 
@@ -476,6 +540,22 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* After tipoff — same footprint as the countdown; live tourney message. */
+.v-picks__timer--live {
+  outline-color: color-mix(in srgb, var(--vp-red) 55%, transparent);
+  color: var(--vp-paper);
+}
+
+.v-picks__timer-live-text {
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  color: var(--vp-gold);
+}
+
 /* Prior-year control — same footprint as the countdown timer. */
 .v-picks__year-switch {
   border-left: 6px solid var(--vp-red);
@@ -485,15 +565,16 @@
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.04em;
-  line-height: 1.3;
+  line-height: 1.25;
   cursor: pointer;
 }
 
 .v-picks__year-switch:hover,
 .v-picks__year-switch:focus-visible {
   background: color-mix(in srgb, var(--vp-gold) 34%, transparent);
-  outline: 2px solid var(--vp-red);
-  outline-offset: 1px;
+  /* Inset ring — outline would add outside width and hop vs the timer. */
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--vp-red);
 }
 
 /* ---------- Filters ---------- */
@@ -654,10 +735,17 @@
 }
 
 .v-picks__row > td {
-  padding: 12px;
+  padding: 6px 10px;
   border-bottom: 1px solid var(--vp-rule);
   text-align: center;
   vertical-align: middle;
+}
+
+/* Logo columns: adminable vertical gap (--vp-row-logo-gap, default 5px). */
+.v-picks__row > td.v-picks__cell--ff,
+.v-picks__row > td.v-picks__cell--champ {
+  padding-top: var(--vp-row-logo-gap, 5px);
+  padding-bottom: var(--vp-row-logo-gap, 5px);
 }
 
 .v-picks__row:hover > td {
@@ -847,28 +935,53 @@
   background: var(--vp-muted);
 }
 
-.v-picks__done,
 .v-picks__pay {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 0 8px;
+  border: 1px solid transparent;
   font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.1em;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .v-picks__pay--paid {
-  color: var(--vp-ink);
+  background: var(--vp-pay-paid-bg, #dcfce7);
+  color: var(--vp-pay-paid-fg, #166534);
+  border-color: color-mix(in srgb, var(--vp-pay-paid-fg, #166534) 35%, transparent);
 }
 
-.v-picks__pay--pending {
-  color: var(--vp-gold-deep);
+/* Unpaid / pending: reserve space, no icon. */
+.v-picks__pay--blank {
+  background: transparent;
+  border-color: transparent;
+  color: transparent;
 }
 
-.v-picks__pay--unpaid {
-  color: var(--vp-red);
+/* Icon-only pay mark (compact desktop / mobile). */
+.v-picks__pay--icon {
+  width: 28px;
+  min-width: 28px;
+  max-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+}
+
+/* Compact status square (mobile): icon only, fixed chip. */
+.v-picks__status--square {
+  width: 28px;
+  min-width: 28px;
+  max-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  gap: 0;
 }
 
 /* ---------- Final Four + champion ---------- */
@@ -883,22 +996,47 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  flex-shrink: 0;
+  width: var(--vs-ff-size, 34px);
+  height: var(--vs-ff-size, 34px);
+  min-width: var(--vs-ff-size, 34px);
+  min-height: var(--vs-ff-size, 34px);
+  flex: 0 0 auto;
+  aspect-ratio: 1 / 1;
   overflow: hidden;
-  border: 1px solid var(--vp-rule);
+  box-sizing: border-box;
+  border: 1px solid transparent;
   border-radius: 0;
-  background: #fff;
+  background-color: var(--vs-shade-pending, #fff);
+}
+
+.v-picks__ff-cell[data-status="correct"] {
+  background-color: var(--vs-shade-correct, #dcfce7);
+}
+
+.v-picks__ff-cell[data-status="incorrect"] {
+  background-color: var(--vs-shade-incorrect, #fee2e2);
+}
+
+.v-picks__ff-cell[data-status="pending"] {
+  background-color: var(--vs-shade-pending, #fff);
 }
 
 .v-picks__ff-cell.is-finalist {
-  border: 2px solid var(--vp-ink);
+  border-width: var(--vs-finalist-border, 2px);
+  border-style: solid;
+  border-color: var(--vs-border-pending, #000);
 }
 
-/* Results-based champ shading deferred — keep white for now. */
-.v-picks__ff-cell.is-champ {
-  background: #fff;
+.v-picks__ff-cell.is-finalist[data-border="correct"] {
+  border-color: var(--vs-border-correct, #16a34a);
+}
+
+.v-picks__ff-cell.is-finalist[data-border="incorrect"] {
+  border-color: var(--vs-border-incorrect, #dc2626);
+}
+
+.v-picks__ff-cell.is-finalist[data-border="pending"] {
+  border-color: var(--vs-border-pending, #000);
 }
 
 .v-picks__champ {
@@ -911,18 +1049,41 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
+  width: var(--vs-champ-size, 34px);
+  height: var(--vs-champ-size, 34px);
+  min-width: var(--vs-champ-size, 34px);
+  min-height: var(--vs-champ-size, 34px);
+  flex: 0 0 auto;
+  aspect-ratio: 1 / 1;
   overflow: hidden;
-  border: 2px solid var(--vp-ink);
+  box-sizing: border-box;
+  border: 1px solid transparent;
   border-radius: 0;
-  background: #fff;
+  background-color: var(--vs-shade-pending, #fff);
 }
 
-.v-picks__champ-cell.is-set {
-  border-color: var(--vp-ink);
-  background: #fff;
+.v-picks__champ-cell[data-status="correct"] {
+  background-color: var(--vs-shade-correct, #dcfce7);
+}
+
+.v-picks__champ-cell[data-status="incorrect"] {
+  background-color: var(--vs-shade-incorrect, #fee2e2);
+}
+
+.v-picks__champ-cell[data-status="pending"] {
+  background-color: var(--vs-shade-pending, #fff);
+}
+
+.v-picks__champ-cell[data-border="correct"] {
+  border-width: 2px;
+  border-style: solid;
+  border-color: var(--vs-border-correct, #16a34a);
+}
+
+.v-picks__champ-cell[data-border="incorrect"] {
+  border-width: 2px;
+  border-style: solid;
+  border-color: var(--vs-border-incorrect, #dc2626);
 }
 
 .v-picks__champ-name {
@@ -935,7 +1096,7 @@
   overflow-wrap: anywhere;
 }
 
-/* ---------- Row actions (shared Tailwind-styled controls) ---------- */
+/* ---------- Row actions (CMS colors via --vp-action-* on .v-picks) ---------- */
 
 .v-picks__actions {
   display: flex;
@@ -945,55 +1106,109 @@
   gap: 6px;
 }
 
-.v-picks__actions button:has(> svg) {
+.v-picks__actions button[data-vp-action] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   padding: 0;
-  border: 1px solid var(--vp-ink);
+  border: 1px solid transparent;
   border-radius: 0;
-  background: transparent;
-  color: var(--vp-ink);
   box-shadow: none;
   cursor: pointer;
-  transition: background-color 0.12s ease, color 0.12s ease;
+  transition: filter 0.12s ease, opacity 0.12s ease;
 }
 
-.v-picks__actions button:has(> svg):hover:not(:disabled) {
-  background: var(--vp-ink);
-  color: var(--vp-paper);
+.v-picks__actions button[data-vp-action="view"] {
+  background: var(--vp-action-view-bg, #1e3a5f);
+  color: var(--vp-action-view-fg, #fff);
+  border-color: var(--vp-action-view-bg, #1e3a5f);
+}
+.v-picks__actions button[data-vp-action="edit"] {
+  background: var(--vp-action-edit-bg, #2563eb);
+  color: var(--vp-action-edit-fg, #fff);
+  border-color: var(--vp-action-edit-bg, #2563eb);
+}
+.v-picks__actions button[data-vp-action="submit"] {
+  background: var(--vp-action-submit-bg, #4f46e5);
+  color: var(--vp-action-submit-fg, #fff);
+  border-color: var(--vp-action-submit-bg, #4f46e5);
+}
+.v-picks__actions button[data-vp-action="copy"] {
+  background: var(--vp-action-copy-bg, #16a34a);
+  color: var(--vp-action-copy-fg, #fff);
+  border-color: var(--vp-action-copy-bg, #16a34a);
+}
+.v-picks__actions button[data-vp-action="delete"] {
+  background: var(--vp-action-delete-bg, #dc2626);
+  color: var(--vp-action-delete-fg, #fff);
+  border-color: var(--vp-action-delete-bg, #dc2626);
+}
+.v-picks__actions button[data-vp-action="restore"] {
+  background: var(--vp-action-restore-bg, #d97706);
+  color: var(--vp-action-restore-fg, #fff);
+  border-color: var(--vp-action-restore-bg, #d97706);
+}
+.v-picks__actions button[data-vp-action="return"] {
+  background: var(--vp-action-return-bg, #d97706);
+  color: var(--vp-action-return-fg, #fff);
+  border-color: var(--vp-action-return-bg, #d97706);
+}
+.v-picks__actions button[data-vp-action="email"] {
+  background: var(--vp-action-email-bg, #4f46e5);
+  color: var(--vp-action-email-fg, #fff);
+  border-color: var(--vp-action-email-bg, #4f46e5);
+}
+.v-picks__actions button[data-vp-action="permanentDelete"] {
+  background: var(--vp-action-permanent-delete-bg, #7f1d1d);
+  color: var(--vp-action-permanent-delete-fg, #fff);
+  border-color: var(--vp-action-permanent-delete-bg, #7f1d1d);
 }
 
-.v-picks__actions button[data-testid="submit-bracket-landing-button"]:not(:disabled) {
-  border-color: var(--vp-red);
-  background: var(--vp-red);
-  color: var(--vp-paper);
+.v-picks__actions button[data-vp-action]:hover:not(:disabled) {
+  filter: brightness(0.92);
 }
 
-.v-picks__actions button[data-testid="submit-bracket-landing-button"]:hover:not(:disabled) {
-  border-color: var(--vp-ink);
-  background: var(--vp-ink);
-}
-
-.v-picks__actions button[data-testid*="delete"]:not(:disabled) {
-  border-color: var(--vp-red);
-  color: var(--vp-red);
-}
-
-.v-picks__actions button[data-testid*="delete"]:hover:not(:disabled) {
-  background: var(--vp-red);
-  color: var(--vp-paper);
-}
-
-.v-picks__actions button:has(> svg):disabled {
-  border-color: var(--vp-rule);
-  border-style: dashed;
-  background: transparent;
-  color: var(--vp-muted);
+.v-picks__actions button[data-vp-action]:disabled {
+  background: var(--vp-action-view-disabled-bg, #d1d5db);
+  color: var(--vp-action-view-disabled-fg, #6b7280);
+  border-color: transparent;
+  border-style: solid;
   cursor: not-allowed;
-  opacity: 0.6;
+  filter: none;
+  opacity: 1;
+}
+
+.v-picks__actions button[data-vp-action="view"]:disabled {
+  background: var(--vp-action-view-disabled-bg, #d1d5db);
+  color: var(--vp-action-view-disabled-fg, #6b7280);
+}
+.v-picks__actions button[data-vp-action="edit"]:disabled {
+  background: var(--vp-action-edit-disabled-bg, #d1d5db);
+  color: var(--vp-action-edit-disabled-fg, #6b7280);
+}
+.v-picks__actions button[data-vp-action="submit"]:disabled {
+  background: var(--vp-action-submit-disabled-bg, #d1d5db);
+  color: var(--vp-action-submit-disabled-fg, #6b7280);
+}
+.v-picks__actions button[data-vp-action="copy"]:disabled {
+  background: var(--vp-action-copy-disabled-bg, #d1d5db);
+  color: var(--vp-action-copy-disabled-fg, #6b7280);
+}
+.v-picks__actions button[data-vp-action="delete"]:disabled,
+.v-picks__actions button[data-vp-action="permanentDelete"]:disabled {
+  background: var(--vp-action-delete-disabled-bg, #d1d5db);
+  color: var(--vp-action-delete-disabled-fg, #6b7280);
+}
+.v-picks__actions button[data-vp-action="restore"]:disabled,
+.v-picks__actions button[data-vp-action="return"]:disabled {
+  background: var(--vp-action-restore-disabled-bg, #d1d5db);
+  color: var(--vp-action-restore-disabled-fg, #6b7280);
+}
+.v-picks__actions button[data-vp-action="email"]:disabled {
+  background: var(--vp-action-email-disabled-bg, #d1d5db);
+  color: var(--vp-action-email-disabled-fg, #6b7280);
 }
 
 /* Inline confirmations (delete / permanent delete / return). */
@@ -1116,21 +1331,12 @@
   min-width: 0;
 }
 
-.v-picks__card .v-picks__actions {
+/* Legacy stacked card actions (unused when card-row is active). */
+.v-picks__card .v-picks__actions:not(.v-picks__actions--grid) {
   justify-content: flex-start;
   margin-top: 14px;
   padding-top: 12px;
   border-top: 1px solid var(--vp-rule);
-}
-
-.v-picks__card .v-picks__actions button:has(> svg) {
-  width: 44px;
-  height: 44px;
-}
-
-.v-picks__card .v-picks__actions button:not(:has(> svg)) {
-  min-height: 44px;
-  min-width: 64px;
 }
 
 .v-picks__cards .v-picks__section-row {
@@ -1206,6 +1412,11 @@
 }
 
 @media (max-width: 899px) {
+  .v-picks {
+    --vs-ff-size: var(--vs-ff-size-mobile, 34px);
+    --vs-champ-size: var(--vs-champ-size-mobile, 34px);
+  }
+
   .v-picks__panel {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1214,11 +1425,16 @@
     flex-direction: row;
     flex-wrap: wrap;
     align-items: flex-end;
+    width: 100%;
   }
 
   .v-picks__timer,
   .v-picks__year-switch {
+    /* Full row under the button strip — keep the width:0 / min-width:100% trick. */
     flex: 1 1 100%;
+    width: 0;
+    min-width: 100%;
+    max-width: 100%;
   }
 }
 
@@ -1234,6 +1450,7 @@
   .v-picks__side {
     flex-direction: column;
     align-items: stretch;
+    width: 100%;
   }
 
   .v-picks__btn {
@@ -1246,12 +1463,7 @@
   }
 
   .v-picks__year {
-    flex: 1 1 auto;
-  }
-
-  .v-picks__select {
-    max-width: none;
-    width: 100%;
+    flex: 0 0 auto;
   }
 
   .v-picks__select,
@@ -1267,11 +1479,178 @@
 
   .v-picks__timer,
   .v-picks__year-switch {
-    min-width: 0;
-    flex: 1 1 100%;
+    /* Do NOT set min-width: 0 — that collapses width:0 into a one-character column. */
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+    align-self: stretch;
+  }
+
+  .v-picks__timer-label,
+  .v-picks__timer-live-text,
+  .v-picks__year-switch {
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: normal;
+    white-space: normal;
   }
 
   .v-picks__timer-value {
     font-size: 24px;
+  }
+
+  /* Compact entry cards — tight stack, column headers, 2×2 FF + actions */
+  .v-picks__cards {
+    gap: 0;
+  }
+
+  /*
+   * Even columns: Entry flexes; Status / FF / Champ / Actions share remaining
+   * width so content isn’t packed to the right edge.
+   */
+  .v-picks__cards {
+    --vp-card-cols: minmax(4.5rem, 1.15fr) minmax(2.5rem, 0.7fr) minmax(3.25rem, 0.95fr)
+      minmax(2.75rem, 0.8fr) minmax(3.5rem, 0.95fr);
+    gap: 0;
+  }
+
+  .v-picks__card-headers {
+    display: grid;
+    grid-template-columns: var(--vp-card-cols);
+    align-items: end;
+    column-gap: 8px;
+    padding: 4px 10px 6px;
+    border-bottom: 1px solid var(--vp-ink);
+    font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--vp-muted);
+  }
+
+  .v-picks__card-h {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    text-align: center;
+    line-height: 1.15;
+  }
+
+  .v-picks__card-h--entry {
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .v-picks__card {
+    padding: 4px 10px;
+    border: none;
+    border-bottom: 1px solid var(--vp-rule);
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .v-picks__card.v-picks__row--deleted {
+    border-style: none none dashed;
+  }
+
+  .v-picks__cards .v-picks__section-row {
+    padding: 10px 10px 4px;
+    border-bottom: 1px solid var(--vp-ink);
+  }
+
+  .v-picks__cards .v-picks__section-row.is-after-in {
+    margin-top: 4px;
+    padding-top: 10px;
+    border-top: 2px solid var(--vp-ink);
+  }
+
+  .v-picks__card-row {
+    display: grid;
+    grid-template-columns: var(--vp-card-cols);
+    align-items: center;
+    justify-items: center;
+    column-gap: 8px;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .v-picks__card-row .v-picks__entry-name {
+    justify-self: stretch;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    text-align: left;
+  }
+
+  /* Final Four: 2×2 (slot order TL, BL, TR, BR → place columns explicitly) */
+  .v-picks__card-row .v-picks__ff {
+    display: grid;
+    grid-template-columns: 26px 26px;
+    grid-template-rows: 26px 26px;
+    gap: 2px;
+    justify-self: center;
+  }
+
+  .v-picks__card-row .v-picks__ff-cell:nth-child(1) {
+    grid-area: 1 / 1;
+  }
+  .v-picks__card-row .v-picks__ff-cell:nth-child(2) {
+    grid-area: 2 / 1;
+  }
+  .v-picks__card-row .v-picks__ff-cell:nth-child(3) {
+    grid-area: 1 / 2;
+  }
+  .v-picks__card-row .v-picks__ff-cell:nth-child(4) {
+    grid-area: 2 / 2;
+  }
+
+  .v-picks__card-row .v-picks__ff-cell {
+    width: 26px;
+    height: 26px;
+  }
+
+  /* Champ ≈ 1.5× a Final Four cell */
+  .v-picks__card-row .v-picks__champ--mobile {
+    justify-self: center;
+  }
+
+  .v-picks__card-row .v-picks__champ--mobile .v-picks__champ-cell {
+    width: 39px;
+    height: 39px;
+  }
+
+  .v-picks__card-row .v-picks__pay--icon,
+  .v-picks__card-row .v-picks__status--square {
+    justify-self: center;
+  }
+
+  /* Actions: 2×2, no separator line */
+  .v-picks__card-row .v-picks__actions--grid {
+    display: grid;
+    grid-template-columns: 28px 28px;
+    grid-auto-rows: 28px;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    justify-self: center;
+  }
+
+  .v-picks__card-row .v-picks__actions--grid button[data-vp-action] {
+    width: 28px;
+    height: 28px;
+  }
+
+  /* Confirm dialogs still need full width when open */
+  .v-picks__card-row .v-picks__actions--grid [data-testid="delete-confirmation-dialog"],
+  .v-picks__card-row .v-picks__actions--grid [data-testid="permanent-delete-confirmation"],
+  .v-picks__card-row .v-picks__actions--grid [data-testid="return-bracket-confirmation"] {
+    grid-column: 1 / -1;
+    width: 100%;
   }
 }

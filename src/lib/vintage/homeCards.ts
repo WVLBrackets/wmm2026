@@ -195,8 +195,8 @@ function blankFields(): Omit<VintageHomeCard, "id" | "type" | "enabled"> {
     playImageSrc: "",
     playHref: "/auth/signin",
     playRibbon: "YOUR BRACKET STARTS HERE",
-    playTitle: "PLAY NOW",
-    playSubtitle: "New player or returning contender?",
+    playTitle: "Play now",
+    playSubtitle: "Sign in or create an account to fill out your bracket.",
     playCtaLabel: "STEP INTO THE TOURNAMENT",
     champImageSrc: "",
     champYear: "2026",
@@ -204,18 +204,18 @@ function blankFields(): Omit<VintageHomeCard, "id" | "type" | "enabled"> {
     champMotto: "Go Blue",
     champYearStyle: "straight",
     champEmblem: "wreathClassic",
-    excelCaption: "Excel formats available here.",
+    excelCaption: "Prefer the old school?",
     excelPicksHref: "",
     excelTrackerHref: "",
-    excelPicksAvailableAt: "",
-    excelTrackerAvailableAt: "",
+    excelPicksAvailableAt: "2027-03-14T23:00:00.000Z",
+    excelTrackerAvailableAt: "2027-03-18T16:15:00.000Z",
     excelNeitherImageSrc: "",
     excelPicksImageSrc: "",
     excelBothImageSrc: "",
     excelImageSrc: "",
-    excelPicksLabel: "Picks Sheet",
-    excelTrackerLabel: "The Tracker",
-    excelCombinedLabel: "",
+    excelPicksLabel: "Excel Picks Sheet",
+    excelTrackerLabel: "Excel Tournament Tracker",
+    excelCombinedLabel: "Picks + Tracker (combined)",
     excelCombinedHref: "",
     placeholderTitle: "Coming soon",
   };
@@ -229,11 +229,29 @@ export function createHomeCard(
   index: number,
   enabled = true,
 ): VintageHomeCard {
+  const fields = blankFields();
+  if (type === "playNow") {
+    fields.playImageSrc =
+      "https://br-odd-rice-ad9n8mtb.storage.c-2.us-east-1.aws.neon.tech/vintage-homepage-media/vintage/7ed9ee88-622e-434e-9deb-25c92912dd2c.png";
+    fields.playRibbon = "Your Bracket Starts Here";
+    fields.playSubtitle = "";
+    fields.excelCaption = "Excel formats available here.";
+    fields.excelPicksAvailableAt = "";
+    fields.excelTrackerAvailableAt = "";
+  } else if (type === "reigningChamp") {
+    fields.champImageSrc =
+      "https://br-odd-rice-ad9n8mtb.storage.c-2.us-east-1.aws.neon.tech/vintage-homepage-media/vintage/8aa3141c-795d-4104-9c13-fd144e759816.png";
+    fields.champName = "jared||ingram";
+    fields.champEmblem = "sunburst";
+    fields.excelCaption = "Excel formats available here.";
+    fields.excelPicksAvailableAt = "";
+    fields.excelTrackerAvailableAt = "";
+  }
   return {
     id: `${type}-${index + 1}`,
     type,
     enabled,
-    ...blankFields(),
+    ...fields,
   };
 }
 

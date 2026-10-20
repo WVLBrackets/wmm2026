@@ -34,6 +34,7 @@ import {
   resolveToolbarIcon,
 } from "@/lib/vintage/toolbarIcons";
 import IconPickerModal from "../IconPickerModal";
+import VintageAdminNav from "../VintageAdminNav";
 import "../editor.css";
 
 type QuickFactIconKey = "feeIcon" | "deadlineIcon" | "ctaIcon";
@@ -334,6 +335,7 @@ export default function VintageInfoEditor() {
 
   return (
     <main className="vintage-editor" data-testid="vintage-info-editor">
+      <VintageAdminNav current="guidebook" />
       <header className="ve-header">
         <div>
           <Link href="/info" className="ve-back" data-testid="vintage-info-editor-back">
@@ -342,8 +344,8 @@ export default function VintageInfoEditor() {
           <p className="ve-eyebrow">WARREN’S MARCH MADNESS · PRIVATE ADMIN</p>
           <h1>Tournament Handbook</h1>
           <p>
-            Edit the Info page. Shared masthead and tipoff deadline stay on the{" "}
-            <Link href="/vintage/admin">homepage editor</Link>.
+            Edit the Info page. Shared masthead and tipoff deadline stay on the
+            Home admin.
           </p>
         </div>
         <div className="ve-status">
@@ -447,7 +449,7 @@ export default function VintageInfoEditor() {
         {tab === "Quick facts" && (
           <>
             <p className="ve-help">
-              Entry deadline is taken from the homepage tipoff countdown (Tournament
+              Entry deadline is taken from the homepage Tourney Tipoff date (Tournament
               &amp; countdown). Edit it there — it is not duplicated here.
             </p>
             <div className="ve-grid">

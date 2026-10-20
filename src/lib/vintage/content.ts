@@ -105,16 +105,30 @@ export interface VintageContent {
     second: string;
   };
   tournament: {
+    /**
+     * Active Tourney Year — sole source for vintage `{year}` / `<year>` tokens
+     * and My Picks active-year mutations (not Config Sheet `tournament_year`).
+     */
     year: string;
     title: string;
     dates: string;
-    /** Homepage heading above the tipoff clock. */
+    /** Homepage heading above the tipoff clock. Supports `{year}` / `<year>`. */
     countdownTitle: string;
-    countdownAt: string;
+    /**
+     * Selection Sunday — when the bracket field is released (Brackets Ready).
+     * Used by My Picks countdown before brackets are published.
+     */
+    bracketsReadyAt: string;
+    /**
+     * Round 1 tipoff (Thursday). Homepage countdown always targets this when on;
+     * My Picks switches to it after brackets are published.
+     */
+    tipoffAt: string;
     countdownEnabled: boolean;
     /**
      * Shown in place of the clock when the countdown is off
-     * (tournament is live / underway).
+     * (tournament is live / underway), and after tipoff on My Picks.
+     * Supports `{year}` / `<year>`.
      */
     liveTourneyMessage: string;
     picksEnabled: boolean;
@@ -149,19 +163,24 @@ export function emptyToolbarSlot(index: number): VintageToolbarItem {
 export function defaultToolbar(): VintageToolbarItem[] {
   return [
     { id: "home", label: "Home", href: "/", icon: "House" },
-    { id: "picks", label: "My Picks", href: "/bracket", icon: "GitFork" },
     { id: "info", label: "Info", href: "/info", icon: "BookOpen" },
+    { id: "history", label: "History", href: "/hall-of-fame", icon: "Trophy" },
     {
       id: "standings",
       label: "Standings",
       href: "/standings",
-      icon: "ChartNoAxesColumnIncreasing",
+      icon: "custom:https://br-odd-rice-ad9n8mtb.storage.c-2.us-east-1.aws.neon.tech/vintage-homepage-media/vintage/d0229683-0185-4a87-827f-b6f36e38bc35.svg",
     },
-    { id: "history", label: "History", href: "/hall-of-fame", icon: "Trophy" },
+    {
+      id: "picks",
+      label: "My Picks",
+      href: "/bracket",
+      icon: "custom:https://br-odd-rice-ad9n8mtb.storage.c-2.us-east-1.aws.neon.tech/vintage-homepage-media/vintage/4d089223-2cb7-4c29-a3df-4965266b0842.svg",
+    },
     {
       id: "account",
       label: "Admin",
-      href: "/vintage/admin",
+      href: "/admin",
       icon: "CircleUserRound",
     },
     emptyToolbarSlot(6),
@@ -454,7 +473,10 @@ export function normalizeVintageContent(value: unknown): VintageContent {
     tournament: (() => {
       const tournamentIn =
         input.tournament && typeof input.tournament === "object"
-          ? (input.tournament as Partial<VintageContent["tournament"]>)
+          ? (input.tournament as Partial<VintageContent["tournament"]> & {
+              /** @deprecated Migrated to `tipoffAt`. */
+              countdownAt?: string;
+            })
           : {};
       const title =
         typeof tournamentIn.countdownTitle === "string"
@@ -464,12 +486,33 @@ export function normalizeVintageContent(value: unknown): VintageContent {
         typeof tournamentIn.liveTourneyMessage === "string"
           ? tournamentIn.liveTourneyMessage.trim()
           : "";
+      const tipoffAt =
+        typeof tournamentIn.tipoffAt === "string" && tournamentIn.tipoffAt.trim()
+          ? tournamentIn.tipoffAt.trim()
+          : typeof tournamentIn.countdownAt === "string"
+            ? tournamentIn.countdownAt.trim()
+            : defaults.tournament.tipoffAt;
+      const bracketsReadyAt =
+        typeof tournamentIn.bracketsReadyAt === "string"
+          ? tournamentIn.bracketsReadyAt.trim()
+          : defaults.tournament.bracketsReadyAt;
+      const {
+        countdownAt: _legacyCountdownAt,
+        ...tournamentRest
+      } = tournamentIn;
+      const yearRaw =
+        typeof tournamentIn.year === "string"
+          ? tournamentIn.year.trim()
+          : defaults.tournament.year;
       return {
         ...defaults.tournament,
-        ...tournamentIn,
+        ...tournamentRest,
+        year: /^\d{4}$/.test(yearRaw) ? yearRaw : defaults.tournament.year,
         countdownTitle: title || defaults.tournament.countdownTitle,
         liveTourneyMessage:
           liveMessage || defaults.tournament.liveTourneyMessage,
+        tipoffAt,
+        bracketsReadyAt,
       };
     })(),
     footer: (() => {
@@ -511,7 +554,7 @@ export const DEFAULT_VINTAGE_CONTENT: VintageContent = {
     enabled: true,
     info: {
       headline: "NEW AROUND HERE?",
-      body: "Learn how to play, scoring rules, important dates, and everything you need to know to get started.",
+      body: "Learn how to play, scoring rules, important dates, and everything you need to know to join in.",
       ctaLabel: "VISIT THE INFO PAGE",
       ctaHref: "/info",
     },
@@ -528,8 +571,8 @@ export const DEFAULT_VINTAGE_CONTENT: VintageContent = {
     items: [
       {
         id: "welcome",
-        at: "2026-10-15T16:00:00.000Z",
-        text: "A fresh front page for a tradition that never gets old. Watch this space for tournament news and updates from the pool.",
+        at: "2026-10-15T12:00:00.000Z",
+        text: "Selection Sunday is March 14, 2027. Mark your calendar. Tell your friends.",
       },
     ],
   },
@@ -541,16 +584,17 @@ export const DEFAULT_VINTAGE_CONTENT: VintageContent = {
     year: "2027",
     title: "NCAA TOURNAMENT",
     dates: "A new chapter. The same madness.",
-    countdownTitle: "Countdown to tipoff",
-    countdownAt: "",
-    countdownEnabled: false,
-    liveTourneyMessage: "The tournament is underway!",
+    countdownTitle: "Countdown to <year> tipoff",
+    bracketsReadyAt: "2027-03-15T00:45:00.000Z",
+    tipoffAt: "2027-03-18T16:15:00.000Z",
+    countdownEnabled: true,
+    liveTourneyMessage: "<year> Tourney Active!",
     picksEnabled: false,
   },
   footer: {
-    text: "© Warren’s March Madness · A tradition since 2001.",
-    contactLabel: "A note to the commissioner",
-    contactEmail: "",
+    text: "© Warren’s March Madness · A tradition since 2000.",
+    contactLabel: "Contact the Commisioner",
+    contactEmail: "ncaatourney@gmail.com",
   },
 };
 
@@ -659,6 +703,8 @@ export function validateVintageContent(
   const doc = normalized;
   if (!doc.masthead.first.trim() || !doc.masthead.second.trim())
     throw new Error("Masthead lines cannot be blank.");
+  if (!doc.tournament.year.trim() || !/^\d{4}$/.test(doc.tournament.year.trim()))
+    throw new Error("Active Tourney Year must be a four-digit year.");
   if (!doc.tournament.countdownTitle.trim())
     throw new Error("Countdown title cannot be blank.");
   if (!doc.tournament.liveTourneyMessage.trim())
@@ -668,19 +714,20 @@ export function validateVintageContent(
     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(doc.footer.contactEmail)
   )
     throw new Error("Enter a valid contact email.");
+  const isoWithTz = /^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/;
+  if (doc.tournament.tipoffAt && !isoWithTz.test(doc.tournament.tipoffAt))
+    throw new Error("Tourney tipoff needs an ISO date with timezone.");
   if (
-    doc.tournament.countdownAt &&
-    !/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/.test(
-      doc.tournament.countdownAt,
-    )
+    doc.tournament.bracketsReadyAt &&
+    !isoWithTz.test(doc.tournament.bracketsReadyAt)
   )
-    throw new Error("Countdown needs an ISO date with timezone.");
+    throw new Error("Brackets Ready needs an ISO date with timezone.");
   if (
     doc.tournament.countdownEnabled &&
-    (!doc.tournament.countdownAt ||
-      !Number.isFinite(Date.parse(doc.tournament.countdownAt)))
+    (!doc.tournament.tipoffAt ||
+      !Number.isFinite(Date.parse(doc.tournament.tipoffAt)))
   )
-    throw new Error("Set a valid countdown date.");
+    throw new Error("Set a valid Tourney Tipoff date to show the countdown.");
   for (const [index, item] of doc.announcementBoard.items.entries()) {
     if (!item.at.trim() || !Number.isFinite(Date.parse(item.at))) {
       throw new Error(

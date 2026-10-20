@@ -20,8 +20,6 @@ import {
   unwrapPicksRevisionContent,
   wrapPicksRevisionContent,
 } from "./homepageDocument";
-import { normalizeVintageInfoContent } from "./infoContent";
-import { normalizeVintageHofContent } from "./hofContent";
 import type { VintageRevision } from "./store";
 
 export interface VintagePicksState {
@@ -169,25 +167,9 @@ export async function writeVintagePicksContent(
     );
     validateVintageContent(publishedHome);
 
-    const draftInfoRaw = splitHomepageDocument(current.draft).info;
-    const publishedInfoRaw = splitHomepageDocument(current.published).info;
-    const draftInfo =
-      draftInfoRaw != null
-        ? normalizeVintageInfoContent(draftInfoRaw)
-        : undefined;
-    const publishedInfo =
-      publishedInfoRaw != null
-        ? normalizeVintageInfoContent(publishedInfoRaw)
-        : undefined;
-
-    const draftHofRaw = splitHomepageDocument(current.draft).hof;
-    const publishedHofRaw = splitHomepageDocument(current.published).hof;
-    const draftHof =
-      draftHofRaw != null ? normalizeVintageHofContent(draftHofRaw) : undefined;
-    const publishedHof =
-      publishedHofRaw != null
-        ? normalizeVintageHofContent(publishedHofRaw)
-        : undefined;
+    const { sidecarsFromRow } = await import("./sidecarPreserve");
+    const draftSides = sidecarsFromRow(current.draft);
+    const publishedSides = sidecarsFromRow(current.published);
 
     const previousPublishedPicks = normalizeVintagePicksContent(
       splitHomepageDocument(current.published).picks,
@@ -195,15 +177,17 @@ export async function writeVintagePicksContent(
 
     const draftOut = mergeHomepageDocument(
       draftHome,
-      draftInfo,
-      draftHof,
+      draftSides.info,
+      draftSides.hof,
       normalizedPicks,
+      draftSides.standings,
     );
     const publishedOut = mergeHomepageDocument(
       publishedHome,
-      publishedInfo,
-      publishedHof,
+      publishedSides.info,
+      publishedSides.hof,
       input.action === "publish" ? normalizedPicks : previousPublishedPicks,
+      publishedSides.standings,
     );
 
     await client.query(

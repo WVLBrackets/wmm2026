@@ -20,7 +20,6 @@ import {
   unwrapHofRevisionContent,
   wrapHofRevisionContent,
 } from "./homepageDocument";
-import { normalizeVintageInfoContent } from "./infoContent";
 import type { VintageRevision } from "./store";
 
 export interface VintageHofState {
@@ -168,28 +167,9 @@ export async function writeVintageHofContent(
     );
     validateVintageContent(publishedHome);
 
-    const draftInfoRaw = splitHomepageDocument(current.draft).info;
-    const publishedInfoRaw = splitHomepageDocument(current.published).info;
-    const draftInfo =
-      draftInfoRaw != null
-        ? normalizeVintageInfoContent(draftInfoRaw)
-        : undefined;
-    const publishedInfo =
-      publishedInfoRaw != null
-        ? normalizeVintageInfoContent(publishedInfoRaw)
-        : undefined;
-
-    const { normalizeVintagePicksContent } = await import("./picksContent");
-    const draftPicksRaw = splitHomepageDocument(current.draft).picks;
-    const publishedPicksRaw = splitHomepageDocument(current.published).picks;
-    const draftPicks =
-      draftPicksRaw != null
-        ? normalizeVintagePicksContent(draftPicksRaw)
-        : undefined;
-    const publishedPicks =
-      publishedPicksRaw != null
-        ? normalizeVintagePicksContent(publishedPicksRaw)
-        : undefined;
+    const { sidecarsFromRow } = await import("./sidecarPreserve");
+    const draftSides = sidecarsFromRow(current.draft);
+    const publishedSides = sidecarsFromRow(current.published);
 
     const previousPublishedHof = normalizeVintageHofContent(
       splitHomepageDocument(current.published).hof,
@@ -197,15 +177,17 @@ export async function writeVintageHofContent(
 
     const draftOut = mergeHomepageDocument(
       draftHome,
-      draftInfo,
+      draftSides.info,
       normalizedHof,
-      draftPicks,
+      draftSides.picks,
+      draftSides.standings,
     );
     const publishedOut = mergeHomepageDocument(
       publishedHome,
-      publishedInfo,
+      publishedSides.info,
       input.action === "publish" ? normalizedHof : previousPublishedHof,
-      publishedPicks,
+      publishedSides.picks,
+      publishedSides.standings,
     );
 
     await client.query(

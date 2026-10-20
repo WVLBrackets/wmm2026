@@ -2,7 +2,7 @@
 
 **Scope:** All web applications in this organization’s portfolio (Next.js / Vercel / Neon stack and aligned patterns).  
 **Created:** February 21, 2026  
-**Last Updated:** October 19, 2026 (Vintage My Picks landing + Info/HoF/Picks CMS sidecars + shared VintageShell)  
+**Last Updated:** October 19, 2026 (Vintage My Picks Action Lock master reference)  
 **Purpose:** Living document defining **how we implement solutions**—security, architecture, testing, APIs, and operational patterns teams should follow or consciously deviate from with Architect review.
 
 ---
@@ -229,6 +229,14 @@ components/
 **Status:** Partially applied. Feature directories exist but shared components lack clear organization.
 
 **WMM2026 vintage homepage (illustrative):** Countdown → three locked plate cards (Play / Champ / Excel) → explore band (Info + Hall) → announcements board. Cards share `CardFooterCaption` (Oswald Bold, ALL CAPS; `||` = two-line break). Primary-admin edit gears deep-link via `lib/vintage/adminFocus.ts`. Details: `docs/VINTAGE_HOMEPAGE_V1.md`.
+
+**WMM2026 vintage CMS sidecars:** Homepage, Info, Hall of Fame, My Picks, and Standings each store draft/published JSON beside `vintage_homepage` (`__infoHandbook`, `__hofContent`, `__picksContent`, `__standingsContent`). Homepage admin owns **Active Tourney Year** (`tournament.year`) and critical dates (`bracketsReadyAt`, `tipoffAt`). Admined strings resolve `{year}` / `<year>` from that year. My Picks CMS owns **Application Master Lock**, brackets-published, and Action Lock messages — not Config Sheet `stop_submit_*`. Standings CMS owns Live Standings labels / empty states (not ranking data).
+
+**WMM2026 vintage Action Lock (My Picks):** Changing actions (New / Edit / Submit / Return / Copy / Delete) are blocked when any of: prior year, brackets not published, tipoff passed (tourney active), or Master Lock. Message priority is that same order (first match wins). Viewing (View / Print / Email) stays allowed. **Save WIP** is allowed on the active year when only tipoff and/or Master Lock would block Submit (mid-session escape hatch). Published-but-missing tournament JSON is an error state (user message + admin email via `notifyAdminOfError`). Same rules for primary admin. Canonical evaluator: `lib/services/vintageActionLock.ts` (client-safe); server fresh path: `vintageActionLockServer.ts`. My Picks copy is sectioned (Timer / Header / Pool / Empty / Cost) with dual flavors.
+
+**WMM2026 vintage auth pages:** `/auth/*` uses `auth/layout.tsx` — `VintageShell` when vintage is enabled (shared masthead/toolbar), else legacy chrome. Sign In / Create Account share `AuthForms` (`?mode=signup` tabs) with cream/navy/red panel styling in `components/auth/auth.css`. UI labels live in My Picks CMS (`__picksContent.auth`) — edited under **Sign in & account** in the My Picks admin (no on-page gear; signing in leaves `/auth`). Site Config still owns email-failure / registration-success strings. NextAuth credentials, register, confirmation, and `/bracket` post-login destination are unchanged.
+
+**WMM2026 vintage Live Standings:** Primary admin only at `/standings` (Live-only; picks-style `?year=`). Default year is CMS **Standings Year** (`__standingsContent.standingsYear`), not homepage Tourney Year. Legacy users keep Daily/Live toggle + disclaimer. Data from `live_standings_snapshots` (rebuilt on KEY save, cold start, or admin **Regenerate** at `POST /api/admin/vintage-standings/recompute`). Copy CMS: `__standingsContent` / `/vintage/admin/standings` — desktop + mobile column headers, filter labels, Updated prefix, paid glyph toggle/label, YOURS/paid legend, logo tile sizes + finalist border px, empty states. Admin also shows **snapshot status** (`GET …/snapshot`) and deep-links KEY editor via `/admin?tab=live-results&year=YYYY`. Default logo tiles: Final Four 22px / Champ 28px (separate desktop + mobile CMS sizes), finalist border 2px. FF/Champ result chrome is shared with My Picks via `lib/pickResultChrome.ts` (KEY regional / semi / champ + eliminated): shade white/green/red and finalist border black/green/red — hues owned by Standings CMS. Gap format `(-N)` vs overall leader; My Entries matches `StandingsEntry.userId`; black frame = entry’s finals picks. Paid = `brackets.payment_status === 'paid'` (hidden when `showPaidIndicator` is false). `/standings/live` redirects vintage admin to `/standings`.
 
 ---
 

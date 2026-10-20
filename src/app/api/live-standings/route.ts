@@ -27,7 +27,17 @@ export async function GET(request: NextRequest) {
 
     let snapshot = await getLiveStandingsSnapshot(yearNum);
 
-    if (!snapshot) {
+    /**
+     * Snapshots older than the My Entries / YOURS work omit `userId` on rows.
+     * Recompute once so filter-by-owner matches session.user.id.
+     */
+    const needsOwnerIds =
+      Boolean(snapshot) &&
+      snapshot!.standingsData.entries.some(
+        (e) => e.bracketId && !e.userId,
+      );
+
+    if (!snapshot || needsOwnerIds) {
       const keyBracket = await getKeyBracketByYear(yearNum);
       if (keyBracket) {
         const result = await recomputeLiveStandingsAfterKeySave(yearNum, keyBracket.id);

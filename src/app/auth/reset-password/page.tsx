@@ -1,51 +1,52 @@
-'use client';
+"use client";
 
-import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Eye, EyeOff, Lock, CheckCircle, XCircle } from 'lucide-react';
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { Eye, EyeOff, CheckCircle, XCircle } from "lucide-react";
+import "@/components/auth/auth.css";
 
 function ResetPasswordContent() {
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  
+
   const searchParams = useSearchParams();
   const router = useRouter();
-  const token = searchParams?.get('token');
+  const token = searchParams?.get("token");
 
   useEffect(() => {
     if (!token) {
-      setError('No reset token provided');
+      setError("No reset token provided");
     }
   }, [token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
+    setError("");
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError("Passwords do not match");
       setIsLoading(false);
       return;
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError("Password must be at least 6 characters");
       setIsLoading(false);
       return;
     }
 
     try {
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ token, password }),
       });
@@ -55,13 +56,13 @@ function ResetPasswordContent() {
       if (response.ok) {
         setSuccess(true);
         setTimeout(() => {
-          router.push('/auth/signin');
+          router.push("/auth/signin");
         }, 3000);
       } else {
-        setError(data.error || 'Failed to reset password');
+        setError(data.error || "Failed to reset password");
       }
     } catch {
-      setError('An error occurred. Please try again.');
+      setError("An error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -69,19 +70,20 @@ function ResetPasswordContent() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          <div className="text-center">
-            <CheckCircle className="mx-auto h-16 w-16 text-green-500 mb-4" />
-            <h2 className="text-3xl font-extrabold text-gray-900 mb-2">
-              Password Reset Successfully!
-            </h2>
-            <p className="text-sm text-gray-600 mb-6">
-              Your password has been updated. You can now sign in with your new password.
+      <div className="v-auth" data-testid="reset-password-success">
+        <div className="v-auth__panel">
+          <div className="v-auth__body v-auth__success">
+            <CheckCircle
+              className="mx-auto mb-4 h-12 w-12"
+              style={{ color: "#166534" }}
+              aria-hidden="true"
+            />
+            <h1 className="v-auth__heading">Password Reset Successfully!</h1>
+            <p>
+              Your password has been updated. You can now sign in with your new
+              password.
             </p>
-            <p className="text-sm text-gray-500">
-              Redirecting to sign in page...
-            </p>
+            <p>Redirecting to sign in page...</p>
           </div>
         </div>
       </div>
@@ -90,19 +92,20 @@ function ResetPasswordContent() {
 
   if (!token) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          <div className="text-center">
-            <XCircle className="mx-auto h-16 w-16 text-red-500 mb-4" />
-            <h2 className="text-3xl font-extrabold text-gray-900 mb-2">
-              Invalid Reset Link
-            </h2>
-            <p className="text-sm text-gray-600 mb-6">
-              This password reset link is invalid or has expired.
-            </p>
+      <div className="v-auth" data-testid="reset-password-invalid">
+        <div className="v-auth__panel">
+          <div className="v-auth__body v-auth__success">
+            <XCircle
+              className="mx-auto mb-4 h-12 w-12"
+              style={{ color: "var(--v-red, #b52c26)" }}
+              aria-hidden="true"
+            />
+            <h1 className="v-auth__heading">Invalid Reset Link</h1>
+            <p>This password reset link is invalid or has expired.</p>
             <Link
               href="/auth/forgot-password"
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer"
+              className="v-auth__link-btn"
+              data-testid="reset-password-request-new"
             >
               Request New Reset Link
             </Link>
@@ -113,118 +116,116 @@ function ResetPasswordContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Reset your password
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Enter your new password below
-          </p>
-        </div>
-        
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+    <div className="v-auth" data-testid="reset-password-form">
+      <div className="v-auth__panel">
+        <div className="v-auth__body">
+          <h1 className="v-auth__heading">Reset your password</h1>
+          <p className="v-auth__lede">Enter your new password below</p>
+
+          <form className="v-auth__form" onSubmit={handleSubmit}>
+            <div className="v-auth__field">
+              <label htmlFor="password" className="v-auth__label">
                 New Password
               </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
+              <div className="v-auth__input-wrap">
                 <input
                   id="password"
                   name="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   autoComplete="new-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none rounded-md relative block w-full pl-10 pr-10 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                  className="v-auth__input v-auth__input--with-toggle"
                   placeholder="Enter your new password"
+                  data-testid="reset-password-input"
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  className="v-auth__toggle"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  data-testid="reset-password-toggle"
                 >
                   {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
+                    <EyeOff className="h-5 w-5" aria-hidden="true" />
                   ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
+                    <Eye className="h-5 w-5" aria-hidden="true" />
                   )}
                 </button>
               </div>
             </div>
-            
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+
+            <div className="v-auth__field">
+              <label htmlFor="confirmPassword" className="v-auth__label">
                 Confirm New Password
               </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
+              <div className="v-auth__input-wrap">
                 <input
                   id="confirmPassword"
                   name="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
+                  type={showConfirmPassword ? "text" : "password"}
                   autoComplete="new-password"
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="appearance-none rounded-md relative block w-full pl-10 pr-10 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                  className="v-auth__input v-auth__input--with-toggle"
                   placeholder="Confirm your new password"
+                  data-testid="reset-confirm-password-input"
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  className="v-auth__toggle"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  aria-label={
+                    showConfirmPassword
+                      ? "Hide confirm password"
+                      : "Show confirm password"
+                  }
+                  data-testid="reset-confirm-password-toggle"
                 >
                   {showConfirmPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
+                    <EyeOff className="h-5 w-5" aria-hidden="true" />
                   ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
+                    <Eye className="h-5 w-5" aria-hidden="true" />
                   )}
                 </button>
               </div>
             </div>
-          </div>
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-3">
-              <p className="text-sm text-red-600">{error}</p>
-            </div>
-          )}
+            {error && (
+              <div
+                className="v-auth__error"
+                role="alert"
+                data-testid="reset-password-error"
+              >
+                {error}
+              </div>
+            )}
 
-          <div>
             <button
               type="submit"
               disabled={isLoading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="v-auth__submit"
+              data-testid="reset-password-submit"
             >
               {isLoading ? (
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                <>
+                  <span className="v-auth__spinner" aria-hidden="true" />
                   Resetting password...
-                </div>
+                </>
               ) : (
-                'Reset Password'
+                "Reset Password"
               )}
             </button>
-          </div>
 
-          <div className="text-center">
-            <Link 
-              href="/auth/signin" 
-              className="text-sm text-gray-600 hover:text-gray-500 cursor-pointer"
-            >
-              Back to Sign In
-            </Link>
-          </div>
-        </form>
+            <div className="v-auth__footer">
+              <Link href="/auth/signin" data-testid="reset-password-back-link">
+                Back to Sign In
+              </Link>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
@@ -232,9 +233,8 @@ function ResetPasswordContent() {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={null}>
       <ResetPasswordContent />
     </Suspense>
   );
 }
-

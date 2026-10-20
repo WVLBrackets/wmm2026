@@ -6,11 +6,15 @@ import { getMasterLockState } from '@/lib/killSwitch';
 import { tryLoadTournamentData } from '@/lib/tournamentLoader';
 import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 import { evaluatePicksAccess } from '@/lib/services/picksAccessPolicy';
+import { vintageAdminEmail } from '@/lib/vintage/admin';
+import { evaluateVintageActionLockFresh } from '@/lib/services/vintageActionLockServer';
+import { getPublishedVintageContent } from '@/lib/vintage/store';
 
 /**
  * GET /api/bracket/check-creation - Check if bracket creation is currently allowed.
  *
- * Priority: brackets_available (+ JSON error) → stop_submit → Application Master Lock.
+ * Vintage primary admin: Action Lock master reference (published, tipoff, master
+ * lock, JSON) from CMS — not Config Sheet stop_submit.
  */
 export async function GET() {
   try {
@@ -21,6 +25,31 @@ export async function GET() {
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
+    }
+
+    const isVintageAdmin = Boolean(await vintageAdminEmail());
+    if (isVintageAdmin) {
+      const home = await getPublishedVintageContent();
+      const activeYear = parseInt(String(home.tournament.year).trim(), 10);
+      if (Number.isNaN(activeYear)) {
+        return NextResponse.json({
+          success: true,
+          allowed: false,
+          reason: 'Active Tourney Year is not configured on the homepage.',
+          reasonCode: 'brackets_missing_json',
+        });
+      }
+      const fresh = await evaluateVintageActionLockFresh({
+        action: 'changing',
+        bracketYear: activeYear,
+        home,
+      });
+      return NextResponse.json({
+        success: true,
+        allowed: !fresh.blocked,
+        reason: fresh.blocked ? fresh.message : undefined,
+        reasonCode: fresh.reasonCode,
+      });
     }
 
     let siteConfig = null;

@@ -1,4 +1,5 @@
 import type { VintageContent } from "@/lib/vintage/content";
+import { resolveVintageYearTokens } from "@/lib/vintage/yearTokens";
 import VintageCountdown from "./VintageCountdown";
 import HomeCardGrid from "./HomeCardGrid";
 import ExploreBand from "./ExploreBand";
@@ -19,6 +20,17 @@ export default function VintageHomepage({
   /** When true (primary vintage admin), show edit gears on countdown + cards. */
   admin?: boolean;
 }) {
+  const activeYear = c.tournament.year.trim() || new Date().getFullYear();
+  const countdownTitle = resolveVintageYearTokens(
+    c.tournament.countdownTitle.trim() || "Countdown to <year> tipoff",
+    activeYear,
+  );
+  const liveMessage = resolveVintageYearTokens(
+    c.tournament.liveTourneyMessage.trim() ||
+      "The <year> tournament is underway!",
+    activeYear,
+  );
+
   return (
     <VintageShell
       content={c}
@@ -44,12 +56,10 @@ export default function VintageHomepage({
         ) : null}
         {c.tournament.countdownEnabled ? (
           <>
-            <h2 id="v-countdown-heading">
-              {c.tournament.countdownTitle.trim() || "Countdown to tipoff"}
-            </h2>
+            <h2 id="v-countdown-heading">{countdownTitle}</h2>
             <VintageCountdown
-              at={c.tournament.countdownAt}
-              liveMessage={c.tournament.liveTourneyMessage}
+              at={c.tournament.tipoffAt}
+              liveMessage={liveMessage}
             />
           </>
         ) : (
@@ -58,8 +68,7 @@ export default function VintageHomepage({
             className="v-live-tourney-message"
             data-testid="vintage-live-tourney-message"
           >
-            {c.tournament.liveTourneyMessage.trim() ||
-              "The tournament is underway!"}
+            {liveMessage}
           </p>
         )}
       </section>

@@ -22,15 +22,27 @@ import { Trophy } from 'lucide-react';
 import { LoggedButton } from '@/components/LoggedButton';
 import { useUsageLogger } from '@/hooks/useUsageLogger';
 import { useCSRF } from '@/hooks/useCSRF';
-import { evaluatePicksAccess } from '@/lib/services/picksAccessPolicy';
+import {
+  evaluatePicksAccess,
+  type PicksAccessResult,
+} from '@/lib/services/picksAccessPolicy';
+import {
+  evaluateVintageActionLock,
+  formatVintagePriorYearMessage,
+} from '@/lib/services/vintageActionLock';
 import {
   buildYearScopedPath,
   isHistoricalYear,
   parseViewingYear,
 } from '@/lib/services/tournamentYearService';
 import type { VintageContent } from '@/lib/vintage/content';
-import type { VintagePicksContent } from '@/lib/vintage/picksContent';
+import {
+  formatVintagePicksLabel,
+  type VintagePicksContent,
+} from '@/lib/vintage/picksContent';
+import { useServerTime } from '@/hooks/useServerTime';
 import VintageShell from '@/components/vintage/VintageShell';
+import '@/components/vintage/picks/picks.css';
 
 /**
  * My Picks table row for submit-from-landing (`entryName` may be unset until the user fills it).
@@ -99,10 +111,13 @@ function BracketContent({
   vintage = false,
   vintageHome = null,
   picksCopy = null,
+  standingsChrome = null,
 }: {
   vintage?: boolean;
   vintageHome?: VintageContent | null;
   picksCopy?: VintagePicksContent | null;
+  /** Published Standings CMS — FF/Champ result chrome colors + sizes. */
+  standingsChrome?: import("@/lib/vintage/standingsContent").VintageStandingsContent | null;
 }) {
   const { data: session, status } = useSession();
   useUsageLogger('Pick');
@@ -163,6 +178,8 @@ function BracketContent({
     parseInt(String(FALLBACK_CONFIG.tournamentYear || new Date().getFullYear()), 10)
   );
   const [availableYears, setAvailableYears] = useState<number[]>([]);
+  /** Soft year switch in progress (keeps landing mounted; no full-page spinner). */
+  const [isYearSwitching, setIsYearSwitching] = useState(false);
 
   const submittedEntryNames = useMemo(
     () => submittedBrackets.filter((b) => b.status === 'submitted').map((b) => b.entryName),
@@ -170,9 +187,17 @@ function BracketContent({
   );
 
   const viewingHistorical = isHistoricalYear(viewingYear, activeYear);
+  const { getServerNowMs } = useServerTime();
 
   const loadTournamentRef = useRef<(() => Promise<void>) | undefined>(undefined);
+  const softSwitchYearRef = useRef<((nextYear: number) => Promise<void>) | undefined>(undefined);
   const hasRestoredState = useRef(false);
+  /** True after the first full tournament load for this session. */
+  const initialLoadDoneRef = useRef(false);
+  /** Year already handled by an in-flight soft switch (avoids double-fetch with URL sync). */
+  const softSwitchTargetRef = useRef<number | null>(null);
+  /** Monotonic id so rapid year changes discard stale field/bracket responses. */
+  const yearSwitchGenRef = useRef(0);
 
   /**
    * Active tournament year from site config (string form for JSON filename).
@@ -390,6 +415,12 @@ function BracketContent({
   }, [session?.user?.name, entryName]);
 
   const loadKillSwitchState = useCallback(async () => {
+    // Vintage: master lock lives on My Picks CMS — do not hit Config Sheet / kill-switch API.
+    if (vintage && picksCopy) {
+      setKillSwitchEnabled(picksCopy.masterLockUnlocked);
+      setKillSwitchMessage(picksCopy.masterLockMessage);
+      return;
+    }
     try {
       const response = await fetch('/api/kill-switch', { cache: 'no-store' });
       const result = await response.json();
@@ -402,12 +433,19 @@ function BracketContent({
     } catch (error) {
       console.error('Error loading kill switch state:', error);
     }
-  }, []);
+  }, [vintage, picksCopy]);
 
   /**
-   * Fetch latest kill switch state from server to avoid stale client state.
+   * Fetch latest kill switch / master-lock state to avoid stale client state.
    */
   const getLatestKillSwitchState = async (): Promise<{ enabled: boolean; message: string }> => {
+    if (vintage && picksCopy) {
+      const enabled = picksCopy.masterLockUnlocked;
+      const message = picksCopy.masterLockMessage;
+      setKillSwitchEnabled(enabled);
+      setKillSwitchMessage(message);
+      return { enabled, message };
+    }
     try {
       const response = await fetch('/api/kill-switch', { cache: 'no-store' });
       const result = await response.json();
@@ -425,33 +463,164 @@ function BracketContent({
     return { enabled: killSwitchEnabled, message: killSwitchMessage };
   };
 
+  // Seed Active Tourney Year + master lock from vintage CMS on mount / publish refresh.
+  useEffect(() => {
+    if (!vintage) return;
+    if (vintageHome?.tournament.year) {
+      const y = parseInt(String(vintageHome.tournament.year).trim(), 10);
+      if (!Number.isNaN(y)) {
+        setActiveYear(y);
+        setViewingYear((prev) => (searchParams?.get('year') ? prev : y));
+      }
+    }
+    if (picksCopy) {
+      setKillSwitchEnabled(picksCopy.masterLockUnlocked);
+      setKillSwitchMessage(picksCopy.masterLockMessage);
+    }
+  }, [vintage, vintageHome?.tournament.year, picksCopy, searchParams]);
+
+  /** Vintage Active Tourney Year from homepage CMS (fallback: client activeYear). */
+  const vintageActiveYear = useMemo(() => {
+    const raw = vintageHome?.tournament.year?.trim();
+    const parsed = raw ? parseInt(raw, 10) : NaN;
+    return Number.isFinite(parsed) ? parsed : activeYear;
+  }, [vintageHome?.tournament.year, activeYear]);
+
   /**
-   * Client-side picks access: brackets_available → JSON → stop_submit → master lock.
-   * `killSwitchEnabled` means Application Master Lock is Unlocked.
+   * Resolve Changing-action access for this page mode.
+   * Vintage: Action Lock master reference (CMS). Legacy: Config Sheet.
+   */
+  const resolvePicksAccess = useCallback(
+    (
+      lockUnlocked: boolean,
+      config: SiteConfigData | null,
+      jsonPresent: boolean,
+      yearForLock: number,
+    ): PicksAccessResult => {
+      if (vintage && picksCopy) {
+        const lock = evaluateVintageActionLock({
+          action: 'changing',
+          bracketYear: yearForLock,
+          activeYear: vintageActiveYear,
+          picksCopy,
+          tipoffAt: vintageHome?.tournament.tipoffAt ?? '',
+          bracketsReadyAt: vintageHome?.tournament.bracketsReadyAt,
+          tournamentJsonPresent: jsonPresent,
+          nowMs: getServerNowMs(),
+        });
+        return {
+          blocked: lock.blocked,
+          reasonCode: lock.reasonCode,
+          message: lock.message,
+        };
+      }
+      if (isHistoricalYear(yearForLock, activeYear)) {
+        return {
+          blocked: true,
+          reasonCode: 'prior_year',
+          message: `Brackets from ${yearForLock} are read-only. Switch to ${activeYear} to make changes.`,
+        };
+      }
+      return evaluatePicksAccess(config, {
+        tournamentJsonPresent: jsonPresent,
+        masterLockUnlocked: lockUnlocked,
+      });
+    },
+    [
+      vintage,
+      picksCopy,
+      vintageHome?.tournament.bracketsReadyAt,
+      vintageHome?.tournament.tipoffAt,
+      vintageActiveYear,
+      activeYear,
+      getServerNowMs,
+    ],
+  );
+
+  /**
+   * Client-side Changing lock (server re-checks on mutate).
    */
   const picksAccess = useMemo(
     () =>
-      evaluatePicksAccess(siteConfig, {
-        tournamentJsonPresent: Boolean(tournamentData),
-        masterLockUnlocked: killSwitchEnabled,
-      }),
-    [siteConfig, tournamentData, killSwitchEnabled]
+      resolvePicksAccess(
+        vintage && picksCopy ? picksCopy.masterLockUnlocked : killSwitchEnabled,
+        siteConfig,
+        Boolean(tournamentData),
+        viewingYear,
+      ),
+    [
+      resolvePicksAccess,
+      vintage,
+      picksCopy,
+      killSwitchEnabled,
+      siteConfig,
+      tournamentData,
+      viewingYear,
+    ],
   );
 
   const mutationsBlockMessage =
     picksAccess.message ||
-    killSwitchMessage ||
+    (vintage && picksCopy
+      ? formatVintagePicksLabel(picksCopy.masterLockMessage, {
+          year: vintageActiveYear,
+        })
+      : killSwitchMessage) ||
     FALLBACK_CONFIG.masterLockMessage ||
     'Bracket actions are temporarily locked by the administrator.';
 
   /**
-   * Ensure bracket mutations are allowed (server check-creation; same priority as picksAccess).
-   * Opening a bracket for **view** uses {@link handleEditBracket} instead (read-only when blocked).
+   * Editor gates: tipoff / master lock block Submit but allow Save WIP.
+   * Prior year / not published / missing JSON block both. Vintage: same rules for admin.
+   */
+  const editorDisableSubmit =
+    picksAccess.blocked || viewingHistorical
+      ? !(isAdminMode && !vintage)
+      : false;
+  const editorDisableSave =
+    isAdminMode && !vintage
+      ? false
+      : viewingHistorical ||
+        (picksAccess.blocked &&
+          !(
+            vintage &&
+            (picksAccess.reasonCode === 'tourney_active' ||
+              picksAccess.reasonCode === 'master_lock')
+          ));
+
+  /** Strip Config Sheet stop_submit for vintage editors (tipoff owns that gate). */
+  const editorSiteConfig = useMemo(() => {
+    if (!vintage || !siteConfig) return siteConfig;
+    return {
+      ...siteConfig,
+      stopSubmitToggle: 'No',
+      stopSubmitDateTime: '',
+      tournamentYear: String(vintageActiveYear),
+      bracketsMissingErrorMessage:
+        picksCopy?.bracketsMissingErrorMessage ||
+        siteConfig.bracketsMissingErrorMessage,
+      priorYearWarningMessage:
+        picksCopy?.priorYearWarningMessage || siteConfig.priorYearWarningMessage,
+      finalMessageSubmitOff:
+        picksCopy?.tourneyActiveMessage || siteConfig.finalMessageSubmitOff,
+      masterLockMessage:
+        picksCopy?.masterLockMessage || siteConfig.masterLockMessage,
+      entryCost: picksCopy?.entryCost ?? siteConfig.entryCost,
+    };
+  }, [vintage, siteConfig, vintageActiveYear, picksCopy]);
+
+  /**
+   * Ensure Changing mutations are allowed (fresh server check-creation).
+   * Opening a bracket for **view** uses {@link handleEditBracket} (read-only when blocked).
    */
   const ensureMutationsAllowed = async (): Promise<boolean> => {
-    if (isAdminMode) return true;
+    if (isAdminMode && !vintage) return true;
     if (viewingHistorical) {
-      alert(`Brackets from ${viewingYear} are read-only. Switch to ${activeYear} to make changes.`);
+      alert(
+        vintage && picksCopy
+          ? formatVintagePriorYearMessage(picksCopy, viewingYear, activeYear)
+          : `Brackets from ${viewingYear} are read-only. Switch to ${activeYear} to make changes.`,
+      );
       return false;
     }
     try {
@@ -506,13 +675,86 @@ function BracketContent({
   };
 
   /**
+   * Switch viewing year without tearing down the landing page.
+   * Reloads field JSON + bracket list only (no fresh site-config / full-page spinner).
+   * Uses a generation counter so rapid year changes discard stale responses.
+   */
+  const softSwitchYear = async (nextYear: number) => {
+    if (nextYear === viewingYear && softSwitchTargetRef.current == null) return;
+    const gen = ++yearSwitchGenRef.current;
+    softSwitchTargetRef.current = nextYear;
+    setCurrentView('landing');
+    setEditingBracket(null);
+    setViewingYear(nextYear);
+    setIsYearSwitching(true);
+    try {
+      const [enriched, bracketsResponse] = await Promise.all([
+        loadFieldDataForYear(String(nextYear)),
+        fetch(`/api/tournament-bracket?year=${nextYear}`, { cache: 'no-store' }),
+      ]);
+      if (gen !== yearSwitchGenRef.current) return;
+
+      if (!enriched) {
+        setTournamentData(null);
+        setBracket(null);
+      } else {
+        setTournamentData(enriched);
+        setBracket(generate64TeamBracket(enriched));
+      }
+
+      const data = await bracketsResponse.json();
+      if (gen !== yearSwitchGenRef.current) return;
+      if (data.success) {
+        if (typeof data.activeYear === 'number') {
+          setActiveYear(data.activeYear);
+        }
+        if (Array.isArray(data.availableYears)) {
+          setAvailableYears(data.availableYears);
+        }
+        const userBrackets = Array.isArray(data.data)
+          ? data.data.filter(
+              (bracket: unknown) =>
+                bracket &&
+                typeof bracket === 'object' &&
+                'playerEmail' in bracket &&
+                (bracket as { playerEmail: string }).playerEmail === session?.user?.email
+            )
+          : [];
+        setSubmittedBrackets(userBrackets);
+      } else {
+        console.error('Failed to load brackets during year switch:', data.error);
+      }
+    } catch (error) {
+      console.error('Error switching tournament year:', error);
+    } finally {
+      if (gen === yearSwitchGenRef.current) {
+        softSwitchTargetRef.current = null;
+        setIsYearSwitching(false);
+      }
+    }
+  };
+
+  softSwitchYearRef.current = softSwitchYear;
+
+  /**
+   * Keep `?year=` in the address bar without an App Router navigation.
+   * `router.replace` remounts this force-dynamic page (full refresh + lag); history does not.
+   */
+  const syncYearInUrl = (nextYear: number) => {
+    if (typeof window === 'undefined') return;
+    const nextPath = buildYearScopedPath('/bracket', nextYear, activeYear);
+    const current = `${window.location.pathname}${window.location.search}`;
+    if (current === nextPath) return;
+    window.history.replaceState(window.history.state, '', nextPath);
+  };
+
+  /**
    * Switch My Picks viewing year via URL (`?year=` omitted for the active year).
    */
   const handleViewingYearChange = (nextYear: number) => {
     if (nextYear === viewingYear) return;
-    setCurrentView('landing');
-    setEditingBracket(null);
-    router.replace(buildYearScopedPath('/bracket', nextYear, activeYear));
+    syncYearInUrl(nextYear);
+    void softSwitchYear(nextYear);
   };
 
   // Assign function to ref after it's declared
@@ -547,27 +789,46 @@ function BracketContent({
       console.error('Error loading tournament:', error);
     } finally {
       setIsLoading(false);
+      initialLoadDoneRef.current = true;
     }
   };
 
   // Assign function to ref after it's declared
   loadTournamentRef.current = loadTournament;
 
+  // Initial auth → full load once (do not re-run on year query changes).
   useEffect(() => {
     if (status === 'loading') return;
-    
+
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
       return;
     }
-    
+
     // Don't load tournament if we're in admin edit mode - loadBracketForEdit will handle it
     if (searchParams?.get('edit') && searchParams?.get('admin') === 'true') {
       return;
     }
-    
+
+    if (initialLoadDoneRef.current) return;
     loadTournamentRef.current?.();
-  }, [status, router, searchParams]);
+    // Intentionally omit searchParams: year switches use history.replaceState + softSwitchYear.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot auth gate only
+  }, [status, router]);
+
+  // Browser back/forward after history.replaceState year sync → soft switch.
+  useEffect(() => {
+    const onPopState = () => {
+      if (status !== 'authenticated' || !initialLoadDoneRef.current) return;
+      const params = new URLSearchParams(window.location.search);
+      const next = parseViewingYear(params.get('year'), activeYear);
+      if (next === viewingYear) return;
+      if (softSwitchTargetRef.current === next) return;
+      void softSwitchYearRef.current?.(next);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [status, activeYear, viewingYear]);
 
   useEffect(() => {
     if (currentView !== 'bracket') return;
@@ -733,11 +994,13 @@ function BracketContent({
   };
 
   const handleSubmitBracket = async () => {
-    if ((picksAccess.blocked || viewingHistorical) && !isAdminMode) {
+    if (editorDisableSubmit) {
       setSubmitError(
-        viewingHistorical
-          ? `Brackets from ${viewingYear} are read-only.`
-          : mutationsBlockMessage
+        viewingHistorical && vintage && picksCopy
+          ? formatVintagePriorYearMessage(picksCopy, viewingYear, activeYear)
+          : viewingHistorical
+            ? `Brackets from ${viewingYear} are read-only.`
+            : mutationsBlockMessage
       );
       return;
     }
@@ -908,7 +1171,11 @@ function BracketContent({
 
     if (!tournamentData || !bracket) {
       alert(
-        siteConfig?.bracketsMissingErrorMessage ||
+        (vintage && picksCopy
+          ? formatVintagePicksLabel(picksCopy.bracketsMissingErrorMessage, {
+              year: vintageActiveYear,
+            })
+          : siteConfig?.bracketsMissingErrorMessage) ||
           FALLBACK_CONFIG.bracketsMissingErrorMessage ||
           `Bracket field data is missing for ${resolveTournamentYear(siteConfig)}.`
       );
@@ -936,21 +1203,33 @@ function BracketContent({
       return;
     }
 
-    const latestLock = isAdminMode
-      ? { enabled: true }
-      : await getLatestKillSwitchState();
-    const freshAccess = evaluatePicksAccess(siteConfig, {
-      tournamentJsonPresent: Boolean(tournamentData),
-      masterLockUnlocked: latestLock.enabled,
-    });
-    const configActiveYear = parseInt(resolveTournamentYear(siteConfig), 10);
+    const latestLock =
+      isAdminMode && !vintage
+        ? { enabled: true }
+        : await getLatestKillSwitchState();
+    const configActiveYear = vintage
+      ? vintageActiveYear
+      : parseInt(resolveTournamentYear(siteConfig), 10);
     const bracketYear =
       typeof bracketData.year === 'number'
         ? bracketData.year
-        : configActiveYear;
-    const isPriorYear = !isAdminMode && bracketYear !== configActiveYear;
+        : Number.isNaN(configActiveYear)
+          ? activeYear
+          : configActiveYear;
+    const freshAccess = resolvePicksAccess(
+      latestLock.enabled,
+      siteConfig,
+      Boolean(tournamentData),
+      bracketYear,
+    );
+    const isPriorYear =
+      !(isAdminMode && !vintage) &&
+      isHistoricalYear(
+        bracketYear,
+        Number.isNaN(configActiveYear) ? activeYear : configActiveYear,
+      );
     const bracketMutationsAllowed =
-      isAdminMode || (!isPriorYear && !freshAccess.blocked);
+      (isAdminMode && !vintage) || (!isPriorYear && !freshAccess.blocked);
 
     // Ensure field JSON matches the bracket year when opening a prior-year entry
     if (isPriorYear || bracketYear !== viewingYear) {
@@ -1387,11 +1666,13 @@ function BracketContent({
   };
 
   const handleDeleteBracket = (bracketId: string) => {
-    if ((picksAccess.blocked || viewingHistorical) && !isAdminMode) {
+    if (editorDisableSubmit) {
       alert(
-        viewingHistorical
-          ? `Brackets from ${viewingYear} are read-only.`
-          : mutationsBlockMessage
+        viewingHistorical && vintage && picksCopy
+          ? formatVintagePriorYearMessage(picksCopy, viewingYear, activeYear)
+          : viewingHistorical
+            ? `Brackets from ${viewingYear} are read-only.`
+            : mutationsBlockMessage
       );
       return;
     }
@@ -1467,16 +1748,45 @@ function BracketContent({
   };
 
   if (status === 'loading' || isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading tournament...</p>
-          </div>
+    const loadingBody = (
+      <div
+        className={
+          vintage
+            ? 'v-picks v-picks--loading'
+            : 'min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100'
+        }
+        data-testid="bracket-loading"
+      >
+        <div
+          className={
+            vintage
+              ? 'v-picks__loading'
+              : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12'
+          }
+        >
+          {vintage ? (
+            <>
+              <div className="v-picks__loading-spinner" aria-hidden />
+              <p className="v-picks__loading-text">Loading tournament…</p>
+            </>
+          ) : (
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto" />
+              <p className="mt-4 text-gray-600">Loading tournament...</p>
+            </div>
+          )}
         </div>
       </div>
     );
+
+    if (vintage && vintageHome) {
+      return (
+        <VintageShell content={vintageHome} testId="vintage-picks-loading">
+          {loadingBody}
+        </VintageShell>
+      );
+    }
+    return loadingBody;
   }
 
   if (status === 'unauthenticated') {
@@ -1534,8 +1844,18 @@ function BracketContent({
         <MyPicksLanding
           variant={vintage ? 'vintage' : 'legacy'}
           picksCopy={picksCopy ?? undefined}
+          standingsChrome={standingsChrome ?? undefined}
+          tipoffAt={vintageHome?.tournament.tipoffAt ?? ''}
+          bracketsReadyAt={vintageHome?.tournament.bracketsReadyAt ?? ''}
+          liveTourneyMessage={formatVintagePicksLabel(
+            vintageHome?.tournament.liveTourneyMessage ??
+              'The <year> tournament is underway!',
+            { year: vintageActiveYear },
+          )}
           admin={vintage}
           brackets={submittedBrackets}
+          viewingYear={viewingYear}
+          activeYear={vintage ? vintageActiveYear : activeYear}
           onCreateNew={handleCreateNew}
           onEditBracket={handleEditBracket}
           onDeleteBracket={handleDeleteBracket}
@@ -1559,12 +1879,23 @@ function BracketContent({
           tournamentData={tournamentData}
           bracket={bracket}
           siteConfig={siteConfig}
-          killSwitchEnabled={killSwitchEnabled}
-          killSwitchMessage={killSwitchMessage}
-          viewingYear={viewingYear}
-          activeYear={activeYear}
-          availableYears={availableYears.length > 0 ? availableYears : [activeYear]}
+          killSwitchEnabled={
+            vintage && picksCopy ? picksCopy.masterLockUnlocked : killSwitchEnabled
+          }
+          killSwitchMessage={
+            vintage && picksCopy
+              ? formatVintagePicksLabel(picksCopy.masterLockMessage, {
+                  year: vintageActiveYear,
+                })
+              : killSwitchMessage
+          }
+          availableYears={
+            availableYears.length > 0
+              ? availableYears
+              : [vintage ? vintageActiveYear : activeYear]
+          }
           onViewingYearChange={handleViewingYearChange}
+          isYearSwitching={isYearSwitching}
           onOpenFullBracketModal={handleOpenFullBracketModalFromMyPicks}
           onPaymentCreated={() => loadSubmittedBrackets(viewingYear)}
         />
@@ -1707,16 +2038,19 @@ function BracketContent({
             submitError={submitError}
             bracketNumber={editingBracket ? (editingBracket as Record<string, unknown>).bracketNumber as number : undefined}
             year={editingBracket ? (editingBracket as Record<string, unknown>).year as number : undefined}
-            siteConfig={siteConfig}
+            siteConfig={editorSiteConfig}
             existingBracketNames={submittedEntryNames}
             currentBracketId={editingBracket ? (editingBracket as Record<string, unknown>).id as string : undefined}
             isAdminMode={isAdminMode}
             isLiveResultsMode={isLiveResultsMode}
-            disableSaveSubmit={(picksAccess.blocked || viewingHistorical) && !isAdminMode}
+            disableSaveSubmit={editorDisableSubmit}
+            disableSave={editorDisableSave}
             disableMessage={
-              viewingHistorical
-                ? `Brackets from ${viewingYear} are read-only.`
-                : mutationsBlockMessage
+              viewingHistorical && vintage && picksCopy
+                ? formatVintagePriorYearMessage(picksCopy, viewingYear, activeYear)
+                : viewingHistorical
+                  ? `Brackets from ${viewingYear} are read-only.`
+                  : mutationsBlockMessage
             }
           />
         ) : (
@@ -1734,15 +2068,18 @@ function BracketContent({
             onTieBreakerChange={setTieBreaker}
             readOnly={isReadOnly}
             submitError={submitError}
-            siteConfig={siteConfig}
+            siteConfig={editorSiteConfig}
             existingBracketNames={submittedEntryNames}
             isAdminMode={isAdminMode}
             isLiveResultsMode={isLiveResultsMode}
-            disableSaveSubmit={(picksAccess.blocked || viewingHistorical) && !isAdminMode}
+            disableSaveSubmit={editorDisableSubmit}
+            disableSave={editorDisableSave}
             disableMessage={
-              viewingHistorical
-                ? `Brackets from ${viewingYear} are read-only.`
-                : mutationsBlockMessage
+              viewingHistorical && vintage && picksCopy
+                ? formatVintagePriorYearMessage(picksCopy, viewingYear, activeYear)
+                : viewingHistorical
+                  ? `Brackets from ${viewingYear} are read-only.`
+                  : mutationsBlockMessage
             }
             onSave={handleSaveBracket}
             onClose={handleCloseBracket}
@@ -1762,10 +2099,12 @@ export default function BracketPageClient({
   vintage = false,
   vintageHome = null,
   picksCopy = null,
+  standingsChrome = null,
 }: {
   vintage?: boolean;
   vintageHome?: VintageContent | null;
   picksCopy?: VintagePicksContent | null;
+  standingsChrome?: import("@/lib/vintage/standingsContent").VintageStandingsContent | null;
 }) {
   return (
     <Suspense fallback={<div>Loading...</div>}>
@@ -1773,6 +2112,7 @@ export default function BracketPageClient({
         vintage={vintage}
         vintageHome={vintageHome}
         picksCopy={picksCopy}
+        standingsChrome={standingsChrome}
       />
     </Suspense>
   );

@@ -39,6 +39,8 @@ export interface FullBracketEditorShellProps {
   isAdminMode?: boolean;
   isLiveResultsMode?: boolean;
   disableSaveSubmit?: boolean;
+  /** When set, overrides save-button disable independently of submit (Save WIP). */
+  disableSave?: boolean;
   disableMessage?: string;
   onSave?: () => void;
   onClose?: () => void;
@@ -69,6 +71,7 @@ export default function FullBracketEditorShell({
   isAdminMode = false,
   isLiveResultsMode = false,
   disableSaveSubmit = false,
+  disableSave,
   disableMessage = '',
   onSave,
   onClose,
@@ -76,6 +79,7 @@ export default function FullBracketEditorShell({
   onComplete,
   bracketSize,
 }: FullBracketEditorShellProps) {
+  const saveDisabled = disableSave ?? disableSaveSubmit;
   /** Geometry from committed full-bracket layout JSON (bundled at build time). */
   const [fullBracketLayout] = useState<LayoutSettings>(DEFAULT_FULL_BRACKET_LAYOUT);
 
@@ -305,16 +309,16 @@ export default function FullBracketEditorShell({
                 {onSave ? (
                   <button
                     type="button"
-                    onClick={() => !disableSaveSubmit && onSave()}
-                    disabled={disableSaveSubmit}
-                    title={disableSaveSubmit ? disableMessage : 'Save'}
+                    onClick={() => !saveDisabled && onSave()}
+                    disabled={saveDisabled}
+                    title={saveDisabled ? disableMessage : 'Save'}
                     style={{
                       width: `${STEP_BUTTON_CH}ch`,
                       minWidth: `${STEP_BUTTON_CH}ch`,
                       maxWidth: `${STEP_BUTTON_CH}ch`,
                     }}
                     className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} ${
-                      disableSaveSubmit
+                      saveDisabled
                         ? 'cursor-not-allowed bg-gray-300 text-gray-500'
                         : 'cursor-pointer bg-purple-600 text-white hover:bg-purple-700'
                     }`}

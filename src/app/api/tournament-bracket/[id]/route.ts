@@ -152,16 +152,25 @@ export async function PUT(
       );
     }
 
-    // Prior-year read-only + brackets_available / stop_submit / master lock for current year
-    const mutationAccess = await evaluateBracketMutationAccess(bracket.year);
+    const body = await request.json();
+
+    // Save WIP vs Changing: persist in_progress without status flip is save_wip
+    // (allowed after tipoff / master lock so mid-session users are not stranded).
+    const nextStatus =
+      body.status !== undefined ? body.status : bracket.status;
+    const isSaveWip =
+      bracket.status === 'in_progress' &&
+      nextStatus === 'in_progress';
+    const mutationAccess = await evaluateBracketMutationAccess(
+      bracket.year,
+      isSaveWip ? 'save_wip' : 'changing',
+    );
     if (!mutationAccess.allowed) {
       return NextResponse.json(
         { success: false, error: mutationAccess.error },
         { status: mutationAccess.status }
       );
     }
-
-    const body = await request.json();
 
     // Submitted → in_progress is allowed (My Picks "Return"); picks/entry merge from DB when omitted in body.
 

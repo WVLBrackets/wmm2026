@@ -4,6 +4,7 @@ import BracketPageClient from "./BracketPageClient";
 import { getBuildStamp } from "@/lib/buildStamp";
 import { vintageAdminEmail } from "@/lib/vintage/admin";
 import { getPublishedVintagePicksContent } from "@/lib/vintage/picksStore";
+import { getPublishedVintageStandingsContent } from "@/lib/vintage/standingsStore";
 import { getPublishedVintageContent } from "@/lib/vintage/store";
 
 export const dynamic = "force-dynamic";
@@ -20,14 +21,20 @@ export async function generateMetadata() {
  */
 export default async function BracketPage() {
   if (await vintageAdminEmail()) {
-    const [home, picksCopy] = await Promise.all([
+    const [home, picksCopy, standingsChrome] = await Promise.all([
       getPublishedVintageContent(),
       getPublishedVintagePicksContent(),
+      getPublishedVintageStandingsContent(),
     ]);
     return (
       <>
         <PageLogger location="My Picks" />
-        <BracketPageClient vintage vintageHome={home} picksCopy={picksCopy} />
+        <BracketPageClient
+          vintage
+          vintageHome={home}
+          picksCopy={picksCopy}
+          standingsChrome={standingsChrome}
+        />
       </>
     );
   }

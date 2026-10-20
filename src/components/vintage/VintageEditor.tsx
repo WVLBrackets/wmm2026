@@ -54,6 +54,7 @@ import {
   resolveToolbarIcon,
 } from "@/lib/vintage/toolbarIcons";
 import IconPickerModal from "./IconPickerModal";
+import VintageAdminNav from "./VintageAdminNav";
 import "./editor.css";
 const tabs = [
   "Masthead",
@@ -475,6 +476,7 @@ export default function VintageEditor() {
   }
   return (
     <main className="vintage-editor">
+      <VintageAdminNav current="home" />
       <header className="ve-header">
         <div>
           <Link href="/" className="ve-back" data-testid="vintage-editor-back">
@@ -482,21 +484,7 @@ export default function VintageEditor() {
           </Link>
           <p className="ve-eyebrow">WARREN’S MARCH MADNESS · PRIVATE ADMIN</p>
           <h1>The editor’s desk.</h1>
-          <p>
-            Make the front page your own.{" "}
-            <Link href="/vintage/admin/info" data-testid="vintage-open-info-editor">
-              Edit the Tournament Handbook
-            </Link>
-            {" · "}
-            <Link href="/vintage/admin/hof" data-testid="vintage-open-hof-editor">
-              Edit Hall of Fame titles
-            </Link>
-            {" · "}
-            <Link href="/vintage/admin/picks" data-testid="vintage-open-picks-editor">
-              Edit My Picks copy
-            </Link>
-            .
-          </p>
+          <p>Make the front page your own.</p>
         </div>
         <div className="ve-status">
           <span className={dirty ? "ve-dot dirty" : "ve-dot"} />
@@ -1499,13 +1487,86 @@ export default function VintageEditor() {
           {tab === "Tournament & countdown" && (
             <div data-testid="vintage-editor-countdown-panel">
               <p className="ve-help">
-                These are homepage display settings. Bracket availability and
-                submission deadlines remain controlled by the existing bracket
-                application.
+                Active year and the two critical dates are administered here
+                only (not the Config Sheet). Use <code>{"{year}"}</code> or{" "}
+                <code>{"<year>"}</code> in countdown / live messages — they
+                resolve to Active Tourney Year.
               </p>
-              <h3>Countdown clock</h3>
+              <h3>Active Tourney Year</h3>
+              {field("tournament.year", "Active Tourney Year", {
+                hint: "Four-digit year (e.g. 2027). Drives My Picks mutations and all <year> / {year} tokens.",
+              })}
+              <h3>Critical dates</h3>
+              <label
+                className="ve-field"
+                htmlFor="vintage-tournament-bracketsReadyAt"
+              >
+                <span id="vintage-brackets-ready-label">Brackets Ready</span>
+                <span className="ve-help">
+                  Selection Sunday — when the field is released. My Picks
+                  counts down to this until brackets are published.
+                </span>
+                <input
+                  id="vintage-tournament-bracketsReadyAt"
+                  data-testid="vintage-tournament-bracketsReadyAt"
+                  type="datetime-local"
+                  step="60"
+                  value={toDatetimeLocalValue(
+                    content.tournament.bracketsReadyAt,
+                  )}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    if (!value) {
+                      update("tournament.bracketsReadyAt", "");
+                      return;
+                    }
+                    const date = new Date(value);
+                    if (!Number.isNaN(date.getTime()))
+                      update(
+                        "tournament.bracketsReadyAt",
+                        date.toISOString(),
+                      );
+                  }}
+                  aria-labelledby="vintage-brackets-ready-label"
+                  aria-describedby="vintage-countdown-timezone"
+                />
+              </label>
+              <label
+                className="ve-field"
+                htmlFor="vintage-tournament-tipoffAt"
+              >
+                <span id="vintage-tipoff-label">Tourney Tipoff</span>
+                <span className="ve-help">
+                  Round 1 tipoff. Homepage countdown always targets this.
+                  My Picks switches to it after brackets are published.
+                </span>
+                <input
+                  id="vintage-tournament-tipoffAt"
+                  data-testid="vintage-tournament-tipoffAt"
+                  type="datetime-local"
+                  step="60"
+                  value={toDatetimeLocalValue(content.tournament.tipoffAt)}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    if (!value) {
+                      update("tournament.tipoffAt", "");
+                      return;
+                    }
+                    const date = new Date(value);
+                    if (!Number.isNaN(date.getTime()))
+                      update("tournament.tipoffAt", date.toISOString());
+                  }}
+                  aria-labelledby="vintage-tipoff-label"
+                  aria-describedby="vintage-countdown-timezone"
+                />
+              </label>
+              <small id="vintage-countdown-timezone">
+                Time zone: {timeZone || "your device’s local time zone"}.
+                Saved as one exact moment for all visitors.
+              </small>
+              <h3>Homepage countdown clock</h3>
               {field("tournament.countdownTitle", "Countdown heading", {
-                hint: "Shown above the tipoff clock when the countdown is on.",
+                hint: "Shown above the tipoff clock when the countdown is on. Tokens: {year} or <year>.",
               })}
               {checkbox(
                 "tournament.countdownEnabled",
@@ -1513,47 +1574,8 @@ export default function VintageEditor() {
                 content.tournament.countdownEnabled,
               )}
               {field("tournament.liveTourneyMessage", "Live tourney message", {
-                hint: "When Show countdown is off (tournament underway), this large message replaces the timer. Also used after tipoff if the clock reaches zero.",
+                hint: "When Show countdown is off, this replaces the homepage timer. Also shown on My Picks after tipoff. Tokens: {year} or <year>.",
               })}
-              <label
-                className="ve-field"
-                htmlFor="vintage-tournament-countdownAt"
-              >
-                <span id="vintage-countdown-label">
-                  Countdown date and time
-                </span>
-                <input
-                  id="vintage-tournament-countdownAt"
-                  data-testid="vintage-tournament-countdownAt"
-                  type="datetime-local"
-                  step="60"
-                  value={(() => {
-                    if (!content.tournament.countdownAt) return "";
-                    const date = new Date(content.tournament.countdownAt);
-                    if (Number.isNaN(date.getTime())) return "";
-                    const pad = (value: number) =>
-                      String(value).padStart(2, "0");
-                    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-                  })()}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    if (!value) {
-                      update("tournament.countdownAt", "");
-                      return;
-                    }
-                    const date = new Date(value);
-                    if (!Number.isNaN(date.getTime()))
-                      update("tournament.countdownAt", date.toISOString());
-                  }}
-                  aria-describedby="vintage-countdown-timezone"
-                  aria-labelledby="vintage-countdown-label"
-                />
-                <small id="vintage-countdown-timezone">
-                  Time zone: {timeZone || "your device’s local time zone"}.
-                  Saved as one exact moment for all visitors. Save Draft to
-                  preview; Publish homepage to update the homepage.
-                </small>
-              </label>
             </div>
           )}
           {tab === "Media library" && (

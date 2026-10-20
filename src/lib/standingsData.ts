@@ -10,6 +10,26 @@ export interface StandingsEntry {
   paid: boolean;
   /** Pool bracket id (live standings); daily sheet rows omit this and use resolve-bracket API. */
   bracketId?: string;
+  /** Owner user id (live standings) — used for My Entries / YOURS, not display-name matching. */
+  userId?: string;
+}
+
+/**
+ * Points gap vs overall leader for display.
+ * Leaders (tied or sole) omit the gap entirely — no `(0)`, dash, or "back".
+ */
+export function formatPointsGap(
+  entryPoints: number,
+  leaderPoints: number,
+): { text: string | null; ariaLabel: string | null } {
+  if (entryPoints >= leaderPoints) {
+    return { text: null, ariaLabel: null };
+  }
+  const gap = leaderPoints - entryPoints;
+  return {
+    text: `(-${gap})`,
+    ariaLabel: `${gap} points behind the leader`,
+  };
 }
 
 /** Row 2 KEY cells E–H: actual regional champs (TL, BL, TR, BR). Blanks mean game not final yet. */
@@ -451,80 +471,16 @@ export function getStandingsCacheStats(): { size: number; entries: string[] } {
   };
 }
 
-export type StandingsShade = 'correct' | 'incorrect' | 'neutral';
+export type {
+  StandingsShade,
+  StandingsBorderTone,
+  ChampionDisplayColors,
+} from '@/lib/pickResultChrome';
 
-/** Border tone for heavy ring; `neutral` = black when game still pending but pick alive. */
-export type StandingsBorderTone = 'correct' | 'incorrect' | 'neutral';
-
-function isEliminated(team: string, eliminatedTeams: string[]): boolean {
-  const t = team.trim();
-  if (!t) return false;
-  return eliminatedTeams.some((e) => e.trim() === t);
-}
-
-/**
- * Regional champ cell fill: compare player pick to one KEY cell (E/F/G/H). If blank, use elimination only.
- */
-export function getRegionalChampionSquareShade(
-  pick: string,
-  keyCellWinner: string,
-  eliminatedTeams: string[]
-): StandingsShade {
-  const p = pick.trim();
-  if (!p) return 'neutral';
-  const actual = keyCellWinner.trim();
-  if (actual !== '') {
-    return p === actual ? 'correct' : 'incorrect';
-  }
-  if (isEliminated(p, eliminatedTeams)) return 'incorrect';
-  return 'neutral';
-}
-
-/**
- * Heavy border on finalist picks: one KEY cell (I or J) for that semi. `neutral` → black ring.
- */
-export function getFinalistBorderTone(
-  pick: string,
-  keyCellWinner: string,
-  eliminatedTeams: string[]
-): StandingsBorderTone {
-  const p = pick.trim();
-  if (!p) return 'neutral';
-  const actual = keyCellWinner.trim();
-  if (actual !== '') {
-    return p === actual ? 'correct' : 'incorrect';
-  }
-  if (isEliminated(p, eliminatedTeams)) return 'incorrect';
-  return 'neutral';
-}
-
-export interface ChampionDisplayColors {
-  shade: StandingsShade;
-  /** `undefined` = no heavy border (pick still alive, K2 blank). */
-  borderTone: StandingsBorderTone | undefined;
-}
-
-/**
- * Champ column: K2 populated → green/red fill + border; K2 blank → eliminated only red; else neutral + no heavy border.
- */
-export function getChampionDisplayColors(
-  pick: string,
-  k2Winner: string,
-  eliminatedTeams: string[]
-): ChampionDisplayColors {
-  const p = pick.trim();
-  if (!p) return { shade: 'neutral', borderTone: undefined };
-  const actual = k2Winner.trim();
-  if (actual !== '') {
-    const ok = p === actual;
-    return {
-      shade: ok ? 'correct' : 'incorrect',
-      borderTone: ok ? 'correct' : 'incorrect',
-    };
-  }
-  if (isEliminated(p, eliminatedTeams)) {
-    return { shade: 'incorrect', borderTone: 'incorrect' };
-  }
-  return { shade: 'neutral', borderTone: undefined };
-}
+export {
+  getRegionalChampionSquareShade,
+  getFinalistBorderTone,
+  getChampionDisplayColors,
+  resolvePickResultTone,
+} from '@/lib/pickResultChrome';
 

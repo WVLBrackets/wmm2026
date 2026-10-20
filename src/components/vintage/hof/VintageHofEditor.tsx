@@ -18,6 +18,7 @@ import {
   type VintageHofContent,
 } from "@/lib/vintage/hofContent";
 import type { VintageHofState } from "@/lib/vintage/hofStore";
+import VintageAdminNav from "../VintageAdminNav";
 import "../editor.css";
 
 /**
@@ -183,6 +184,7 @@ export default function VintageHofEditor() {
 
   return (
     <main className="vintage-editor" data-testid="vintage-hof-editor">
+      <VintageAdminNav current="hof" />
       <header className="ve-header">
         <div>
           <Link href="/hall-of-fame" className="ve-back">

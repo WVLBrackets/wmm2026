@@ -15,14 +15,18 @@ export default function SiteChrome({
     pathname === "/info" ||
     pathname === "/hall-of-fame" ||
     pathname === "/bracket" ||
+    pathname === "/standings" ||
+    pathname === "/standings/live" ||
     pathname === "/vintage" ||
     pathname === "/vintage/admin" ||
     pathname.startsWith("/vintage/admin/") ||
     pathname.startsWith("/admin/vintage-homepage") ||
     pathname.startsWith("/admin/vintage-info") ||
     pathname.startsWith("/admin/vintage-hof") ||
-    pathname.startsWith("/admin/vintage-picks");
-  // Vintage pages and My Picks own their chrome; legacy paths wrap LegacySiteChrome themselves.
+    pathname.startsWith("/admin/vintage-picks") ||
+    pathname.startsWith("/admin/vintage-standings") ||
+    pathname.startsWith("/auth/");
+  // Vintage pages, My Picks, and auth own their chrome; legacy paths wrap LegacySiteChrome themselves.
   if (standalone) return <>{children}</>;
   return (
     <LegacySiteChrome buildStamp={buildStamp}>{children}</LegacySiteChrome>

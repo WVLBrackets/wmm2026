@@ -127,3 +127,20 @@ export async function getLiveStandingsSnapshot(year: number): Promise<LiveStandi
     standingsData,
   };
 }
+
+/**
+ * Years that have a live standings snapshot for the current environment (newest first).
+ */
+export async function listLiveStandingsYears(): Promise<number[]> {
+  await ensureTable();
+  const environment = getCurrentEnvironment();
+  const result = await sql`
+    SELECT year
+    FROM live_standings_snapshots
+    WHERE environment = ${environment}
+    ORDER BY year DESC
+  `;
+  return result.rows
+    .map((row) => Number((row as { year: number }).year))
+    .filter((y) => Number.isFinite(y));
+}

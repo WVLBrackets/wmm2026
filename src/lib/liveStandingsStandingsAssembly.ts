@@ -147,6 +147,7 @@ export function assembleLiveStandingsData(
       // `brackets.payment_status === 'paid'` — same `StandingsEntry.paid` as daily sheet column Y.
       paid: (b.paymentStatus ?? '') === 'paid',
       bracketId: b.id,
+      userId: b.userId,
     };
   });
 

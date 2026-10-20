@@ -21,14 +21,30 @@ import {
   evaluatePicksAccess,
   formatPriorYearWarningMessage,
   isBracketsAvailableFlag,
+  type PicksAccessResult,
 } from '@/lib/services/picksAccessPolicy';
+import {
+  evaluateVintageActionLock,
+  formatVintagePriorYearMessage,
+} from '@/lib/services/vintageActionLock';
 import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 import { useIsMdUp } from '@/hooks/useIsMdUp';
 import {
   DEFAULT_VINTAGE_PICKS_CONTENT,
   formatVintagePicksLabel,
+  vintagePicksChromeCssVars,
   type VintagePicksContent,
 } from '@/lib/vintage/picksContent';
+import {
+  DEFAULT_VINTAGE_STANDINGS_CONTENT,
+  standingsResultChromeStyle,
+  type VintageStandingsContent,
+} from '@/lib/vintage/standingsContent';
+import {
+  emptyPickResultKeyContext,
+  resolvePickResultTone,
+  type PickResultKeyContext,
+} from '@/lib/pickResultChrome';
 import PicksEditGear from '@/components/vintage/picks/PicksEditGear';
 import './vintage/picks/picks.css';
 
@@ -228,8 +244,24 @@ function formatInThePoolMessage(template: string, submittedCount: number): strin
 interface MyPicksLandingProps {
   /** Visual treatment: `legacy` (default) keeps the blue/white UI; `vintage` uses the cream/navy editorial layout. */
   variant?: 'legacy' | 'vintage';
-  /** Published My Picks CMS copy (timer labels, prior-year switch). */
+  /** Published My Picks CMS copy (timer, flavors for header/pool/empty). */
   picksCopy?: VintagePicksContent;
+  /**
+   * Published Standings CMS — shared FF/Champ result chrome (colors, sizes, border width).
+   */
+  standingsChrome?: VintageStandingsContent;
+  /**
+   * Homepage Tourney Tipoff ISO (`tournament.tipoffAt`).
+   * Vintage only — no Config Sheet datetime.
+   */
+  tipoffAt?: string;
+  /**
+   * Homepage Brackets Ready ISO (`tournament.bracketsReadyAt`, Selection Sunday).
+   * Vintage My Picks countdown target before brackets are published.
+   */
+  bracketsReadyAt?: string;
+  /** Homepage live-tourney message — shown on My Picks after tipoff. */
+  liveTourneyMessage?: string;
   /** When true, show admin edit gear on the vintage landing. */
   admin?: boolean;
   brackets?: Bracket[];
@@ -268,6 +300,8 @@ interface MyPicksLandingProps {
   availableYears?: number[];
   /** Switch My Picks viewing year (parent updates URL). */
   onViewingYearChange?: (year: number) => void;
+  /** Soft year switch in progress — keep landing mounted; dim list + disable year select. */
+  isYearSwitching?: boolean;
   /** Eye icon: open full-bracket modal when set; otherwise falls back to print tab. */
   onOpenFullBracketModal?: (bracket: Bracket) => void;
   /** Called after a Venmo payment request is recorded so the parent can refresh the bracket list. */
@@ -308,6 +342,10 @@ const FinalFourLogo = React.memo(function FinalFourLogo({
 export default function MyPicksLanding({
   variant = 'legacy',
   picksCopy = DEFAULT_VINTAGE_PICKS_CONTENT,
+  standingsChrome = DEFAULT_VINTAGE_STANDINGS_CONTENT,
+  tipoffAt = '',
+  bracketsReadyAt = '',
+  liveTourneyMessage = 'The tournament is underway!',
   admin = false,
   brackets = [],
   onCreateNew,
@@ -339,6 +377,7 @@ export default function MyPicksLanding({
   activeYear: activeYearProp,
   availableYears = [],
   onViewingYearChange,
+  isYearSwitching = false,
   onOpenFullBracketModal,
   onPaymentCreated,
 }: MyPicksLandingProps) {
@@ -373,6 +412,10 @@ export default function MyPicksLanding({
   /** Vintage layout renders only the matching breakpoint so test ids stay unique. */
   const isMdUp = useIsMdUp();
   const viewportSuffix: 'desktop' | 'mobile' = isMdUp ? 'desktop' : 'mobile';
+  /** KEY-derived chrome for FF / Champ (shared with Standings). */
+  const [resultKeyContext, setResultKeyContext] = useState<PickResultKeyContext>(
+    () => emptyPickResultKeyContext(),
+  );
 
   // Active year from config; viewing year from parent URL / props
   const activeYear =
@@ -386,44 +429,137 @@ export default function MyPicksLanding({
   const isHistoricalView = viewingYear !== activeYear;
   const historicalReadOnlyMessage = `Brackets from ${viewingYear} are read-only. Switch to ${activeYear} to create or edit.`;
 
+  /**
+   * Load KEY regional / semi / champ winners + eliminated list for result chrome.
+   */
+  useEffect(() => {
+    if (!isVintage) {
+      setResultKeyContext(emptyPickResultKeyContext());
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch(
+          `/api/live-standings?year=${encodeURIComponent(String(viewingYear))}`,
+          { cache: 'no-store' },
+        );
+        const json = await response.json();
+        if (cancelled) return;
+        if (!response.ok || !json.available || !json.standingsData) {
+          setResultKeyContext(emptyPickResultKeyContext());
+          return;
+        }
+        const data = json.standingsData as {
+          regionalChampionKey?: [string, string, string, string];
+          semifinalKey?: [string, string];
+          finalWinner?: string;
+          eliminatedTeams?: string[];
+        };
+        setResultKeyContext({
+          regionalChampionKey: data.regionalChampionKey ?? ['', '', '', ''],
+          semifinalKey: data.semifinalKey ?? ['', ''],
+          finalWinner: data.finalWinner ?? '',
+          eliminatedTeams: data.eliminatedTeams ?? [],
+        });
+      } catch {
+        if (!cancelled) setResultKeyContext(emptyPickResultKeyContext());
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isVintage, viewingYear]);
+
+  /** Current vs historic editorial flavor for vintage landing copy. */
+  const picksFlavor = isHistoricalView
+    ? picksCopy.flavors.historic
+    : picksCopy.flavors.current;
+  const picksTokenVars = { year: viewingYear, activeYear };
+
   const priorYearBannerMessage = useMemo(
     () =>
-      formatPriorYearWarningMessage(
-        siteConfig?.priorYearWarningMessage,
-        viewingYear,
-        activeYear
-      ),
-    [siteConfig?.priorYearWarningMessage, viewingYear, activeYear]
+      isVintage
+        ? formatVintagePriorYearMessage(picksCopy, viewingYear, activeYear)
+        : formatPriorYearWarningMessage(
+            siteConfig?.priorYearWarningMessage,
+            viewingYear,
+            activeYear,
+          ),
+    [
+      isVintage,
+      picksCopy,
+      siteConfig?.priorYearWarningMessage,
+      viewingYear,
+      activeYear,
+    ],
   );
 
   /**
-   * Unified mutation gate for the *active* year only.
-   * Prior-year viewing is always read-only (separate from publish / lock gates).
+   * Unified Changing-action gate.
+   * Vintage: Action Lock master reference (no Config Sheet stop_submit).
+   * Legacy: Config Sheet evaluatePicksAccess.
    */
-  const picksAccess = useMemo(
-    () =>
-      evaluatePicksAccess(siteConfig, {
+  const picksAccess = useMemo((): PicksAccessResult => {
+    if (isVintage) {
+      const lock = evaluateVintageActionLock({
+        action: 'changing',
+        bracketYear: viewingYear,
+        activeYear,
+        picksCopy,
+        tipoffAt,
+        bracketsReadyAt,
         tournamentJsonPresent: Boolean(tournamentData),
-        masterLockUnlocked: killSwitchEnabled,
-      }),
-    [siteConfig, tournamentData, killSwitchEnabled]
-  );
+        nowMs: getServerNowMs(),
+      });
+      return {
+        blocked: lock.blocked,
+        reasonCode: lock.reasonCode,
+        message: lock.message,
+      };
+    }
+    if (isHistoricalView) {
+      return {
+        blocked: true,
+        reasonCode: 'prior_year',
+        message: historicalReadOnlyMessage,
+      };
+    }
+    return evaluatePicksAccess(siteConfig, {
+      tournamentJsonPresent: Boolean(tournamentData),
+      masterLockUnlocked: killSwitchEnabled,
+    });
+  }, [
+    isVintage,
+    picksCopy,
+    tipoffAt,
+    bracketsReadyAt,
+    activeYear,
+    viewingYear,
+    isHistoricalView,
+    historicalReadOnlyMessage,
+    siteConfig,
+    tournamentData,
+    killSwitchEnabled,
+    getServerNowMs,
+  ]);
 
-  const accessBlockMessage = isHistoricalView
-    ? historicalReadOnlyMessage
-    : picksAccess.message ||
-      killSwitchMessage ||
-      siteConfig?.masterLockMessage ||
-      FALLBACK_CONFIG.masterLockMessage ||
-      'Bracket actions are temporarily locked by the administrator.';
+  const accessBlockMessage =
+    picksAccess.message ||
+    (isVintage
+      ? formatVintagePicksLabel(picksCopy.masterLockMessage, { year: activeYear })
+      : killSwitchMessage || siteConfig?.masterLockMessage) ||
+    FALLBACK_CONFIG.masterLockMessage ||
+    'Bracket actions are temporarily locked by the administrator.';
 
   const accessMessageClassName =
-    picksAccess.reasonCode === 'brackets_missing_json' || picksAccess.reasonCode === 'master_lock'
+    picksAccess.reasonCode === 'brackets_missing_json' ||
+    picksAccess.reasonCode === 'master_lock'
       ? 'text-sm text-red-600 mt-1 font-medium'
       : 'text-sm text-amber-800 mt-1 font-medium';
 
-  /** Mutations blocked for prior-year view or active-year access gates. */
-  const mutationsBlocked = isHistoricalView || picksAccess.blocked;
+  /** Changing actions blocked (View / Print / Email remain available). */
+  const mutationsBlocked = picksAccess.blocked;
 
   /** All brackets for the viewing year (parent usually pre-filters; keep a safety filter). */
   const bracketsForYear = useMemo(
@@ -455,7 +591,7 @@ export default function MyPicksLanding({
     [bracketsForYear]
   );
 
-  const entryCost = siteConfig?.entryCost ?? 5;
+  const entryCost = isVintage ? picksCopy.entryCost : (siteConfig?.entryCost ?? 5);
   const venmoUser = siteConfig?.venmoUser;
   const payCapabilityEnabled = siteConfig?.enablePayCapability?.toUpperCase() === 'YES';
 
@@ -704,13 +840,17 @@ export default function MyPicksLanding({
     const submittedCount = bracketsForYear.filter((bracket) => bracket.status === 'submitted').length;
     const inProgressCount = bracketsForYear.filter((bracket) => bracket.status === 'in_progress').length;
     const deletedCount = bracketsForYear.filter((bracket) => bracket.status === 'deleted').length;
-    const entryCost = siteConfig?.entryCost || 5;
+    const entryCost = isVintage
+      ? picksCopy.entryCost
+      : siteConfig?.entryCost || 5;
     const totalCost = submittedCount * entryCost;
-    return { submittedCount, inProgressCount, deletedCount, totalCost };
+    return { submittedCount, inProgressCount, deletedCount, totalCost, entryCost };
   };
 
   /**
    * Header status copy based on bracket counts.
+   * Vintage: My Picks CMS flavor cost lines (no Config Sheet welcome_*).
+   * Legacy: sheet welcome_* keys.
    * Returns null when New Bracket is disabled and the user has no entries — avoid
    * prompting them to click a disabled control.
    */
@@ -719,7 +859,18 @@ export default function MyPicksLanding({
 
     let message = '';
 
-    if (submittedCount === 0 && inProgressCount === 0) {
+    if (isVintage) {
+      if (submittedCount === 0 && inProgressCount === 0) {
+        if (mutationsBlocked) return null;
+        message = picksFlavor.costNoBrackets;
+      } else if (submittedCount > 0 && inProgressCount === 0) {
+        message = picksFlavor.costNoInProgress;
+      } else if (submittedCount === 0 && inProgressCount > 0) {
+        message = picksFlavor.costNoSubmitted;
+      } else {
+        message = picksFlavor.costBoth;
+      }
+    } else if (submittedCount === 0 && inProgressCount === 0) {
       if (mutationsBlocked) return null;
       message = siteConfig?.welcomeNoBrackets || 'Click New Bracket to start your first entry';
     } else if (submittedCount > 0 && inProgressCount === 0) {
@@ -736,7 +887,7 @@ export default function MyPicksLanding({
         `Your total cost so far is $${totalCost}. In Progress brackets are not included in the contest until submitted.`;
     }
 
-    return message
+    return formatVintagePicksLabel(message, picksTokenVars)
       .replace(/{Submitted}/g, submittedCount.toString())
       .replace(/{In Progress}/g, inProgressCount.toString())
       .replace(/{cost}/g, totalCost.toString());
@@ -796,25 +947,52 @@ export default function MyPicksLanding({
 
   /**
    * Target datetime for the My Picks countdown scoreboard.
-   * Pre-release (`brackets_available=NO`): `brackets_available_date_time`.
-   * Once available: `tournament_start_date` (tip-off).
+   * Vintage: homepage Brackets Ready (pre-publish) or Tourney Tipoff (published).
+   * Legacy: Config Sheet brackets_available_date_time / tournament_start_date.
    */
   const countdownTargetRaw = useMemo(() => {
+    if (isVintage) {
+      if (!picksCopy.bracketsPublished) {
+        return bracketsReadyAt.trim();
+      }
+      return tipoffAt.trim();
+    }
     if (!isBracketsAvailableFlag(siteConfig)) {
       return siteConfig?.bracketsAvailableDateTime?.trim() || '';
     }
     return siteConfig?.tournamentStartDate?.trim() || '';
   }, [
+    isVintage,
+    picksCopy.bracketsPublished,
+    bracketsReadyAt,
+    tipoffAt,
     siteConfig?.bracketsAvailable,
     siteConfig?.bracketsAvailableDateTime,
     siteConfig?.tournamentStartDate,
   ]);
 
+  /** Vintage: tipoff has arrived (active tournament) — swap timer for live message. */
+  const vintageTourneyLive = useMemo(() => {
+    if (!isVintage || !picksCopy.bracketsPublished) return false;
+    const tip = Date.parse(tipoffAt);
+    if (!Number.isFinite(tip)) return false;
+    if (countdownMs !== null && countdownTargetRaw === tipoffAt.trim()) {
+      return countdownMs <= 0;
+    }
+    return getServerNowMs() >= tip;
+  }, [
+    isVintage,
+    picksCopy.bracketsPublished,
+    tipoffAt,
+    countdownMs,
+    countdownTargetRaw,
+    getServerNowMs,
+  ]);
+
   /**
    * Convert a millisecond duration into HH:MM:SS or MM:SS.
    * Switches to MM:SS once remaining time is under one hour.
-   * For long horizons (>100 hours), display the sheet “X Days …” template using
-   * full remaining calendar days (not day-of-month delta).
+   * For long horizons (>100 hours): vintage uses “N days to go”; legacy uses sheet templates.
    *
    * @param useMobileDaysTemplate When true and the “X days away” branch applies, use `countdownTimerMessageMobile` (fallback: desktop message).
    */
@@ -826,6 +1004,9 @@ export default function MyPicksLanding({
 
     if (hours > 100) {
       const daysAway = Math.max(1, Math.ceil(remainingMs / (24 * 60 * 60 * 1000)));
+      if (isVintage) {
+        return `${daysAway} day${daysAway === 1 ? '' : 's'} to go`;
+      }
       const desktopTemplate = siteConfig?.countdownTimerMessage?.trim() || 'X Days Away';
       const mobileTemplate =
         siteConfig?.countdownTimerMessageMobile?.trim() || desktopTemplate;
@@ -865,21 +1046,28 @@ export default function MyPicksLanding({
     countdownMs !== null ? formatCountdown(countdownMs, false) : null;
   const countdownDisplayMobile =
     countdownMs !== null ? formatCountdown(countdownMs, true) : null;
+  /** Legacy only — vintage always shows Ready/Tipoff/Live status box (no sheet flag). */
   const showCountdownTimer = siteConfig?.showCountdownTimer?.trim().toUpperCase() === 'YES';
   // Countdown is independent of Application Master Lock (lock is a separate fail-safe).
   const scoreboardTimeDesktop = countdownDisplayDesktop || '00:00';
   const scoreboardTimeMobile = countdownDisplayMobile || '00:00';
-  const countdownHoverTitle = isBracketsAvailableFlag(siteConfig)
-    ? 'Countdown to Bracket Submission Deadline'
-    : 'Countdown to Bracket Publication';
+  const bracketsFieldOpen = isVintage
+    ? picksCopy.bracketsPublished
+    : isBracketsAvailableFlag(siteConfig);
+  const countdownHoverTitle = bracketsFieldOpen
+    ? 'Countdown to tipoff'
+    : 'Countdown to brackets ready';
 
-  /** Adminable vintage timer label (active year only; prior year uses switch control). */
+  /** Adminable vintage timer label: Ready message pre-publish, tipoff message after. */
   const vintageCountdownLabel = formatVintagePicksLabel(
-    isBracketsAvailableFlag(siteConfig)
+    bracketsFieldOpen
       ? picksCopy.countdownToTipoffLabel
       : picksCopy.countdownToBracketLabel,
     { year: viewingYear, activeYear },
   );
+
+  const vintageLiveMessage =
+    liveTourneyMessage.trim() || 'The tournament is underway!';
 
   /** Adminable prior-year switch copy that replaces the timer. */
   const vintagePriorYearSwitchLabel = formatVintagePicksLabel(
@@ -1042,21 +1230,37 @@ export default function MyPicksLanding({
     [bracketsForYear]
   );
 
-  /** Bold header + optional detail; sheet keys `in_the_pool_header` / `in_the_pool_message`. */
-  const inPoolCopy = {
-    header: siteConfig?.inThePoolHeader?.trim() || 'In the pool',
-    detail: formatInThePoolMessage(
-      siteConfig?.inThePoolMessage?.trim() || 'Submitted entries count toward the contest.',
-      submittedEntryCountForPoolMessage
-    ),
-  };
-  /** Sheet keys `not_in_the_pool_header` / `not_in_the_pool_message`. */
-  const outPoolCopy = {
-    header: siteConfig?.notInThePoolHeader?.trim() || 'Not in the pool',
-    detail:
-      siteConfig?.notInThePoolMessage?.trim() ||
-      'In progress and deleted entries are not included until you submit.',
-  };
+  /**
+   * Pool section banners: vintage uses CMS flavors; legacy keeps sheet keys
+   * `in_the_pool_header` / `in_the_pool_message` (and not-in equivalents).
+   */
+  const inPoolCopy = isVintage
+    ? {
+        header: formatVintagePicksLabel(picksFlavor.inPoolHeader, picksTokenVars),
+        detail: formatInThePoolMessage(
+          formatVintagePicksLabel(picksFlavor.inPoolDetail, picksTokenVars),
+          submittedEntryCountForPoolMessage
+        ),
+      }
+    : {
+        header: siteConfig?.inThePoolHeader?.trim() || 'In the pool',
+        detail: formatInThePoolMessage(
+          siteConfig?.inThePoolMessage?.trim() ||
+            'Submitted entries count toward the contest.',
+          submittedEntryCountForPoolMessage
+        ),
+      };
+  const outPoolCopy = isVintage
+    ? {
+        header: formatVintagePicksLabel(picksFlavor.outPoolHeader, picksTokenVars),
+        detail: formatVintagePicksLabel(picksFlavor.outPoolDetail, picksTokenVars),
+      }
+    : {
+        header: siteConfig?.notInThePoolHeader?.trim() || 'Not in the pool',
+        detail:
+          siteConfig?.notInThePoolMessage?.trim() ||
+          'In progress and deleted entries are not included until you submit.',
+      };
 
   /**
    * Open profile modal and load `/api/user/profile` (display name, email, stats).
@@ -1241,6 +1445,19 @@ export default function MyPicksLanding({
   };
 
   /**
+   * Class names for a row action button. Vintage colors come from CMS CSS vars
+   * via `data-vp-action`; legacy keeps Tailwind fill colors.
+   */
+  const rowActionClass = (disabled: boolean, legacyEnabled: string) =>
+    isVintage
+      ? 'v-picks__action-btn flex h-8 w-8 items-center justify-center transition-colors'
+      : `w-8 h-8 rounded flex items-center justify-center transition-colors ${
+          disabled
+            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            : legacyEnabled
+        }`;
+
+  /**
    * Row action controls (view / edit / submit / copy / delete / restore / return / email, plus inline confirmations).
    * Shared by the legacy table and the vintage table + mobile cards so handlers stay identical.
    *
@@ -1287,7 +1504,8 @@ export default function MyPicksLanding({
                                       onClick={() => handleEyeOpenFullBracketOrPrint(bracket)}
                                       logLocation={onOpenFullBracketModal ? 'FullBracketModal' : 'Print'}
                                       bracketId={number ? String(number).padStart(6, '0') : null}
-                                      className="w-8 h-8 rounded flex items-center justify-center transition-colors bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
+                                      className={rowActionClass(false, 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer')}
+                                      data-vp-action="view"
                                       title="View"
                                     >
                                       <Eye className="h-4 w-4" />
@@ -1300,11 +1518,11 @@ export default function MyPicksLanding({
                                       logLocation="Edit"
                                       bracketId={number ? String(number).padStart(6, '0') : null}
                                       disabled={Boolean(getInProgressEditButtonDisabledReason())}
-                                      className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
-                                        getInProgressEditButtonDisabledReason()
-                                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                          : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                                      }`}
+                                      className={rowActionClass(
+                                        Boolean(getInProgressEditButtonDisabledReason()),
+                                        'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer',
+                                      )}
+                                      data-vp-action="edit"
                                       title={getInProgressEditButtonDisabledReason() || 'Edit'}
                                     >
                                       <Edit className="h-4 w-4" />
@@ -1317,13 +1535,13 @@ export default function MyPicksLanding({
                                     logLocation="Submit"
                                     bracketId={number ? String(number).padStart(6, '0') : null}
                                     disabled={Boolean(submitDisabledReason)}
-                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
-                                      submitDisabledReason
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer'
-                                    }`}
+                                    className={rowActionClass(
+                                      Boolean(submitDisabledReason),
+                                      'bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer',
+                                    )}
                                     title={submitDisabledReason || 'Submit'}
                                     data-testid="submit-bracket-landing-button"
+                                    data-vp-action="submit"
                                   >
                                     <Send className="h-4 w-4" aria-hidden />
                                   </LoggedButton>
@@ -1332,13 +1550,13 @@ export default function MyPicksLanding({
                                     logLocation="Copy"
                                     bracketId={number ? String(number).padStart(6, '0') : null}
                                     disabled={Boolean(getActionDisabledReason('copy'))}
-                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
-                                      getActionDisabledReason('copy')
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
-                                    }`}
+                                    className={rowActionClass(
+                                      Boolean(getActionDisabledReason('copy')),
+                                      'bg-green-600 text-white hover:bg-green-700 cursor-pointer',
+                                    )}
                                     title={getActionDisabledReason('copy') || 'Copy'}
                                     data-testid="copy-bracket-button"
+                                    data-vp-action="copy"
                                   >
                                     <Copy className="h-4 w-4" />
                                   </LoggedButton>
@@ -1347,13 +1565,13 @@ export default function MyPicksLanding({
                                     logLocation="Delete"
                                     bracketId={number ? String(number).padStart(6, '0') : null}
                                     disabled={Boolean(getActionDisabledReason('delete')) || deletingBracketId === bracket.id || pendingDeleteBracketId === bracket.id}
-                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
-                                      getActionDisabledReason('delete') || deletingBracketId === bracket.id || pendingDeleteBracketId === bracket.id
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-red-600 text-white hover:bg-red-700 cursor-pointer'
-                                    }`}
+                                    className={rowActionClass(
+                                      Boolean(getActionDisabledReason('delete')) || deletingBracketId === bracket.id || pendingDeleteBracketId === bracket.id,
+                                      'bg-red-600 text-white hover:bg-red-700 cursor-pointer',
+                                    )}
                                     title={getActionDisabledReason('delete') || (deletingBracketId === bracket.id ? 'Deleting...' : 'Delete')}
                                     data-testid="delete-bracket-button"
+                                    data-vp-action="delete"
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </LoggedButton>
@@ -1398,9 +1616,10 @@ export default function MyPicksLanding({
                                     onClick={() => handleEyeOpenFullBracketOrPrint(bracket)}
                                     logLocation={onOpenFullBracketModal ? 'FullBracketModal' : 'Print'}
                                     bracketId={number ? String(number).padStart(6, '0') : null}
-                                    className="flex h-8 w-8 cursor-pointer items-center justify-center rounded bg-blue-600 text-white transition-colors hover:bg-blue-700"
+                                    className={rowActionClass(false, 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer')}
                                     title={onOpenFullBracketModal ? 'View' : 'View/Print'}
                                     data-testid="print-deleted-bracket-button"
+                                    data-vp-action="view"
                                   >
                                     <Eye className="h-4 w-4" />
                                   </LoggedButton>
@@ -1409,13 +1628,13 @@ export default function MyPicksLanding({
                                     logLocation="Copy"
                                     bracketId={number ? String(number).padStart(6, '0') : null}
                                     disabled={Boolean(getActionDisabledReason('copy'))}
-                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
-                                      getActionDisabledReason('copy')
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
-                                    }`}
+                                    className={rowActionClass(
+                                      Boolean(getActionDisabledReason('copy')),
+                                      'bg-green-600 text-white hover:bg-green-700 cursor-pointer',
+                                    )}
                                     title={getActionDisabledReason('copy') || 'Copy'}
                                     data-testid="copy-deleted-bracket-button"
+                                    data-vp-action="copy"
                                   >
                                     <Copy className="h-4 w-4" />
                                   </LoggedButton>
@@ -1428,13 +1647,13 @@ export default function MyPicksLanding({
                                     logLocation="Restore"
                                     bracketId={number ? String(number).padStart(6, '0') : null}
                                     disabled={Boolean(getActionDisabledReason('restore'))}
-                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
-                                      getActionDisabledReason('restore')
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-amber-600 text-white hover:bg-amber-700 cursor-pointer'
-                                    }`}
+                                    className={rowActionClass(
+                                      Boolean(getActionDisabledReason('restore')),
+                                      'bg-amber-600 text-white hover:bg-amber-700 cursor-pointer',
+                                    )}
                                     title={getActionDisabledReason('restore') || 'Restore to In Progress'}
                                     data-testid="restore-bracket-button"
+                                    data-vp-action="restore"
                                   >
                                     <RotateCcw className="h-4 w-4" />
                                   </LoggedButton>
@@ -1451,15 +1670,15 @@ export default function MyPicksLanding({
                                       deletingBracketId === bracket.id ||
                                       Boolean(pendingPermanentDeleteBracketId)
                                     }
-                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
-                                      getActionDisabledReason('delete') ||
-                                      deletingBracketId === bracket.id ||
-                                      pendingPermanentDeleteBracketId
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-red-900 text-white hover:bg-red-950 cursor-pointer'
-                                    }`}
+                                    className={rowActionClass(
+                                      Boolean(getActionDisabledReason('delete')) ||
+                                        deletingBracketId === bracket.id ||
+                                        Boolean(pendingPermanentDeleteBracketId),
+                                      'bg-red-900 text-white hover:bg-red-950 cursor-pointer',
+                                    )}
                                     title={getActionDisabledReason('delete') || 'Permanently delete'}
                                     data-testid="permanent-delete-bracket-button"
+                                    data-vp-action="permanentDelete"
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </LoggedButton>
@@ -1508,9 +1727,10 @@ export default function MyPicksLanding({
                                     onClick={() => handleEyeOpenFullBracketOrPrint(bracket)}
                                     logLocation={onOpenFullBracketModal ? 'FullBracketModal' : 'Print'}
                                     bracketId={number ? String(number).padStart(6, '0') : null}
-                                    className="flex w-8 h-8 cursor-pointer items-center justify-center rounded bg-blue-600 text-white transition-colors hover:bg-blue-700"
+                                    className={rowActionClass(false, 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer')}
                                     title={onOpenFullBracketModal ? 'View' : 'View/Print'}
                                     data-testid="print-bracket-button"
+                                    data-vp-action="view"
                                   >
                                     <Eye className="h-4 w-4" />
                                   </LoggedButton>
@@ -1527,19 +1747,19 @@ export default function MyPicksLanding({
                                       Boolean(returningBracketId) ||
                                       Boolean(pendingReturnBracketId)
                                     }
-                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
-                                      getActionDisabledReason('return') ||
-                                      returningBracketId ||
-                                      pendingReturnBracketId
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-amber-600 text-white hover:bg-amber-700 cursor-pointer'
-                                    }`}
+                                    className={rowActionClass(
+                                      Boolean(getActionDisabledReason('return')) ||
+                                        Boolean(returningBracketId) ||
+                                        Boolean(pendingReturnBracketId),
+                                      'bg-amber-600 text-white hover:bg-amber-700 cursor-pointer',
+                                    )}
                                     title={
                                       getActionDisabledReason('return') ||
                                       siteConfig?.returnActionHoverMessage?.trim() ||
                                       'Return to In Progress (you must submit again to re-enter the pool)'
                                     }
                                     data-testid="return-bracket-button"
+                                    data-vp-action="return"
                                   >
                                     <Undo2 className="h-4 w-4" />
                                   </LoggedButton>
@@ -1548,13 +1768,13 @@ export default function MyPicksLanding({
                                     logLocation="Copy"
                                     bracketId={number ? String(number).padStart(6, '0') : null}
                                     disabled={Boolean(getActionDisabledReason('copy'))}
-                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
-                                      getActionDisabledReason('copy')
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
-                                    }`}
+                                    className={rowActionClass(
+                                      Boolean(getActionDisabledReason('copy')),
+                                      'bg-green-600 text-white hover:bg-green-700 cursor-pointer',
+                                    )}
                                     title={getActionDisabledReason('copy') || 'Copy'}
                                     data-testid="copy-bracket-button"
+                                    data-vp-action="copy"
                                   >
                                     <Copy className="h-4 w-4" />
                                   </LoggedButton>
@@ -1562,9 +1782,10 @@ export default function MyPicksLanding({
                                     onClick={() => handleEmailBracket(bracket)}
                                     logLocation="Email"
                                     bracketId={number ? String(number).padStart(6, '0') : null}
-                                    className="bg-indigo-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-indigo-700 cursor-pointer transition-colors"
+                                    className={rowActionClass(false, 'bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer')}
                                     title="Email PDF"
                                     data-testid="email-bracket-button"
+                                    data-vp-action="email"
                                   >
                                     <Mail className="h-4 w-4" />
                                   </LoggedButton>
@@ -1606,7 +1827,7 @@ export default function MyPicksLanding({
    * Native select: calls `onViewingYearChange` directly, so the year picker modal is never opened.
    */
   const renderVintageYearSelect = () => {
-    const canPickYear = Boolean(onViewingYearChange);
+    const canPickYear = Boolean(onViewingYearChange) && !isYearSwitching;
     return (
       <div className="v-picks__year" data-testid={`picks-year-control-${viewportSuffix}`}>
         <label className="v-picks__sr-only" htmlFor={`picks-year-select-${viewportSuffix}`}>
@@ -1618,15 +1839,21 @@ export default function MyPicksLanding({
             className="v-picks__select"
             value={viewingYear}
             disabled={!canPickYear}
+            aria-busy={isYearSwitching || undefined}
             onChange={(e) => onViewingYearChange?.(Number(e.target.value))}
-            title={canPickYear ? 'Change tournament year' : undefined}
+            title={
+              isYearSwitching
+                ? 'Loading tournament year…'
+                : canPickYear
+                  ? 'Change tournament year'
+                  : undefined
+            }
             aria-label="Tournament year"
             data-testid={`picks-year-badge-${viewportSuffix}`}
           >
             {yearOptions.map((y) => (
               <option key={y} value={y} data-testid={`picks-year-option-${y}`}>
                 {y}
-                {y === activeYear ? ' (current)' : ''}
               </option>
             ))}
           </select>
@@ -1636,24 +1863,69 @@ export default function MyPicksLanding({
     );
   };
 
-  /** Four Final Four logos (TL, BL, TR, BR) with finalist / champion emphasis. */
+  /** Four Final Four logos (TL, BL, TR, BR) — same KEY chrome as Standings. */
   const renderVintageFinalFour = (finalFour: ReturnType<typeof getFinalFourTeams>) => {
+    // Sheet order TL, BL, TR, BR matches regionalChampionKey indices 0–3.
     const slots = [
-      { id: finalFour.topLeftId, logo: finalFour.topLeft, name: finalFour.topLeftName },
-      { id: finalFour.bottomLeftId, logo: finalFour.bottomLeft, name: finalFour.bottomLeftName },
-      { id: finalFour.topRightId, logo: finalFour.topRight, name: finalFour.topRightName },
-      { id: finalFour.bottomRightId, logo: finalFour.bottomRight, name: finalFour.bottomRightName },
+      {
+        id: finalFour.topLeftId,
+        logo: finalFour.topLeft,
+        name: finalFour.topLeftName,
+        sheetIndex: 0,
+      },
+      {
+        id: finalFour.bottomLeftId,
+        logo: finalFour.bottomLeft,
+        name: finalFour.bottomLeftName,
+        sheetIndex: 1,
+      },
+      {
+        id: finalFour.topRightId,
+        logo: finalFour.topRight,
+        name: finalFour.topRightName,
+        sheetIndex: 2,
+      },
+      {
+        id: finalFour.bottomRightId,
+        logo: finalFour.bottomRight,
+        name: finalFour.bottomRightName,
+        sheetIndex: 3,
+      },
     ];
+    const iKey = resultKeyContext.semifinalKey[0] ?? '';
+    const jKey = resultKeyContext.semifinalKey[1] ?? '';
+
     return (
       <div className="v-picks__ff" role="group" aria-label="Final Four">
-        {slots.map((slot, i) => {
+        {slots.map((slot) => {
+          const teamName = slot.name ?? '';
           const isFinalist =
-            Boolean(slot.id) && (slot.id === finalFour.finalist1Id || slot.id === finalFour.finalist2Id);
-          const isChamp = Boolean(finalFour.championId) && slot.id === finalFour.championId;
+            Boolean(slot.id) &&
+            (slot.id === finalFour.finalist1Id || slot.id === finalFour.finalist2Id);
+          const shadeTone = resolvePickResultTone(
+            teamName,
+            resultKeyContext.regionalChampionKey[slot.sheetIndex] ?? '',
+            resultKeyContext.eliminatedTeams,
+          );
+          const semiKey =
+            slot.id === finalFour.finalist1Id
+              ? iKey
+              : slot.id === finalFour.finalist2Id
+                ? jKey
+                : '';
+          const borderTone = isFinalist
+            ? resolvePickResultTone(
+                teamName,
+                semiKey,
+                resultKeyContext.eliminatedTeams,
+              )
+            : undefined;
           return (
             <div
-              key={i}
-              className={`v-picks__ff-cell${isFinalist ? ' is-finalist' : ''}${isChamp ? ' is-champ' : ''}`}
+              key={slot.sheetIndex}
+              className={`v-picks__ff-cell${isFinalist ? ' is-finalist' : ''}`}
+              data-status={shadeTone}
+              data-border={borderTone}
               title={slot.name || undefined}
             >
               <FinalFourLogo logoPath={slot.logo} teamName={slot.name} />
@@ -1664,63 +1936,76 @@ export default function MyPicksLanding({
     );
   };
 
-  /** Champion pick cell (distinct from the Final Four cluster). */
+  /** Champion pick cell — shade vs KEY championship; no finalist black frame. */
   const renderVintageChampion = (
     finalFour: ReturnType<typeof getFinalFourTeams>,
     showName: boolean,
-  ) => (
-    <div className="v-picks__champ">
-      <div
-        className={`v-picks__champ-cell${finalFour.champion ? ' is-set' : ''}`}
-        title={finalFour.championName || undefined}
-      >
-        <FinalFourLogo logoPath={finalFour.champion} teamName={finalFour.championName} />
+  ) => {
+    const shadeTone = resolvePickResultTone(
+      finalFour.championName ?? '',
+      resultKeyContext.finalWinner,
+      resultKeyContext.eliminatedTeams,
+    );
+    return (
+      <div className="v-picks__champ">
+        <div
+          className={`v-picks__champ-cell${finalFour.champion ? ' is-set' : ''}`}
+          data-status={shadeTone}
+          data-border={shadeTone !== 'pending' ? shadeTone : undefined}
+          title={finalFour.championName || undefined}
+        >
+          <FinalFourLogo logoPath={finalFour.champion} teamName={finalFour.championName} />
+        </div>
+        {showName && (
+          <span className="v-picks__champ-name">{finalFour.championName || 'Not picked'}</span>
+        )}
       </div>
-      {showName && (
-        <span className="v-picks__champ-name">{finalFour.championName || 'Not picked'}</span>
-      )}
-    </div>
-  );
+    );
+  };
 
-  /** Progress (in progress / deleted) or completion + payment marker (submitted). */
+  /**
+   * Submitted rows: Paid shows $; unpaid/pending is blank (no icon).
+   * @param iconOnly - Compact chip (no “Paid” word) for desktop Progress col / mobile.
+   */
+  const renderVintagePayment = (bracket: Bracket, iconOnly = false) => {
+    const paid = bracket.paymentStatus === 'paid';
+    const pending = bracket.paymentStatus === 'pending';
+    const title = paid
+      ? 'Payment Confirmed'
+      : pending
+        ? 'Payment Pending'
+        : 'Not Paid';
+    if (!paid) {
+      return (
+        <span
+          className={`v-picks__pay v-picks__pay--blank${iconOnly ? ' v-picks__pay--icon' : ''}`}
+          title={title}
+          aria-label={title}
+        />
+      );
+    }
+    return (
+      <span
+        className={`v-picks__pay v-picks__pay--paid${iconOnly ? ' v-picks__pay--icon' : ''}`}
+        title={title}
+        aria-label={title}
+      >
+        <DollarSign className="v-picks__icon" aria-hidden />
+        {!iconOnly ? <span>Paid</span> : null}
+      </span>
+    );
+  };
+
+  /** Progress bar (in progress / deleted) or payment marker (submitted). */
   const renderVintageProgress = (
     bracket: Bracket,
     progress: ReturnType<typeof calculateProgress>,
+    opts?: { paymentIconOnly?: boolean },
   ) => {
     if (bracket.status === 'submitted') {
       return (
         <div className="v-picks__progress v-picks__progress--done">
-          <span title="Submitted — complete" className="v-picks__done">
-            <CheckCircle className="v-picks__icon" aria-label="Submitted — bracket complete" />
-            <span>Complete</span>
-          </span>
-          {venmoUser && (
-            <span
-              className={`v-picks__pay v-picks__pay--${
-                bracket.paymentStatus === 'paid'
-                  ? 'paid'
-                  : bracket.paymentStatus === 'pending'
-                    ? 'pending'
-                    : 'unpaid'
-              }`}
-              title={
-                bracket.paymentStatus === 'paid'
-                  ? 'Payment Confirmed'
-                  : bracket.paymentStatus === 'pending'
-                    ? 'Payment Pending'
-                    : 'Not Paid'
-              }
-            >
-              <DollarSign className="v-picks__icon" aria-hidden />
-              <span>
-                {bracket.paymentStatus === 'paid'
-                  ? 'Paid'
-                  : bracket.paymentStatus === 'pending'
-                    ? 'Pending'
-                    : 'Unpaid'}
-              </span>
-            </span>
-          )}
+          {renderVintagePayment(bracket, opts?.paymentIconOnly)}
         </div>
       );
     }
@@ -1787,7 +2072,10 @@ export default function MyPicksLanding({
   const renderVintageSummary = () => {
     const counts = getBracketsInfo();
     const displayName = isMdUp ? session?.user?.name || 'User' : getFirstName(session?.user?.name);
-    const headerMessage = isMdUp ? siteConfig?.bracketsMessage : siteConfig?.mobileBracketsMessage;
+    const vintageHeaderNote = formatVintagePicksLabel(
+      picksFlavor.headerNote,
+      picksTokenVars
+    ).trim();
     const accessIsError =
       picksAccess.reasonCode === 'brackets_missing_json' || picksAccess.reasonCode === 'master_lock';
     return (
@@ -1805,8 +2093,11 @@ export default function MyPicksLanding({
             {renderMessageWithLineBreaks(accessBlockMessage)}
           </p>
         ) : (
-          !mutationsBlocked &&
-          headerMessage && <p className="v-picks__note">{renderMessageWithLineBreaks(headerMessage)}</p>
+          vintageHeaderNote && (
+            <p className="v-picks__note" data-testid="picks-header-note">
+              {renderMessageWithLineBreaks(vintageHeaderNote)}
+            </p>
+          )
         )}
 
         <ul className="v-picks__pills" aria-label="Entry counts">
@@ -1848,7 +2139,7 @@ export default function MyPicksLanding({
           className="v-picks__btn v-picks__btn--primary"
         >
           <Plus className="v-picks__icon" aria-hidden />
-          <span>New</span>
+          <span>New Bracket</span>
         </button>
         {renderVintageYearSelect()}
         <LoggedButton
@@ -1879,11 +2170,21 @@ export default function MyPicksLanding({
           type="button"
           className="v-picks__year-switch"
           data-testid="picks-switch-to-active-year"
+          disabled={isYearSwitching}
           onClick={() => onViewingYearChange?.(activeYear)}
         >
           {vintagePriorYearSwitchLabel}
         </button>
-      ) : showCountdownTimer ? (
+      ) : vintageTourneyLive ? (
+        <div
+          className="v-picks__timer v-picks__timer--live"
+          data-testid="picks-live-tourney"
+          title={vintageLiveMessage}
+        >
+          <span className="v-picks__timer-label">Live</span>
+          <span className="v-picks__timer-live-text">{vintageLiveMessage}</span>
+        </div>
+      ) : isVintage || showCountdownTimer ? (
         <div
           className="v-picks__timer"
           title={vintageCountdownLabel}
@@ -1898,40 +2199,43 @@ export default function MyPicksLanding({
     </div>
   );
 
-  /** Empty-state panel (same branching and test ids as legacy). */
-  const renderVintageEmptyState = () => (
-    <div className="v-picks__empty" data-testid="picks-empty-state">
-      <Trophy className="v-picks__empty-icon" aria-hidden />
-      {isHistoricalView ? (
-        <>
-          <h3 className="v-picks__empty-title">No entries for {viewingYear}</h3>
-          <p className="v-picks__empty-text" data-testid="picks-empty-historical-message">
-            You have no brackets for {viewingYear}. Switch to {activeYear} to create new picks.
-          </p>
-        </>
-      ) : showNotAvailableInEmptyState ? (
-        <p className="v-picks__empty-lead" data-testid="picks-empty-not-available-message">
-          {renderMessageWithLineBreaks(accessBlockMessage)}
-        </p>
-      ) : picksAccess.blocked ? (
-        <>
-          <h3 className="v-picks__empty-title">No brackets yet</h3>
-          <p className="v-picks__empty-text" data-testid="picks-empty-access-message">
+  /** Empty-state panel (CMS flavors for editorial; siteConfig for access gates). */
+  const renderVintageEmptyState = () => {
+    const emptyTitle = formatVintagePicksLabel(picksFlavor.emptyTitle, picksTokenVars);
+    const emptyBody = formatVintagePicksLabel(picksFlavor.emptyBody, picksTokenVars);
+    const emptyCta = formatVintagePicksLabel(picksCopy.emptyCtaBody, picksTokenVars);
+    return (
+      <div className="v-picks__empty" data-testid="picks-empty-state">
+        <Trophy className="v-picks__empty-icon" aria-hidden />
+        {isHistoricalView ? (
+          <>
+            <h3 className="v-picks__empty-title">{emptyTitle}</h3>
+            <p className="v-picks__empty-text" data-testid="picks-empty-historical-message">
+              {emptyBody}
+            </p>
+          </>
+        ) : showNotAvailableInEmptyState ? (
+          <p className="v-picks__empty-lead" data-testid="picks-empty-not-available-message">
             {renderMessageWithLineBreaks(accessBlockMessage)}
           </p>
-        </>
-      ) : (
-        <>
-          <h3 className="v-picks__empty-title">No brackets yet</h3>
-          <p className="v-picks__empty-text">
-            {isMdUp
-              ? 'Use the "New Bracket" button to create your first bracket.'
-              : 'Use the "New Bracket" button above to create your first bracket.'}
-          </p>
-        </>
-      )}
-    </div>
-  );
+        ) : picksAccess.blocked ? (
+          <>
+            <h3 className="v-picks__empty-title">{emptyTitle}</h3>
+            <p className="v-picks__empty-text" data-testid="picks-empty-access-message">
+              {renderMessageWithLineBreaks(accessBlockMessage)}
+            </p>
+          </>
+        ) : (
+          <>
+            <h3 className="v-picks__empty-title">{emptyTitle}</h3>
+            <p className="v-picks__empty-text" data-testid="picks-empty-cta-message">
+              {emptyCta}
+            </p>
+          </>
+        )}
+      </div>
+    );
+  };
 
   /** Status chips + search box. */
   const renderVintageFilters = () => {
@@ -2063,7 +2367,9 @@ export default function MyPicksLanding({
                 <th scope="col" className="v-picks__th">Status</th>
                 <th scope="col" className="v-picks__th">Progress</th>
                 <th scope="col" className="v-picks__th">Final Four</th>
-                <th scope="col" className="v-picks__th v-picks__th--champ">Champ</th>
+                <th scope="col" className="v-picks__th v-picks__th--champ" title="Champion">
+                  Champ
+                </th>
                 <th scope="col" className="v-picks__th v-picks__th--actions">Actions</th>
               </tr>
             </thead>
@@ -2112,8 +2418,12 @@ export default function MyPicksLanding({
                           {getStatusText(bracket.status)}
                         </button>
                       </td>
-                      <td className="v-picks__cell">{renderVintageProgress(bracket, ctx.progress)}</td>
-                      <td className="v-picks__cell">{renderVintageFinalFour(ctx.finalFour)}</td>
+                      <td className="v-picks__cell">
+                        {renderVintageProgress(bracket, ctx.progress)}
+                      </td>
+                      <td className="v-picks__cell v-picks__cell--ff">
+                        {renderVintageFinalFour(ctx.finalFour)}
+                      </td>
                       <td className="v-picks__cell v-picks__cell--champ">
                         {renderVintageChampion(ctx.finalFour, false)}
                       </td>
@@ -2139,8 +2449,16 @@ export default function MyPicksLanding({
 
     return (
       <div className="v-picks__cards">
+        <div className="v-picks__card-headers" aria-hidden>
+          <span className="v-picks__card-h v-picks__card-h--entry">Entry</span>
+          <span className="v-picks__card-h v-picks__card-h--pay">Status</span>
+          <span className="v-picks__card-h v-picks__card-h--ff">Final Four</span>
+          <span className="v-picks__card-h v-picks__card-h--champ">Champ</span>
+          <span className="v-picks__card-h v-picks__card-h--actions">Actions</span>
+        </div>
         {sortedBrackets.map((bracket, index) => {
           const ctx = rowContext(bracket, index);
+          const inPool = bracket.status === 'submitted';
           return (
             <React.Fragment key={bracket.id}>
               {ctx.showInHeader && (
@@ -2161,52 +2479,59 @@ export default function MyPicksLanding({
                 data-testid="picks-entry-card"
                 data-status={bracket.status}
               >
-                <div className="v-picks__card-head">
+                {/* Name | $ or status | FF 2×2 | Champ | Actions 2×2 */}
+                <div className="v-picks__card-row">
                   <button
                     type="button"
                     className="v-picks__entry-name"
                     onClick={() => openBracketFromLandingRow(bracket)}
-                    title={ctx.rowOpenTitle}
+                    title={`${ctx.rowOpenTitle} · ID ${ctx.paddedId}`}
                   >
                     {ctx.rawEntryName}
                   </button>
-                  <span className="v-picks__card-id">
-                    ID{' '}
-                    <span data-testid="bracket-row-entry-id" title={`Bracket ID ${ctx.paddedId}`}>
-                      {ctx.paddedId}
-                    </span>
-                  </span>
-                </div>
-                <div className="v-picks__card-meta">
-                  <button
-                    type="button"
-                    className={`${vintageStatusClass(bracket.status)} v-picks__status--button`}
-                    onClick={() => openBracketFromLandingRow(bracket)}
-                    title={ctx.rowOpenTitle}
-                  >
-                    {renderVintageStatusIcon(bracket.status)}
-                    {getStatusText(bracket.status)}
-                  </button>
-                  {renderVintageProgress(bracket, ctx.progress)}
-                </div>
-                <div className="v-picks__card-picks">
-                  <div className="v-picks__card-pick">
-                    <span className="v-picks__label">Final Four</span>
-                    {renderVintageFinalFour(ctx.finalFour)}
-                  </div>
-                  <div className="v-picks__card-pick">
-                    <span className="v-picks__label">Champion</span>
-                    {renderVintageChampion(ctx.finalFour, true)}
-                  </div>
-                </div>
-                <div className="v-picks__actions">
-                  {renderRowActionButtons(
-                    bracket,
-                    ctx.number,
-                    ctx.submitDisabledReason,
-                    ctx.accessForcesViewOnly,
+                  {inPool ? (
+                    renderVintagePayment(bracket, true)
+                  ) : (
+                    <button
+                      type="button"
+                      className={`${vintageStatusClass(bracket.status)} v-picks__status--button v-picks__status--square`}
+                      onClick={() => openBracketFromLandingRow(bracket)}
+                      title={getStatusText(bracket.status)}
+                      aria-label={getStatusText(bracket.status)}
+                    >
+                      {renderVintageStatusIcon(bracket.status)}
+                    </button>
                   )}
+                  {renderVintageFinalFour(ctx.finalFour)}
+                  <div
+                    className="v-picks__champ v-picks__champ--mobile"
+                    title={ctx.finalFour.championName || 'Champion'}
+                  >
+                    <div
+                      className={`v-picks__champ-cell${ctx.finalFour.champion ? ' is-set' : ''}`}
+                    >
+                      {ctx.finalFour.champion ? (
+                        <FinalFourLogo
+                          logoPath={ctx.finalFour.champion}
+                          teamName={ctx.finalFour.championName}
+                        />
+                      ) : (
+                        <Trophy className="v-picks__icon" aria-label="Champion not picked" />
+                      )}
+                    </div>
+                  </div>
+                  <div className="v-picks__actions v-picks__actions--grid">
+                    {renderRowActionButtons(
+                      bracket,
+                      ctx.number,
+                      ctx.submitDisabledReason,
+                      ctx.accessForcesViewOnly,
+                    )}
+                  </div>
                 </div>
+                <span className="v-picks__sr-only" data-testid="bracket-row-entry-id">
+                  {ctx.paddedId}
+                </span>
               </article>
             </React.Fragment>
           );
@@ -2214,6 +2539,14 @@ export default function MyPicksLanding({
       </div>
     );
   };
+
+  /** Vintage in-place loader while a year soft-switch is in flight (hides empty-state flash). */
+  const renderVintageYearLoading = () => (
+    <div className="v-picks__loading v-picks__loading--year" data-testid="picks-year-loading">
+      <div className="v-picks__loading-spinner" aria-hidden />
+      <p className="v-picks__loading-text">Loading tournament…</p>
+    </div>
+  );
 
   /** Full vintage landing body (rendered inside the `.v-picks` root; modals are shared below). */
   const renderVintageLanding = () => (
@@ -2233,7 +2566,9 @@ export default function MyPicksLanding({
       </section>
 
       <section className="v-picks__list" aria-label="Your entries">
-        {bracketsForYear.length === 0 ? (
+        {isYearSwitching ? (
+          renderVintageYearLoading()
+        ) : bracketsForYear.length === 0 ? (
           renderVintageEmptyState()
         ) : (
           <>
@@ -2266,7 +2601,23 @@ export default function MyPicksLanding({
   );
 
   return (
-    <div className={isVintage ? 'v-picks' : 'min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100'}>
+    <div
+      className={
+        isVintage
+          ? `v-picks${isYearSwitching ? ' v-picks--year-switching' : ''}`
+          : 'min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100'
+      }
+      style={
+        isVintage
+          ? ({
+              ...vintagePicksChromeCssVars(picksCopy),
+              ...standingsResultChromeStyle(standingsChrome),
+            } as React.CSSProperties)
+          : undefined
+      }
+      aria-busy={isVintage && isYearSwitching ? true : undefined}
+      data-testid={isVintage && isYearSwitching ? 'picks-year-switching' : undefined}
+    >
       {isVintage ? (
         renderVintageLanding()
       ) : (
@@ -2546,7 +2897,12 @@ export default function MyPicksLanding({
         {/* Brackets List */}
         <div className="bg-white rounded-lg shadow-lg p-6">
 
-          {bracketsForYear.length === 0 ? (
+          {isYearSwitching ? (
+            <div className="text-center py-12" data-testid="picks-year-loading">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
+              <p className="mt-4 text-gray-600">Loading tournament...</p>
+            </div>
+          ) : bracketsForYear.length === 0 ? (
             <div className="text-center py-12" data-testid="picks-empty-state">
               <Trophy className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               {isHistoricalView ? (
