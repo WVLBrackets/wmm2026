@@ -75,12 +75,18 @@ async function main() {
     await page.getByRole('combobox', { name: 'East seed 16 slot type' }).selectOption('playin');
     await page.getByRole('combobox', { name: 'East seed 16, play-in school 2' }).fill('Texas');
     await page.getByRole('option', { name: 'Texas', exact: true }).click();
+    const label = page.getByRole('textbox', { name: 'East seed 16 combined display name' });
+    assert.equal(await label.getAttribute('placeholder'), 'Siena / Texas');
+    await label.fill('SIE / TEX');
     await page.getByRole('button', { name: 'Save Draft', exact: true }).click();
     await page.getByRole('status').filter({ hasText: 'Draft saved' }).waitFor();
+    await page.reload();
+    await page.getByRole('textbox', { name: 'East seed 16 combined display name' }).waitFor();
+    assert.equal(await page.getByRole('textbox', { name: 'East seed 16 combined display name' }).inputValue(), 'SIE / TEX');
     const draftPublic = await context.request.get(base + '/api/tournament-data?year=2027');
     assert.equal(draftPublic.status(), 404, 'Draft is not public');
     await page.getByRole('button', { name: 'Preview Bracket', exact: true }).click();
-    await page.getByText('Siena / Texas', { exact: true }).waitFor();
+    await page.getByLabel('Tournament preview').getByText('SIE / TEX', { exact: true }).waitFor();
     await mkdir('test-results/tournament', { recursive: true });
     await page.screenshot({ path: 'test-results/tournament/builder-desktop.png', fullPage: true });
     await page.setViewportSize({ width: 390, height: 844 });
@@ -90,7 +96,14 @@ async function main() {
     await page.getByRole('status').filter({ hasText: 'published to local' }).waitFor();
     const unresolved = await (await context.request.get(base + '/api/tournament-data?year=2027')).json() as TournamentData;
     const slot = unresolved.regions[0].teams.find(t => t.playIn)!;
-    assert.equal(slot.name, 'Siena / Texas');
+    assert.equal(slot.name, 'SIE / TEX');
+    assert.equal(slot.playIn?.displayName, 'SIE / TEX');
+    // Clearing the override restores auto mode and persists through publish.
+    await page.getByRole('button', { name: 'Use automatic label', exact: true }).click();
+    await page.getByRole('button', { name: 'Publish to local', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'published to local' }).waitFor();
+    const automatic = await (await context.request.get(base + '/api/tournament-data?year=2027')).json() as TournamentData;
+    assert.equal(automatic.regions[0].teams.find(t => t.id === slot.id)?.name, 'Siena / Texas');
     assert.match(slot.logo, /^data:image\/svg/);
     const workspace = await (await context.request.get(base + '/api/admin/tournament-builder?year=2027')).json();
     const saved = await context.request.put(base + '/api/admin/first-four', { headers: { 'x-csrf-token': csrf }, data: { year: 2027, revision: workspace.revision, results: { [slot.id]: '65' } } });

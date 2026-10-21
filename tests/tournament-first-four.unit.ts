@@ -11,6 +11,7 @@ import { addCombinedPlayInLogos } from '../src/lib/tournamentLogosServer';
 import { applyDisplayNamesToTournamentData } from '../src/lib/teamDisplayName';
 import { uniqueTournamentSchools } from '../src/components/admin/TournamentSchoolPicker';
 import { saveTournamentWorkspace, tournamentScope } from '../src/lib/repositories/tournamentRepository';
+import { getPlayInDisplayName, playInLabelWidth, PLAY_IN_LABEL_WIDTH } from '../src/lib/playInDisplayName';
 import type { TournamentData } from '../src/types/tournament';
 import type { BracketWithUser } from '../src/lib/types/database';
 
@@ -25,6 +26,48 @@ async function field(): Promise<TournamentData> {
   }
   return canonicalTournament(d);
 }
+
+test('long pairs use recognized abbreviations, unknown schools stay readable, and overrides survive enrichment', async () => {
+  const pair = [
+    { id: '2193', name: 'East Tennessee State', logo: '/logos/teams/2193.png' },
+    { id: '2430', name: 'North Carolina Greensboro', logo: '/logos/teams/2430.png' },
+  ] as [import('../src/types/tournament').PlayInSchool, import('../src/types/tournament').PlayInSchool];
+  assert.equal(getPlayInDisplayName(pair), 'ETSU / UNCG');
+  assert.equal(getPlayInDisplayName([{ ...pair[0], id: '150', name: 'Duke' }, { ...pair[1], id: '61', name: 'Georgia' }]), 'Duke / Georgia');
+  // Equal character counts can have very different widths.
+  assert.ok(playInLabelWidth('WWWW') > playInLabelWidth('iiii'));
+  const unknown = getPlayInDisplayName(pair.map(t => ({ ...t, id: `999${t.id}` })) as typeof pair);
+  assert.ok(playInLabelWidth(unknown) <= PLAY_IN_LABEL_WIDTH);
+  assert.ok(unknown.includes(' / '));
+  assert.ok(!unknown.includes('NOCAGR'), 'Does not invent initials');
+  const d = await field();
+  const old = d.regions[0].teams.find(t => t.playIn)!;
+  const slot = createPlayInTeam(d.year, d.regions[0].position, old.seed, pair, '  East Tenn / UNCG  ');
+  d.regions[0].teams = d.regions[0].teams.map(t => t.id === old.id ? slot : t);
+  const canonical = canonicalTournament(d);
+  const stored = canonical.regions[0].teams.find(t => t.id === slot.id)!;
+  assert.equal(stored.playIn?.displayName, 'East Tenn / UNCG');
+  const enriched = applyDisplayNamesToTournamentData(resolveFirstFour(canonical, {}), new Map(pair.map(t => [t.id, `${t.name} Full`])));
+  assert.equal(enriched.regions[0].teams.find(t => t.id === slot.id)?.name, 'East Tenn / UNCG');
+  const automatic = structuredClone(canonical);
+  delete automatic.regions[0].teams.find(t => t.id === slot.id)!.playIn!.displayName;
+  assert.equal(resolveFirstFour(automatic, {}).regions[0].teams.find(t => t.id === slot.id)?.name, 'ETSU / UNCG');
+  const invalid = structuredClone(canonical);
+  invalid.regions[0].teams.find(t => t.id === slot.id)!.playIn!.displayName = 'x'.repeat(41);
+  assert.match(validateTournamentDefinition(invalid).join(' '), /combined display name/);
+  // Monday's stored pick and Thursday's newly created pick use the same id.
+  const monday = { game1: slot.id };
+  for (const school of pair) {
+    const resolved = resolveFirstFour(canonical, { [slot.id]: school.id });
+    const thursdaySlot = resolved.regions[0].teams.find(t => t.id === slot.id)!;
+    assert.equal(thursdaySlot.name, school.name);
+    const thursday = { game1: thursdaySlot.id };
+    const key = { game1: slot.id };
+    const games = [{ id: 'game1', round: 'Round of 64', gameNumber: 1, team1: thursdaySlot, team2: { id: 'other', name: 'Opponent', seed: 1, logo: '' } }];
+    assert.equal(scorePicksAgainstKey(monday, key, games), scorePicksAgainstKey(thursday, key, games));
+    assert.ok(scorePicksAgainstKey(monday, key, games) > 0);
+  }
+});
 
 test('four real pairs create 64 slots and exactly 63 scored games', async () => {
   const d = await field();
@@ -110,7 +153,17 @@ test('draft/publish/results have revisions, audit history, environment isolation
     assert.equal((await db.query('SELECT published FROM tournament_workspaces')).rows[0].published.name, d.name);
     await db.query("INSERT INTO brackets VALUES ('entry','local',2027)");
     await assert.rejects(saveTournamentWorkspace({ year: 2027, revision: 4, actor, action: 'publish', definition: next }, db), /already has brackets/);
-    const corrected = await saveTournamentWorkspace({ year: 2027, revision: 4, actor, action: 'results', results: {} }, db);
+    const relabeled = structuredClone(d);
+    const relabeledSlot = relabeled.regions[0].teams.find(t => t.playIn)!;
+    relabeledSlot.playIn!.displayName = 'Short pair';
+    relabeledSlot.name = 'Short pair';
+    const republished = await saveTournamentWorkspace({ year: 2027, revision: 4, actor, action: 'publish', definition: canonicalTournament(relabeled) }, db);
+    assert.equal(republished.published?.regions[0].teams.find(t => t.id === slot.id)?.playIn?.displayName, 'Short pair');
+    assert.deepEqual(republished.results, results, 'Label-only publication preserves First Four result');
+    const changedSchool = structuredClone(relabeled);
+    changedSchool.regions[0].teams.find(t => t.playIn)!.playIn!.teams[0].id = '999999';
+    await assert.rejects(saveTournamentWorkspace({ year: 2027, revision: 5, actor, action: 'publish', definition: canonicalTournament(changedSchool) }, db), /already has brackets/);
+    const corrected = await saveTournamentWorkspace({ year: 2027, revision: 5, actor, action: 'results', results: {} }, db);
     assert.deepEqual(corrected.results, {});
     process.env.APP_ENV = 'preview'; process.env.VERCEL_GIT_COMMIT_REF = 'feature/test';
     const featureScope = tournamentScope();

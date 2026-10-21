@@ -7,6 +7,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { getCSRFHeaders } from '@/hooks/useCSRF';
 import { getTeamReferenceDisplayName } from '@/lib/teamDisplayName';
+import { getPlayInDisplayName, PLAY_IN_LABEL_MAX_LENGTH } from '@/lib/playInDisplayName';
 import { canonicalTournament, createPlayInTeam, MATCHUP_SEEDS, REGION_POSITIONS, validateTournamentDefinition } from '@/lib/tournamentDefinition';
 import TournamentSchoolPicker, { uniqueTournamentSchools } from '@/components/admin/TournamentSchoolPicker';
 import type { PlayInSchool, TournamentData, TournamentTeam } from '@/types/tournament';
@@ -144,6 +145,23 @@ export default function TournamentBuilderPage() {
               const pair = [...current.playIn!.teams] as [PlayInSchool, PlayInSchool]; pair[index] = school;
               return createPlayInTeam(year, region!.position, seed, pair);
             })} />)}
+          <label className="block text-xs text-slate-700">Combined display name (optional)
+            <input aria-label={`${region!.name || region!.position} seed ${seed} combined display name`}
+              value={t.playIn.displayName ?? ''} placeholder={getPlayInDisplayName(t.playIn.teams)} maxLength={PLAY_IN_LABEL_MAX_LENGTH}
+              disabled={busy || readOnly}
+              onChange={e => updateSlot(seed, current => ({ ...current,
+                name: getPlayInDisplayName(current.playIn!.teams, e.target.value),
+                playIn: { ...current.playIn!, displayName: e.target.value },
+              }))}
+              className="mt-1 w-full rounded border border-slate-300 p-2 text-sm" />
+          </label>
+          <p className="break-words text-xs text-slate-600" aria-label={`${region!.name || region!.position} seed ${seed} label preview`}>
+            Shown as: <strong>{getPlayInDisplayName(t.playIn.teams, t.playIn.displayName)}</strong>
+          </p>
+          {t.playIn.displayName && <button type="button" disabled={busy || readOnly}
+            onClick={() => updateSlot(seed, current => createPlayInTeam(year, region!.position, seed, current.playIn!.teams))}
+            className="text-xs text-blue-700 underline">Use automatic label</button>}
+          <p className="text-xs text-slate-500">Leave blank for automatic shortening. Changing either school resets the label. After the play-in, the winner’s normal name is shown.</p>
           <p className="text-xs text-slate-500">The advancing school fills this slot. No play-in points.</p>
         </> : <TournamentSchoolPicker label={`${region!.name || region!.position} seed ${seed}`} value={t} schools={schools} disabled={busy || readOnly}
           onChange={school => updateSlot(seed, () => ({ ...school, seed }))} />}
@@ -209,7 +227,7 @@ export default function TournamentBuilderPage() {
               const t = r.teams.find(team => team.seed === seed)!;
               return <div key={seed} className="flex items-center gap-2 py-1"><span>{seed}</span>
                 {(t.playIn?.teams || [t]).map(s => s.logo ? <Image key={s.id} src={s.logo} alt="" width={20} height={20} unoptimized className="h-5 w-5 object-contain" /> : null)}
-                <span>{t.playIn ? t.playIn.teams.map(s => s.name).join(' / ') : t.name}</span>
+                <span title={t.playIn?.teams.map(s => s.name).join(' / ')}>{t.playIn ? getPlayInDisplayName(t.playIn.teams, t.playIn.displayName) : t.name}</span>
               </div>;
             })}
           </div>)}

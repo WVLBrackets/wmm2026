@@ -75,7 +75,7 @@ export async function saveTournamentWorkspace(options: {
     if (options.action === 'publish') {
       const entries = await client.query('SELECT id FROM brackets WHERE environment=$1 AND year=$2 LIMIT 1', [getAppEnvironment(), options.year]);
       if (entries.rows.length && (!published || !sameTournamentDefinition(published, options.definition!))) {
-        throw new TournamentConflict('This year already has brackets or KEY results. Its field cannot be replaced. First Four results can still be updated.');
+        throw new TournamentConflict('This year already has brackets or KEY results. Its field cannot be replaced. Combined display names and First Four results can still be updated.');
       }
       published = options.definition!;
       draft = options.definition!;
