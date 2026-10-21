@@ -56,3 +56,24 @@ When Google Fonts is unreachable, an offline compile check can use `NEXT_FONT_GO
 The untouched staging baseline at `f7d2954` already fails four vintage content/handbook assertions (date validation, countdown copy, handbook icon default and prize amount). These are separate from the tournament feature.
 
 Local verification completed: all four feature test groups pass; the authenticated desktop/mobile browser flow passes through actual new API handlers and in-memory SQL, including the explicit First Four save/correction UI and unauthorized/CSRF rejection. TypeScript and focused ESLint checks pass. The complete Next production build passes with the offline Google Font fixture; an unmodified-font build is blocked by this environment's Google Fonts network access. No remote database migration was run.
+
+## Combined play-in labels
+
+Unresolved pairs keep full school names when they fit a shared 140px label budget
+(14px Arial glyph measurements, summed consistently on server and client).
+Long pairs use recognized ESPN abbreviations by school ID: for example, ETSU / UNCG.
+Unknown schools use readable word shortening and, if needed, ellipses rather than
+invented initials. The builder previews the result and provides an optional
+40-character combined display name override. Clearing it restores automatic mode;
+changing either participant clears the override to avoid stale labels.
+
+The bundled abbreviation catalog covers 362 teams, retrieved 2026-10-21 from
+https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/teams?limit=1000.
+It requires no runtime ESPN request or reference-database changes. The catalog can
+be refreshed from that feed when new schools join. Glyph widths are a conservative
+fit estimate; actual UI fonts can differ, and an admin override may be longer.
+
+Only the combined label may be republished after entries exist. School identities,
+seeds, and the rest of the published field remain frozen. First Four results stay
+separate; the winner's normal display name and logo replace either automatic or
+custom combined labels. Existing saved picks and scores retain their slot IDs.

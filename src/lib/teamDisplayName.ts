@@ -1,5 +1,6 @@
 import type { TeamReferenceData } from '@/lib/types/database';
 import type { TournamentData, TournamentTeam } from '@/types/tournament';
+import { getPlayInDisplayName } from './playInDisplayName';
 /**
  * Resolved label shown to users for a team reference row.
  * Uses `displayName` when set and non-empty; otherwise falls back to official `name` (School).
@@ -62,7 +63,7 @@ export function applyDisplayNamesToTournamentData(
     ...team,
     name: team.playIn ? (team.playIn.winnerId
       ? idToDisplay.get(team.playIn.winnerId) ?? team.name
-      : team.playIn.teams.map(t => idToDisplay.get(t.id) ?? t.name).join(' / '))
+      : getPlayInDisplayName(team.playIn.teams.map(t => ({ ...t, name: idToDisplay.get(t.id) ?? t.name })) as typeof team.playIn.teams, team.playIn.displayName))
       : idToDisplay.get(team.id) ?? team.name,
   });
   return {

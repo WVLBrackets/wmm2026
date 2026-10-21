@@ -8,6 +8,8 @@ export interface TournamentTeam {
   /** Stable bracket slot id remains `id`; these are real school identities. */
   playIn?: {
     teams: [PlayInSchool, PlayInSchool];
+    /** Optional admin label for the unresolved pair only; never used as pick identity. */
+    displayName?: string;
     winnerId?: string;
   };
 }

@@ -1,4 +1,5 @@
 import type { PlayInSchool, TournamentData, TournamentTeam } from '@/types/tournament';
+import { getPlayInDisplayName, PLAY_IN_LABEL_MAX_LENGTH } from './playInDisplayName';
 
 export const MATCHUP_SEEDS = [1, 16, 8, 9, 5, 12, 4, 13, 6, 11, 3, 14, 7, 10, 2, 15];
 export const REGION_POSITIONS = ['Top Left', 'Bottom Left', 'Top Right', 'Bottom Right'];
@@ -9,11 +10,12 @@ export function playInSlotId(year: string, position: string, seed: number): stri
   return `playin:${year}:${position.toLowerCase().replace(/ /g, '-')}:${seed}`;
 }
 
-export function createPlayInTeam(year: string, position: string, seed: number, teams: [PlayInSchool, PlayInSchool]): TournamentTeam {
+export function createPlayInTeam(year: string, position: string, seed: number, teams: [PlayInSchool, PlayInSchool], displayName?: string): TournamentTeam {
+  const label = displayName?.trim();
   return {
     id: playInSlotId(year, position, seed), seed,
-    name: teams.map(t => t.name).join(' / '),
-    logo: '/images/basketball icon.png', playIn: { teams },
+    name: getPlayInDisplayName(teams, label),
+    logo: '/images/basketball icon.png', playIn: { teams, ...(label ? { displayName: label } : {}) },
   };
 }
 
@@ -26,9 +28,9 @@ export function resolveFirstFour(data: TournamentData, results: FirstFourResults
       const winner = team.playIn.teams.find(t => t.id === results[team.id]);
       return {
         ...team,
-        name: winner?.name ?? team.playIn.teams.map(t => t.name).join(' / '),
+        name: winner?.name ?? getPlayInDisplayName(team.playIn.teams, team.playIn.displayName),
         logo: winner?.logo ?? '/images/basketball icon.png',
-        playIn: { teams: team.playIn.teams, ...(winner ? { winnerId: winner.id } : {}) },
+        playIn: { teams: team.playIn.teams, ...(team.playIn.displayName ? { displayName: team.playIn.displayName } : {}), ...(winner ? { winnerId: winner.id } : {}) },
       };
     }) })),
   };
@@ -44,7 +46,7 @@ export function canonicalTournament(data: TournamentData): TournamentData {
         const team = region.teams.find(t => t.seed === seed)!;
         const school = (t: PlayInSchool): PlayInSchool => ({ id: t.id, name: t.name.trim(), logo: t.logo });
         return team.playIn
-          ? createPlayInTeam(data.year, position, seed, team.playIn.teams.map(school) as [PlayInSchool, PlayInSchool])
+          ? createPlayInTeam(data.year, position, seed, team.playIn.teams.map(school) as [PlayInSchool, PlayInSchool], team.playIn.displayName)
           : { ...school(team), seed };
       }) };
     }),
@@ -103,6 +105,9 @@ export function validateTournamentDefinition(value: unknown, complete = true): s
         playIns++;
         if (!Array.isArray(t.playIn.teams) || t.playIn.teams.length !== 2 || t.id !== playInSlotId(d.year, r.position, t.seed)) { errors.push(`${label}: invalid play-in slot.`); continue; }
         t.playIn.teams.forEach(s => checkSchool(s, label));
+        if (t.playIn.displayName !== undefined && (typeof t.playIn.displayName !== 'string' || t.playIn.displayName.length > PLAY_IN_LABEL_MAX_LENGTH || /[\r\n\t\x00-\x1f\x7f]/.test(t.playIn.displayName))) {
+          errors.push(`${label}: combined display name must be a single line of at most ${PLAY_IN_LABEL_MAX_LENGTH} characters.`);
+        }
       } else checkSchool(t, label);
     }
   }
@@ -118,7 +123,10 @@ export function validateFirstFourResults(data: TournamentData, results: unknown)
   return Object.entries(results).every(([id, winner]) => slots.some(t => t.id === id && t.playIn!.teams.some(s => s.id === winner)));
 }
 
-/** Entry creation freezes the entire published field, including names and seeds. */
+/** Entries freeze the field. Only the unresolved pair's presentation label may change. */
 export function sameTournamentDefinition(a: TournamentData, b: TournamentData): boolean {
-  return JSON.stringify(a) === JSON.stringify(b);
+  const field = (d: TournamentData) => ({ ...d, regions: d.regions.map(r => ({ ...r,
+    teams: r.teams.map(t => t.playIn ? { ...t, name: '', playIn: { teams: t.playIn.teams } } : t),
+  })) });
+  return JSON.stringify(field(a)) === JSON.stringify(field(b));
 }
