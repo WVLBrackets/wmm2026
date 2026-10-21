@@ -36,6 +36,12 @@ import {
 import IconPickerModal from "../IconPickerModal";
 import VintageAdminNav from "../VintageAdminNav";
 import "../editor.css";
+import {
+  SectionPanel,
+  SectionRail,
+  sectionDomId,
+  useSectionNav,
+} from "../sectionNav";
 
 type QuickFactIconKey = "feeIcon" | "deadlineIcon" | "ctaIcon";
 
@@ -49,6 +55,18 @@ const tabs = [
   VINTAGE_INFO_EDITOR_TAB.questions,
   VINTAGE_INFO_EDITOR_TAB.revisions,
 ] as const;
+
+/**
+ * Stable DOM id of a stacked section from its tab label
+ * (e.g. "Quick facts" → `ve-section-quick-facts`).
+ */
+function sectionIdFor(label: string): string {
+  return sectionDomId(label);
+}
+
+/** Ordered sections for the sticky left rail. */
+const SECTIONS = tabs.map((label) => ({ label, id: sectionIdFor(label) }));
+const SECTION_IDS = SECTIONS.map((section) => section.id);
 
 /**
  * Set a nested string/boolean/number field on the handbook draft by dotted path.
@@ -85,7 +103,6 @@ export default function VintageInfoEditor() {
   const [content, setContent] = useState<VintageInfoContent>(
     structuredClone(DEFAULT_VINTAGE_INFO_CONTENT),
   );
-  const [tab, setTab] = useState<(typeof tabs)[number]>(tabs[0]);
   const [dirty, setDirty] = useState(false);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -95,6 +112,8 @@ export default function VintageInfoEditor() {
   const [iconPickerKey, setIconPickerKey] = useState<QuickFactIconKey | null>(
     null,
   );
+
+  const { activeId, jumpTo } = useSectionNav(SECTION_IDS, Boolean(state));
 
   useEffect(() => {
     let active = true;
@@ -121,15 +140,15 @@ export default function VintageInfoEditor() {
   }, []);
 
   /**
-   * Open the handbook editor tab requested by on-page edit gears.
+   * Scroll to the handbook section requested by on-page edit gears.
    */
   useEffect(() => {
     if (focusApplied.current || !state) return;
     const focus = parseVintageInfoAdminFocus(searchParams?.get("focus"));
     if (!focus) return;
     focusApplied.current = true;
-    setTab(infoFocusToTab(focus));
-  }, [state, searchParams]);
+    jumpTo(sectionIdFor(infoFocusToTab(focus)));
+  }, [state, searchParams, jumpTo]);
 
   /**
    * Update one CMS field and mark the draft dirty.
@@ -401,26 +420,16 @@ export default function VintageInfoEditor() {
       )}
 
       <div className="ve-workspace">
-        <nav className="ve-tabs" aria-label="Handbook sections">
-          {tabs.map((name, index) => (
-            <button
-              key={name}
-              type="button"
-              aria-current={tab === name ? "page" : undefined}
-              data-testid={`vintage-info-tab-${index}`}
-              onClick={() => setTab(name)}
-            >
-              <span>{String(index + 1).padStart(2, "0")}</span>
-              {name}
-            </button>
-          ))}
-        </nav>
+        <SectionRail
+          sections={SECTIONS}
+          activeId={activeId}
+          onJump={jumpTo}
+          ariaLabel="Handbook sections"
+          testIdPrefix="vintage-info-tab"
+        />
 
-        <fieldset className="ve-panel" aria-label={tab} disabled={busy}>
-          <p className="ve-eyebrow">THE {tab.toUpperCase()}</p>
-          <h2>{tab}</h2>
-
-        {tab === "Introduction" && (
+        <div className="ve-sections">
+        <SectionPanel id={sectionIdFor("Introduction")} title="Introduction" disabled={busy}>
           <>
             <div className="ve-grid">
               {field("intro.heading", "Main heading")}
@@ -444,9 +453,9 @@ export default function VintageInfoEditor() {
               </div>
             ))}
           </>
-        )}
+        </SectionPanel>
 
-        {tab === "Quick facts" && (
+        <SectionPanel id={sectionIdFor("Quick facts")} title="Quick facts" disabled={busy}>
           <>
             <p className="ve-help">
               Entry deadline is taken from the homepage Tourney Tipoff date (Tournament
@@ -477,9 +486,9 @@ export default function VintageInfoEditor() {
               onUploadSvg={uploadFactSvg}
             />
           </>
-        )}
+        </SectionPanel>
 
-        {tab === "Entry & payment" && (
+        <SectionPanel id={sectionIdFor("Entry & payment")} title="Entry & payment" disabled={busy}>
           <>
             {field("entry.heading", "Section heading")}
             <h3>Steps</h3>
@@ -505,9 +514,9 @@ export default function VintageInfoEditor() {
               {field("entry.cashBody", "Cash copy", { multiline: true })}
             </div>
           </>
-        )}
+        </SectionPanel>
 
-        {tab === "Scoring" && (
+        <SectionPanel id={sectionIdFor("Scoring")} title="Scoring" disabled={busy}>
           <>
             <p className="ve-help">
               Display copy only. Changing these values does not alter the live
@@ -541,9 +550,9 @@ export default function VintageInfoEditor() {
               ),
             )}
           </>
-        )}
+        </SectionPanel>
 
-        {tab === "Prizes" && (
+        <SectionPanel id={sectionIdFor("Prizes")} title="Prizes" disabled={busy}>
           <>
             <p className="ve-help">
               Prize pool = ${INFO_PRIZE_ENTRY_FEE} × number of entries. Place
@@ -654,9 +663,9 @@ export default function VintageInfoEditor() {
               );
             })}
           </>
-        )}
+        </SectionPanel>
 
-        {tab === "Tracker" && (
+        <SectionPanel id={sectionIdFor("Tracker")} title="Tracker" disabled={busy}>
           <>
             <p className="ve-help">
               Use || for a line break between notes paragraphs.
@@ -664,18 +673,18 @@ export default function VintageInfoEditor() {
             {field("tracker.heading", "Heading")}
             {field("tracker.notes", "Notes", { multiline: true })}
           </>
-        )}
+        </SectionPanel>
 
-        {tab === "Questions" && (
+        <SectionPanel id={sectionIdFor("Questions")} title="Questions" disabled={busy}>
           <div className="ve-grid">
             {field("questions.heading", "Heading")}
             {field("questions.body", "Supporting copy", { multiline: true })}
             {field("questions.actionLabel", "Contact link label")}
             {field("questions.contactEmail", "Commissioner email")}
           </div>
-        )}
+        </SectionPanel>
 
-        {tab === "Revisions" && (
+        <SectionPanel id={sectionIdFor("Revisions")} title="Revisions" disabled={busy}>
           <>
             <p className="ve-help">
               Restoring replaces your draft. It does not change the published
@@ -707,8 +716,8 @@ export default function VintageInfoEditor() {
               ))}
             </ul>
           </>
-        )}
-        </fieldset>
+        </SectionPanel>
+        </div>
       </div>
     </main>
   );

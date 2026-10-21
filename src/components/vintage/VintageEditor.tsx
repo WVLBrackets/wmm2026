@@ -56,6 +56,12 @@ import {
 import IconPickerModal from "./IconPickerModal";
 import VintageAdminNav from "./VintageAdminNav";
 import "./editor.css";
+import {
+  SectionPanel,
+  SectionRail,
+  sectionDomId,
+  useSectionNav,
+} from "./sectionNav";
 const tabs = [
   "Masthead",
   "Toolbar & theme",
@@ -67,6 +73,19 @@ const tabs = [
   "Footer",
   "Revisions",
 ];
+
+/**
+ * Stable DOM id of a stacked section from its tab label
+ * (e.g. "Masthead" -> `ve-section-masthead`).
+ */
+function sectionIdFor(label: string): string {
+  return sectionDomId(label);
+}
+
+/** Ordered sections for the sticky left rail. */
+const SECTIONS = tabs.map((label) => ({ label, id: sectionIdFor(label) }));
+const SECTION_IDS = SECTIONS.map((section) => section.id);
+
 export default function VintageEditor() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -74,7 +93,6 @@ export default function VintageEditor() {
   const [content, setContent] = useState<VintageContent>(
     structuredClone(DEFAULT_VINTAGE_CONTENT),
   );
-  const [tab, setTab] = useState(tabs[0]);
   const [dirty, setDirty] = useState(false);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -92,6 +110,11 @@ export default function VintageEditor() {
   const [focusCardId, setFocusCardId] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const focusApplied = useRef(false);
+  const mediaRequested = useRef(false);
+  const { activeId, jumpTo, markActive } = useSectionNav(
+    SECTION_IDS,
+    Boolean(state),
+  );
   useEffect(() => {
     let cancelled = false;
     setTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone);
@@ -113,7 +136,7 @@ export default function VintageEditor() {
     };
   }, []);
   /**
-   * Open the tab (and card slot) requested by homepage edit gears.
+   * Highlight the section (and card slot) requested by homepage edit gears.
    */
   useEffect(() => {
     if (focusApplied.current || !state) return;
@@ -124,41 +147,31 @@ export default function VintageEditor() {
     if (!focus) return;
     focusApplied.current = true;
     if (focus.kind === "countdown") {
-      setTab(VINTAGE_EDITOR_TAB.countdown);
+      markActive(sectionIdFor(VINTAGE_EDITOR_TAB.countdown));
       setFocusCardId("__countdown__");
       return;
     }
     if (focus.kind === "explore") {
-      setTab(VINTAGE_EDITOR_TAB.explore);
+      markActive(sectionIdFor(VINTAGE_EDITOR_TAB.explore));
       setFocusCardId("__explore__");
       return;
     }
     if (focus.kind === "announcements") {
-      setTab(VINTAGE_EDITOR_TAB.announcements);
+      markActive(sectionIdFor(VINTAGE_EDITOR_TAB.announcements));
       setFocusCardId("__announcements__");
       return;
     }
-    setTab(VINTAGE_EDITOR_TAB.homeCards);
+    markActive(sectionIdFor(VINTAGE_EDITOR_TAB.homeCards));
     setFocusCardId(focus.id);
-  }, [state, searchParams]);
+  }, [state, searchParams, markActive]);
   /**
-   * Scroll the focused editor target into view after its panel mounts.
+   * Scroll the focused editor target into view (all sections stay mounted).
    */
   useEffect(() => {
     if (!focusCardId) return;
     const isCountdown = focusCardId === "__countdown__";
     const isExplore = focusCardId === "__explore__";
     const isAnnouncements = focusCardId === "__announcements__";
-    if (isCountdown && tab !== VINTAGE_EDITOR_TAB.countdown) return;
-    if (isExplore && tab !== VINTAGE_EDITOR_TAB.explore) return;
-    if (isAnnouncements && tab !== VINTAGE_EDITOR_TAB.announcements) return;
-    if (
-      !isCountdown &&
-      !isExplore &&
-      !isAnnouncements &&
-      tab !== VINTAGE_EDITOR_TAB.homeCards
-    )
-      return;
 
     const el = isCountdown
       ? document.querySelector<HTMLElement>(
@@ -183,7 +196,7 @@ export default function VintageEditor() {
       setFocusCardId(null);
     }, 2400);
     return () => window.clearTimeout(timer);
-  }, [tab, focusCardId, content.homeCards]);
+  }, [focusCardId, content.homeCards]);
   useEffect(() => {
     if (!dirty) return;
     const warn = (event: BeforeUnloadEvent) => {
@@ -192,6 +205,16 @@ export default function VintageEditor() {
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
+  /**
+   * Lazily load the media library the first time its section is reached.
+   */
+  useEffect(() => {
+    if (activeId !== sectionIdFor("Media library") || mediaRequested.current) {
+      return;
+    }
+    mediaRequested.current = true;
+    void loadMedia();
+  }, [activeId]);
   async function loadMedia() {
     setError("");
     try {
@@ -549,26 +572,15 @@ export default function VintageEditor() {
         </p>
       )}
       <div className="ve-workspace">
-        <nav className="ve-tabs" aria-label="Editor sections">
-          {tabs.map((name, i) => (
-            <button
-              key={name}
-              aria-current={tab === name ? "page" : undefined}
-              data-testid={`vintage-tab-${i}`}
-              onClick={() => {
-                setTab(name);
-                if (name === "Media library") void loadMedia();
-              }}
-            >
-              <span>{String(i + 1).padStart(2, "0")}</span>
-              {name}
-            </button>
-          ))}
-        </nav>
-        <fieldset className="ve-panel" aria-label={tab} disabled={busy}>
-          <p className="ve-eyebrow">THE {tab.toUpperCase()}</p>
-          <h2>{tab}</h2>
-          {tab === "Masthead" && (
+        <SectionRail
+          sections={SECTIONS}
+          activeId={activeId}
+          onJump={jumpTo}
+          ariaLabel="Editor sections"
+          testIdPrefix="vintage-tab"
+        />
+        <div className="ve-sections">
+          <SectionPanel id={sectionIdFor("Masthead")} title="Masthead" disabled={busy}>
             <>
               <p className="ve-help">
                 Newspaper nameplate at the top of the homepage (two lines).
@@ -578,8 +590,8 @@ export default function VintageEditor() {
                 {field("masthead.second", "Second line")}
               </div>
             </>
-          )}
-          {tab === "Toolbar & theme" && (
+          </SectionPanel>
+          <SectionPanel id={sectionIdFor("Toolbar & theme")} title="Toolbar & theme" disabled={busy}>
             <>
               <h3>Theme colors</h3>
               <p className="ve-help">
@@ -829,8 +841,8 @@ export default function VintageEditor() {
                 onUploadSvg={uploadToolbarSvg}
               />
             </>
-          )}
-          {tab === "Home cards" && (
+          </SectionPanel>
+          <SectionPanel id={sectionIdFor("Home cards")} title="Home cards" disabled={busy}>
             <>
               <p className="ve-help">
                 Three main cards below the countdown (Play Now, Reigning Champ,
@@ -923,7 +935,7 @@ export default function VintageEditor() {
                                 setImageTarget(
                                   `homeCards.${index}.playImageSrc`,
                                 );
-                                setTab("Media library");
+                                jumpTo(sectionIdFor("Media library"));
                                 void loadMedia();
                               }}
                             >
@@ -1016,7 +1028,7 @@ export default function VintageEditor() {
                                 setImageTarget(
                                   `homeCards.${index}.champImageSrc`,
                                 );
-                                setTab("Media library");
+                                jumpTo(sectionIdFor("Media library"));
                                 void loadMedia();
                               }}
                             >
@@ -1145,7 +1157,7 @@ export default function VintageEditor() {
                                     setImageTarget(
                                       `homeCards.${index}.${plate.field}`,
                                     );
-                                    setTab("Media library");
+                                    jumpTo(sectionIdFor("Media library"));
                                     void loadMedia();
                                   }}
                                 >
@@ -1319,8 +1331,8 @@ export default function VintageEditor() {
                 ))}
               </div>
             </>
-          )}
-          {tab === "Explore band" && (
+          </SectionPanel>
+          <SectionPanel id={sectionIdFor("Explore band")} title="Explore band" disabled={busy}>
             <div data-testid="vintage-editor-explore-panel">
               <p className="ve-help">
                 Wide band under the three main cards: Info and Hall of Fame
@@ -1351,8 +1363,8 @@ export default function VintageEditor() {
                 })}
               </fieldset>
             </div>
-          )}
-          {tab === "Announcements" && (
+          </SectionPanel>
+          <SectionPanel id={sectionIdFor("Announcements")} title="Announcements" disabled={busy}>
             <div data-testid="vintage-editor-announcements-panel">
               <p className="ve-help">
                 Full-width board under the explore band. Each line shows
@@ -1483,8 +1495,8 @@ export default function VintageEditor() {
                 <Plus size={16} /> Add announcement
               </button>
             </div>
-          )}
-          {tab === "Tournament & countdown" && (
+          </SectionPanel>
+          <SectionPanel id={sectionIdFor("Tournament & countdown")} title="Tournament & countdown" disabled={busy}>
             <div data-testid="vintage-editor-countdown-panel">
               <p className="ve-help">
                 Active year and the two critical dates are administered here
@@ -1577,8 +1589,8 @@ export default function VintageEditor() {
                 hint: "When Show countdown is off, this replaces the homepage timer. Also shown on My Picks after tipoff. Tokens: {year} or <year>.",
               })}
             </div>
-          )}
-          {tab === "Media library" && (
+          </SectionPanel>
+          <SectionPanel id={sectionIdFor("Media library")} title="Media library" disabled={busy}>
             <>
               <p className="ve-help">
                 Upload JPEG, PNG, WebP (under 3 MB) or SVG icons (under 500 KB,
@@ -1676,12 +1688,12 @@ export default function VintageEditor() {
                     onClick={() => {
                       if (imageTarget.endsWith("ImageSrc")) {
                         update(imageTarget, item.url);
-                        setTab("Home cards");
+                        jumpTo(sectionIdFor("Home cards"));
                         return;
                       }
                       update(`${imageTarget}.src`, item.url);
                       update(`${imageTarget}.alt`, item.alt);
-                      setTab("Home cards");
+                      jumpTo(sectionIdFor("Home cards"));
                     }}
                   >
                     <Image
@@ -1700,8 +1712,8 @@ export default function VintageEditor() {
                 <p className="ve-help">No uploaded images yet.</p>
               )}
             </>
-          )}
-          {tab === "Footer" && (
+          </SectionPanel>
+          <SectionPanel id={sectionIdFor("Footer")} title="Footer" disabled={busy}>
             <>
               {field("footer.text", "Footer text")}
               {field("footer.contactLabel", "Contact link label", {
@@ -1711,8 +1723,8 @@ export default function VintageEditor() {
                 type: "email",
               })}
             </>
-          )}
-          {tab === "Revisions" && (
+          </SectionPanel>
+          <SectionPanel id={sectionIdFor("Revisions")} title="Revisions" disabled={busy}>
             <>
               <p className="ve-help">
                 Restoring replaces your draft. It does not change the published
@@ -1751,8 +1763,8 @@ export default function VintageEditor() {
                 <p className="ve-help">Your saved editions will appear here.</p>
               )}
             </>
-          )}
-        </fieldset>
+          </SectionPanel>
+        </div>
       </div>
     </main>
   );

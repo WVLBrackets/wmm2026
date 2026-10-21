@@ -24,6 +24,12 @@ import {
 import type { VintagePicksState } from "@/lib/vintage/picksStore";
 import VintageAdminNav from "../VintageAdminNav";
 import "../editor.css";
+import {
+  SectionPanel,
+  SectionRail,
+  sectionDomId,
+  useSectionNav,
+} from "../sectionNav";
 
 const TABS = [
   "Timer & year",
@@ -47,7 +53,17 @@ const ACTION_KEYS: { key: keyof VintagePicksActionButtons; label: string }[] = [
   { key: "permanentDelete", label: "Permanent delete" },
 ];
 
-type PicksEditorTab = (typeof TABS)[number];
+/**
+ * Stable DOM id of a stacked section from its tab label
+ * (e.g. "Timer & year" → `ve-section-timer-and-year`).
+ */
+function sectionIdFor(label: string): string {
+  return sectionDomId(label);
+}
+
+/** Ordered sections for the sticky left rail. */
+const SECTIONS = TABS.map((label) => ({ label, id: sectionIdFor(label) }));
+const SECTION_IDS = SECTIONS.map((section) => section.id);
 
 type SharedStringKey = keyof Pick<
   VintagePicksContent,
@@ -143,7 +159,7 @@ export default function VintagePicksEditor() {
   const [content, setContent] = useState<VintagePicksContent>(
     structuredClone(DEFAULT_VINTAGE_PICKS_CONTENT),
   );
-  const [tab, setTab] = useState<PicksEditorTab>(TABS[0]);
+  const { activeId, jumpTo } = useSectionNav(SECTION_IDS, Boolean(state));
   const [dirty, setDirty] = useState(false);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -506,26 +522,16 @@ export default function VintagePicksEditor() {
       {dirty ? <p className="ve-help">Unsaved changes</p> : null}
 
       <div className="ve-workspace">
-        <nav className="ve-tabs" aria-label="Editor sections">
-          {TABS.map((name, i) => (
-            <button
-              key={name}
-              type="button"
-              aria-current={tab === name ? "page" : undefined}
-              data-testid={`vintage-picks-tab-${i}`}
-              onClick={() => setTab(name)}
-            >
-              <span>{String(i + 1).padStart(2, "0")}</span>
-              {name}
-            </button>
-          ))}
-        </nav>
+        <SectionRail
+          sections={SECTIONS}
+          activeId={activeId}
+          onJump={jumpTo}
+          ariaLabel="Editor sections"
+          testIdPrefix="vintage-picks-tab"
+        />
 
-        <fieldset className="ve-panel" aria-label={tab} disabled={busy}>
-          <p className="ve-eyebrow">THE {tab.toUpperCase()}</p>
-          <h2>{tab}</h2>
-
-          {tab === "Timer & year" ? (
+        <div className="ve-sections">
+          <SectionPanel id={sectionIdFor("Timer & year")} title="Timer & year" disabled={busy}>
             <>
               <h3>Application Master Lock</h3>
               <p className="ve-help">
@@ -650,9 +656,9 @@ export default function VintagePicksEditor() {
                 )}
               </div>
             </>
-          ) : null}
+          </SectionPanel>
 
-          {tab === "Header" ? (
+          <SectionPanel id={sectionIdFor("Header")} title="Header" disabled={busy}>
             <>
               <p className="ve-help">
                 Supporting line under Welcome. Leave blank to hide. Token:{" "}
@@ -664,9 +670,9 @@ export default function VintagePicksEditor() {
                 "Shown under the welcome line when mutations are allowed (current) or as archive context (historic).",
               )}
             </>
-          ) : null}
+          </SectionPanel>
 
-          {tab === "Pool sections" ? (
+          <SectionPanel id={sectionIdFor("Pool sections")} title="Pool sections" disabled={busy}>
             <>
               <p className="ve-help">
                 Section banners above in-pool and out-of-pool entries. In-pool
@@ -687,9 +693,9 @@ export default function VintagePicksEditor() {
                 true,
               )}
             </>
-          ) : null}
+          </SectionPanel>
 
-          {tab === "Empty states" ? (
+          <SectionPanel id={sectionIdFor("Empty states")} title="Empty states" disabled={busy}>
             <>
               <p className="ve-help">
                 Shown when the viewer has no brackets for the selected year
@@ -715,9 +721,9 @@ export default function VintagePicksEditor() {
                 )}
               </div>
             </>
-          ) : null}
+          </SectionPanel>
 
-          {tab === "Cost & status" ? (
+          <SectionPanel id={sectionIdFor("Cost & status")} title="Cost & status" disabled={busy}>
             <>
               <p className="ve-help">
                 Dynamic line under the status chips (replaces Config Sheet{" "}
@@ -782,9 +788,9 @@ export default function VintagePicksEditor() {
                 true,
               )}
             </>
-          ) : null}
+          </SectionPanel>
 
-          {tab === "Row chrome" ? (
+          <SectionPanel id={sectionIdFor("Row chrome")} title="Row chrome" disabled={busy}>
             <>
               <p className="ve-help">
                 Desktop row density and action / payment chip colors. Icons stay
@@ -899,9 +905,9 @@ export default function VintagePicksEditor() {
                 );
               })}
             </>
-          ) : null}
+          </SectionPanel>
 
-          {tab === "Sign in & account" ? (
+          <SectionPanel id={sectionIdFor("Sign in & account")} title="Sign in & account" disabled={busy}>
             <>
               <p className="ve-help">
                 Labels for <code>/auth/signin</code> (Sign In + Create Account
@@ -1004,8 +1010,8 @@ export default function VintagePicksEditor() {
                 </fieldset>
               </div>
             </>
-          ) : null}
-        </fieldset>
+          </SectionPanel>
+        </div>
       </div>
 
       {state.revisions.length ? (

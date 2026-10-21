@@ -1,4 +1,7 @@
-/** Availability is separate from identity: every page/API also verifies the primary admin. */
+/**
+ * Product flag: when on, public routes render vintage UI for everyone.
+ * CMS edit gear and `/vintage/admin/*` still require {@link isPrimaryVintageAdmin}.
+ */
 export function isVintageEnabled(): boolean {
   return (
     process.env.NODE_ENV === "development" ||

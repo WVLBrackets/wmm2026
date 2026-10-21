@@ -62,10 +62,10 @@ test.describe('Public Pages', () => {
       expect(currentUrl).not.toContain('vercel.com/login');
       expect(currentUrl).toContain('/info');
       
-      // Wait for content to load (info page has loading state)
-      await page.waitForLoadState('domcontentloaded');
+      await expect(page.getByTestId('vintage-info-page')).toBeVisible({
+        timeout: 10000,
+      });
       
-      // Check for key content elements
       const bodyText = await page.locator('body').textContent();
       expect(bodyText).toBeTruthy();
       
@@ -75,31 +75,29 @@ test.describe('Public Pages', () => {
     test('should display entry and payment section', async ({ page }) => {
       await page.goto('/info', { waitUntil: 'domcontentloaded' });
       
-      // Check for entry fee information (Playwright auto-waits for visibility)
-      await expect(page.getByText(/\$5 per entry/i)).toBeVisible({ timeout: 10000 });
-      
-      // Check for payment-related content
+      await expect(page.getByTestId('vintage-info-entry')).toBeVisible({
+        timeout: 10000,
+      });
+      await expect(page.getByTestId('vintage-info-facts')).toContainText(/\$5/i);
       await expect(page.getByText(/payment/i).first()).toBeVisible();
     });
 
     test('should display scoring section', async ({ page }) => {
       await page.goto('/info', { waitUntil: 'domcontentloaded' });
       
-      // Check for scoring heading or content (Playwright auto-waits for visibility)
-      await expect(page.getByText(/scoring/i).first()).toBeVisible({ timeout: 10000 });
-      
-      // Check for scoring values (1 point, 2 points, etc.)
-      await expect(page.getByText(/1 point/i).first()).toBeVisible();
+      const scoring = page.getByTestId('vintage-info-scoring');
+      await expect(scoring).toBeVisible({ timeout: 10000 });
+      await expect(scoring).toContainText(/scoring|points add up/i);
+      await expect(scoring).toContainText(/First Round/i);
     });
 
     test('should display prizes section', async ({ page }) => {
       await page.goto('/info', { waitUntil: 'domcontentloaded' });
       
-      // Check for prizes section (Playwright auto-waits for visibility)
-      await expect(page.getByText(/prize/i).first()).toBeVisible({ timeout: 10000 });
-      
-      // Check for place indicators (1st, 2nd, 3rd)
-      await expect(page.getByText(/1st place/i).first()).toBeVisible();
+      const prizes = page.getByTestId('vintage-info-prizes');
+      await expect(prizes).toBeVisible({ timeout: 10000 });
+      await expect(prizes).toContainText(/prize|playing for/i);
+      await expect(prizes).toContainText(/1st place/i);
     });
   });
 
@@ -115,14 +113,22 @@ test.describe('Public Pages', () => {
       expect(currentUrl).not.toContain('vercel.com/login');
       expect(currentUrl).toContain('/hall-of-fame');
       
+      await expect(page.getByTestId('vintage-hof')).toBeVisible({
+        timeout: 10000,
+      });
+      
       console.log('✅ Hall of Fame page loaded successfully');
     });
 
     test('should display reigning champion', async ({ page }) => {
       await page.goto('/hall-of-fame', { waitUntil: 'domcontentloaded' });
       
-      // Check for reigning champion section (Playwright auto-waits for visibility)
-      await expect(page.getByText(/reigning champion/i)).toBeVisible({ timeout: 10000 });
+      await expect(page.getByTestId('vintage-hof-reigning')).toBeVisible({
+        timeout: 10000,
+      });
+      await expect(page.getByText(/reigning champion/i)).toBeVisible({
+        timeout: 10000,
+      });
     });
 
     test('should display lifetime / tournament statistics', async ({ page }) => {
@@ -136,12 +142,9 @@ test.describe('Public Pages', () => {
     test('should display year archive and all-time leaders', async ({ page }) => {
       await page.goto('/hall-of-fame', { waitUntil: 'domcontentloaded' });
 
-      // Legacy: Tournament History; vintage (gated): Champions by Year
-      await expect(
-        page
-          .getByText(/tournament history|champions by year/i)
-          .first(),
-      ).toBeVisible({ timeout: 10000 });
+      await expect(page.getByText(/champions by year/i).first()).toBeVisible({
+        timeout: 10000,
+      });
 
       await expect(
         page.getByText(/all[- ]?time leaders/i).first(),
@@ -161,16 +164,20 @@ test.describe('Public Pages', () => {
       expect(currentUrl).not.toContain('vercel.com/login');
       expect(currentUrl).toContain('/standings');
       
+      await expect(page.getByTestId('vintage-standings-page')).toBeVisible({
+        timeout: 15000,
+      });
+      
       console.log('✅ Standings page loaded successfully');
     });
 
     test('should display standings table or content', async ({ page }) => {
       await page.goto('/standings', { waitUntil: 'domcontentloaded' });
       
-      // Wait for page content to load by checking for body content
-      await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+      await expect(page.getByTestId('vintage-standings-page')).toBeVisible({
+        timeout: 15000,
+      });
       
-      // The page should have meaningful content
       const bodyText = await page.locator('body').textContent();
       expect(bodyText).toBeTruthy();
       expect(bodyText!.length).toBeGreaterThan(100);
@@ -340,37 +347,35 @@ test.describe('Public Pages', () => {
   // NAVIGATION TESTS
   // ==========================================
   test.describe('Navigation Between Public Pages', () => {
-    test('should navigate from info page to rules via Quick Navigation', async ({ page }) => {
+    test('should navigate from info handbook to scoring via guide chips', async ({ page }) => {
       await page.goto('/info', { waitUntil: 'domcontentloaded' });
       
-      // Wait for Quick Navigation to be visible (Playwright auto-waits)
-      const scoringLink = page.getByRole('link', { name: /scoring/i }).first();
+      await expect(page.getByTestId('vintage-info-toc')).toBeVisible({
+        timeout: 10000,
+      });
+      const scoringLink = page.getByTestId('vintage-info-toc-chip-scoring');
       await expect(scoringLink).toBeVisible({ timeout: 10000 });
       
       await scoringLink.click();
       
-      // Should stay on info page (anchor link)
-      const currentUrl = page.url();
-      expect(currentUrl).toContain('/info');
+      await expect(page).toHaveURL(/\/info#scoring/);
+      await expect(page.getByTestId('vintage-info-scoring')).toBeVisible();
       
-      console.log('✅ Quick Navigation works on info page');
+      console.log('✅ Vintage guide navigation works on info page');
     });
 
-    test('should verify homepage has navigation to public pages', async ({ page }) => {
+    test('should verify homepage has vintage navigation to public pages', async ({ page }) => {
       await page.goto('/', { waitUntil: 'domcontentloaded' });
       
-      // Wait for page content to load
-      await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+      await expect(page.getByTestId('vintage-homepage')).toBeVisible({
+        timeout: 10000,
+      });
+      await expect(page.getByTestId('vintage-toolbar')).toBeVisible();
       
-      // The page should have some navigation elements
-      const bodyText = await page.locator('body').textContent();
-      expect(bodyText).toBeTruthy();
-      
-      // Check that the page loaded successfully (not an error page)
       const currentUrl = page.url();
       expect(currentUrl).not.toContain('vercel.com/login');
       
-      console.log('✅ Homepage loaded with navigation elements');
+      console.log('✅ Homepage loaded with vintage navigation');
     });
   });
 });

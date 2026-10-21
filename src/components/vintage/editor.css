@@ -258,6 +258,25 @@
   min-width: 0;
   max-width: 950px;
 }
+/* Stacked editor sections (single scrollable page, jump links in .ve-tabs) */
+.ve-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  min-width: 0;
+}
+.ve-sections > .ve-panel {
+  width: 100%;
+  margin: 0;
+}
+.ve-section {
+  /* Clear the sticky toolbar when jumping to a section */
+  scroll-margin-top: 110px;
+}
+.ve-tabs button:focus-visible {
+  outline: 2px solid #a4322b;
+  outline-offset: -2px;
+}
 .ve-panel h2 {
   font-family: Georgia, serif;
   font-size: 29px;
@@ -455,6 +474,13 @@
   }
   .ve-panel {
     padding: 22px 18px;
+  }
+  .ve-sections {
+    gap: 20px;
+  }
+  .ve-section {
+    /* Rail becomes a static strip on mobile; only the toolbar needs clearing */
+    scroll-margin-top: 90px;
   }
   .ve-grid {
     grid-template-columns: 1fr;

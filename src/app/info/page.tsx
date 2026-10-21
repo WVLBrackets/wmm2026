@@ -1,53 +1,33 @@
-import { getSiteConfigFromGoogleSheets } from "@/lib/siteConfig";
-import { FALLBACK_CONFIG } from "@/lib/fallbackConfig";
+import { notFound } from "next/navigation";
 import { PageLogger } from "@/components/PageLogger";
-import LegacyInfoPage from "@/components/LegacyInfoPage";
-import LegacySiteChrome from "@/components/LegacySiteChrome";
 import VintageInfoPage from "@/components/vintage/info/VintageInfoPage";
 import { vintageAdminEmail } from "@/lib/vintage/admin";
+import { isVintageEnabled } from "@/lib/vintage/access";
 import { getPublishedVintageContent } from "@/lib/vintage/store";
 import { getPublishedVintageInfoContent } from "@/lib/vintage/infoStore";
-import { getBuildStamp } from "@/lib/buildStamp";
 
-// Primary-admin path is session-dependent; legacy path keeps on-demand rebuild.
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata() {
-  return (await vintageAdminEmail())
-    ? { robots: { index: false, follow: false } }
-    : {};
-}
-
 /**
- * Info page: vintage handbook for the primary admin; legacy Sheets page for everyone else.
+ * Info / Guidebook: vintage for everyone when enabled; edit gear for primary admin only.
  */
 export default async function InfoPage() {
-  if (await vintageAdminEmail()) {
-    const [info, home] = await Promise.all([
-      getPublishedVintageInfoContent(),
-      getPublishedVintageContent(),
-    ]);
-    return (
-      <>
-        <PageLogger location="Info" />
-        <VintageInfoPage content={info} home={home} admin />
-      </>
-    );
-  }
+  if (!isVintageEnabled()) notFound();
 
-  let siteConfig = null;
-  try {
-    siteConfig = await getSiteConfigFromGoogleSheets();
-  } catch (error) {
-    console.error("Error loading site config:", error);
-    siteConfig = FALLBACK_CONFIG;
-  }
-  if (!siteConfig) siteConfig = FALLBACK_CONFIG;
+  const [info, home, adminEmail] = await Promise.all([
+    getPublishedVintageInfoContent(),
+    getPublishedVintageContent(),
+    vintageAdminEmail(),
+  ]);
 
   return (
-    <LegacySiteChrome buildStamp={getBuildStamp()}>
+    <>
       <PageLogger location="Info" />
-      <LegacyInfoPage siteConfig={siteConfig} />
-    </LegacySiteChrome>
+      <VintageInfoPage
+        content={info}
+        home={home}
+        admin={Boolean(adminEmail)}
+      />
+    </>
   );
 }

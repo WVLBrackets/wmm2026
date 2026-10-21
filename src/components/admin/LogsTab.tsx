@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Power } from 'lucide-react';
-
 interface UsageLog {
   id: string;
   environment: string;
@@ -112,9 +110,6 @@ export default function LogsTab() {
   const [emailLogAttachmentExpectedFilter, setEmailLogAttachmentExpectedFilter] = useState<string>('');
   const [emailLogAttachmentSuccessFilter, setEmailLogAttachmentSuccessFilter] = useState<string>('');
   const [emailLogEmailSuccessFilter, setEmailLogEmailSuccessFilter] = useState<string>('');
-  const [initializingDatabase, setInitializingDatabase] = useState(false);
-  const [databaseInitMessage, setDatabaseInitMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
   // Helper function to update URL with new tab
   const updateUrlTab = (logsTab: 'summary' | 'usage' | 'error' | 'email', emailView?: 'summary' | 'detail') => {
     const params = new URLSearchParams(searchParams?.toString() || '');
@@ -421,45 +416,6 @@ export default function LogsTab() {
     }
   };
 
-  const handleInitializeDatabase = async () => {
-    if (!confirm('This will create the usage_logs and error_logs tables if they don\'t exist. Continue?')) {
-      return;
-    }
-
-    try {
-      setInitializingDatabase(true);
-      setDatabaseInitMessage(null);
-      setLogsError('');
-
-      const response = await fetch('/api/init-database', {
-        method: 'POST',
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        setDatabaseInitMessage({ type: 'success', text: 'Database tables initialized successfully!' });
-        // Reload logs after initialization
-        if (logsTab === 'summary') {
-          await loadUsageSummary();
-        } else if (logsTab === 'usage') {
-          await loadUsageLogs();
-        } else if (logsTab === 'error') {
-          await loadErrorLogs();
-        } else if (logsTab === 'email') {
-          await loadEmailSummary();
-        }
-      } else {
-        setDatabaseInitMessage({ type: 'error', text: data.error || 'Failed to initialize database' });
-      }
-    } catch (error) {
-      console.error('Error initializing database:', error);
-      setDatabaseInitMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to initialize database' });
-    } finally {
-      setInitializingDatabase(false);
-    }
-  };
-
   // Sync state from URL params when they change (e.g., on page refresh)
   useEffect(() => {
     if (!searchParams) return;
@@ -537,25 +493,7 @@ export default function LogsTab() {
           >
             {logsLoading ? 'Loading...' : 'Refresh'}
           </button>
-          <button
-            onClick={handleInitializeDatabase}
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400 flex items-center space-x-2"
-            disabled={initializingDatabase}
-            title="Create usage_logs and error_logs tables if they don't exist"
-          >
-            <Power className="h-4 w-4" />
-            <span>{initializingDatabase ? 'Initializing...' : 'Initialize Tables'}</span>
-          </button>
         </div>
-        {databaseInitMessage && (
-          <div className={`mt-3 p-3 rounded ${
-            databaseInitMessage.type === 'success' 
-              ? 'bg-green-100 text-green-700' 
-              : 'bg-red-100 text-red-700'
-          }`}>
-            {databaseInitMessage.text}
-          </div>
-        )}
       </div>
 
       <div className="mb-6 border-b border-gray-200">

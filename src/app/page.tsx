@@ -1,30 +1,20 @@
-import LegacyHomepage from "@/components/LegacyHomepage";
-import LegacySiteChrome from "@/components/LegacySiteChrome";
+import { notFound } from "next/navigation";
 import VintageHomepage from "@/components/vintage/VintageHomepage";
 import { vintageAdminEmail } from "@/lib/vintage/admin";
+import { isVintageEnabled } from "@/lib/vintage/access";
 import { getPublishedVintageContent } from "@/lib/vintage/store";
-import { getBuildStamp } from "@/lib/buildStamp";
 
-// Session-dependent HTML must never be shared between visitors.
+/** Session-dependent admin gears; do not share HTML across visitors. */
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata() {
-  return (await vintageAdminEmail())
-    ? { robots: { index: false, follow: false } }
-    : {};
-}
-
+/**
+ * Public home: vintage for everyone when enabled; edit gear for primary admin only.
+ */
 export default async function Home() {
-  if (await vintageAdminEmail()) {
-    return (
-      <VintageHomepage content={await getPublishedVintageContent()} admin />
-    );
-  }
-  return (
-    <LegacySiteChrome buildStamp={getBuildStamp()}>
-      <div data-testid="legacy-homepage">
-        <LegacyHomepage />
-      </div>
-    </LegacySiteChrome>
-  );
+  if (!isVintageEnabled()) notFound();
+  const [content, adminEmail] = await Promise.all([
+    getPublishedVintageContent(),
+    vintageAdminEmail(),
+  ]);
+  return <VintageHomepage content={content} admin={Boolean(adminEmail)} />;
 }

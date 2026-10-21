@@ -94,7 +94,7 @@ export default function TourneyR1BracketPreview({ year }: TourneyR1BracketPrevie
     try {
       const response = await fetch(`/api/tournament-data?year=${year}`, { cache: 'no-store' });
       if (!response.ok) {
-        throw new Error(`Could not load tournament-${year}.json (${response.status})`);
+        throw new Error(`Could not load tournament field for ${year} (${response.status})`);
       }
       const json = (await response.json()) as TournamentData;
       if (!json.regions || !Array.isArray(json.regions)) {

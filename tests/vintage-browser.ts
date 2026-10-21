@@ -95,10 +95,21 @@ async function main() {
     page.on("pageerror", (error) => errors.push(error.message));
     page.on("request", (request) => requests.push(request.url()));
     await page.goto(baseURL + "/", { waitUntil: "networkidle" });
-    assert.equal(await page.getByTestId("legacy-homepage").count(), 1);
-    assert.equal(await page.getByTestId("vintage-homepage").count(), 0);
+    assert.equal(await page.getByTestId("legacy-homepage").count(), 0);
+    assert.equal(await page.getByTestId("vintage-homepage").count(), 1);
+    assert.equal(await page.getByTestId("vintage-edit-gear-countdown").count(), 0);
     assert.equal(await page.locator('[data-testid^="home-view-"]').count(), 0);
-    assert.equal((await page.request.get(baseURL + "/vintage")).status(), 404);
+    const vintageRedirect = await page.request.get(baseURL + "/vintage", {
+      maxRedirects: 0,
+    });
+    assert.ok(
+      vintageRedirect.status() >= 300 && vintageRedirect.status() < 400,
+      `/vintage should redirect (got ${vintageRedirect.status()})`,
+    );
+    assert.equal(
+      new URL(vintageRedirect.headers().location!, baseURL).pathname,
+      "/",
+    );
     assert.equal(
       (await page.request.get(baseURL + "/vintage/admin")).status(),
       404,
@@ -120,7 +131,8 @@ async function main() {
       403,
     );
     await page.goto(baseURL + "/?view=new", { waitUntil: "networkidle" });
-    assert.equal(await page.getByTestId("legacy-homepage").count(), 1);
+    assert.equal(await page.getByTestId("vintage-homepage").count(), 1);
+    assert.equal(await page.getByTestId("legacy-homepage").count(), 0);
     const ordinaryToken = await encode({
       secret,
       token: {
@@ -133,8 +145,17 @@ async function main() {
       { name: "next-auth.session-token", value: ordinaryToken, url: baseURL },
     ]);
     await page.goto(baseURL + "/", { waitUntil: "networkidle" });
-    assert.equal(await page.getByTestId("legacy-homepage").count(), 1);
-    assert.equal((await page.request.get(baseURL + "/vintage")).status(), 404);
+    assert.equal(await page.getByTestId("vintage-homepage").count(), 1);
+    assert.equal(await page.getByTestId("vintage-edit-gear-countdown").count(), 0);
+    const signedInVintageRedirect = await page.request.get(
+      baseURL + "/vintage",
+      { maxRedirects: 0 },
+    );
+    assert.ok(signedInVintageRedirect.status() >= 300);
+    assert.equal(
+      new URL(signedInVintageRedirect.headers().location!, baseURL).pathname,
+      "/",
+    );
     assert.equal(
       (
         await page.request.get(baseURL + "/api/admin/vintage-homepage")
@@ -157,6 +178,7 @@ async function main() {
     await page.goto(baseURL + "/", { waitUntil: "networkidle" });
     assert.equal(await page.getByTestId("legacy-homepage").count(), 0);
     assert.equal(await page.getByTestId("vintage-homepage").count(), 1);
+    assert.equal(await page.getByTestId("vintage-edit-gear-countdown").count(), 1);
     assert.equal(await page.locator('[data-testid^="home-view-"]').count(), 0);
     const primaryResponse = await page.request.get(baseURL + "/");
     assert.match(primaryResponse.headers()["cache-control"] || "", /no-store/);
@@ -164,9 +186,10 @@ async function main() {
       (await primaryResponse.text()).includes('data-testid="vintage-homepage"'),
     );
     console.log(
-      "PASS home selection: anonymous users keep the original homepage; only the authenticated primary email receives the new homepage; no toggles or query overrides",
+      "PASS home selection: everyone sees vintage when enabled; only primary admin gets edit gears; no legacy toggles or query overrides",
     );
     await page.goto(baseURL + "/vintage", { waitUntil: "networkidle" });
+    assert.match(page.url(), /\/$/);
     await page.evaluate(() => document.fonts.ready);
     assert.equal(await page.getByTestId("vintage-homepage").count(), 1);
     assert.equal(await page.getByTestId("vintage-home-cards").count(), 1);
@@ -322,7 +345,15 @@ async function main() {
     console.log(
       "PASS authorization: another configured administrator cannot read private homepage drafts",
     );
-    assert.equal((await page.request.get(baseURL + "/vintage")).status(), 404);
+    const outsiderVintageRedirect = await page.request.get(
+      baseURL + "/vintage",
+      { maxRedirects: 0 },
+    );
+    assert.ok(outsiderVintageRedirect.status() >= 300);
+    assert.equal(
+      new URL(outsiderVintageRedirect.headers().location!, baseURL).pathname,
+      "/",
+    );
     assert.equal(
       (await page.request.get(baseURL + "/vintage/admin")).status(),
       404,
@@ -338,11 +369,12 @@ async function main() {
       403,
     );
     await page.goto(baseURL + "/", { waitUntil: "networkidle" });
-    assert.equal(await page.getByTestId("legacy-homepage").count(), 1);
-    assert.equal(await page.getByTestId("vintage-homepage").count(), 0);
+    assert.equal(await page.getByTestId("legacy-homepage").count(), 0);
+    assert.equal(await page.getByTestId("vintage-homepage").count(), 1);
+    assert.equal(await page.getByTestId("vintage-edit-gear-countdown").count(), 0);
     assert.equal(await page.locator('[data-testid^="home-view-"]').count(), 0);
     console.log(
-      "PASS isolation: another configured admin named wvanderlaan receives only the original homepage and cannot open vintage routes or APIs, after a primary-admin request",
+      "PASS isolation: another configured admin sees vintage public UI without edit gears and cannot open vintage CMS routes or APIs",
     );
     requests.length = 0;
     const token = await encode({
@@ -358,13 +390,15 @@ async function main() {
       { name: "next-auth.session-token", value: token, url: baseURL },
     ]);
     await page.goto(baseURL + "/vintage", { waitUntil: "networkidle" });
-    assert.equal(await page.getByTestId("vintage-admin-tools").count(), 0);
+    assert.match(page.url(), /\/$/);
+    assert.equal(await page.getByTestId("vintage-homepage").count(), 1);
+    assert.equal(await page.getByTestId("vintage-edit-gear-countdown").count(), 1);
     assert.equal(
       await page.getByTestId("vintage-nav-account").getAttribute("href"),
-      "/vintage/admin",
+      "/admin",
     );
     console.log(
-      "PASS homepage admin entry: toolbar Admin button opens dedicated editor; under-masthead admin bar removed",
+      "PASS homepage admin entry: /vintage redirects home; primary admin has edit gears; toolbar Admin opens site admin",
     );
     const csrfResponse = await page.request.get(baseURL + "/api/csrf-token");
     const { csrfToken } = await csrfResponse.json();

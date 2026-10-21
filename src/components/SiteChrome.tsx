@@ -26,7 +26,7 @@ export default function SiteChrome({
     pathname.startsWith("/admin/vintage-picks") ||
     pathname.startsWith("/admin/vintage-standings") ||
     pathname.startsWith("/auth/");
-  // Vintage pages, My Picks, and auth own their chrome; legacy paths wrap LegacySiteChrome themselves.
+  // Vintage public routes and auth own their chrome; remaining ops pages use legacy shell.
   if (standalone) return <>{children}</>;
   return (
     <LegacySiteChrome buildStamp={buildStamp}>{children}</LegacySiteChrome>

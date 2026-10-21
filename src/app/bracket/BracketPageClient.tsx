@@ -109,11 +109,14 @@ function defaultBracketCopyEntryName(sourceEntryName: string): string {
 
 function BracketContent({
   vintage = false,
+  vintageAdmin = false,
   vintageHome = null,
   picksCopy = null,
   standingsChrome = null,
 }: {
   vintage?: boolean;
+  /** Primary vintage admin — CMS edit gear only (not the public UX gate). */
+  vintageAdmin?: boolean;
   vintageHome?: VintageContent | null;
   picksCopy?: VintagePicksContent | null;
   /** Published Standings CMS — FF/Champ result chrome colors + sizes. */
@@ -1852,7 +1855,7 @@ function BracketContent({
               'The <year> tournament is underway!',
             { year: vintageActiveYear },
           )}
-          admin={vintage}
+          admin={vintageAdmin}
           brackets={submittedBrackets}
           viewingYear={viewingYear}
           activeYear={vintage ? vintageActiveYear : activeYear}
@@ -2097,11 +2100,13 @@ function BracketContent({
  */
 export default function BracketPageClient({
   vintage = false,
+  vintageAdmin = false,
   vintageHome = null,
   picksCopy = null,
   standingsChrome = null,
 }: {
   vintage?: boolean;
+  vintageAdmin?: boolean;
   vintageHome?: VintageContent | null;
   picksCopy?: VintagePicksContent | null;
   standingsChrome?: import("@/lib/vintage/standingsContent").VintageStandingsContent | null;
@@ -2110,6 +2115,7 @@ export default function BracketPageClient({
     <Suspense fallback={<div>Loading...</div>}>
       <BracketContent
         vintage={vintage}
+        vintageAdmin={vintageAdmin}
         vintageHome={vintageHome}
         picksCopy={picksCopy}
         standingsChrome={standingsChrome}

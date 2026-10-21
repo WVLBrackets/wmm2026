@@ -1,13 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { Pool } from "pg";
 import {
   DEFAULT_VINTAGE_CONTENT,
   normalizeVintageContent,
   type VintageContent,
   validateVintageContent,
 } from "./content";
-import { isVintageEnabled } from "./access";
-import { assertDedicatedVintageDatabase } from "./databaseSafety";
+import { getVintageDbPool, hasVintageDatabase } from "./dbPool";
 import {
   isHofRevisionContent,
   isInfoRevisionContent,
@@ -36,27 +34,7 @@ const EMPTY = (): VintageState => ({
   published: structuredClone(DEFAULT_VINTAGE_CONTENT),
   revisions: [],
 });
-let pool: Pool | undefined;
-/** A dedicated connection is required. Never fall back to the bracket database. */
-function database(): Pool {
-  if (!isVintageEnabled()) throw new Error("Vintage is disabled.");
-  const connectionString = process.env.VINTAGE_DATABASE_URL;
-  if (!connectionString)
-    throw new Error(
-      "Set VINTAGE_DATABASE_URL to a dedicated vintage database.",
-    );
-  assertDedicatedVintageDatabase(connectionString);
-  pool ??= new Pool({
-    connectionString,
-    max: 3,
-    connectionTimeoutMillis: 10000,
-    query_timeout: 15000,
-  });
-  return pool;
-}
-export function hasVintageDatabase(): boolean {
-  return !!process.env.VINTAGE_DATABASE_URL;
-}
+export { hasVintageDatabase };
 
 /**
  * Normalize homepage JSON while ignoring CMS sidecars.
@@ -67,10 +45,10 @@ function homepageFromRow(raw: unknown): VintageContent {
 
 export async function readVintageState(): Promise<VintageState> {
   if (!hasVintageDatabase()) return EMPTY();
-  const result = await database().query(
+  const result = await getVintageDbPool().query(
     "SELECT version, draft, published FROM vintage_homepage WHERE id = 1",
   );
-  const revisions = await database().query(
+  const revisions = await getVintageDbPool().query(
     "SELECT id, created_at AS \"createdAt\", author, action, content FROM vintage_homepage_revisions ORDER BY created_at DESC LIMIT 40",
   );
   const row = result.rows[0];
@@ -84,7 +62,8 @@ export async function readVintageState(): Promise<VintageState> {
       (item) =>
         !isInfoRevisionContent(item.content) &&
         !isHofRevisionContent(item.content) &&
-        !isPicksRevisionContent(item.content),
+        !isPicksRevisionContent(item.content) &&
+        !isStandingsRevisionContent(item.content),
     )
     .slice(0, 20)
     .map(({ id, createdAt, author, action }) => ({
@@ -120,7 +99,7 @@ export async function writeVintageContent(
   },
   author: string,
 ): Promise<VintageState> {
-  const client = await database().connect();
+  const client = await getVintageDbPool().connect();
   try {
     await client.query("BEGIN");
     await client.query(

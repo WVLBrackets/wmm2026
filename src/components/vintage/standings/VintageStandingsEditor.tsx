@@ -21,6 +21,34 @@ import {
 import type { VintageStandingsState } from "@/lib/vintage/standingsStore";
 import VintageAdminNav from "../VintageAdminNav";
 import "../editor.css";
+import {
+  SectionPanel,
+  SectionRail,
+  sectionDomId,
+  useSectionNav,
+} from "../sectionNav";
+
+/** Section labels in page order (Revisions is appended when revisions exist). */
+const SECTION_LABELS = [
+  "Snapshot status",
+  "Page & year",
+  "Filters & badges",
+  "Logo sizing",
+  "Result shade colors",
+  "Result border colors",
+  "Column headers (desktop)",
+  "Column headers (mobile)",
+  "Empty states & legend",
+  "Regenerate snapshot",
+] as const;
+
+/**
+ * Stable DOM id of a stacked section from its label
+ * (e.g. "Page & year" → `ve-section-page-and-year`).
+ */
+function sectionIdFor(label: string): string {
+  return sectionDomId(label);
+}
 
 type SnapshotStatus = {
   year: number;
@@ -61,6 +89,14 @@ export default function VintageStandingsEditor() {
   const [recomputeYear, setRecomputeYear] = useState("2026");
   const [snapshot, setSnapshot] = useState<SnapshotStatus | null>(null);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
+  const SECTIONS = [
+    ...SECTION_LABELS,
+    ...(state?.revisions.length ? (["Revisions"] as const) : []),
+  ].map((label) => ({ label, id: sectionIdFor(label) }));
+  const { activeId, jumpTo } = useSectionNav(
+    SECTIONS.map((section) => section.id),
+    Boolean(state),
+  );
 
   /**
    * Load snapshot freshness for the regenerator year.
@@ -332,235 +368,243 @@ export default function VintageStandingsEditor() {
       ) : null}
       {dirty ? <p className="ve-help">Unsaved changes</p> : null}
 
-      <h2>Snapshot status</h2>
-      <div
-        className="ve-notice"
-        data-testid="standings-snapshot-status"
-        role="status"
-      >
-        {snapshotLoading ? (
-          <p>Loading snapshot status…</p>
-        ) : snapshot ? (
-          <ul style={{ margin: 0, paddingLeft: "1.2rem" }}>
-            <li>
-              <strong>Year:</strong> {snapshot.year}
-            </li>
-            <li>
-              <strong>Snapshot:</strong>{" "}
-              {snapshot.exists
-                ? `${snapshot.entryCount} entries`
-                : "None yet"}
-            </li>
-            <li>
-              <strong>Computed:</strong>{" "}
-              {snapshot.computedAt
-                ? new Date(snapshot.computedAt).toLocaleString()
-                : "—"}
-            </li>
-            <li>
-              <strong>KEY:</strong>{" "}
-              {snapshot.keyExists
-                ? snapshot.keyBracketId ?? "present"
-                : "Missing"}
-              {snapshot.keyUpdatedAt
-                ? ` · updated ${new Date(snapshot.keyUpdatedAt).toLocaleString()}`
-                : ""}
-            </li>
-          </ul>
-        ) : (
-          <p>No snapshot status for this year.</p>
-        )}
-        <p style={{ marginTop: 10, marginBottom: 0 }}>
-          <Link
-            href={keyEditorHref}
-            className="ve-button"
-            data-testid="standings-key-editor-link"
-            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+      <div className="ve-workspace">
+        <SectionRail
+          sections={SECTIONS}
+          activeId={activeId}
+          onJump={jumpTo}
+          ariaLabel="Standings sections"
+          testIdPrefix="vintage-standings-tab"
+        />
+        <div className="ve-sections">
+          <SectionPanel id={sectionIdFor("Snapshot status")} title="Snapshot status">
+          <div
+            className="ve-notice"
+            data-testid="standings-snapshot-status"
+            role="status"
           >
-            <ExternalLink size={14} aria-hidden /> Open KEY editor (
-            {recomputeYear.trim() || content.standingsYear})
-          </Link>
-        </p>
-      </div>
-
-      <h2>Page &amp; year</h2>
-      <div className="ve-grid">
-        {field("heading", "Page heading")}
-        {field("standingsYear", "Standings Year", {
-          help: "Default year for the standings selector (four digits). Independent of Tourney Year on the homepage.",
-        })}
-        {field("updatedLabel", "Updated message (prefix)", {
-          help: 'Prepended to the snapshot timestamp. Example: "Updated" or "Standings last updated".',
-        })}
-        {field("searchPlaceholder", "Search placeholder")}
-        {field("yearSelectAriaLabel", "Year select aria label", {
-          help: "Token: {year}",
-        })}
-      </div>
-
-      <h2>Filters &amp; badges</h2>
-      <div className="ve-grid">
-        {field("filterAllLabel", "All Entries button")}
-        {field("filterMineLabel", "My Entries button")}
-        {field("yoursBadgeLabel", "YOURS badge (signed-in owner)")}
-        {field("showPaidIndicator", "Show paid indicator", {
-          help: 'Use "true" or "false". When false, paid glyphs are hidden.',
-        })}
-        {field("paidGlyph", "Paid glyph", {
-          help: 'Shown next to paid entries (default "$").',
-        })}
-        {field("paidAriaLabel", "Paid accessible label", {
-          help: "Title / screen-reader text for the paid glyph.",
-        })}
-      </div>
-
-      <h2>Logo sizing</h2>
-      <p className="ve-help">
-        Independent square tile sizes for desktop and mobile (breakpoint
-        900px). Clamped to 12–64px for logos and 1–8px for the finalist border.
-        Publish to apply on the public Standings page.
-      </p>
-      <div className="ve-grid">
-        {field("finalFourLogoSizeDesktopPx", "Final Four square — desktop (px)", {
-          help: "Default 22.",
-        })}
-        {field("champLogoSizeDesktopPx", "Champ square — desktop (px)", {
-          help: "Default 28.",
-        })}
-        {field("finalFourLogoSizeMobilePx", "Final Four square — mobile (px)", {
-          help: "Default 22.",
-        })}
-        {field("champLogoSizeMobilePx", "Champ square — mobile (px)", {
-          help: "Default 28.",
-        })}
-        {field("finalistBorderWidthPx", "Finalist border width (px)", {
-          help: "Default 2. Applies on both desktop and mobile.",
-        })}
-      </div>
-
-      <h2>Result shade colors</h2>
-      <p className="ve-help">
-        Cell fill for Final Four / Champ icons (CSS colors). Correct = KEY
-        match; incorrect = KEY mismatch or eliminated; pending = not decided
-        yet and still alive.
-      </p>
-      <div className="ve-grid">
-        {field("shadeCorrect", "Shade — correct (green)", {
-          help: "Default #dcfce7",
-        })}
-        {field("shadeIncorrect", "Shade — incorrect (red)", {
-          help: "Default #fee2e2",
-        })}
-        {field("shadePending", "Shade — pending (white)", {
-          help: "Default #ffffff",
-        })}
-      </div>
-
-      <h2>Result border colors</h2>
-      <p className="ve-help">
-        Finalist heavy frame (and Champ status border when decided). Pending
-        finalists use the black/pending color at the width above.
-      </p>
-      <div className="ve-grid">
-        {field("borderCorrect", "Border — correct (green)", {
-          help: "Default #16a34a",
-        })}
-        {field("borderIncorrect", "Border — incorrect (red)", {
-          help: "Default #dc2626",
-        })}
-        {field("borderPendingFinalist", "Border — pending finalist (black)", {
-          help: "Default #000000",
-        })}
-      </div>
-
-      <h2>Column headers (desktop)</h2>
-      <div className="ve-grid">
-        {field("colRankHeader", "Rank")}
-        {field("colEntryHeader", "Entry")}
-        {field("colPaidHeader", "Paid")}
-        {field("colPointsHeader", "Points")}
-        {field("colGapHeader", "Back")}
-        {field("colTbHeader", "TB")}
-        {field("colFinalFourHeader", "Final Four")}
-        {field("colChampHeader", "Champ")}
-        {field("gapColumnAriaLabel", "Gap accessible name (screen readers)")}
-      </div>
-
-      <h2>Column headers (mobile)</h2>
-      <p className="ve-help">
-        Short labels for the compact mobile grid (e.g. #, PAID, FF, Ch.).
-      </p>
-      <div className="ve-grid">
-        {field("colRankHeaderMobile", "Rank (mobile)")}
-        {field("colEntryHeaderMobile", "Entry (mobile)")}
-        {field("colPaidHeaderMobile", "Paid (mobile)")}
-        {field("colFinalFourHeaderMobile", "Final Four (mobile)")}
-        {field("colChampHeaderMobile", "Champ (mobile)")}
-      </div>
-
-      <h2>Empty states &amp; legend</h2>
-      <div className="ve-grid">
-        {field("notAvailableMessage", "Standings not available", {
-          multiline: true,
-          help: "Token: {year}",
-        })}
-        {field("noSearchResultsMessage", "No search results")}
-        {field("noMyEntriesMessage", "No My Entries")}
-        {field("showingCountTemplate", "Showing count footer", {
-          help: "Tokens: {shown}, {total}",
-        })}
-        {field("legendFinalFourChamp", "Legend — Final Four / Champ", {
-          multiline: true,
-        })}
-        {field("legendFinalistFrame", "Legend — black finalist frame", {
-          multiline: true,
-        })}
-        {field("legendYoursPaid", "Legend — YOURS / paid", {
-          multiline: true,
-          help: "Blank hides this segment. Example: YOURS = your entries · $ = paid entry",
-        })}
-      </div>
-
-      <h2>Regenerate snapshot</h2>
-      <p className="ve-help">
-        Rebuilds <code>live_standings_snapshots</code> for the year from the
-        current KEY bracket and all submitted pool brackets. Does not change the
-        KEY itself. The public Updated stamp will move to the new compute time.
-      </p>
-      <div className="ve-grid">
-        <label className="ve-field" htmlFor="standings-recompute-year">
-          <span>Regenerate year</span>
-          <input
-            id="standings-recompute-year"
-            data-testid="standings-recompute-year"
-            value={recomputeYear}
-            onChange={(e) => {
-              setRecomputeYear(e.target.value);
-              if (/^\d{4}$/.test(e.target.value.trim())) {
-                void loadSnapshotStatus(e.target.value.trim());
-              }
-            }}
-            maxLength={4}
-            inputMode="numeric"
-          />
-        </label>
-      </div>
-      <div className="ve-actions" style={{ marginTop: 12 }}>
-        <button
-          type="button"
-          className="ve-button"
-          disabled={recomputing || busy}
-          onClick={() => void regenerateSnapshot()}
-          data-testid="standings-recompute"
-        >
-          <RefreshCw size={16} />{" "}
-          {recomputing ? "Regenerating…" : "Regenerate standings snapshot"}
-        </button>
-      </div>
-
-      {state.revisions.length ? (
-        <>
-          <h2>Revisions</h2>
+            {snapshotLoading ? (
+              <p>Loading snapshot status…</p>
+            ) : snapshot ? (
+              <ul style={{ margin: 0, paddingLeft: "1.2rem" }}>
+                <li>
+                  <strong>Year:</strong> {snapshot.year}
+                </li>
+                <li>
+                  <strong>Snapshot:</strong>{" "}
+                  {snapshot.exists
+                    ? `${snapshot.entryCount} entries`
+                    : "None yet"}
+                </li>
+                <li>
+                  <strong>Computed:</strong>{" "}
+                  {snapshot.computedAt
+                    ? new Date(snapshot.computedAt).toLocaleString()
+                    : "—"}
+                </li>
+                <li>
+                  <strong>KEY:</strong>{" "}
+                  {snapshot.keyExists
+                    ? snapshot.keyBracketId ?? "present"
+                    : "Missing"}
+                  {snapshot.keyUpdatedAt
+                    ? ` · updated ${new Date(snapshot.keyUpdatedAt).toLocaleString()}`
+                    : ""}
+                </li>
+              </ul>
+            ) : (
+              <p>No snapshot status for this year.</p>
+            )}
+            <p style={{ marginTop: 10, marginBottom: 0 }}>
+              <Link
+                href={keyEditorHref}
+                className="ve-button"
+                data-testid="standings-key-editor-link"
+                style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+              >
+                <ExternalLink size={14} aria-hidden /> Open KEY editor (
+                {recomputeYear.trim() || content.standingsYear})
+              </Link>
+            </p>
+          </div>
+          </SectionPanel>
+          <SectionPanel id={sectionIdFor("Page & year")} title="Page & year">
+          <div className="ve-grid">
+            {field("heading", "Page heading")}
+            {field("standingsYear", "Standings Year", {
+              help: "Default year for the standings selector (four digits). Independent of Tourney Year on the homepage.",
+            })}
+            {field("updatedLabel", "Updated message (prefix)", {
+              help: 'Prepended to the snapshot timestamp. Example: "Updated" or "Standings last updated".',
+            })}
+            {field("searchPlaceholder", "Search placeholder")}
+            {field("yearSelectAriaLabel", "Year select aria label", {
+              help: "Token: {year}",
+            })}
+          </div>
+          </SectionPanel>
+          <SectionPanel id={sectionIdFor("Filters & badges")} title="Filters & badges">
+          <div className="ve-grid">
+            {field("filterAllLabel", "All Entries button")}
+            {field("filterMineLabel", "My Entries button")}
+            {field("yoursBadgeLabel", "YOURS badge (signed-in owner)")}
+            {field("showPaidIndicator", "Show paid indicator", {
+              help: 'Use "true" or "false". When false, paid glyphs are hidden.',
+            })}
+            {field("paidGlyph", "Paid glyph", {
+              help: 'Shown next to paid entries (default "$").',
+            })}
+            {field("paidAriaLabel", "Paid accessible label", {
+              help: "Title / screen-reader text for the paid glyph.",
+            })}
+          </div>
+          </SectionPanel>
+          <SectionPanel id={sectionIdFor("Logo sizing")} title="Logo sizing">
+          <p className="ve-help">
+            Independent square tile sizes for desktop and mobile (breakpoint
+            900px). Clamped to 12–64px for logos and 1–8px for the finalist border.
+            Publish to apply on the public Standings page.
+          </p>
+          <div className="ve-grid">
+            {field("finalFourLogoSizeDesktopPx", "Final Four square — desktop (px)", {
+              help: "Default 22.",
+            })}
+            {field("champLogoSizeDesktopPx", "Champ square — desktop (px)", {
+              help: "Default 28.",
+            })}
+            {field("finalFourLogoSizeMobilePx", "Final Four square — mobile (px)", {
+              help: "Default 22.",
+            })}
+            {field("champLogoSizeMobilePx", "Champ square — mobile (px)", {
+              help: "Default 28.",
+            })}
+            {field("finalistBorderWidthPx", "Finalist border width (px)", {
+              help: "Default 2. Applies on both desktop and mobile.",
+            })}
+          </div>
+          </SectionPanel>
+          <SectionPanel id={sectionIdFor("Result shade colors")} title="Result shade colors">
+          <p className="ve-help">
+            Cell fill for Final Four / Champ icons (CSS colors). Correct = KEY
+            match; incorrect = KEY mismatch or eliminated; pending = not decided
+            yet and still alive.
+          </p>
+          <div className="ve-grid">
+            {field("shadeCorrect", "Shade — correct (green)", {
+              help: "Default #dcfce7",
+            })}
+            {field("shadeIncorrect", "Shade — incorrect (red)", {
+              help: "Default #fee2e2",
+            })}
+            {field("shadePending", "Shade — pending (white)", {
+              help: "Default #ffffff",
+            })}
+          </div>
+          </SectionPanel>
+          <SectionPanel id={sectionIdFor("Result border colors")} title="Result border colors">
+          <p className="ve-help">
+            Finalist heavy frame (and Champ status border when decided). Pending
+            finalists use the black/pending color at the width above.
+          </p>
+          <div className="ve-grid">
+            {field("borderCorrect", "Border — correct (green)", {
+              help: "Default #16a34a",
+            })}
+            {field("borderIncorrect", "Border — incorrect (red)", {
+              help: "Default #dc2626",
+            })}
+            {field("borderPendingFinalist", "Border — pending finalist (black)", {
+              help: "Default #000000",
+            })}
+          </div>
+          </SectionPanel>
+          <SectionPanel id={sectionIdFor("Column headers (desktop)")} title="Column headers (desktop)">
+          <div className="ve-grid">
+            {field("colRankHeader", "Rank")}
+            {field("colEntryHeader", "Entry")}
+            {field("colPaidHeader", "Paid")}
+            {field("colPointsHeader", "Points")}
+            {field("colGapHeader", "Back")}
+            {field("colTbHeader", "TB")}
+            {field("colFinalFourHeader", "Final Four")}
+            {field("colChampHeader", "Champ")}
+            {field("gapColumnAriaLabel", "Gap accessible name (screen readers)")}
+          </div>
+          </SectionPanel>
+          <SectionPanel id={sectionIdFor("Column headers (mobile)")} title="Column headers (mobile)">
+          <p className="ve-help">
+            Short labels for the compact mobile grid (e.g. #, PAID, FF, Ch.).
+          </p>
+          <div className="ve-grid">
+            {field("colRankHeaderMobile", "Rank (mobile)")}
+            {field("colEntryHeaderMobile", "Entry (mobile)")}
+            {field("colPaidHeaderMobile", "Paid (mobile)")}
+            {field("colFinalFourHeaderMobile", "Final Four (mobile)")}
+            {field("colChampHeaderMobile", "Champ (mobile)")}
+          </div>
+          </SectionPanel>
+          <SectionPanel id={sectionIdFor("Empty states & legend")} title="Empty states & legend">
+          <div className="ve-grid">
+            {field("notAvailableMessage", "Standings not available", {
+              multiline: true,
+              help: "Token: {year}",
+            })}
+            {field("noSearchResultsMessage", "No search results")}
+            {field("noMyEntriesMessage", "No My Entries")}
+            {field("showingCountTemplate", "Showing count footer", {
+              help: "Tokens: {shown}, {total}",
+            })}
+            {field("legendFinalFourChamp", "Legend — Final Four / Champ", {
+              multiline: true,
+            })}
+            {field("legendFinalistFrame", "Legend — black finalist frame", {
+              multiline: true,
+            })}
+            {field("legendYoursPaid", "Legend — YOURS / paid", {
+              multiline: true,
+              help: "Blank hides this segment. Example: YOURS = your entries · $ = paid entry",
+            })}
+          </div>
+          </SectionPanel>
+          <SectionPanel id={sectionIdFor("Regenerate snapshot")} title="Regenerate snapshot">
+          <p className="ve-help">
+            Rebuilds <code>live_standings_snapshots</code> for the year from the
+            current KEY bracket and all submitted pool brackets. Does not change the
+            KEY itself. The public Updated stamp will move to the new compute time.
+          </p>
+          <div className="ve-grid">
+            <label className="ve-field" htmlFor="standings-recompute-year">
+              <span>Regenerate year</span>
+              <input
+                id="standings-recompute-year"
+                data-testid="standings-recompute-year"
+                value={recomputeYear}
+                onChange={(e) => {
+                  setRecomputeYear(e.target.value);
+                  if (/^\d{4}$/.test(e.target.value.trim())) {
+                    void loadSnapshotStatus(e.target.value.trim());
+                  }
+                }}
+                maxLength={4}
+                inputMode="numeric"
+              />
+            </label>
+          </div>
+          <div className="ve-actions" style={{ marginTop: 12 }}>
+            <button
+              type="button"
+              className="ve-button"
+              disabled={recomputing || busy}
+              onClick={() => void regenerateSnapshot()}
+              data-testid="standings-recompute"
+            >
+              <RefreshCw size={16} />{" "}
+              {recomputing ? "Regenerating…" : "Regenerate standings snapshot"}
+            </button>
+          </div>
+          </SectionPanel>
+          {state.revisions.length ? (
+            <SectionPanel id={sectionIdFor("Revisions")} title="Revisions">
           <ul className="ve-revisions">
             {state.revisions.map((revision) => (
               <li key={revision.id}>
@@ -579,8 +623,10 @@ export default function VintageStandingsEditor() {
               </li>
             ))}
           </ul>
-        </>
-      ) : null}
+            </SectionPanel>
+          ) : null}
+        </div>
+      </div>
     </main>
   );
 }

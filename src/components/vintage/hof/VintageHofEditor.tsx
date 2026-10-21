@@ -20,6 +20,28 @@ import {
 import type { VintageHofState } from "@/lib/vintage/hofStore";
 import VintageAdminNav from "../VintageAdminNav";
 import "../editor.css";
+import {
+  SectionPanel,
+  SectionRail,
+  sectionDomId,
+  useSectionNav,
+} from "../sectionNav";
+
+/** Section labels in page order (Revisions is appended when revisions exist). */
+const SECTION_LABELS = [
+  "Page header",
+  "Champions by year",
+  "All-time leaders",
+  "Closing",
+] as const;
+
+/**
+ * Stable DOM id of a stacked section from its label
+ * (e.g. "All-time leaders" → `ve-section-all-time-leaders`).
+ */
+function sectionIdFor(label: string): string {
+  return sectionDomId(label);
+}
 
 /**
  * Set a string field on the HoF draft by key.
@@ -46,6 +68,14 @@ export default function VintageHofEditor() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const SECTIONS = [
+    ...SECTION_LABELS,
+    ...(state?.revisions.length ? (["Revisions"] as const) : []),
+  ].map((label) => ({ label, id: sectionIdFor(label) }));
+  const { activeId, jumpTo } = useSectionNav(
+    SECTIONS.map((section) => section.id),
+    Boolean(state),
+  );
 
   useEffect(() => {
     let active = true;
@@ -242,26 +272,51 @@ export default function VintageHofEditor() {
       ) : null}
       {dirty ? <p className="ve-help">Unsaved changes</p> : null}
 
-      <div className="ve-grid">
-        {field("heading", "Main heading")}
-        {field("supporting", "Supporting sentence", { multiline: true })}
-        {field("reigningLabel", "Reigning champion label")}
-        {field("archiveHeading", "Champions by Year heading")}
-        {field("leadersHeading", "All-Time Leaders heading")}
-        {field("careerHeading", "Career Winnings heading")}
-        {field("careerSubtitle", "Career Winnings subtitle")}
-        {field("singleSeasonHeading", "Single-Season Points heading")}
-        {field("singleSeasonSubtitle", "Single-Season Points subtitle")}
-        {field("closing", "Closing line")}
-        {field("showMoreLabel", "Show More Years label")}
-        {field("showFewerLabel", "Show Fewer Years label")}
-        {field("viewTop25Label", "View Top 25 label")}
-        {field("showTop5Label", "Show Top 5 label")}
-      </div>
-
-      {state.revisions.length ? (
-        <>
-          <h2>Revisions</h2>
+      <div className="ve-workspace">
+        <SectionRail
+          sections={SECTIONS}
+          activeId={activeId}
+          onJump={jumpTo}
+          ariaLabel="Hall of Fame sections"
+          testIdPrefix="vintage-hof-tab"
+        />
+        <div className="ve-sections">
+          <SectionPanel id={sectionIdFor("Page header")} title="Page header">
+            <div className="ve-grid">
+              {field("heading", "Main heading")}
+              {field("supporting", "Supporting sentence", { multiline: true })}
+              {field("reigningLabel", "Reigning champion label")}
+            </div>
+          </SectionPanel>
+          <SectionPanel
+            id={sectionIdFor("Champions by year")}
+            title="Champions by year"
+          >
+            <div className="ve-grid">
+              {field("archiveHeading", "Champions by Year heading")}
+              {field("showMoreLabel", "Show More Years label")}
+              {field("showFewerLabel", "Show Fewer Years label")}
+            </div>
+          </SectionPanel>
+          <SectionPanel
+            id={sectionIdFor("All-time leaders")}
+            title="All-time leaders"
+          >
+            <div className="ve-grid">
+              {field("leadersHeading", "All-Time Leaders heading")}
+              {field("careerHeading", "Career Winnings heading")}
+              {field("careerSubtitle", "Career Winnings subtitle")}
+              {field("singleSeasonHeading", "Single-Season Points heading")}
+              {field("singleSeasonSubtitle", "Single-Season Points subtitle")}
+              {field("viewTop25Label", "View Top 25 label")}
+              {field("showTop5Label", "Show Top 5 label")}
+            </div>
+          </SectionPanel>
+          <SectionPanel id={sectionIdFor("Closing")} title="Closing">
+            <div className="ve-grid">{field("closing", "Closing line")}</div>
+          </SectionPanel>
+          {state.revisions.length ? (
+            <SectionPanel id={sectionIdFor("Revisions")} title="Revisions">
           <ul className="ve-revisions">
             {state.revisions.map((revision) => (
               <li key={revision.id}>
@@ -280,8 +335,10 @@ export default function VintageHofEditor() {
               </li>
             ))}
           </ul>
-        </>
-      ) : null}
+            </SectionPanel>
+          ) : null}
+        </div>
+      </div>
     </main>
   );
 }
