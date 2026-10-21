@@ -154,6 +154,7 @@ export function assembleLiveStandingsData(
   const ranked = sortAndRankStandingsEntries(rawEntries, keyTieBreakerPopulated);
 
   return {
+    teamLogos: Object.fromEntries(tournamentData.regions.flatMap(r => r.teams).map(t => [t.name, t.logo])),
     day: 'Live',
     entries: ranked,
     lastUpdated: computedAtIso,

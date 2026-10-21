@@ -92,7 +92,7 @@ export default function TourneyR1BracketPreview({ year }: TourneyR1BracketPrevie
     setLoadError(null);
     setData(null);
     try {
-      const response = await fetch(`/data/tournament-${year}.json`, { cache: 'no-store' });
+      const response = await fetch(`/api/tournament-data?year=${year}`, { cache: 'no-store' });
       if (!response.ok) {
         throw new Error(`Could not load tournament-${year}.json (${response.status})`);
       }
@@ -137,7 +137,7 @@ export default function TourneyR1BracketPreview({ year }: TourneyR1BracketPrevie
         <div>
           <h4 className="text-lg font-semibold text-gray-900">Round of 64 preview</h4>
           <p className="text-xs text-gray-500 mt-0.5">
-            Read-only snapshot from <code className="text-gray-700">public/data/tournament-{year}.json</code>
+            Published tournament for {year}.
           </p>
         </div>
         <button

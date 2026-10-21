@@ -6,7 +6,7 @@ import { getUserByEmail } from '@/lib/repositories/userRepository';
 import { getSiteConfigFromGoogleSheets, getSiteConfigFromGoogleSheetsFresh } from '@/lib/siteConfig';
 import { sendSubmissionConfirmationEmail, processEmailAsync } from '@/lib/bracketEmailService';
 import { validateBracketSubmission } from '@/lib/bracketSubmissionValidator';
-import { tryLoadTournamentData } from '@/lib/tournamentLoader';
+import { tryLoadTournamentData } from '@/lib/tournamentLoaderServer';
 import { logError } from '@/lib/serverErrorLogger';
 import { csrfProtection } from '@/lib/csrf';
 import { normalizeStoredDisplayName } from '@/lib/stringNormalize';

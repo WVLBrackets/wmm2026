@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Pencil } from 'lucide-react';
 import TourneyR1BracketPreview from '@/components/admin/TourneyR1BracketPreview';
+import FirstFourResults from '@/components/admin/FirstFourResults';
 
 interface TournamentFilesResponse {
   success: boolean;
@@ -99,7 +100,7 @@ export default function TourneyTab() {
       <div className="mb-4">
         <h3 className="text-xl font-semibold text-gray-900">Tourney</h3>
         <p className="text-sm text-gray-600 mt-1">
-          Select a tournament year and edit its bracket JSON in Tournament Builder.
+          Build and publish a tournament directly to this environment. Historical JSON remains unchanged.
         </p>
       </div>
 
@@ -144,12 +145,13 @@ export default function TourneyTab() {
       {selectedYear && (
         <p className={`mt-3 text-xs ${fileExists ? 'text-green-700' : 'text-amber-700'}`}>
           {fileExists
-            ? `Editing existing file: ${selectedFile}`
-            : `${selectedFile} not found yet. Builder will open with year ${selectedYear} to create/update it.`}
+            ? `A definition or legacy JSON exists for ${selectedYear}.`
+            : `Create a new tournament for ${selectedYear} in the builder.`}
         </p>
       )}
 
       {selectedYear && <TourneyR1BracketPreview year={selectedYear} />}
+      {selectedYear && <FirstFourResults key={selectedYear} year={selectedYear} />}
     </div>
   );
 }

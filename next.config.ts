@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: {
+    '/api/**/*': ['./public/data/tournament-*.json', './public/logos/teams/*.png'],
+  },
   images: {
     qualities: [25, 50, 75, 95, 100],
     formats: ['image/webp', 'image/avif'],

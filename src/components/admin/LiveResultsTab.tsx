@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { KeyRound, Pencil } from 'lucide-react';
 import KeyBracketPreviewModal from '@/components/admin/KeyBracketPreviewModal';
+import FirstFourResults from '@/components/admin/FirstFourResults';
 
 interface BracketSummary {
   year?: number;
@@ -143,6 +144,8 @@ export default function LiveResultsTab({ brackets }: LiveResultsTabProps) {
           Edit
         </button>
       </div>
+
+      {selectedYear && <FirstFourResults key={selectedYear} year={selectedYear} onSaved={() => setEmbeddedPreviewKey(k => k + 1)} />}
 
       {selectedYear && (
         <KeyBracketPreviewModal

@@ -5,7 +5,7 @@
  */
 
 import { notifyAdminOfError } from '@/lib/adminNotifications';
-import { tryLoadTournamentData } from '@/lib/tournamentLoader';
+import { tryLoadTournamentData } from '@/lib/tournamentLoaderServer';
 import type { VintageContent } from '@/lib/vintage/content';
 import type { VintagePicksContent } from '@/lib/vintage/picksContent';
 import { getPublishedVintagePicksContent } from '@/lib/vintage/picksStore';

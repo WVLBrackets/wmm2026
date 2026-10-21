@@ -5,6 +5,17 @@ export interface TournamentTeam {
   logo: string;
   region?: string; // Added for Final Four teams to show which region they came from
   mascot?: string;
+  /** Stable bracket slot id remains `id`; these are real school identities. */
+  playIn?: {
+    teams: [PlayInSchool, PlayInSchool];
+    winnerId?: string;
+  };
+}
+
+export interface PlayInSchool {
+  id: string;
+  name: string;
+  logo: string;
 }
 
 export interface TournamentRegion {
@@ -14,6 +25,7 @@ export interface TournamentRegion {
 }
 
 export interface TournamentData {
+  schemaVersion?: 2;
   year: string;
   name: string;
   regions: TournamentRegion[];

@@ -36,6 +36,9 @@ export function formatPointsGap(
 export type RegionalChampionKeyRow = [string, string, string, string];
 
 export interface StandingsData {
+  /** Year-specific slot displays; unresolved play-ins do not exist in the school DB. */
+  teamLogos?: Record<string, string>;
+  tournamentRevision?: number;
   day: string;
   entries: StandingsEntry[];
   lastUpdated: string;

@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSiteConfigFromGoogleSheetsFresh } from '@/lib/siteConfig';
 import { getMasterLockState } from '@/lib/killSwitch';
-import { tryLoadTournamentData } from '@/lib/tournamentLoader';
+import { tryLoadTournamentData } from '@/lib/tournamentLoaderServer';
 import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 import { evaluatePicksAccess } from '@/lib/services/picksAccessPolicy';
 import { vintageAdminEmail } from '@/lib/vintage/admin';
