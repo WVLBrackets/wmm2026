@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   isToolbarItemPopulated,
@@ -13,6 +14,7 @@ import {
 
 /**
  * Render populated toolbar buttons from CMS content.
+ * Slots marked admin-only stay hidden until `/api/check-admin` confirms ops admin.
  */
 export default function VintageToolbar({
   items,
@@ -20,7 +22,57 @@ export default function VintageToolbar({
   items: VintageToolbarItem[];
 }) {
   const pathname = usePathname() || "/";
-  const visible = items.filter(isToolbarItemPopulated);
+  const populated = items.filter(isToolbarItemPopulated);
+  const needsAdminCheck = populated.some((item) => item.adminOnly);
+  const [viewerIsAdmin, setViewerIsAdmin] = useState(false);
+  const [adminCheckReady, setAdminCheckReady] = useState(!needsAdminCheck);
+
+  useEffect(() => {
+    if (!needsAdminCheck) {
+      setAdminCheckReady(true);
+      setViewerIsAdmin(false);
+      return;
+    }
+
+    let cancelled = false;
+    setAdminCheckReady(false);
+
+    /**
+     * Resolve ops-admin status for admin-only toolbar slots.
+     */
+    async function loadAdminStatus() {
+      try {
+        const response = await fetch("/api/check-admin", { cache: "no-store" });
+        if (!response.ok) {
+          if (!cancelled) {
+            setViewerIsAdmin(false);
+            setAdminCheckReady(true);
+          }
+          return;
+        }
+        const data = (await response.json()) as { isAdmin?: boolean };
+        if (!cancelled) {
+          setViewerIsAdmin(Boolean(data.isAdmin));
+          setAdminCheckReady(true);
+        }
+      } catch {
+        if (!cancelled) {
+          setViewerIsAdmin(false);
+          setAdminCheckReady(true);
+        }
+      }
+    }
+
+    void loadAdminStatus();
+    return () => {
+      cancelled = true;
+    };
+  }, [needsAdminCheck]);
+
+  const visible = populated.filter((item) => {
+    if (!item.adminOnly) return true;
+    return adminCheckReady && viewerIsAdmin;
+  });
 
   return (
     <nav

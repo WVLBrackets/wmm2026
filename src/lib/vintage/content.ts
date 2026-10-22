@@ -31,6 +31,11 @@ export interface VintageToolbarItem {
   label: string;
   href: string;
   icon: string;
+  /**
+   * When true, only ops admins (`ADMIN_EMAIL` / `/api/check-admin`) see the button.
+   * Toggled per slot in homepage CMS — not hard-coded by destination.
+   */
+  adminOnly: boolean;
 }
 
 /** Site-wide vintage theme colors (hex) and four role-based fonts. */
@@ -154,6 +159,7 @@ export function emptyToolbarSlot(index: number): VintageToolbarItem {
     label: "",
     href: "",
     icon: "",
+    adminOnly: false,
   };
 }
 
@@ -162,30 +168,51 @@ export function emptyToolbarSlot(index: number): VintageToolbarItem {
  */
 export function defaultToolbar(): VintageToolbarItem[] {
   return [
-    { id: "home", label: "Home", href: "/", icon: "House" },
-    { id: "info", label: "Info", href: "/info", icon: "BookOpen" },
-    { id: "history", label: "History", href: "/hall-of-fame", icon: "Trophy" },
+    { id: "home", label: "Home", href: "/", icon: "House", adminOnly: false },
+    { id: "info", label: "Info", href: "/info", icon: "BookOpen", adminOnly: false },
+    {
+      id: "history",
+      label: "History",
+      href: "/hall-of-fame",
+      icon: "Trophy",
+      adminOnly: false,
+    },
     {
       id: "standings",
       label: "Standings",
       href: "/standings",
       icon: "custom:https://br-odd-rice-ad9n8mtb.storage.c-2.us-east-1.aws.neon.tech/vintage-homepage-media/vintage/d0229683-0185-4a87-827f-b6f36e38bc35.svg",
+      adminOnly: false,
     },
     {
       id: "picks",
       label: "My Picks",
       href: "/bracket",
       icon: "custom:https://br-odd-rice-ad9n8mtb.storage.c-2.us-east-1.aws.neon.tech/vintage-homepage-media/vintage/4d089223-2cb7-4c29-a3df-4965266b0842.svg",
+      adminOnly: false,
     },
     {
       id: "account",
       label: "Admin",
       href: "/admin",
       icon: "CircleUserRound",
+      adminOnly: true,
     },
     emptyToolbarSlot(6),
     emptyToolbarSlot(7),
   ];
+}
+
+/**
+ * Default admin-only for the legacy Admin slot when older CMS docs omit the flag.
+ */
+function defaultToolbarAdminOnly(
+  id: string,
+  href: string,
+  fallbackAdminOnly: boolean,
+): boolean {
+  if (id === "account" || href.trim() === "/admin") return true;
+  return fallbackAdminOnly;
 }
 
 /**
@@ -222,11 +249,17 @@ export function normalizeToolbar(
       ) {
         icon = "BookOpen";
       }
+      const fallbackAdminOnly = fallback.adminOnly;
+      const adminOnly =
+        typeof item.adminOnly === "boolean"
+          ? item.adminOnly
+          : defaultToolbarAdminOnly(id, href, fallbackAdminOnly);
       return {
         id,
         label: typeof item.label === "string" ? item.label : "",
         href,
         icon,
+        adminOnly,
       };
     },
   );

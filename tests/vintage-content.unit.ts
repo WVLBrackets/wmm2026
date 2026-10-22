@@ -76,6 +76,44 @@ test("rejects bad dates, unsafe URLs, blank masthead, and invalid announcements"
   assert.equal(migrated.theme.primary, "#152c3a");
 });
 
+test("toolbar Admin slot defaults to adminOnly; others stay public", () => {
+  assert.equal(
+    DEFAULT_VINTAGE_CONTENT.toolbar.find((item) => item.id === "account")
+      ?.adminOnly,
+    true,
+  );
+  assert.equal(
+    DEFAULT_VINTAGE_CONTENT.toolbar.find((item) => item.id === "home")
+      ?.adminOnly,
+    false,
+  );
+  const legacy = normalizeVintageContent({
+    toolbar: [
+      { id: "home", label: "Home", href: "/", icon: "House" },
+      {
+        id: "account",
+        label: "Admin",
+        href: "/admin",
+        icon: "CircleUserRound",
+      },
+    ],
+  });
+  assert.equal(legacy.toolbar[0].adminOnly, false);
+  assert.equal(legacy.toolbar[1].adminOnly, true);
+  const explicit = normalizeVintageContent({
+    toolbar: [
+      {
+        id: "standings",
+        label: "Standings",
+        href: "/standings",
+        icon: "Trophy",
+        adminOnly: true,
+      },
+    ],
+  });
+  assert.equal(explicit.toolbar[0].adminOnly, true);
+});
+
 test("rejects invalid theme colors, fonts, and unknown toolbar icons", () => {
   const badColor = structuredClone(DEFAULT_VINTAGE_CONTENT);
   badColor.theme.primary = "navy";

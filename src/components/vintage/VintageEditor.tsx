@@ -302,7 +302,12 @@ export default function VintageEditor() {
    * Clear a toolbar slot so it no longer appears on the homepage.
    */
   function clearToolbarSlot(index: number) {
-    updateToolbar(index, { label: "", href: "", icon: "" });
+    updateToolbar(index, {
+      label: "",
+      href: "",
+      icon: "",
+      adminOnly: false,
+    });
   }
 
   /**
@@ -708,7 +713,8 @@ export default function VintageEditor() {
                 Up to {VINTAGE_TOOLBAR_SLOTS} buttons. A button appears on the
                 homepage only when caption, destination, and icon are all set.
                 Drag the handle to reorder. Icons can be Lucide or your own
-                uploaded SVGs.
+                uploaded SVGs. Turn on <strong>Admin only</strong> to hide a
+                button from everyone except ops admins (same gate as `/admin`).
               </p>
               <div
                 className="ve-toolbar-slots"
@@ -749,7 +755,11 @@ export default function VintageEditor() {
                         <div className="ve-toolbar-slot-head">
                           <strong>Button {index + 1}</strong>
                           <span>
-                            {populated ? "Visible on homepage" : "Hidden (incomplete)"}
+                            {!populated
+                              ? "Hidden (incomplete)"
+                              : item.adminOnly
+                                ? "Visible to admins only"
+                                : "Visible to everyone"}
                           </span>
                         </div>
                         <div className="ve-grid">
@@ -788,6 +798,23 @@ export default function VintageEditor() {
                             />
                           </label>
                         </div>
+                        <label
+                          className="ve-check"
+                          htmlFor={`vintage-toolbar-admin-only-${index}`}
+                        >
+                          <input
+                            id={`vintage-toolbar-admin-only-${index}`}
+                            type="checkbox"
+                            checked={Boolean(item.adminOnly)}
+                            data-testid={`vintage-toolbar-admin-only-${index}`}
+                            onChange={(event) =>
+                              updateToolbar(index, {
+                                adminOnly: event.target.checked,
+                              })
+                            }
+                          />
+                          <span>Admin only</span>
+                        </label>
                         <div className="ve-toolbar-icon-row">
                           <button
                             type="button"

@@ -29,7 +29,8 @@ async function main() {
         ...process.env,
         NEXTAUTH_SECRET: secret,
         NEXTAUTH_URL: baseURL,
-        ADMIN_EMAIL: "other-admin@example.invalid",
+        // Ops admin matches primary vintage admin (prod shape); CMS still requires primary.
+        ADMIN_EMAIL: admin,
         VERCEL_ENV: process.env.VINTAGE_TEST_ENV || "preview",
         VINTAGE_HOMEPAGE_ENABLED: "true",
         NODE_OPTIONS: `${process.env.NODE_OPTIONS || ""} --require ${path.resolve("tests/fixtures/vintage-network-stubs.cjs")}`,
@@ -98,6 +99,7 @@ async function main() {
     assert.equal(await page.getByTestId("legacy-homepage").count(), 0);
     assert.equal(await page.getByTestId("vintage-homepage").count(), 1);
     assert.equal(await page.getByTestId("vintage-edit-gear-countdown").count(), 0);
+    assert.equal(await page.getByTestId("vintage-nav-account").count(), 0);
     assert.equal(await page.locator('[data-testid^="home-view-"]').count(), 0);
     const vintageRedirect = await page.request.get(baseURL + "/vintage", {
       maxRedirects: 0,
@@ -147,6 +149,7 @@ async function main() {
     await page.goto(baseURL + "/", { waitUntil: "networkidle" });
     assert.equal(await page.getByTestId("vintage-homepage").count(), 1);
     assert.equal(await page.getByTestId("vintage-edit-gear-countdown").count(), 0);
+    assert.equal(await page.getByTestId("vintage-nav-account").count(), 0);
     const signedInVintageRedirect = await page.request.get(
       baseURL + "/vintage",
       { maxRedirects: 0 },
@@ -179,6 +182,11 @@ async function main() {
     assert.equal(await page.getByTestId("legacy-homepage").count(), 0);
     assert.equal(await page.getByTestId("vintage-homepage").count(), 1);
     assert.equal(await page.getByTestId("vintage-edit-gear-countdown").count(), 1);
+    await page.getByTestId("vintage-nav-account").waitFor({ state: "visible" });
+    assert.equal(
+      await page.getByTestId("vintage-nav-account").getAttribute("href"),
+      "/admin",
+    );
     assert.equal(await page.locator('[data-testid^="home-view-"]').count(), 0);
     const primaryResponse = await page.request.get(baseURL + "/");
     assert.match(primaryResponse.headers()["cache-control"] || "", /no-store/);
@@ -372,6 +380,8 @@ async function main() {
     assert.equal(await page.getByTestId("legacy-homepage").count(), 0);
     assert.equal(await page.getByTestId("vintage-homepage").count(), 1);
     assert.equal(await page.getByTestId("vintage-edit-gear-countdown").count(), 0);
+    // other-admin is not ADMIN_EMAIL — Admin-only toolbar slot stays hidden.
+    assert.equal(await page.getByTestId("vintage-nav-account").count(), 0);
     assert.equal(await page.locator('[data-testid^="home-view-"]').count(), 0);
     console.log(
       "PASS isolation: another configured admin sees vintage public UI without edit gears and cannot open vintage CMS routes or APIs",
