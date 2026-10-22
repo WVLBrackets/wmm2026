@@ -6,7 +6,7 @@ import { getUserByEmail } from '@/lib/repositories/userRepository';
 import { getSiteConfigFromGoogleSheets, getSiteConfigFromGoogleSheetsFresh } from '@/lib/siteConfig';
 import { sendSubmissionConfirmationEmail, processEmailAsync } from '@/lib/bracketEmailService';
 import { validateBracketSubmission } from '@/lib/bracketSubmissionValidator';
-import { tryLoadTournamentData } from '@/lib/tournamentLoader';
+import { tryLoadTournamentData } from '@/lib/tournamentLoaderServer';
 import { logError } from '@/lib/serverErrorLogger';
 import { csrfProtection } from '@/lib/csrf';
 import { normalizeStoredDisplayName } from '@/lib/stringNormalize';
@@ -87,18 +87,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Resolve year + mutation gates (stop_submit toggle/deadline) before creating
+    // Resolve year + Changing gates (submit creates a submitted bracket)
     let siteConfig = null;
     try {
       siteConfig = await getSiteConfigFromGoogleSheetsFresh();
     } catch {
       siteConfig = FALLBACK_CONFIG;
     }
-    const tournamentYear = siteConfig?.tournamentYear
+    const sheetYear = siteConfig?.tournamentYear
       ? parseInt(String(siteConfig.tournamentYear), 10)
       : parseInt(String(FALLBACK_CONFIG.tournamentYear), 10);
 
-    const mutationAccess = await evaluateBracketMutationAccess(tournamentYear);
+    const mutationAccess = await evaluateBracketMutationAccess(
+      sheetYear,
+      'changing',
+      { forCreate: true },
+    );
     if (!mutationAccess.allowed) {
       return NextResponse.json(
         { success: false, error: mutationAccess.error },
@@ -106,6 +110,7 @@ export async function POST(request: NextRequest) {
       );
     }
     siteConfig = mutationAccess.siteConfig;
+    const tournamentYear = mutationAccess.activeYear;
 
     // Get all existing brackets for this user
     const existingBrackets = await getBracketsByUserId(user.id);
@@ -315,24 +320,31 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Use fresh config for mutation gates (toggle / deadline / year)
+    // First Save of a new editor session → create in_progress (save_wip).
+    // Year comes from mutation policy (CMS active year for vintage).
     let siteConfig = null;
     try {
       siteConfig = await getSiteConfigFromGoogleSheetsFresh();
     } catch {
       siteConfig = FALLBACK_CONFIG;
     }
-    const createYear = siteConfig?.tournamentYear
+    const sheetYear = siteConfig?.tournamentYear
       ? parseInt(String(siteConfig.tournamentYear), 10)
       : parseInt(String(FALLBACK_CONFIG.tournamentYear), 10);
 
-    const mutationAccess = await evaluateBracketMutationAccess(createYear);
+    const mutationAccess = await evaluateBracketMutationAccess(
+      sheetYear,
+      'save_wip',
+      { forCreate: true },
+    );
     if (!mutationAccess.allowed) {
       return NextResponse.json(
         { success: false, error: mutationAccess.error },
         { status: mutationAccess.status }
       );
     }
+    siteConfig = mutationAccess.siteConfig;
+    const createYear = mutationAccess.activeYear;
 
     const fieldData = await tryLoadTournamentData(String(createYear));
     if (!fieldData) {

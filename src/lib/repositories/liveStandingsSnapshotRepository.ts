@@ -7,6 +7,8 @@ import type { StandingsData } from '@/lib/standingsData';
 import { sql } from '../databaseAdapter';
 import { getCurrentEnvironment } from '../databaseConfig';
 import { initializeDatabase } from '../database/migrations';
+import { tournamentScope } from './tournamentRepository';
+import { FIRST_MANAGED_YEAR } from '../tournamentDefinition';
 
 export interface LiveStandingsSnapshot {
   year: number;
@@ -59,7 +61,7 @@ export async function upsertLiveStandingsSnapshot(
   standingsData: StandingsData
 ): Promise<void> {
   await ensureTable();
-  const environment = getCurrentEnvironment();
+  const environment = year >= FIRST_MANAGED_YEAR ? tournamentScope() : getCurrentEnvironment();
 
   await sql`
     INSERT INTO live_standings_snapshots (
@@ -92,7 +94,7 @@ export async function upsertLiveStandingsSnapshot(
  */
 export async function getLiveStandingsSnapshot(year: number): Promise<LiveStandingsSnapshot | null> {
   await ensureTable();
-  const environment = getCurrentEnvironment();
+  const environment = year >= FIRST_MANAGED_YEAR ? tournamentScope() : getCurrentEnvironment();
 
   const result = await sql`
     SELECT year, key_bracket_id, key_updated_at, computed_at, entries
@@ -126,4 +128,21 @@ export async function getLiveStandingsSnapshot(year: number): Promise<LiveStandi
     computedAt: new Date(row.computed_at as string),
     standingsData,
   };
+}
+
+/**
+ * Years that have a live standings snapshot for the current environment (newest first).
+ */
+export async function listLiveStandingsYears(): Promise<number[]> {
+  await ensureTable();
+  const environment = getCurrentEnvironment();
+  const result = await sql`
+    SELECT year
+    FROM live_standings_snapshots
+    WHERE (environment = ${environment} AND year < ${FIRST_MANAGED_YEAR}) OR environment = ${tournamentScope()}
+    ORDER BY year DESC
+  `;
+  return result.rows
+    .map((row) => Number((row as { year: number }).year))
+    .filter((y) => Number.isFinite(y));
 }

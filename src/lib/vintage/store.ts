@@ -1,12 +1,21 @@
 import { randomUUID } from "node:crypto";
-import { Pool } from "pg";
 import {
   DEFAULT_VINTAGE_CONTENT,
+  normalizeVintageContent,
   type VintageContent,
   validateVintageContent,
 } from "./content";
-import { isVintageEnabled } from "./access";
-import { assertDedicatedVintageDatabase } from "./databaseSafety";
+import { getVintageDbPool, hasVintageDatabase } from "./dbPool";
+import {
+  isHofRevisionContent,
+  isInfoRevisionContent,
+  isPicksRevisionContent,
+  isStandingsRevisionContent,
+  mergeHomepageDocument,
+  splitHomepageDocument,
+} from "./homepageDocument";
+import { sidecarsFromRow } from "./sidecarPreserve";
+
 export interface VintageRevision {
   id: string;
   createdAt: string;
@@ -25,44 +34,49 @@ const EMPTY = (): VintageState => ({
   published: structuredClone(DEFAULT_VINTAGE_CONTENT),
   revisions: [],
 });
-let pool: Pool | undefined;
-/** A dedicated connection is required. Never fall back to the bracket database. */
-function database(): Pool {
-  if (!isVintageEnabled()) throw new Error("Vintage is disabled.");
-  const connectionString = process.env.VINTAGE_DATABASE_URL;
-  if (!connectionString)
-    throw new Error(
-      "Set VINTAGE_DATABASE_URL to a dedicated vintage database.",
-    );
-  assertDedicatedVintageDatabase(connectionString);
-  pool ??= new Pool({
-    connectionString,
-    max: 3,
-    connectionTimeoutMillis: 10000,
-    query_timeout: 15000,
-  });
-  return pool;
+export { hasVintageDatabase };
+
+/**
+ * Normalize homepage JSON while ignoring CMS sidecars.
+ */
+function homepageFromRow(raw: unknown): VintageContent {
+  return normalizeVintageContent(splitHomepageDocument(raw).homepage);
 }
-export function hasVintageDatabase(): boolean {
-  return !!process.env.VINTAGE_DATABASE_URL;
-}
+
 export async function readVintageState(): Promise<VintageState> {
   if (!hasVintageDatabase()) return EMPTY();
-  const result = await database().query(
+  const result = await getVintageDbPool().query(
     "SELECT version, draft, published FROM vintage_homepage WHERE id = 1",
   );
-  const revisions = await database().query(
-    'SELECT id, created_at AS "createdAt", author, action FROM vintage_homepage_revisions ORDER BY created_at DESC LIMIT 20',
+  const revisions = await getVintageDbPool().query(
+    "SELECT id, created_at AS \"createdAt\", author, action, content FROM vintage_homepage_revisions ORDER BY created_at DESC LIMIT 40",
   );
   const row = result.rows[0];
   if (!row) return EMPTY();
-  validateVintageContent(row.draft);
-  validateVintageContent(row.published);
+  const draft = homepageFromRow(row.draft);
+  const published = homepageFromRow(row.published);
+  validateVintageContent(draft);
+  validateVintageContent(published);
+  const homepageRevisions = revisions.rows
+    .filter(
+      (item) =>
+        !isInfoRevisionContent(item.content) &&
+        !isHofRevisionContent(item.content) &&
+        !isPicksRevisionContent(item.content) &&
+        !isStandingsRevisionContent(item.content),
+    )
+    .slice(0, 20)
+    .map(({ id, createdAt, author, action }) => ({
+      id,
+      createdAt,
+      author,
+      action,
+    }));
   return {
     version: Number(row.version),
-    draft: row.draft,
-    published: row.published,
-    revisions: revisions.rows,
+    draft,
+    published,
+    revisions: homepageRevisions,
   };
 }
 export async function getPublishedVintageContent(): Promise<VintageContent> {
@@ -85,7 +99,7 @@ export async function writeVintageContent(
   },
   author: string,
 ): Promise<VintageState> {
-  const client = await database().connect();
+  const client = await getVintageDbPool().connect();
   try {
     await client.query("BEGIN");
     await client.query(
@@ -104,17 +118,72 @@ export async function writeVintageContent(
         [input.revisionId],
       );
       if (!revision.rows[0]) throw new Error("Revision not found.");
-      content = revision.rows[0].content;
+      if (isInfoRevisionContent(revision.rows[0].content)) {
+        throw new Error(
+          "That revision belongs to the handbook editor. Restore it there.",
+        );
+      }
+      if (isHofRevisionContent(revision.rows[0].content)) {
+        throw new Error(
+          "That revision belongs to the Hall of Fame editor. Restore it there.",
+        );
+      }
+      if (isPicksRevisionContent(revision.rows[0].content)) {
+        throw new Error(
+          "That revision belongs to the My Picks editor. Restore it there.",
+        );
+      }
+      if (isStandingsRevisionContent(revision.rows[0].content)) {
+        throw new Error(
+          "That revision belongs to the Standings editor. Restore it there.",
+        );
+      }
+      content = splitHomepageDocument(revision.rows[0].content).homepage as
+        | VintageContent
+        | undefined;
     }
-    validateVintageContent(content);
-    const published = input.action === "publish" ? content : current.published;
+    const normalized = normalizeVintageContent(content);
+    validateVintageContent(normalized);
+    const draftSides = sidecarsFromRow(current.draft);
+    const publishedSides = sidecarsFromRow(current.published);
+    const publishedHome =
+      input.action === "publish"
+        ? normalized
+        : homepageFromRow(current.published);
+    const draftOut = mergeHomepageDocument(
+      normalized,
+      draftSides.info,
+      draftSides.hof,
+      draftSides.picks,
+      draftSides.standings,
+    );
+    const publishedOut = mergeHomepageDocument(
+      publishedHome,
+      publishedSides.info,
+      publishedSides.hof,
+      publishedSides.picks,
+      publishedSides.standings,
+    );
     await client.query(
       "UPDATE vintage_homepage SET version = version + 1, draft = $1, published = $2 WHERE id = 1",
-      [JSON.stringify(content), JSON.stringify(published)],
+      [JSON.stringify(draftOut), JSON.stringify(publishedOut)],
     );
     await client.query(
       "INSERT INTO vintage_homepage_revisions (id, author, action, content) VALUES ($1, $2, $3, $4)",
-      [randomUUID(), author, input.action, JSON.stringify(content)],
+      [
+        randomUUID(),
+        author,
+        input.action,
+        JSON.stringify(
+          mergeHomepageDocument(
+            normalized,
+            draftSides.info,
+            draftSides.hof,
+            draftSides.picks,
+            draftSides.standings,
+          ),
+        ),
+      ],
     );
     await client.query("COMMIT");
   } catch (error) {

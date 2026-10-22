@@ -147,12 +147,14 @@ export function assembleLiveStandingsData(
       // `brackets.payment_status === 'paid'` — same `StandingsEntry.paid` as daily sheet column Y.
       paid: (b.paymentStatus ?? '') === 'paid',
       bracketId: b.id,
+      userId: b.userId,
     };
   });
 
   const ranked = sortAndRankStandingsEntries(rawEntries, keyTieBreakerPopulated);
 
   return {
+    teamLogos: Object.fromEntries(tournamentData.regions.flatMap(r => r.teams).map(t => [t.name, t.logo])),
     day: 'Live',
     entries: ranked,
     lastUpdated: computedAtIso,

@@ -1,15 +1,54 @@
-import StandingsShell from '@/components/StandingsShell';
-import { PageLogger } from '@/components/PageLogger';
+import { notFound } from "next/navigation";
+import { PageLogger } from "@/components/PageLogger";
+import VintageLiveStandings from "@/components/vintage/standings/VintageLiveStandings";
+import { listLiveStandingsYears } from "@/lib/repositories/liveStandingsSnapshotRepository";
+import {
+  mergeAvailableYears,
+  parseViewingYear,
+} from "@/lib/services/tournamentYearService";
+import { vintageAdminEmail } from "@/lib/vintage/admin";
+import { isVintageEnabled } from "@/lib/vintage/access";
+import { getPublishedVintageStandingsContent } from "@/lib/vintage/standingsStore";
+import { getPublishedVintageContent } from "@/lib/vintage/store";
 
-export default function StandingsPage() {
+export const dynamic = "force-dynamic";
+
+/**
+ * Standings: Live Standings only (vintage) for everyone when enabled.
+ * Default year comes from Standings CMS `standingsYear` (not Tourney Year).
+ */
+export default async function StandingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ year?: string }>;
+}) {
+  if (!isVintageEnabled()) notFound();
+
+  const params = await searchParams;
+  const [home, copy, snapshotYears, adminEmail] = await Promise.all([
+    getPublishedVintageContent(),
+    getPublishedVintageStandingsContent(),
+    listLiveStandingsYears().catch(() => [] as number[]),
+    vintageAdminEmail(),
+  ]);
+  const standingsDefaultYear = parseInt(copy.standingsYear.trim(), 10);
+  const defaultYear = Number.isFinite(standingsDefaultYear)
+    ? standingsDefaultYear
+    : new Date().getFullYear();
+  const viewingYear = parseViewingYear(params.year, defaultYear);
+  const availableYears = mergeAvailableYears(snapshotYears, defaultYear);
+
   return (
     <>
       <PageLogger location="Standings" />
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-          <StandingsShell />
-        </div>
-      </div>
+      <VintageLiveStandings
+        home={home}
+        copy={copy}
+        admin={Boolean(adminEmail)}
+        standingsDefaultYear={defaultYear}
+        viewingYear={viewingYear}
+        availableYears={availableYears}
+      />
     </>
   );
 }

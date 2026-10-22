@@ -39,6 +39,8 @@ interface StepByStepBracketProps {
   isAdminMode?: boolean;
   isLiveResultsMode?: boolean;
   disableSaveSubmit?: boolean;
+  /** When set, overrides save-button disable independently of submit (Save WIP). */
+  disableSave?: boolean;
   disableMessage?: string;
 }
 
@@ -65,8 +67,10 @@ export default function StepByStepBracket({
   isAdminMode = false,
   isLiveResultsMode = false,
   disableSaveSubmit = false,
+  disableSave,
   disableMessage = ''
 }: StepByStepBracketProps) {
+  const saveDisabled = disableSave ?? disableSaveSubmit;
   // Restore current step from sessionStorage on mount
   const getInitialStep = () => {
     if (typeof window === 'undefined') return 0;
@@ -298,7 +302,7 @@ export default function StepByStepBracket({
           entryName={entryName}
           onEntryNameChange={onEntryNameChange}
           isLiveResultsMode={isLiveResultsMode}
-          disableSave={disableSaveSubmit}
+          disableSave={saveDisabled}
           disableSaveMessage={disableMessage}
           bracketRegionalMessage={
             siteConfig?.bracketRegionalMessage?.trim() ??
@@ -345,6 +349,7 @@ export default function StepByStepBracket({
           isAdminMode={isAdminMode}
           isLiveResultsMode={isLiveResultsMode}
           disableSaveSubmit={disableSaveSubmit}
+          disableSave={saveDisabled}
           disableSaveSubmitMessage={disableMessage}
           entryNameDuplicate={entryNameDuplicate}
         />

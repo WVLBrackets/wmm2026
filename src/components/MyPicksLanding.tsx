@@ -21,8 +21,32 @@ import {
   evaluatePicksAccess,
   formatPriorYearWarningMessage,
   isBracketsAvailableFlag,
+  type PicksAccessResult,
 } from '@/lib/services/picksAccessPolicy';
+import {
+  evaluateVintageActionLock,
+  formatVintagePriorYearMessage,
+} from '@/lib/services/vintageActionLock';
 import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
+import { useIsMdUp } from '@/hooks/useIsMdUp';
+import {
+  DEFAULT_VINTAGE_PICKS_CONTENT,
+  formatVintagePicksLabel,
+  vintagePicksChromeCssVars,
+  type VintagePicksContent,
+} from '@/lib/vintage/picksContent';
+import {
+  DEFAULT_VINTAGE_STANDINGS_CONTENT,
+  standingsResultChromeStyle,
+  type VintageStandingsContent,
+} from '@/lib/vintage/standingsContent';
+import {
+  emptyPickResultKeyContext,
+  resolvePickResultTone,
+  type PickResultKeyContext,
+} from '@/lib/pickResultChrome';
+import PicksEditGear from '@/components/vintage/picks/PicksEditGear';
+import './vintage/picks/picks.css';
 
 const scoreboardFont = Press_Start_2P({
   weight: '400',
@@ -218,6 +242,28 @@ function formatInThePoolMessage(template: string, submittedCount: number): strin
 }
 
 interface MyPicksLandingProps {
+  /** Visual treatment: `legacy` (default) keeps the blue/white UI; `vintage` uses the cream/navy editorial layout. */
+  variant?: 'legacy' | 'vintage';
+  /** Published My Picks CMS copy (timer, flavors for header/pool/empty). */
+  picksCopy?: VintagePicksContent;
+  /**
+   * Published Standings CMS — shared FF/Champ result chrome (colors, sizes, border width).
+   */
+  standingsChrome?: VintageStandingsContent;
+  /**
+   * Homepage Tourney Tipoff ISO (`tournament.tipoffAt`).
+   * Vintage only — no Config Sheet datetime.
+   */
+  tipoffAt?: string;
+  /**
+   * Homepage Brackets Ready ISO (`tournament.bracketsReadyAt`, Selection Sunday).
+   * Vintage My Picks countdown target before brackets are published.
+   */
+  bracketsReadyAt?: string;
+  /** Homepage live-tourney message — shown on My Picks after tipoff. */
+  liveTourneyMessage?: string;
+  /** When true, show admin edit gear on the vintage landing. */
+  admin?: boolean;
   brackets?: Bracket[];
   onCreateNew: () => void;
   onEditBracket: (bracket: Bracket) => void;
@@ -254,6 +300,8 @@ interface MyPicksLandingProps {
   availableYears?: number[];
   /** Switch My Picks viewing year (parent updates URL). */
   onViewingYearChange?: (year: number) => void;
+  /** Soft year switch in progress — keep landing mounted; dim list + disable year select. */
+  isYearSwitching?: boolean;
   /** Eye icon: open full-bracket modal when set; otherwise falls back to print tab. */
   onOpenFullBracketModal?: (bracket: Bracket) => void;
   /** Called after a Venmo payment request is recorded so the parent can refresh the bracket list. */
@@ -264,7 +312,14 @@ interface MyPicksLandingProps {
  * Small team logo for My Picks Final Four / Champ cells.
  * Module-scoped so parent re-renders (e.g. per-second countdown) do not remount {@link Image} and flash on mobile.
  */
-const FinalFourLogo = React.memo(function FinalFourLogo({ logoPath }: { logoPath: string | null }) {
+const FinalFourLogo = React.memo(function FinalFourLogo({
+  logoPath,
+  teamName = null,
+}: {
+  logoPath: string | null;
+  /** Team name for the image alt text when known. */
+  teamName?: string | null;
+}) {
   const [imageError, setImageError] = React.useState(false);
 
   if (!logoPath || imageError) {
@@ -274,7 +329,7 @@ const FinalFourLogo = React.memo(function FinalFourLogo({ logoPath }: { logoPath
   return (
     <Image
       src={logoPath}
-      alt="Team logo"
+      alt={teamName ? `${teamName} logo` : 'Team logo'}
       width={24}
       height={24}
       className="max-h-[22px] max-w-[22px] object-contain"
@@ -285,6 +340,13 @@ const FinalFourLogo = React.memo(function FinalFourLogo({ logoPath }: { logoPath
 });
 
 export default function MyPicksLanding({
+  variant = 'legacy',
+  picksCopy = DEFAULT_VINTAGE_PICKS_CONTENT,
+  standingsChrome = DEFAULT_VINTAGE_STANDINGS_CONTENT,
+  tipoffAt = '',
+  bracketsReadyAt = '',
+  liveTourneyMessage = 'The tournament is underway!',
+  admin = false,
   brackets = [],
   onCreateNew,
   onEditBracket,
@@ -315,6 +377,7 @@ export default function MyPicksLanding({
   activeYear: activeYearProp,
   availableYears = [],
   onViewingYearChange,
+  isYearSwitching = false,
   onOpenFullBracketModal,
   onPaymentCreated,
 }: MyPicksLandingProps) {
@@ -345,6 +408,14 @@ export default function MyPicksLanding({
     bracketsEntered: number;
   } | null>(null);
   const { getServerNowMs } = useServerTime();
+  const isVintage = variant === 'vintage';
+  /** Vintage layout renders only the matching breakpoint so test ids stay unique. */
+  const isMdUp = useIsMdUp();
+  const viewportSuffix: 'desktop' | 'mobile' = isMdUp ? 'desktop' : 'mobile';
+  /** KEY-derived chrome for FF / Champ (shared with Standings). */
+  const [resultKeyContext, setResultKeyContext] = useState<PickResultKeyContext>(
+    () => emptyPickResultKeyContext(),
+  );
 
   // Active year from config; viewing year from parent URL / props
   const activeYear =
@@ -358,44 +429,137 @@ export default function MyPicksLanding({
   const isHistoricalView = viewingYear !== activeYear;
   const historicalReadOnlyMessage = `Brackets from ${viewingYear} are read-only. Switch to ${activeYear} to create or edit.`;
 
+  /**
+   * Load KEY regional / semi / champ winners + eliminated list for result chrome.
+   */
+  useEffect(() => {
+    if (!isVintage) {
+      setResultKeyContext(emptyPickResultKeyContext());
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch(
+          `/api/live-standings?year=${encodeURIComponent(String(viewingYear))}`,
+          { cache: 'no-store' },
+        );
+        const json = await response.json();
+        if (cancelled) return;
+        if (!response.ok || !json.available || !json.standingsData) {
+          setResultKeyContext(emptyPickResultKeyContext());
+          return;
+        }
+        const data = json.standingsData as {
+          regionalChampionKey?: [string, string, string, string];
+          semifinalKey?: [string, string];
+          finalWinner?: string;
+          eliminatedTeams?: string[];
+        };
+        setResultKeyContext({
+          regionalChampionKey: data.regionalChampionKey ?? ['', '', '', ''],
+          semifinalKey: data.semifinalKey ?? ['', ''],
+          finalWinner: data.finalWinner ?? '',
+          eliminatedTeams: data.eliminatedTeams ?? [],
+        });
+      } catch {
+        if (!cancelled) setResultKeyContext(emptyPickResultKeyContext());
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isVintage, viewingYear]);
+
+  /** Current vs historic editorial flavor for vintage landing copy. */
+  const picksFlavor = isHistoricalView
+    ? picksCopy.flavors.historic
+    : picksCopy.flavors.current;
+  const picksTokenVars = { year: viewingYear, activeYear };
+
   const priorYearBannerMessage = useMemo(
     () =>
-      formatPriorYearWarningMessage(
-        siteConfig?.priorYearWarningMessage,
-        viewingYear,
-        activeYear
-      ),
-    [siteConfig?.priorYearWarningMessage, viewingYear, activeYear]
+      isVintage
+        ? formatVintagePriorYearMessage(picksCopy, viewingYear, activeYear)
+        : formatPriorYearWarningMessage(
+            siteConfig?.priorYearWarningMessage,
+            viewingYear,
+            activeYear,
+          ),
+    [
+      isVintage,
+      picksCopy,
+      siteConfig?.priorYearWarningMessage,
+      viewingYear,
+      activeYear,
+    ],
   );
 
   /**
-   * Unified mutation gate for the *active* year only.
-   * Prior-year viewing is always read-only (separate from publish / lock gates).
+   * Unified Changing-action gate.
+   * Vintage: Action Lock master reference (no Config Sheet stop_submit).
+   * Legacy: Config Sheet evaluatePicksAccess.
    */
-  const picksAccess = useMemo(
-    () =>
-      evaluatePicksAccess(siteConfig, {
+  const picksAccess = useMemo((): PicksAccessResult => {
+    if (isVintage) {
+      const lock = evaluateVintageActionLock({
+        action: 'changing',
+        bracketYear: viewingYear,
+        activeYear,
+        picksCopy,
+        tipoffAt,
+        bracketsReadyAt,
         tournamentJsonPresent: Boolean(tournamentData),
-        masterLockUnlocked: killSwitchEnabled,
-      }),
-    [siteConfig, tournamentData, killSwitchEnabled]
-  );
+        nowMs: getServerNowMs(),
+      });
+      return {
+        blocked: lock.blocked,
+        reasonCode: lock.reasonCode,
+        message: lock.message,
+      };
+    }
+    if (isHistoricalView) {
+      return {
+        blocked: true,
+        reasonCode: 'prior_year',
+        message: historicalReadOnlyMessage,
+      };
+    }
+    return evaluatePicksAccess(siteConfig, {
+      tournamentJsonPresent: Boolean(tournamentData),
+      masterLockUnlocked: killSwitchEnabled,
+    });
+  }, [
+    isVintage,
+    picksCopy,
+    tipoffAt,
+    bracketsReadyAt,
+    activeYear,
+    viewingYear,
+    isHistoricalView,
+    historicalReadOnlyMessage,
+    siteConfig,
+    tournamentData,
+    killSwitchEnabled,
+    getServerNowMs,
+  ]);
 
-  const accessBlockMessage = isHistoricalView
-    ? historicalReadOnlyMessage
-    : picksAccess.message ||
-      killSwitchMessage ||
-      siteConfig?.masterLockMessage ||
-      FALLBACK_CONFIG.masterLockMessage ||
-      'Bracket actions are temporarily locked by the administrator.';
+  const accessBlockMessage =
+    picksAccess.message ||
+    (isVintage
+      ? formatVintagePicksLabel(picksCopy.masterLockMessage, { year: activeYear })
+      : killSwitchMessage || siteConfig?.masterLockMessage) ||
+    FALLBACK_CONFIG.masterLockMessage ||
+    'Bracket actions are temporarily locked by the administrator.';
 
   const accessMessageClassName =
-    picksAccess.reasonCode === 'brackets_missing_json' || picksAccess.reasonCode === 'master_lock'
+    picksAccess.reasonCode === 'brackets_missing_json' ||
+    picksAccess.reasonCode === 'master_lock'
       ? 'text-sm text-red-600 mt-1 font-medium'
       : 'text-sm text-amber-800 mt-1 font-medium';
 
-  /** Mutations blocked for prior-year view or active-year access gates. */
-  const mutationsBlocked = isHistoricalView || picksAccess.blocked;
+  /** Changing actions blocked (View / Print / Email remain available). */
+  const mutationsBlocked = picksAccess.blocked;
 
   /** All brackets for the viewing year (parent usually pre-filters; keep a safety filter). */
   const bracketsForYear = useMemo(
@@ -427,7 +591,7 @@ export default function MyPicksLanding({
     [bracketsForYear]
   );
 
-  const entryCost = siteConfig?.entryCost ?? 5;
+  const entryCost = isVintage ? picksCopy.entryCost : (siteConfig?.entryCost ?? 5);
   const venmoUser = siteConfig?.venmoUser;
   const payCapabilityEnabled = siteConfig?.enablePayCapability?.toUpperCase() === 'YES';
 
@@ -513,6 +677,16 @@ export default function MyPicksLanding({
     return null;
   };
 
+  /** Looks up a team display name by id (for logo alt text); null when unknown. */
+  const findTeamNameById = (teamId: string | null): string | null => {
+    if (!teamId || !tournamentData) return null;
+    for (const region of tournamentData.regions) {
+      const team = region.teams.find((t) => t.id === teamId);
+      if (team) return team.name || null;
+    }
+    return null;
+  };
+
   // Get Final Four teams from picks
   const getFinalFourTeams = (picks: { [gameId: string]: string }) => {
     // The Final Four consists of the 4 Elite Eight winners who compete in final-four-1 and final-four-2
@@ -540,6 +714,11 @@ export default function MyPicksLanding({
       finalist1: findTeamLogoById(finalist1Id),
       finalist2: findTeamLogoById(finalist2Id),
       champion: findTeamLogoById(championId),
+      topLeftName: findTeamNameById(topLeftId),
+      bottomLeftName: findTeamNameById(bottomLeftId),
+      topRightName: findTeamNameById(topRightId),
+      bottomRightName: findTeamNameById(bottomRightId),
+      championName: findTeamNameById(championId),
       // Store IDs to check which teams are finalists
       finalist1Id,
       finalist2Id,
@@ -661,13 +840,17 @@ export default function MyPicksLanding({
     const submittedCount = bracketsForYear.filter((bracket) => bracket.status === 'submitted').length;
     const inProgressCount = bracketsForYear.filter((bracket) => bracket.status === 'in_progress').length;
     const deletedCount = bracketsForYear.filter((bracket) => bracket.status === 'deleted').length;
-    const entryCost = siteConfig?.entryCost || 5;
+    const entryCost = isVintage
+      ? picksCopy.entryCost
+      : siteConfig?.entryCost || 5;
     const totalCost = submittedCount * entryCost;
-    return { submittedCount, inProgressCount, deletedCount, totalCost };
+    return { submittedCount, inProgressCount, deletedCount, totalCost, entryCost };
   };
 
   /**
    * Header status copy based on bracket counts.
+   * Vintage: My Picks CMS flavor cost lines (no Config Sheet welcome_*).
+   * Legacy: sheet welcome_* keys.
    * Returns null when New Bracket is disabled and the user has no entries — avoid
    * prompting them to click a disabled control.
    */
@@ -676,7 +859,18 @@ export default function MyPicksLanding({
 
     let message = '';
 
-    if (submittedCount === 0 && inProgressCount === 0) {
+    if (isVintage) {
+      if (submittedCount === 0 && inProgressCount === 0) {
+        if (mutationsBlocked) return null;
+        message = picksFlavor.costNoBrackets;
+      } else if (submittedCount > 0 && inProgressCount === 0) {
+        message = picksFlavor.costNoInProgress;
+      } else if (submittedCount === 0 && inProgressCount > 0) {
+        message = picksFlavor.costNoSubmitted;
+      } else {
+        message = picksFlavor.costBoth;
+      }
+    } else if (submittedCount === 0 && inProgressCount === 0) {
       if (mutationsBlocked) return null;
       message = siteConfig?.welcomeNoBrackets || 'Click New Bracket to start your first entry';
     } else if (submittedCount > 0 && inProgressCount === 0) {
@@ -693,7 +887,7 @@ export default function MyPicksLanding({
         `Your total cost so far is $${totalCost}. In Progress brackets are not included in the contest until submitted.`;
     }
 
-    return message
+    return formatVintagePicksLabel(message, picksTokenVars)
       .replace(/{Submitted}/g, submittedCount.toString())
       .replace(/{In Progress}/g, inProgressCount.toString())
       .replace(/{cost}/g, totalCost.toString());
@@ -753,25 +947,52 @@ export default function MyPicksLanding({
 
   /**
    * Target datetime for the My Picks countdown scoreboard.
-   * Pre-release (`brackets_available=NO`): `brackets_available_date_time`.
-   * Once available: `tournament_start_date` (tip-off).
+   * Vintage: homepage Brackets Ready (pre-publish) or Tourney Tipoff (published).
+   * Legacy: Config Sheet brackets_available_date_time / tournament_start_date.
    */
   const countdownTargetRaw = useMemo(() => {
+    if (isVintage) {
+      if (!picksCopy.bracketsPublished) {
+        return bracketsReadyAt.trim();
+      }
+      return tipoffAt.trim();
+    }
     if (!isBracketsAvailableFlag(siteConfig)) {
       return siteConfig?.bracketsAvailableDateTime?.trim() || '';
     }
     return siteConfig?.tournamentStartDate?.trim() || '';
   }, [
+    isVintage,
+    picksCopy.bracketsPublished,
+    bracketsReadyAt,
+    tipoffAt,
     siteConfig?.bracketsAvailable,
     siteConfig?.bracketsAvailableDateTime,
     siteConfig?.tournamentStartDate,
   ]);
 
+  /** Vintage: tipoff has arrived (active tournament) — swap timer for live message. */
+  const vintageTourneyLive = useMemo(() => {
+    if (!isVintage || !picksCopy.bracketsPublished) return false;
+    const tip = Date.parse(tipoffAt);
+    if (!Number.isFinite(tip)) return false;
+    if (countdownMs !== null && countdownTargetRaw === tipoffAt.trim()) {
+      return countdownMs <= 0;
+    }
+    return getServerNowMs() >= tip;
+  }, [
+    isVintage,
+    picksCopy.bracketsPublished,
+    tipoffAt,
+    countdownMs,
+    countdownTargetRaw,
+    getServerNowMs,
+  ]);
+
   /**
    * Convert a millisecond duration into HH:MM:SS or MM:SS.
    * Switches to MM:SS once remaining time is under one hour.
-   * For long horizons (>100 hours), display the sheet “X Days …” template using
-   * full remaining calendar days (not day-of-month delta).
+   * For long horizons (>100 hours): vintage uses “N days to go”; legacy uses sheet templates.
    *
    * @param useMobileDaysTemplate When true and the “X days away” branch applies, use `countdownTimerMessageMobile` (fallback: desktop message).
    */
@@ -783,6 +1004,9 @@ export default function MyPicksLanding({
 
     if (hours > 100) {
       const daysAway = Math.max(1, Math.ceil(remainingMs / (24 * 60 * 60 * 1000)));
+      if (isVintage) {
+        return `${daysAway} day${daysAway === 1 ? '' : 's'} to go`;
+      }
       const desktopTemplate = siteConfig?.countdownTimerMessage?.trim() || 'X Days Away';
       const mobileTemplate =
         siteConfig?.countdownTimerMessageMobile?.trim() || desktopTemplate;
@@ -822,13 +1046,34 @@ export default function MyPicksLanding({
     countdownMs !== null ? formatCountdown(countdownMs, false) : null;
   const countdownDisplayMobile =
     countdownMs !== null ? formatCountdown(countdownMs, true) : null;
+  /** Legacy only — vintage always shows Ready/Tipoff/Live status box (no sheet flag). */
   const showCountdownTimer = siteConfig?.showCountdownTimer?.trim().toUpperCase() === 'YES';
   // Countdown is independent of Application Master Lock (lock is a separate fail-safe).
   const scoreboardTimeDesktop = countdownDisplayDesktop || '00:00';
   const scoreboardTimeMobile = countdownDisplayMobile || '00:00';
-  const countdownHoverTitle = isBracketsAvailableFlag(siteConfig)
-    ? 'Countdown to Bracket Submission Deadline'
-    : 'Countdown to Bracket Publication';
+  const bracketsFieldOpen = isVintage
+    ? picksCopy.bracketsPublished
+    : isBracketsAvailableFlag(siteConfig);
+  const countdownHoverTitle = bracketsFieldOpen
+    ? 'Countdown to tipoff'
+    : 'Countdown to brackets ready';
+
+  /** Adminable vintage timer label: Ready message pre-publish, tipoff message after. */
+  const vintageCountdownLabel = formatVintagePicksLabel(
+    bracketsFieldOpen
+      ? picksCopy.countdownToTipoffLabel
+      : picksCopy.countdownToBracketLabel,
+    { year: viewingYear, activeYear },
+  );
+
+  const vintageLiveMessage =
+    liveTourneyMessage.trim() || 'The tournament is underway!';
+
+  /** Adminable prior-year switch copy that replaces the timer. */
+  const vintagePriorYearSwitchLabel = formatVintagePicksLabel(
+    picksCopy.viewingPriorYearLabel,
+    { year: viewingYear, activeYear },
+  );
 
   /**
    * Get tooltip/disable reason for user actions.
@@ -985,21 +1230,37 @@ export default function MyPicksLanding({
     [bracketsForYear]
   );
 
-  /** Bold header + optional detail; sheet keys `in_the_pool_header` / `in_the_pool_message`. */
-  const inPoolCopy = {
-    header: siteConfig?.inThePoolHeader?.trim() || 'In the pool',
-    detail: formatInThePoolMessage(
-      siteConfig?.inThePoolMessage?.trim() || 'Submitted entries count toward the contest.',
-      submittedEntryCountForPoolMessage
-    ),
-  };
-  /** Sheet keys `not_in_the_pool_header` / `not_in_the_pool_message`. */
-  const outPoolCopy = {
-    header: siteConfig?.notInThePoolHeader?.trim() || 'Not in the pool',
-    detail:
-      siteConfig?.notInThePoolMessage?.trim() ||
-      'In progress and deleted entries are not included until you submit.',
-  };
+  /**
+   * Pool section banners: vintage uses CMS flavors; legacy keeps sheet keys
+   * `in_the_pool_header` / `in_the_pool_message` (and not-in equivalents).
+   */
+  const inPoolCopy = isVintage
+    ? {
+        header: formatVintagePicksLabel(picksFlavor.inPoolHeader, picksTokenVars),
+        detail: formatInThePoolMessage(
+          formatVintagePicksLabel(picksFlavor.inPoolDetail, picksTokenVars),
+          submittedEntryCountForPoolMessage
+        ),
+      }
+    : {
+        header: siteConfig?.inThePoolHeader?.trim() || 'In the pool',
+        detail: formatInThePoolMessage(
+          siteConfig?.inThePoolMessage?.trim() ||
+            'Submitted entries count toward the contest.',
+          submittedEntryCountForPoolMessage
+        ),
+      };
+  const outPoolCopy = isVintage
+    ? {
+        header: formatVintagePicksLabel(picksFlavor.outPoolHeader, picksTokenVars),
+        detail: formatVintagePicksLabel(picksFlavor.outPoolDetail, picksTokenVars),
+      }
+    : {
+        header: siteConfig?.notInThePoolHeader?.trim() || 'Not in the pool',
+        detail:
+          siteConfig?.notInThePoolMessage?.trim() ||
+          'In progress and deleted entries are not included until you submit.',
+      };
 
   /**
    * Open profile modal and load `/api/user/profile` (display name, email, stats).
@@ -1183,8 +1444,1184 @@ export default function MyPicksLanding({
     );
   };
 
+  /**
+   * Class names for a row action button. Vintage colors come from CMS CSS vars
+   * via `data-vp-action`; legacy keeps Tailwind fill colors.
+   */
+  const rowActionClass = (disabled: boolean, legacyEnabled: string) =>
+    isVintage
+      ? 'v-picks__action-btn flex h-8 w-8 items-center justify-center transition-colors'
+      : `w-8 h-8 rounded flex items-center justify-center transition-colors ${
+          disabled
+            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            : legacyEnabled
+        }`;
+
+  /**
+   * Row action controls (view / edit / submit / copy / delete / restore / return / email, plus inline confirmations).
+   * Shared by the legacy table and the vintage table + mobile cards so handlers stay identical.
+   *
+   * @param bracket - Row bracket.
+   * @param number - Display bracket number (0 when unknown); used for usage-log ids.
+   * @param submitDisabledReason - Disable reason for in-progress Submit, or null.
+   * @param accessForcesViewOnly - True when an in-progress row opens read-only because mutations are blocked.
+   */
+  const renderRowActionButtons = (
+    bracket: Bracket,
+    number: number,
+    submitDisabledReason: string | null,
+    accessForcesViewOnly: boolean,
+  ) => (
+    <>
+                          {bracket.status === 'in_progress' ? (
+                            <>
+                              {pendingDeleteBracketId === bracket.id ? (
+                                <>
+                                  {/* Confirmation UI - embedded in the table */}
+                                  <div className="col-span-2 flex w-full max-w-xs flex-wrap items-center justify-center gap-2 justify-self-center bg-red-50 border border-red-200 rounded px-2 py-1 md:col-auto md:w-auto" data-testid="delete-confirmation-dialog">
+                                    <span className="text-xs text-red-700 font-medium whitespace-nowrap">Delete?</span>
+                                    <button
+                                      onClick={() => onConfirmDelete && onConfirmDelete(bracket.id)}
+                                      disabled={deletingBracketId === bracket.id}
+                                      className="bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      Yes
+                                    </button>
+                                    <button
+                                      onClick={() => onCancelDelete && onCancelDelete()}
+                                      disabled={deletingBracketId === bracket.id}
+                                      className="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      No
+                                    </button>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  {/* In Progress: Edit (or View when kill-switch on), Submit, Copy, Delete */}
+                                  {accessForcesViewOnly ? (
+                                    <LoggedButton
+                                      onClick={() => handleEyeOpenFullBracketOrPrint(bracket)}
+                                      logLocation={onOpenFullBracketModal ? 'FullBracketModal' : 'Print'}
+                                      bracketId={number ? String(number).padStart(6, '0') : null}
+                                      className={rowActionClass(false, 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer')}
+                                      data-vp-action="view"
+                                      title="View"
+                                    >
+                                      <Eye className="h-4 w-4" />
+                                    </LoggedButton>
+                                  ) : (
+                                    <LoggedButton
+                                      onClick={() =>
+                                        !getInProgressEditButtonDisabledReason() && onEditBracket(bracket)
+                                      }
+                                      logLocation="Edit"
+                                      bracketId={number ? String(number).padStart(6, '0') : null}
+                                      disabled={Boolean(getInProgressEditButtonDisabledReason())}
+                                      className={rowActionClass(
+                                        Boolean(getInProgressEditButtonDisabledReason()),
+                                        'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer',
+                                      )}
+                                      data-vp-action="edit"
+                                      title={getInProgressEditButtonDisabledReason() || 'Edit'}
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </LoggedButton>
+                                  )}
+                                  <LoggedButton
+                                    onClick={() => {
+                                      if (!submitDisabledReason) void onSubmitBracket(bracket);
+                                    }}
+                                    logLocation="Submit"
+                                    bracketId={number ? String(number).padStart(6, '0') : null}
+                                    disabled={Boolean(submitDisabledReason)}
+                                    className={rowActionClass(
+                                      Boolean(submitDisabledReason),
+                                      'bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer',
+                                    )}
+                                    title={submitDisabledReason || 'Submit'}
+                                    data-testid="submit-bracket-landing-button"
+                                    data-vp-action="submit"
+                                  >
+                                    <Send className="h-4 w-4" aria-hidden />
+                                  </LoggedButton>
+                                  <LoggedButton
+                                    onClick={() => !getActionDisabledReason('copy') && onCopyBracket(bracket)}
+                                    logLocation="Copy"
+                                    bracketId={number ? String(number).padStart(6, '0') : null}
+                                    disabled={Boolean(getActionDisabledReason('copy'))}
+                                    className={rowActionClass(
+                                      Boolean(getActionDisabledReason('copy')),
+                                      'bg-green-600 text-white hover:bg-green-700 cursor-pointer',
+                                    )}
+                                    title={getActionDisabledReason('copy') || 'Copy'}
+                                    data-testid="copy-bracket-button"
+                                    data-vp-action="copy"
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </LoggedButton>
+                                  <LoggedButton
+                                    onClick={() => !getActionDisabledReason('delete') && onDeleteBracket(bracket.id)}
+                                    logLocation="Delete"
+                                    bracketId={number ? String(number).padStart(6, '0') : null}
+                                    disabled={Boolean(getActionDisabledReason('delete')) || deletingBracketId === bracket.id || pendingDeleteBracketId === bracket.id}
+                                    className={rowActionClass(
+                                      Boolean(getActionDisabledReason('delete')) || deletingBracketId === bracket.id || pendingDeleteBracketId === bracket.id,
+                                      'bg-red-600 text-white hover:bg-red-700 cursor-pointer',
+                                    )}
+                                    title={getActionDisabledReason('delete') || (deletingBracketId === bracket.id ? 'Deleting...' : 'Delete')}
+                                    data-testid="delete-bracket-button"
+                                    data-vp-action="delete"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </LoggedButton>
+                                </>
+                              )}
+                            </>
+                          ) : bracket.status === 'deleted' ? (
+                            <>
+                              {pendingPermanentDeleteBracketId === bracket.id ? (
+                                <div
+                                  className="col-span-2 flex w-full max-w-xs flex-col items-stretch gap-2 justify-self-center bg-red-50 border border-red-200 rounded px-2 py-2 mx-auto md:col-auto md:mx-auto"
+                                  data-testid="permanent-delete-confirmation"
+                                >
+                                  <div className="text-xs text-gray-800 text-left">
+                                    {renderMessageWithLineBreaks(
+                                      siteConfig?.permDeleteMessage ||
+                                        'Permanently delete this bracket? This cannot be undone.||Are you sure you want to continue?'
+                                    )}
+                                  </div>
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => onConfirmPermanentDelete && onConfirmPermanentDelete(bracket.id)}
+                                      disabled={deletingBracketId === bracket.id}
+                                      className="bg-red-800 text-white text-xs px-2 py-1 rounded hover:bg-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      Yes
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => onCancelPermanentDelete && onCancelPermanentDelete()}
+                                      disabled={deletingBracketId === bracket.id}
+                                      className="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      No
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <LoggedButton
+                                    onClick={() => handleEyeOpenFullBracketOrPrint(bracket)}
+                                    logLocation={onOpenFullBracketModal ? 'FullBracketModal' : 'Print'}
+                                    bracketId={number ? String(number).padStart(6, '0') : null}
+                                    className={rowActionClass(false, 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer')}
+                                    title={onOpenFullBracketModal ? 'View' : 'View/Print'}
+                                    data-testid="print-deleted-bracket-button"
+                                    data-vp-action="view"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </LoggedButton>
+                                  <LoggedButton
+                                    onClick={() => !getActionDisabledReason('copy') && onCopyBracket(bracket)}
+                                    logLocation="Copy"
+                                    bracketId={number ? String(number).padStart(6, '0') : null}
+                                    disabled={Boolean(getActionDisabledReason('copy'))}
+                                    className={rowActionClass(
+                                      Boolean(getActionDisabledReason('copy')),
+                                      'bg-green-600 text-white hover:bg-green-700 cursor-pointer',
+                                    )}
+                                    title={getActionDisabledReason('copy') || 'Copy'}
+                                    data-testid="copy-deleted-bracket-button"
+                                    data-vp-action="copy"
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </LoggedButton>
+                                  <LoggedButton
+                                    onClick={() => {
+                                      if (!getActionDisabledReason('restore') && onRestoreBracket) {
+                                        onRestoreBracket(bracket.id);
+                                      }
+                                    }}
+                                    logLocation="Restore"
+                                    bracketId={number ? String(number).padStart(6, '0') : null}
+                                    disabled={Boolean(getActionDisabledReason('restore'))}
+                                    className={rowActionClass(
+                                      Boolean(getActionDisabledReason('restore')),
+                                      'bg-amber-600 text-white hover:bg-amber-700 cursor-pointer',
+                                    )}
+                                    title={getActionDisabledReason('restore') || 'Restore to In Progress'}
+                                    data-testid="restore-bracket-button"
+                                    data-vp-action="restore"
+                                  >
+                                    <RotateCcw className="h-4 w-4" />
+                                  </LoggedButton>
+                                  <LoggedButton
+                                    onClick={() =>
+                                      !getActionDisabledReason('delete') &&
+                                      onPermanentDeleteClick &&
+                                      onPermanentDeleteClick(bracket.id)
+                                    }
+                                    logLocation="PermanentDelete"
+                                    bracketId={number ? String(number).padStart(6, '0') : null}
+                                    disabled={
+                                      Boolean(getActionDisabledReason('delete')) ||
+                                      deletingBracketId === bracket.id ||
+                                      Boolean(pendingPermanentDeleteBracketId)
+                                    }
+                                    className={rowActionClass(
+                                      Boolean(getActionDisabledReason('delete')) ||
+                                        deletingBracketId === bracket.id ||
+                                        Boolean(pendingPermanentDeleteBracketId),
+                                      'bg-red-900 text-white hover:bg-red-950 cursor-pointer',
+                                    )}
+                                    title={getActionDisabledReason('delete') || 'Permanently delete'}
+                                    data-testid="permanent-delete-bracket-button"
+                                    data-vp-action="permanentDelete"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </LoggedButton>
+                                </>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              {/* Submitted: View/Print, Return, Copy, Email (open picks via entry name or View/Print) */}
+                              {pendingReturnBracketId === bracket.id ? (
+                                <div
+                                  className="col-span-2 flex w-full max-w-xs flex-col items-stretch gap-2 justify-self-center bg-amber-50 border border-amber-200 rounded px-2 py-2 mx-auto md:col-auto md:mx-auto"
+                                  data-testid="return-bracket-confirmation"
+                                >
+                                  <div className="text-xs text-gray-800 text-left">
+                                    {renderMessageWithLineBreaks(
+                                      siteConfig?.returnActionConfirmMessage?.trim() ||
+                                        siteConfig?.bracketReturnMessage?.trim() ||
+                                        'This bracket will leave the contest pool until you submit again.||Are you sure you want to return it to In Progress?'
+                                    )}
+                                  </div>
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        onConfirmReturnBracket && onConfirmReturnBracket(bracket.id)
+                                      }
+                                      disabled={returningBracketId === bracket.id}
+                                      className="bg-amber-700 text-white text-xs px-2 py-1 rounded hover:bg-amber-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      Yes
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => onCancelReturnBracket && onCancelReturnBracket()}
+                                      disabled={returningBracketId === bracket.id}
+                                      className="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      No
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <LoggedButton
+                                    onClick={() => handleEyeOpenFullBracketOrPrint(bracket)}
+                                    logLocation={onOpenFullBracketModal ? 'FullBracketModal' : 'Print'}
+                                    bracketId={number ? String(number).padStart(6, '0') : null}
+                                    className={rowActionClass(false, 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer')}
+                                    title={onOpenFullBracketModal ? 'View' : 'View/Print'}
+                                    data-testid="print-bracket-button"
+                                    data-vp-action="view"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </LoggedButton>
+                                  <LoggedButton
+                                    onClick={() =>
+                                      !getActionDisabledReason('return') &&
+                                      onReturnBracketClick &&
+                                      onReturnBracketClick(bracket.id)
+                                    }
+                                    logLocation="Return"
+                                    bracketId={number ? String(number).padStart(6, '0') : null}
+                                    disabled={
+                                      Boolean(getActionDisabledReason('return')) ||
+                                      Boolean(returningBracketId) ||
+                                      Boolean(pendingReturnBracketId)
+                                    }
+                                    className={rowActionClass(
+                                      Boolean(getActionDisabledReason('return')) ||
+                                        Boolean(returningBracketId) ||
+                                        Boolean(pendingReturnBracketId),
+                                      'bg-amber-600 text-white hover:bg-amber-700 cursor-pointer',
+                                    )}
+                                    title={
+                                      getActionDisabledReason('return') ||
+                                      siteConfig?.returnActionHoverMessage?.trim() ||
+                                      'Return to In Progress (you must submit again to re-enter the pool)'
+                                    }
+                                    data-testid="return-bracket-button"
+                                    data-vp-action="return"
+                                  >
+                                    <Undo2 className="h-4 w-4" />
+                                  </LoggedButton>
+                                  <LoggedButton
+                                    onClick={() => !getActionDisabledReason('copy') && onCopyBracket(bracket)}
+                                    logLocation="Copy"
+                                    bracketId={number ? String(number).padStart(6, '0') : null}
+                                    disabled={Boolean(getActionDisabledReason('copy'))}
+                                    className={rowActionClass(
+                                      Boolean(getActionDisabledReason('copy')),
+                                      'bg-green-600 text-white hover:bg-green-700 cursor-pointer',
+                                    )}
+                                    title={getActionDisabledReason('copy') || 'Copy'}
+                                    data-testid="copy-bracket-button"
+                                    data-vp-action="copy"
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </LoggedButton>
+                                  <LoggedButton
+                                    onClick={() => handleEmailBracket(bracket)}
+                                    logLocation="Email"
+                                    bracketId={number ? String(number).padStart(6, '0') : null}
+                                    className={rowActionClass(false, 'bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer')}
+                                    title="Email PDF"
+                                    data-testid="email-bracket-button"
+                                    data-vp-action="email"
+                                  >
+                                    <Mail className="h-4 w-4" />
+                                  </LoggedButton>
+                                </>
+                              )}
+                            </>
+                          )}
+    </>
+  );
+
+  // ---------------------------------------------------------------------------
+  // Vintage presentation (variant === 'vintage'). Reuses the same state, handlers,
+  // and row action buttons as legacy; only markup/classes differ.
+  // ---------------------------------------------------------------------------
+
+  /** Status label used for vintage badges (matches legacy copy). */
+  const vintageStatusClass = (status: string) =>
+    status === 'submitted'
+      ? 'v-picks__status v-picks__status--submitted'
+      : status === 'deleted'
+        ? 'v-picks__status v-picks__status--deleted'
+        : 'v-picks__status v-picks__status--progress';
+
+  /**
+   * Shared vintage status mark (checkmark / clock / trash) for pills, filters, and row badges.
+   */
+  const renderVintageStatusIcon = (status: 'submitted' | 'in_progress' | 'deleted') => {
+    if (status === 'submitted') {
+      return <CheckCircle className="v-picks__icon" aria-hidden />;
+    }
+    if (status === 'deleted') {
+      return <Trash2 className="v-picks__icon" aria-hidden />;
+    }
+    return <Clock className="v-picks__icon" aria-hidden />;
+  };
+
+  /**
+   * Compact year selector (no visible label) for the New / Year / Logout row.
+   * Native select: calls `onViewingYearChange` directly, so the year picker modal is never opened.
+   */
+  const renderVintageYearSelect = () => {
+    const canPickYear = Boolean(onViewingYearChange) && !isYearSwitching;
+    return (
+      <div className="v-picks__year" data-testid={`picks-year-control-${viewportSuffix}`}>
+        <label className="v-picks__sr-only" htmlFor={`picks-year-select-${viewportSuffix}`}>
+          Tournament year
+        </label>
+        <div className="v-picks__select-wrap">
+          <select
+            id={`picks-year-select-${viewportSuffix}`}
+            className="v-picks__select"
+            value={viewingYear}
+            disabled={!canPickYear}
+            aria-busy={isYearSwitching || undefined}
+            onChange={(e) => onViewingYearChange?.(Number(e.target.value))}
+            title={
+              isYearSwitching
+                ? 'Loading tournament year…'
+                : canPickYear
+                  ? 'Change tournament year'
+                  : undefined
+            }
+            aria-label="Tournament year"
+            data-testid={`picks-year-badge-${viewportSuffix}`}
+          >
+            {yearOptions.map((y) => (
+              <option key={y} value={y} data-testid={`picks-year-option-${y}`}>
+                {y}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="v-picks__select-icon" aria-hidden />
+        </div>
+      </div>
+    );
+  };
+
+  /** Four Final Four logos (TL, BL, TR, BR) — same KEY chrome as Standings. */
+  const renderVintageFinalFour = (finalFour: ReturnType<typeof getFinalFourTeams>) => {
+    // Sheet order TL, BL, TR, BR matches regionalChampionKey indices 0–3.
+    const slots = [
+      {
+        id: finalFour.topLeftId,
+        logo: finalFour.topLeft,
+        name: finalFour.topLeftName,
+        sheetIndex: 0,
+      },
+      {
+        id: finalFour.bottomLeftId,
+        logo: finalFour.bottomLeft,
+        name: finalFour.bottomLeftName,
+        sheetIndex: 1,
+      },
+      {
+        id: finalFour.topRightId,
+        logo: finalFour.topRight,
+        name: finalFour.topRightName,
+        sheetIndex: 2,
+      },
+      {
+        id: finalFour.bottomRightId,
+        logo: finalFour.bottomRight,
+        name: finalFour.bottomRightName,
+        sheetIndex: 3,
+      },
+    ];
+    const iKey = resultKeyContext.semifinalKey[0] ?? '';
+    const jKey = resultKeyContext.semifinalKey[1] ?? '';
+
+    return (
+      <div className="v-picks__ff" role="group" aria-label="Final Four">
+        {slots.map((slot) => {
+          const teamName = slot.name ?? '';
+          const isFinalist =
+            Boolean(slot.id) &&
+            (slot.id === finalFour.finalist1Id || slot.id === finalFour.finalist2Id);
+          const shadeTone = resolvePickResultTone(
+            teamName,
+            resultKeyContext.regionalChampionKey[slot.sheetIndex] ?? '',
+            resultKeyContext.eliminatedTeams,
+          );
+          const semiKey =
+            slot.id === finalFour.finalist1Id
+              ? iKey
+              : slot.id === finalFour.finalist2Id
+                ? jKey
+                : '';
+          const borderTone = isFinalist
+            ? resolvePickResultTone(
+                teamName,
+                semiKey,
+                resultKeyContext.eliminatedTeams,
+              )
+            : undefined;
+          return (
+            <div
+              key={slot.sheetIndex}
+              className={`v-picks__ff-cell${isFinalist ? ' is-finalist' : ''}`}
+              data-status={shadeTone}
+              data-border={borderTone}
+              title={slot.name || undefined}
+            >
+              <FinalFourLogo logoPath={slot.logo} teamName={slot.name} />
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  /** Champion pick cell — shade vs KEY championship; no finalist black frame. */
+  const renderVintageChampion = (
+    finalFour: ReturnType<typeof getFinalFourTeams>,
+    showName: boolean,
+  ) => {
+    const shadeTone = resolvePickResultTone(
+      finalFour.championName ?? '',
+      resultKeyContext.finalWinner,
+      resultKeyContext.eliminatedTeams,
+    );
+    return (
+      <div className="v-picks__champ">
+        <div
+          className={`v-picks__champ-cell${finalFour.champion ? ' is-set' : ''}`}
+          data-status={shadeTone}
+          data-border={shadeTone !== 'pending' ? shadeTone : undefined}
+          title={finalFour.championName || undefined}
+        >
+          <FinalFourLogo logoPath={finalFour.champion} teamName={finalFour.championName} />
+        </div>
+        {showName && (
+          <span className="v-picks__champ-name">{finalFour.championName || 'Not picked'}</span>
+        )}
+      </div>
+    );
+  };
+
+  /**
+   * Submitted rows: Paid shows $; unpaid/pending is blank (no icon).
+   * @param iconOnly - Compact chip (no “Paid” word) for desktop Progress col / mobile.
+   */
+  const renderVintagePayment = (bracket: Bracket, iconOnly = false) => {
+    const paid = bracket.paymentStatus === 'paid';
+    const pending = bracket.paymentStatus === 'pending';
+    const title = paid
+      ? 'Payment Confirmed'
+      : pending
+        ? 'Payment Pending'
+        : 'Not Paid';
+    if (!paid) {
+      return (
+        <span
+          className={`v-picks__pay v-picks__pay--blank${iconOnly ? ' v-picks__pay--icon' : ''}`}
+          title={title}
+          aria-label={title}
+        />
+      );
+    }
+    return (
+      <span
+        className={`v-picks__pay v-picks__pay--paid${iconOnly ? ' v-picks__pay--icon' : ''}`}
+        title={title}
+        aria-label={title}
+      >
+        <DollarSign className="v-picks__icon" aria-hidden />
+        {!iconOnly ? <span>Paid</span> : null}
+      </span>
+    );
+  };
+
+  /** Progress bar (in progress / deleted) or payment marker (submitted). */
+  const renderVintageProgress = (
+    bracket: Bracket,
+    progress: ReturnType<typeof calculateProgress>,
+    opts?: { paymentIconOnly?: boolean },
+  ) => {
+    if (bracket.status === 'submitted') {
+      return (
+        <div className="v-picks__progress v-picks__progress--done">
+          {renderVintagePayment(bracket, opts?.paymentIconOnly)}
+        </div>
+      );
+    }
+    return (
+      <div className="v-picks__progress">
+        <span className="v-picks__progress-text">
+          {progress.completed} / {progress.total} picks
+        </span>
+        <span className="v-picks__bar" aria-hidden>
+          <span
+            className={`v-picks__bar-fill v-picks__bar-fill--${bracket.status}`}
+            style={{ width: `${progress.percentage}%` }}
+          />
+        </span>
+      </div>
+    );
+  };
+
+  /** "In the pool" / "Not in the pool" section heading content (shared by table rows and cards). */
+  const renderVintagePoolSection = (kind: 'in' | 'out') => {
+    const copy = kind === 'in' ? inPoolCopy : outPoolCopy;
+    const key = kind === 'in' ? 'in-pool' : 'out-pool';
+    const Icon = kind === 'in' ? CheckCircle : Clock;
+    return (
+      <div className="v-picks__section-inner" style={poolSectionFontStyle}>
+        <div className="v-picks__section-line">
+          <Icon className={`v-picks__section-icon v-picks__section-icon--${kind}`} aria-hidden />
+          <strong className="v-picks__section-title">{copy.header}</strong>
+          {copy.detail && isMdUp ? (
+            <span className="v-picks__section-detail">— {copy.detail}</span>
+          ) : null}
+          {copy.detail && !isMdUp ? (
+            <button
+              type="button"
+              onClick={() => setPoolBannerExpanded((prev) => (prev === key ? null : key))}
+              className="v-picks__section-info"
+              aria-label={`More about ${copy.header}`}
+              aria-expanded={poolBannerExpanded === key}
+              data-testid={`brackets-section-${key}-info`}
+            >
+              <Info className="v-picks__icon" aria-hidden />
+            </button>
+          ) : null}
+        </div>
+        {!isMdUp && poolBannerExpanded === key && copy.detail ? (
+          <div className="v-picks__section-note">
+            <button
+              type="button"
+              onClick={() => setPoolBannerExpanded(null)}
+              className="v-picks__section-close"
+              aria-label="Close section message"
+              data-testid={`brackets-section-${key}-close`}
+            >
+              <X className="v-picks__icon" aria-hidden />
+            </button>
+            <div>{renderMessageWithLineBreaks(copy.detail)}</div>
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
+  /** Welcome line, header messages, status pills, and cost copy. */
+  const renderVintageSummary = () => {
+    const counts = getBracketsInfo();
+    const displayName = isMdUp ? session?.user?.name || 'User' : getFirstName(session?.user?.name);
+    const vintageHeaderNote = formatVintagePicksLabel(
+      picksFlavor.headerNote,
+      picksTokenVars
+    ).trim();
+    const accessIsError =
+      picksAccess.reasonCode === 'brackets_missing_json' || picksAccess.reasonCode === 'master_lock';
+    return (
+      <div className="v-picks__summary">
+        <h1 className="v-picks__welcome" data-testid="picks-page-title">
+          <span>Welcome {displayName}</span>
+          {renderProfileEditButton(viewportSuffix)}
+        </h1>
+
+        {showHeaderAccessMessage ? (
+          <p
+            className={`v-picks__notice ${accessIsError ? 'v-picks__notice--error' : 'v-picks__notice--warn'}`}
+            data-testid={`picks-access-message-${viewportSuffix}`}
+          >
+            {renderMessageWithLineBreaks(accessBlockMessage)}
+          </p>
+        ) : (
+          vintageHeaderNote && (
+            <p className="v-picks__note" data-testid="picks-header-note">
+              {renderMessageWithLineBreaks(vintageHeaderNote)}
+            </p>
+          )
+        )}
+
+        <ul className="v-picks__pills" aria-label="Entry counts">
+          <li className="v-picks__pill v-picks__pill--submitted">
+            {renderVintageStatusIcon('submitted')}
+            Submitted {counts.submittedCount}
+          </li>
+          <li className="v-picks__pill v-picks__pill--progress">
+            {renderVintageStatusIcon('in_progress')}
+            In Progress {counts.inProgressCount}
+          </li>
+          {counts.deletedCount > 0 && (
+            <li className="v-picks__pill v-picks__pill--deleted">
+              {renderVintageStatusIcon('deleted')}
+              Deleted {counts.deletedCount}
+            </li>
+          )}
+        </ul>
+
+        {dynamicMessage && (
+          <p className="v-picks__cost" data-testid="picks-cost-message">
+            {renderMessageWithLineBreaks(dynamicMessage)}
+          </p>
+        )}
+      </div>
+    );
+  };
+
+  /** New / Year / Logout row, optional Pay, and the countdown timer (or prior-year switch). */
+  const renderVintageActions = () => (
+    <div className="v-picks__side">
+      <div className="v-picks__buttons">
+        <button
+          type="button"
+          onClick={onCreateNew}
+          disabled={Boolean(getActionDisabledReason('new'))}
+          title={getActionDisabledReason('new') || 'Create a new bracket'}
+          data-testid={`new-bracket-button-${viewportSuffix}`}
+          className="v-picks__btn v-picks__btn--primary"
+        >
+          <Plus className="v-picks__icon" aria-hidden />
+          <span>New Bracket</span>
+        </button>
+        {renderVintageYearSelect()}
+        <LoggedButton
+          onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+          logLocation="Logout"
+          className="v-picks__btn v-picks__btn--ghost v-picks__btn--icon"
+          data-testid={`logout-button-${viewportSuffix}`}
+          title="Logout"
+          aria-label="Logout"
+        >
+          <LogOut className="v-picks__icon" aria-hidden />
+        </LoggedButton>
+        {showPayButton && (
+          <button
+            type="button"
+            onClick={() => setPayModalOpen(true)}
+            className="v-picks__btn v-picks__btn--secondary"
+            data-testid={`pay-button-${viewportSuffix}`}
+            title="Pay for submitted brackets via Venmo"
+          >
+            <DollarSign className="v-picks__icon" aria-hidden />
+            <span>Pay</span>
+          </button>
+        )}
+      </div>
+      {isHistoricalView ? (
+        <button
+          type="button"
+          className="v-picks__year-switch"
+          data-testid="picks-switch-to-active-year"
+          disabled={isYearSwitching}
+          onClick={() => onViewingYearChange?.(activeYear)}
+        >
+          {vintagePriorYearSwitchLabel}
+        </button>
+      ) : vintageTourneyLive ? (
+        <div
+          className="v-picks__timer v-picks__timer--live"
+          data-testid="picks-live-tourney"
+          title={vintageLiveMessage}
+        >
+          <span className="v-picks__timer-label">Live</span>
+          <span className="v-picks__timer-live-text">{vintageLiveMessage}</span>
+        </div>
+      ) : isVintage || showCountdownTimer ? (
+        <div
+          className="v-picks__timer"
+          title={vintageCountdownLabel}
+          data-testid="picks-countdown-timer"
+        >
+          <span className="v-picks__timer-label">{vintageCountdownLabel}</span>
+          <span className="v-picks__timer-value">
+            {isMdUp ? scoreboardTimeDesktop : scoreboardTimeMobile}
+          </span>
+        </div>
+      ) : null}
+    </div>
+  );
+
+  /** Empty-state panel (CMS flavors for editorial; siteConfig for access gates). */
+  const renderVintageEmptyState = () => {
+    const emptyTitle = formatVintagePicksLabel(picksFlavor.emptyTitle, picksTokenVars);
+    const emptyBody = formatVintagePicksLabel(picksFlavor.emptyBody, picksTokenVars);
+    const emptyCta = formatVintagePicksLabel(picksCopy.emptyCtaBody, picksTokenVars);
+    return (
+      <div className="v-picks__empty" data-testid="picks-empty-state">
+        <Trophy className="v-picks__empty-icon" aria-hidden />
+        {isHistoricalView ? (
+          <>
+            <h3 className="v-picks__empty-title">{emptyTitle}</h3>
+            <p className="v-picks__empty-text" data-testid="picks-empty-historical-message">
+              {emptyBody}
+            </p>
+          </>
+        ) : showNotAvailableInEmptyState ? (
+          <p className="v-picks__empty-lead" data-testid="picks-empty-not-available-message">
+            {renderMessageWithLineBreaks(accessBlockMessage)}
+          </p>
+        ) : picksAccess.blocked ? (
+          <>
+            <h3 className="v-picks__empty-title">{emptyTitle}</h3>
+            <p className="v-picks__empty-text" data-testid="picks-empty-access-message">
+              {renderMessageWithLineBreaks(accessBlockMessage)}
+            </p>
+          </>
+        ) : (
+          <>
+            <h3 className="v-picks__empty-title">{emptyTitle}</h3>
+            <p className="v-picks__empty-text" data-testid="picks-empty-cta-message">
+              {emptyCta}
+            </p>
+          </>
+        )}
+      </div>
+    );
+  };
+
+  /** Status chips + search box. */
+  const renderVintageFilters = () => {
+    const chip = (
+      testId: string,
+      label: string,
+      pressed: boolean,
+      tone: 'all' | 'submitted' | 'progress' | 'deleted',
+      onClick: () => void,
+      statusIcon?: 'submitted' | 'in_progress' | 'deleted',
+    ) => (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={pressed}
+        data-testid={testId}
+        className={`v-picks__chip v-picks__chip--${tone}${pressed ? ' is-on' : ''}`}
+      >
+        {statusIcon ? renderVintageStatusIcon(statusIcon) : null}
+        {label}
+      </button>
+    );
+    return (
+      <div className="v-picks__filters" data-testid="brackets-list-filters">
+        <div className="v-picks__filter-group">
+          <span className="v-picks__filter-label">Show:</span>
+          <div className="v-picks__chips">
+            {chip('bracket-filter-all', 'All', allStatusFiltersOn, 'all', () =>
+              updateStatusVisibility({ ...DEFAULT_STATUS_VISIBILITY }),
+            )}
+            {chip(
+              'bracket-filter-submitted',
+              'Submitted',
+              statusVisibility.submitted,
+              'submitted',
+              () => updateStatusVisibility((v) => ({ ...v, submitted: !v.submitted })),
+              'submitted',
+            )}
+            {chip(
+              'bracket-filter-in-progress',
+              'In progress',
+              statusVisibility.in_progress,
+              'progress',
+              () => updateStatusVisibility((v) => ({ ...v, in_progress: !v.in_progress })),
+              'in_progress',
+            )}
+            {chip(
+              'bracket-filter-deleted',
+              'Deleted',
+              statusVisibility.deleted,
+              'deleted',
+              () => updateStatusVisibility((v) => ({ ...v, deleted: !v.deleted })),
+              'deleted',
+            )}
+          </div>
+        </div>
+        <div className="v-picks__search">
+          <label htmlFor="bracket-entry-search" className="v-picks__sr-only">
+            Search brackets by entry name or ID
+          </label>
+          <Search className="v-picks__search-icon" aria-hidden />
+          <input
+            id="bracket-entry-search"
+            type="search"
+            value={entrySearchQuery}
+            onChange={(e) => setEntrySearchQuery(e.target.value)}
+            placeholder="Search by entry name or bracket ID…"
+            autoComplete="off"
+            data-testid="bracket-entry-search"
+            className="v-picks__search-input"
+          />
+        </div>
+      </div>
+    );
+  };
+
+  /** Desktop table + mobile cards for the filtered, sorted entries. */
+  const renderVintageEntries = () => {
+    const sortedBrackets = sortBracketsForDisplay(filteredDisplayBrackets);
+
+    const rowContext = (bracket: Bracket, index: number) => {
+      const bracketData = bracket as unknown as Record<string, unknown>;
+      const number = (bracketData.bracketNumber as number) || 0;
+      const submitDisabledReason =
+        bracket.status === 'in_progress' ? getInProgressSubmitDisabledReason(bracket) : null;
+      const accessForcesViewOnly = bracket.status === 'in_progress' && mutationsBlocked;
+      const entriesStillAccepted = !mutationsBlocked;
+      const rowOpenTitle =
+        bracket.status === 'submitted' || bracket.status === 'deleted'
+          ? onOpenFullBracketModal
+            ? 'View bracket'
+            : 'View/Print'
+          : accessForcesViewOnly
+            ? onOpenFullBracketModal
+              ? 'View bracket'
+              : 'View/Print'
+            : bracket.status === 'in_progress' && entriesStillAccepted
+              ? 'Edit bracket'
+              : onOpenFullBracketModal
+                ? 'View bracket'
+                : 'View/Print';
+      const inPool = bracket.status === 'submitted';
+      const prev = sortedBrackets[index - 1];
+      const prevInPool = prev ? prev.status === 'submitted' : false;
+      return {
+        number,
+        paddedId: String(number).padStart(6, '0'),
+        submitDisabledReason,
+        accessForcesViewOnly,
+        rowOpenTitle,
+        rawEntryName: bracket.entryName || `Bracket #${index + 1}`,
+        progress: calculateProgress(bracket.picks),
+        finalFour: getFinalFourTeams(bracket.picks),
+        showInHeader: inPool && (index === 0 || !prevInPool),
+        showOutHeader: !inPool && (index === 0 || prevInPool),
+        followsInPool: index > 0 && prevInPool,
+      };
+    };
+
+    if (isMdUp) {
+      return (
+        <div className="v-picks__table-wrap">
+          <table className="v-picks__table">
+            <caption className="v-picks__sr-only">Your bracket entries for {viewingYear}</caption>
+            <thead>
+              <tr>
+                <th scope="col" className="v-picks__th v-picks__th--entry">Entry</th>
+                <th scope="col" className="v-picks__th v-picks__th--id">ID</th>
+                <th scope="col" className="v-picks__th">Status</th>
+                <th scope="col" className="v-picks__th">Progress</th>
+                <th scope="col" className="v-picks__th">Final Four</th>
+                <th scope="col" className="v-picks__th v-picks__th--champ" title="Champion">
+                  Champ
+                </th>
+                <th scope="col" className="v-picks__th v-picks__th--actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedBrackets.map((bracket, index) => {
+                const ctx = rowContext(bracket, index);
+                return (
+                  <React.Fragment key={bracket.id}>
+                    {ctx.showInHeader && (
+                      <tr className="v-picks__section-row v-picks__section-row--in" data-testid="brackets-section-in-pool">
+                        <td colSpan={7}>{renderVintagePoolSection('in')}</td>
+                      </tr>
+                    )}
+                    {ctx.showOutHeader && (
+                      <tr
+                        className={`v-picks__section-row v-picks__section-row--out${ctx.followsInPool ? ' is-after-in' : ''}`}
+                        data-testid="brackets-section-out-pool"
+                      >
+                        <td colSpan={7}>{renderVintagePoolSection('out')}</td>
+                      </tr>
+                    )}
+                    <tr className={`v-picks__row v-picks__row--${bracket.status}`}>
+                      <td className="v-picks__cell v-picks__cell--entry">
+                        <button
+                          type="button"
+                          className="v-picks__entry-name"
+                          onClick={() => openBracketFromLandingRow(bracket)}
+                          title={ctx.rowOpenTitle}
+                        >
+                          {ctx.rawEntryName}
+                        </button>
+                      </td>
+                      <td className="v-picks__cell v-picks__cell--id">
+                        <span data-testid="bracket-row-entry-id" title={`Bracket ID ${ctx.paddedId}`}>
+                          {ctx.paddedId}
+                        </span>
+                      </td>
+                      <td className="v-picks__cell">
+                        <button
+                          type="button"
+                          className={`${vintageStatusClass(bracket.status)} v-picks__status--button`}
+                          onClick={() => openBracketFromLandingRow(bracket)}
+                          title={ctx.rowOpenTitle}
+                        >
+                          {renderVintageStatusIcon(bracket.status)}
+                          {getStatusText(bracket.status)}
+                        </button>
+                      </td>
+                      <td className="v-picks__cell">
+                        {renderVintageProgress(bracket, ctx.progress)}
+                      </td>
+                      <td className="v-picks__cell v-picks__cell--ff">
+                        {renderVintageFinalFour(ctx.finalFour)}
+                      </td>
+                      <td className="v-picks__cell v-picks__cell--champ">
+                        {renderVintageChampion(ctx.finalFour, false)}
+                      </td>
+                      <td className="v-picks__cell v-picks__cell--actions">
+                        <div className="v-picks__actions">
+                          {renderRowActionButtons(
+                            bracket,
+                            ctx.number,
+                            ctx.submitDisabledReason,
+                            ctx.accessForcesViewOnly,
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    return (
+      <div className="v-picks__cards">
+        <div className="v-picks__card-headers" aria-hidden>
+          <span className="v-picks__card-h v-picks__card-h--entry">Entry</span>
+          <span className="v-picks__card-h v-picks__card-h--pay">Status</span>
+          <span className="v-picks__card-h v-picks__card-h--ff">Final Four</span>
+          <span className="v-picks__card-h v-picks__card-h--champ">Champ</span>
+          <span className="v-picks__card-h v-picks__card-h--actions">Actions</span>
+        </div>
+        {sortedBrackets.map((bracket, index) => {
+          const ctx = rowContext(bracket, index);
+          const inPool = bracket.status === 'submitted';
+          return (
+            <React.Fragment key={bracket.id}>
+              {ctx.showInHeader && (
+                <div className="v-picks__section-row v-picks__section-row--in" data-testid="brackets-section-in-pool">
+                  {renderVintagePoolSection('in')}
+                </div>
+              )}
+              {ctx.showOutHeader && (
+                <div
+                  className={`v-picks__section-row v-picks__section-row--out${ctx.followsInPool ? ' is-after-in' : ''}`}
+                  data-testid="brackets-section-out-pool"
+                >
+                  {renderVintagePoolSection('out')}
+                </div>
+              )}
+              <article
+                className={`v-picks__card v-picks__row--${bracket.status}`}
+                data-testid="picks-entry-card"
+                data-status={bracket.status}
+              >
+                {/* Name | $ or status | FF 2×2 | Champ | Actions 2×2 */}
+                <div className="v-picks__card-row">
+                  <button
+                    type="button"
+                    className="v-picks__entry-name"
+                    onClick={() => openBracketFromLandingRow(bracket)}
+                    title={`${ctx.rowOpenTitle} · ID ${ctx.paddedId}`}
+                  >
+                    {ctx.rawEntryName}
+                  </button>
+                  {inPool ? (
+                    renderVintagePayment(bracket, true)
+                  ) : (
+                    <button
+                      type="button"
+                      className={`${vintageStatusClass(bracket.status)} v-picks__status--button v-picks__status--square`}
+                      onClick={() => openBracketFromLandingRow(bracket)}
+                      title={getStatusText(bracket.status)}
+                      aria-label={getStatusText(bracket.status)}
+                    >
+                      {renderVintageStatusIcon(bracket.status)}
+                    </button>
+                  )}
+                  {renderVintageFinalFour(ctx.finalFour)}
+                  <div
+                    className="v-picks__champ v-picks__champ--mobile"
+                    title={ctx.finalFour.championName || 'Champion'}
+                  >
+                    <div
+                      className={`v-picks__champ-cell${ctx.finalFour.champion ? ' is-set' : ''}`}
+                    >
+                      {ctx.finalFour.champion ? (
+                        <FinalFourLogo
+                          logoPath={ctx.finalFour.champion}
+                          teamName={ctx.finalFour.championName}
+                        />
+                      ) : (
+                        <Trophy className="v-picks__icon" aria-label="Champion not picked" />
+                      )}
+                    </div>
+                  </div>
+                  <div className="v-picks__actions v-picks__actions--grid">
+                    {renderRowActionButtons(
+                      bracket,
+                      ctx.number,
+                      ctx.submitDisabledReason,
+                      ctx.accessForcesViewOnly,
+                    )}
+                  </div>
+                </div>
+                <span className="v-picks__sr-only" data-testid="bracket-row-entry-id">
+                  {ctx.paddedId}
+                </span>
+              </article>
+            </React.Fragment>
+          );
+        })}
+      </div>
+    );
+  };
+
+  /** Vintage in-place loader while a year soft-switch is in flight (hides empty-state flash). */
+  const renderVintageYearLoading = () => (
+    <div className="v-picks__loading v-picks__loading--year" data-testid="picks-year-loading">
+      <div className="v-picks__loading-spinner" aria-hidden />
+      <p className="v-picks__loading-text">Loading tournament…</p>
+    </div>
+  );
+
+  /** Full vintage landing body (rendered inside the `.v-picks` root; modals are shared below). */
+  const renderVintageLanding = () => (
+    <div className="v-picks__inner">
+      {admin ? (
+        <div className="v-picks__admin-bar">
+          <PicksEditGear
+            testId="vintage-picks-gear"
+            label="Edit My Picks copy"
+          />
+        </div>
+      ) : null}
+
+      <section className="v-picks__panel" aria-label="Account and entry summary">
+        {renderVintageSummary()}
+        {renderVintageActions()}
+      </section>
+
+      <section className="v-picks__list" aria-label="Your entries">
+        {isYearSwitching ? (
+          renderVintageYearLoading()
+        ) : bracketsForYear.length === 0 ? (
+          renderVintageEmptyState()
+        ) : (
+          <>
+            {renderVintageFilters()}
+            {filteredDisplayBrackets.length === 0 ? (
+              <div className="v-picks__empty v-picks__empty--filtered">
+                <p className="v-picks__empty-title">No brackets match your filters</p>
+                <p className="v-picks__empty-text">
+                  Try turning on more statuses, clearing the search, or click Reset below.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateStatusVisibility({ ...DEFAULT_STATUS_VISIBILITY });
+                    setEntrySearchQuery('');
+                  }}
+                  data-testid="bracket-filters-reset"
+                  className="v-picks__btn v-picks__btn--primary"
+                >
+                  Reset filters
+                </button>
+              </div>
+            ) : (
+              renderVintageEntries()
+            )}
+          </>
+        )}
+      </section>
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div
+      className={
+        isVintage
+          ? `v-picks${isYearSwitching ? ' v-picks--year-switching' : ''}`
+          : 'min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100'
+      }
+      style={
+        isVintage
+          ? ({
+              ...vintagePicksChromeCssVars(picksCopy),
+              ...standingsResultChromeStyle(standingsChrome),
+            } as React.CSSProperties)
+          : undefined
+      }
+      aria-busy={isVintage && isYearSwitching ? true : undefined}
+      data-testid={isVintage && isYearSwitching ? 'picks-year-switching' : undefined}
+    >
+      {isVintage ? (
+        renderVintageLanding()
+      ) : (
+      <>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
             {/* Welcome Header */}
@@ -1460,7 +2897,12 @@ export default function MyPicksLanding({
         {/* Brackets List */}
         <div className="bg-white rounded-lg shadow-lg p-6">
 
-          {bracketsForYear.length === 0 ? (
+          {isYearSwitching ? (
+            <div className="text-center py-12" data-testid="picks-year-loading">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
+              <p className="mt-4 text-gray-600">Loading tournament...</p>
+            </div>
+          ) : bracketsForYear.length === 0 ? (
             <div className="text-center py-12" data-testid="picks-empty-state">
               <Trophy className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               {isHistoricalView ? (
@@ -1886,7 +3328,7 @@ export default function MyPicksLanding({
                               : 'border border-gray-300'
                           }`}
                           >
-                            <FinalFourLogo logoPath={finalFour.topLeft} />
+                            <FinalFourLogo logoPath={finalFour.topLeft} teamName={finalFour.topLeftName} />
                           </div>
                           {/* Bottom Left */}
                           <div
@@ -1901,7 +3343,7 @@ export default function MyPicksLanding({
                               : 'border border-gray-300'
                           }`}
                           >
-                            <FinalFourLogo logoPath={finalFour.bottomLeft} />
+                            <FinalFourLogo logoPath={finalFour.bottomLeft} teamName={finalFour.bottomLeftName} />
                           </div>
                           {/* Top Right */}
                           <div
@@ -1916,7 +3358,7 @@ export default function MyPicksLanding({
                               : 'border border-gray-300'
                           }`}
                           >
-                            <FinalFourLogo logoPath={finalFour.topRight} />
+                            <FinalFourLogo logoPath={finalFour.topRight} teamName={finalFour.topRightName} />
                           </div>
                           {/* Bottom Right */}
                           <div
@@ -1931,7 +3373,7 @@ export default function MyPicksLanding({
                               : 'border border-gray-300'
                           }`}
                           >
-                            <FinalFourLogo logoPath={finalFour.bottomRight} />
+                            <FinalFourLogo logoPath={finalFour.bottomRight} teamName={finalFour.bottomRightName} />
                           </div>
                         </div>
                       </td>
@@ -1942,7 +3384,7 @@ export default function MyPicksLanding({
                               ? 'bg-green-50 border-green-600'
                               : 'bg-gray-100 border-gray-300'
                           }`}>
-                            <FinalFourLogo logoPath={finalFour.champion} />
+                            <FinalFourLogo logoPath={finalFour.champion} teamName={finalFour.championName} />
                           </div>
                         </div>
                       </td>
@@ -1954,322 +3396,7 @@ export default function MyPicksLanding({
                         */}
                         <div className="mx-auto grid w-max grid-cols-2 justify-items-center max-md:content-start max-md:items-start max-md:gap-1 md:mx-0 md:flex md:w-auto md:max-w-none md:flex-wrap md:items-center md:justify-center md:gap-2">
                           {/* Action buttons - icon-only squares with tooltips; 2×2 grid on mobile, row on md+ */}
-                          {bracket.status === 'in_progress' ? (
-                            <>
-                              {pendingDeleteBracketId === bracket.id ? (
-                                <>
-                                  {/* Confirmation UI - embedded in the table */}
-                                  <div className="col-span-2 flex w-full max-w-xs flex-wrap items-center justify-center gap-2 justify-self-center bg-red-50 border border-red-200 rounded px-2 py-1 md:col-auto md:w-auto" data-testid="delete-confirmation-dialog">
-                                    <span className="text-xs text-red-700 font-medium whitespace-nowrap">Delete?</span>
-                                    <button
-                                      onClick={() => onConfirmDelete && onConfirmDelete(bracket.id)}
-                                      disabled={deletingBracketId === bracket.id}
-                                      className="bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                      Yes
-                                    </button>
-                                    <button
-                                      onClick={() => onCancelDelete && onCancelDelete()}
-                                      disabled={deletingBracketId === bracket.id}
-                                      className="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                      No
-                                    </button>
-                                  </div>
-                                </>
-                              ) : (
-                                <>
-                                  {/* In Progress: Edit (or View when kill-switch on), Submit, Copy, Delete */}
-                                  {accessForcesViewOnly ? (
-                                    <LoggedButton
-                                      onClick={() => handleEyeOpenFullBracketOrPrint(bracket)}
-                                      logLocation={onOpenFullBracketModal ? 'FullBracketModal' : 'Print'}
-                                      bracketId={number ? String(number).padStart(6, '0') : null}
-                                      className="w-8 h-8 rounded flex items-center justify-center transition-colors bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
-                                      title="View"
-                                    >
-                                      <Eye className="h-4 w-4" />
-                                    </LoggedButton>
-                                  ) : (
-                                    <LoggedButton
-                                      onClick={() =>
-                                        !getInProgressEditButtonDisabledReason() && onEditBracket(bracket)
-                                      }
-                                      logLocation="Edit"
-                                      bracketId={number ? String(number).padStart(6, '0') : null}
-                                      disabled={Boolean(getInProgressEditButtonDisabledReason())}
-                                      className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
-                                        getInProgressEditButtonDisabledReason()
-                                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                          : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                                      }`}
-                                      title={getInProgressEditButtonDisabledReason() || 'Edit'}
-                                    >
-                                      <Edit className="h-4 w-4" />
-                                    </LoggedButton>
-                                  )}
-                                  <LoggedButton
-                                    onClick={() => {
-                                      if (!submitDisabledReason) void onSubmitBracket(bracket);
-                                    }}
-                                    logLocation="Submit"
-                                    bracketId={number ? String(number).padStart(6, '0') : null}
-                                    disabled={Boolean(submitDisabledReason)}
-                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
-                                      submitDisabledReason
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer'
-                                    }`}
-                                    title={submitDisabledReason || 'Submit'}
-                                    data-testid="submit-bracket-landing-button"
-                                  >
-                                    <Send className="h-4 w-4" aria-hidden />
-                                  </LoggedButton>
-                                  <LoggedButton
-                                    onClick={() => !getActionDisabledReason('copy') && onCopyBracket(bracket)}
-                                    logLocation="Copy"
-                                    bracketId={number ? String(number).padStart(6, '0') : null}
-                                    disabled={Boolean(getActionDisabledReason('copy'))}
-                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
-                                      getActionDisabledReason('copy')
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
-                                    }`}
-                                    title={getActionDisabledReason('copy') || 'Copy'}
-                                    data-testid="copy-bracket-button"
-                                  >
-                                    <Copy className="h-4 w-4" />
-                                  </LoggedButton>
-                                  <LoggedButton
-                                    onClick={() => !getActionDisabledReason('delete') && onDeleteBracket(bracket.id)}
-                                    logLocation="Delete"
-                                    bracketId={number ? String(number).padStart(6, '0') : null}
-                                    disabled={Boolean(getActionDisabledReason('delete')) || deletingBracketId === bracket.id || pendingDeleteBracketId === bracket.id}
-                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
-                                      getActionDisabledReason('delete') || deletingBracketId === bracket.id || pendingDeleteBracketId === bracket.id
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-red-600 text-white hover:bg-red-700 cursor-pointer'
-                                    }`}
-                                    title={getActionDisabledReason('delete') || (deletingBracketId === bracket.id ? 'Deleting...' : 'Delete')}
-                                    data-testid="delete-bracket-button"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </LoggedButton>
-                                </>
-                              )}
-                            </>
-                          ) : bracket.status === 'deleted' ? (
-                            <>
-                              {pendingPermanentDeleteBracketId === bracket.id ? (
-                                <div
-                                  className="col-span-2 flex w-full max-w-xs flex-col items-stretch gap-2 justify-self-center bg-red-50 border border-red-200 rounded px-2 py-2 mx-auto md:col-auto md:mx-auto"
-                                  data-testid="permanent-delete-confirmation"
-                                >
-                                  <div className="text-xs text-gray-800 text-left">
-                                    {renderMessageWithLineBreaks(
-                                      siteConfig?.permDeleteMessage ||
-                                        'Permanently delete this bracket? This cannot be undone.||Are you sure you want to continue?'
-                                    )}
-                                  </div>
-                                  <div className="flex items-center justify-center gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => onConfirmPermanentDelete && onConfirmPermanentDelete(bracket.id)}
-                                      disabled={deletingBracketId === bracket.id}
-                                      className="bg-red-800 text-white text-xs px-2 py-1 rounded hover:bg-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                      Yes
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => onCancelPermanentDelete && onCancelPermanentDelete()}
-                                      disabled={deletingBracketId === bracket.id}
-                                      className="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                      No
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <>
-                                  <LoggedButton
-                                    onClick={() => handleEyeOpenFullBracketOrPrint(bracket)}
-                                    logLocation={onOpenFullBracketModal ? 'FullBracketModal' : 'Print'}
-                                    bracketId={number ? String(number).padStart(6, '0') : null}
-                                    className="flex h-8 w-8 cursor-pointer items-center justify-center rounded bg-blue-600 text-white transition-colors hover:bg-blue-700"
-                                    title={onOpenFullBracketModal ? 'View' : 'View/Print'}
-                                    data-testid="print-deleted-bracket-button"
-                                  >
-                                    <Eye className="h-4 w-4" />
-                                  </LoggedButton>
-                                  <LoggedButton
-                                    onClick={() => !getActionDisabledReason('copy') && onCopyBracket(bracket)}
-                                    logLocation="Copy"
-                                    bracketId={number ? String(number).padStart(6, '0') : null}
-                                    disabled={Boolean(getActionDisabledReason('copy'))}
-                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
-                                      getActionDisabledReason('copy')
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
-                                    }`}
-                                    title={getActionDisabledReason('copy') || 'Copy'}
-                                    data-testid="copy-deleted-bracket-button"
-                                  >
-                                    <Copy className="h-4 w-4" />
-                                  </LoggedButton>
-                                  <LoggedButton
-                                    onClick={() => {
-                                      if (!getActionDisabledReason('restore') && onRestoreBracket) {
-                                        onRestoreBracket(bracket.id);
-                                      }
-                                    }}
-                                    logLocation="Restore"
-                                    bracketId={number ? String(number).padStart(6, '0') : null}
-                                    disabled={Boolean(getActionDisabledReason('restore'))}
-                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
-                                      getActionDisabledReason('restore')
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-amber-600 text-white hover:bg-amber-700 cursor-pointer'
-                                    }`}
-                                    title={getActionDisabledReason('restore') || 'Restore to In Progress'}
-                                    data-testid="restore-bracket-button"
-                                  >
-                                    <RotateCcw className="h-4 w-4" />
-                                  </LoggedButton>
-                                  <LoggedButton
-                                    onClick={() =>
-                                      !getActionDisabledReason('delete') &&
-                                      onPermanentDeleteClick &&
-                                      onPermanentDeleteClick(bracket.id)
-                                    }
-                                    logLocation="PermanentDelete"
-                                    bracketId={number ? String(number).padStart(6, '0') : null}
-                                    disabled={
-                                      Boolean(getActionDisabledReason('delete')) ||
-                                      deletingBracketId === bracket.id ||
-                                      Boolean(pendingPermanentDeleteBracketId)
-                                    }
-                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
-                                      getActionDisabledReason('delete') ||
-                                      deletingBracketId === bracket.id ||
-                                      pendingPermanentDeleteBracketId
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-red-900 text-white hover:bg-red-950 cursor-pointer'
-                                    }`}
-                                    title={getActionDisabledReason('delete') || 'Permanently delete'}
-                                    data-testid="permanent-delete-bracket-button"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </LoggedButton>
-                                </>
-                              )}
-                            </>
-                          ) : (
-                            <>
-                              {/* Submitted: View/Print, Return, Copy, Email (open picks via entry name or View/Print) */}
-                              {pendingReturnBracketId === bracket.id ? (
-                                <div
-                                  className="col-span-2 flex w-full max-w-xs flex-col items-stretch gap-2 justify-self-center bg-amber-50 border border-amber-200 rounded px-2 py-2 mx-auto md:col-auto md:mx-auto"
-                                  data-testid="return-bracket-confirmation"
-                                >
-                                  <div className="text-xs text-gray-800 text-left">
-                                    {renderMessageWithLineBreaks(
-                                      siteConfig?.returnActionConfirmMessage?.trim() ||
-                                        siteConfig?.bracketReturnMessage?.trim() ||
-                                        'This bracket will leave the contest pool until you submit again.||Are you sure you want to return it to In Progress?'
-                                    )}
-                                  </div>
-                                  <div className="flex items-center justify-center gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        onConfirmReturnBracket && onConfirmReturnBracket(bracket.id)
-                                      }
-                                      disabled={returningBracketId === bracket.id}
-                                      className="bg-amber-700 text-white text-xs px-2 py-1 rounded hover:bg-amber-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                      Yes
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => onCancelReturnBracket && onCancelReturnBracket()}
-                                      disabled={returningBracketId === bracket.id}
-                                      className="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                      No
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <>
-                                  <LoggedButton
-                                    onClick={() => handleEyeOpenFullBracketOrPrint(bracket)}
-                                    logLocation={onOpenFullBracketModal ? 'FullBracketModal' : 'Print'}
-                                    bracketId={number ? String(number).padStart(6, '0') : null}
-                                    className="flex w-8 h-8 cursor-pointer items-center justify-center rounded bg-blue-600 text-white transition-colors hover:bg-blue-700"
-                                    title={onOpenFullBracketModal ? 'View' : 'View/Print'}
-                                    data-testid="print-bracket-button"
-                                  >
-                                    <Eye className="h-4 w-4" />
-                                  </LoggedButton>
-                                  <LoggedButton
-                                    onClick={() =>
-                                      !getActionDisabledReason('return') &&
-                                      onReturnBracketClick &&
-                                      onReturnBracketClick(bracket.id)
-                                    }
-                                    logLocation="Return"
-                                    bracketId={number ? String(number).padStart(6, '0') : null}
-                                    disabled={
-                                      Boolean(getActionDisabledReason('return')) ||
-                                      Boolean(returningBracketId) ||
-                                      Boolean(pendingReturnBracketId)
-                                    }
-                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
-                                      getActionDisabledReason('return') ||
-                                      returningBracketId ||
-                                      pendingReturnBracketId
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-amber-600 text-white hover:bg-amber-700 cursor-pointer'
-                                    }`}
-                                    title={
-                                      getActionDisabledReason('return') ||
-                                      siteConfig?.returnActionHoverMessage?.trim() ||
-                                      'Return to In Progress (you must submit again to re-enter the pool)'
-                                    }
-                                    data-testid="return-bracket-button"
-                                  >
-                                    <Undo2 className="h-4 w-4" />
-                                  </LoggedButton>
-                                  <LoggedButton
-                                    onClick={() => !getActionDisabledReason('copy') && onCopyBracket(bracket)}
-                                    logLocation="Copy"
-                                    bracketId={number ? String(number).padStart(6, '0') : null}
-                                    disabled={Boolean(getActionDisabledReason('copy'))}
-                                    className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
-                                      getActionDisabledReason('copy')
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
-                                    }`}
-                                    title={getActionDisabledReason('copy') || 'Copy'}
-                                    data-testid="copy-bracket-button"
-                                  >
-                                    <Copy className="h-4 w-4" />
-                                  </LoggedButton>
-                                  <LoggedButton
-                                    onClick={() => handleEmailBracket(bracket)}
-                                    logLocation="Email"
-                                    bracketId={number ? String(number).padStart(6, '0') : null}
-                                    className="bg-indigo-600 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-indigo-700 cursor-pointer transition-colors"
-                                    title="Email PDF"
-                                    data-testid="email-bracket-button"
-                                  >
-                                    <Mail className="h-4 w-4" />
-                                  </LoggedButton>
-                                </>
-                              )}
-                            </>
-                          )}
+                          {renderRowActionButtons(bracket, number, submitDisabledReason, accessForcesViewOnly)}
                         </div>
                       </td>
                     </tr>
@@ -2285,6 +3412,8 @@ export default function MyPicksLanding({
           )}
         </div>
       </div>
+      </>
+      )}
 
       {/* Edit profile (display name) */}
       {profileModalOpen && (

@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "test:tournament": "node --import tsx --test tests/tournament-first-four.unit.ts",
+    "test:tournament:browser": "node --import tsx tests/tournament-builder.browser.ts",
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
@@ -35,7 +37,7 @@
     "sync-teams": "tsx scripts/sync-teams-from-espn.ts",
     "preview-uniform": "tsx scripts/preview-uniform.ts",
     "generate-players": "tsx scripts/generate-players-batch.ts",
-    "test:vintage": "node --import tsx --test tests/vintage-*.unit.ts",
+    "test:vintage": "node --import tsx --test tests/vintage-*.unit.ts tests/hall-of-fame-stats.unit.ts",
     "test:vintage:browser": "node --import tsx tests/vintage-browser.ts"
   },
   "dependencies": {

@@ -44,6 +44,8 @@ interface FinalFourChampionshipProps {
   isAdminMode?: boolean;
   isLiveResultsMode?: boolean;
   disableSaveSubmit?: boolean;
+  /** When set, overrides save-button disable independently of submit (Save WIP). */
+  disableSave?: boolean;
   disableSaveSubmitMessage?: string;
   /** True when entry name matches another submitted bracket (yellow field). */
   entryNameDuplicate?: boolean;
@@ -78,9 +80,11 @@ export default function FinalFourChampionship({
   isAdminMode = false,
   isLiveResultsMode = false,
   disableSaveSubmit = false,
+  disableSave,
   disableSaveSubmitMessage = '',
   entryNameDuplicate = false,
 }: FinalFourChampionshipProps) {
+  const saveDisabled = disableSave ?? disableSaveSubmit;
   const [tieBreakerHintOpen, setTieBreakerHintOpen] = useState(false);
   /** Games-row min height (rem); shipped constant — see `finalFourGamesRowLayoutStorage`. */
   const gamesRowMinHeightRem = FINAL_FOUR_GAMES_ROW_SHIPPED_MIN_HEIGHT_REM;
@@ -578,16 +582,16 @@ export default function FinalFourChampionship({
                 {onSave && (
                   <button
                     type="button"
-                    onClick={() => !disableSaveSubmit && onSave()}
-                    disabled={disableSaveSubmit}
-                    title={disableSaveSubmit ? disableSaveSubmitMessage : 'Save'}
+                    onClick={() => !saveDisabled && onSave()}
+                    disabled={saveDisabled}
+                    title={saveDisabled ? disableSaveSubmitMessage : 'Save'}
                     style={{
                       width: `${stepButtonWidthCh}ch`,
                       minWidth: `${stepButtonWidthCh}ch`,
                       maxWidth: `${stepButtonWidthCh}ch`,
                     }}
                     className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} ${
-                      disableSaveSubmit
+                      saveDisabled
                         ? 'cursor-not-allowed bg-gray-300 text-gray-500'
                         : 'cursor-pointer bg-purple-600 text-white hover:bg-purple-700'
                     }`}

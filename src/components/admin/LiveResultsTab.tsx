@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { KeyRound, Pencil } from 'lucide-react';
 import KeyBracketPreviewModal from '@/components/admin/KeyBracketPreviewModal';
+import FirstFourResults from '@/components/admin/FirstFourResults';
 
 interface BracketSummary {
   year?: number;
@@ -12,8 +14,32 @@ interface LiveResultsTabProps {
   brackets: BracketSummary[];
 }
 
+/**
+ * Prefer `?year=YYYY` from Standings admin deep links, else site tourney year.
+ */
+function resolveInitialYear(
+  urlYear: string | null,
+  tournamentYear: string,
+  availableYears: number[],
+): string {
+  if (urlYear && /^\d{4}$/.test(urlYear)) {
+    return urlYear;
+  }
+  if (tournamentYear && /^\d{4}$/.test(tournamentYear)) {
+    return tournamentYear;
+  }
+  if (availableYears.length > 0) {
+    return String(availableYears[0]);
+  }
+  return '';
+}
+
 export default function LiveResultsTab({ brackets }: LiveResultsTabProps) {
-  const [selectedYear, setSelectedYear] = useState<string>('');
+  const searchParams = useSearchParams();
+  const urlYear = searchParams?.get('year') ?? null;
+  const [selectedYear, setSelectedYear] = useState<string>(() =>
+    urlYear && /^\d{4}$/.test(urlYear) ? urlYear : '',
+  );
   const [showBracketPreview, setShowBracketPreview] = useState(false);
   const [tournamentYear, setTournamentYear] = useState<string>('');
   /** Bump to remount embedded read-only preview after closing the edit modal so picks stay in sync. */
@@ -29,31 +55,40 @@ export default function LiveResultsTab({ brackets }: LiveResultsTabProps) {
     if (tournamentYear && !isNaN(Number(tournamentYear))) {
       years.add(Number(tournamentYear));
     }
+    if (urlYear && /^\d{4}$/.test(urlYear)) {
+      years.add(Number(urlYear));
+    }
     return Array.from(years).sort((a, b) => b - a);
-  }, [brackets, tournamentYear]);
+  }, [brackets, tournamentYear, urlYear]);
 
   useEffect(() => {
     const loadTournamentYear = async () => {
+      let configYear = '';
       try {
         const response = await fetch('/api/site-config');
         const data = await response.json();
         if (data.success && data.data?.tournamentYear) {
-          const year = data.data.tournamentYear as string;
-          setTournamentYear(year);
-          setSelectedYear(year);
-          return;
+          configYear = data.data.tournamentYear as string;
+          setTournamentYear(configYear);
         }
       } catch (fetchError) {
         console.error('Error loading tournament year for live results:', fetchError);
       }
 
-      if (availableYears.length > 0) {
-        setSelectedYear(String(availableYears[0]));
-      }
+      setSelectedYear((current) => {
+        if (current && /^\d{4}$/.test(current)) return current;
+        return resolveInitialYear(urlYear, configYear, availableYears);
+      });
     };
-    loadTournamentYear();
+    void loadTournamentYear();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (urlYear && /^\d{4}$/.test(urlYear)) {
+      setSelectedYear(urlYear);
+    }
+  }, [urlYear]);
 
   const handleCloseEditModal = () => {
     setShowBracketPreview(false);
@@ -109,6 +144,8 @@ export default function LiveResultsTab({ brackets }: LiveResultsTabProps) {
           Edit
         </button>
       </div>
+
+      {selectedYear && <FirstFourResults key={selectedYear} year={selectedYear} onSaved={() => setEmbeddedPreviewKey(k => k + 1)} />}
 
       {selectedYear && (
         <KeyBracketPreviewModal

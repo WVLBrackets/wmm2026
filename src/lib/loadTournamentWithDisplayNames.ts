@@ -3,7 +3,7 @@
  * Do not import this module from Client Components — it pulls in `pg` via the team data repository.
  */
 
-import { loadTournamentData } from '@/lib/tournamentLoader';
+import { loadTournamentData } from '@/lib/tournamentLoaderServer';
 import { getAllTeamReferenceData } from '@/lib/repositories/teamDataRepository';
 import {
   applyDisplayNamesToTournamentData,

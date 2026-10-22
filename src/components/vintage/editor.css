@@ -9,6 +9,45 @@
 .vintage-editor * {
   box-sizing: border-box;
 }
+.ve-admin-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 22px;
+}
+
+.ve-admin-nav__chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid #182e3b;
+  border-radius: 0;
+  background: #fff;
+  color: #182e3b;
+  font-family: Oswald, Impact, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.ve-admin-nav__chip:hover {
+  background: #ece8df;
+}
+
+.ve-admin-nav__chip.is-active {
+  background: #182e3b;
+  color: #fff;
+}
+
+.ve-admin-nav__chip:focus-visible {
+  outline: 3px solid #a4322b;
+  outline-offset: 2px;
+}
+
 .ve-header {
   display: flex;
   justify-content: space-between;
@@ -97,6 +136,55 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+/* My Picks master lock — Unlocked green / Locked red */
+.ve-lock-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 8px 0 16px;
+}
+
+.ve-lock-btn {
+  min-width: 9rem;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 2px solid transparent;
+  border-radius: 0;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  opacity: 0.55;
+}
+
+.ve-lock-btn.is-on {
+  opacity: 1;
+}
+
+.ve-lock-btn--unlocked {
+  background: #d9e6dc;
+  border-color: #3f6b4a;
+  color: #243f2c;
+}
+
+.ve-lock-btn--unlocked.is-on {
+  background: #3f6b4a;
+  color: #f2ead8;
+}
+
+.ve-lock-btn--locked {
+  background: #f0d9d7;
+  border-color: #b52c26;
+  color: #5c1815;
+}
+
+.ve-lock-btn--locked.is-on {
+  background: #b52c26;
+  color: #f2ead8;
+}
+
 .ve-primary {
   background: #a4322b;
   color: #fff;
@@ -169,6 +257,25 @@
   padding: 30px 35px;
   min-width: 0;
   max-width: 950px;
+}
+/* Stacked editor sections (single scrollable page, jump links in .ve-tabs) */
+.ve-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  min-width: 0;
+}
+.ve-sections > .ve-panel {
+  width: 100%;
+  margin: 0;
+}
+.ve-section {
+  /* Clear the sticky toolbar when jumping to a section */
+  scroll-margin-top: 110px;
+}
+.ve-tabs button:focus-visible {
+  outline: 2px solid #a4322b;
+  outline-offset: -2px;
 }
 .ve-panel h2 {
   font-family: Georgia, serif;
@@ -368,6 +475,13 @@
   .ve-panel {
     padding: 22px 18px;
   }
+  .ve-sections {
+    gap: 20px;
+  }
+  .ve-section {
+    /* Rail becomes a static strip on mobile; only the toolbar needs clearing */
+    scroll-margin-top: 90px;
+  }
   .ve-grid {
     grid-template-columns: 1fr;
   }
@@ -386,6 +500,198 @@
   }
 }
 
+.ve-color-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.ve-color-row input[type="color"] {
+  width: 46px;
+  height: 38px;
+  padding: 2px;
+  border: 1px solid #bfc7c6;
+  background: #fff;
+  cursor: pointer;
+}
+.ve-color-row input[type="text"],
+.ve-color-row input:not([type="color"]) {
+  flex: 1;
+}
+.ve-toolbar-slots {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+.ve-toolbar-slot {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #d7dcd5;
+  background: #fffefa;
+  scroll-margin-top: 24px;
+  transition: box-shadow 0.35s ease, border-color 0.35s ease;
+}
+.ve-toolbar-slot.ve-focus-target,
+[data-testid="vintage-editor-countdown-panel"].ve-focus-target,
+[data-testid="vintage-editor-explore-panel"].ve-focus-target,
+[data-testid="vintage-editor-announcements-panel"].ve-focus-target {
+  border-color: #a8342c;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #a8342c 28%, transparent);
+}
+[data-testid="vintage-editor-countdown-panel"],
+[data-testid="vintage-editor-explore-panel"],
+[data-testid="vintage-editor-announcements-panel"] {
+  scroll-margin-top: 24px;
+  border-radius: 4px;
+  transition: box-shadow 0.35s ease;
+}
+.ve-toolbar-slot-empty {
+  opacity: 0.78;
+  border-style: dashed;
+}
+.ve-drag-handle {
+  border: 0;
+  background: #ece8de;
+  color: #485960;
+  cursor: grab;
+  font-size: 14px;
+  letter-spacing: -2px;
+  line-height: 1;
+}
+.ve-drag-handle:active {
+  cursor: grabbing;
+}
+.ve-toolbar-slot-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.ve-toolbar-slot-head span {
+  color: #667375;
+}
+.ve-inline-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #485960;
+  cursor: pointer;
+}
+.ve-champ-emblem-picker {
+  margin-top: 8px;
+}
+.ve-champ-emblem-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+.ve-champ-emblem-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 8px;
+  border: 1px solid #d7dcd5;
+  background: #fffefa;
+  cursor: pointer;
+  color: #182e3b;
+  font-size: 11px;
+  text-align: center;
+}
+.ve-champ-emblem-option .v-card-champ-emblem {
+  width: 72px;
+  height: 72px;
+  color: #c9a227;
+}
+.ve-champ-emblem-option .v-card-champ-emblem-year {
+  font-size: 12px;
+}
+.ve-toolbar-icon-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.ve-icon-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.ve-icon-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: #152c3a73;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+.ve-icon-modal {
+  width: min(760px, 100%);
+  max-height: min(80vh, 720px);
+  overflow: auto;
+  background: #fffefa;
+  border: 2px solid #182e3b;
+  padding: 18px;
+  box-shadow: 0 18px 50px #152c3a40;
+}
+.ve-icon-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.ve-icon-modal-header h3 {
+  margin: 0;
+  font-family: Georgia, serif;
+}
+.ve-icon-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.ve-icon-tab {
+  border: 1px solid #d7dcd5;
+  background: #fff;
+  color: #182e3b;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.ve-icon-tab.active {
+  border-color: #a4322b;
+  outline: 2px solid #a4322b55;
+}
+.ve-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.ve-icon-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-height: 78px;
+  padding: 10px 6px;
+  border: 1px solid #d7dcd5;
+  background: #fff;
+  color: #182e3b;
+  cursor: pointer;
+  font-size: 11px;
+  word-break: break-word;
+}
+.ve-icon-option:hover,
+.ve-icon-selected {
+  border-color: #a4322b;
+  outline: 2px solid #a4322b55;
+}
 .ve-signin {
   max-width: 760px;
   margin: auto;

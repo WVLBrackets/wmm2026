@@ -1,15 +1,15 @@
 import type { SiteConfigData } from '@/lib/siteConfig';
-import { getActiveTournamentYear, isHistoricalYear } from '@/lib/services/tournamentYearService';
-import { getSiteConfigFromGoogleSheetsFresh } from '@/lib/siteConfig';
 import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
-import { evaluatePicksAccess } from '@/lib/services/picksAccessPolicy';
-import { tryLoadTournamentData } from '@/lib/tournamentLoader';
-import { getMasterLockState } from '@/lib/killSwitch';
+import type { VintageActionKind } from '@/lib/services/vintageActionLock';
+import { evaluateVintageActionLockFresh } from '@/lib/services/vintageActionLockServer';
+import { getPublishedVintageContent } from '@/lib/vintage/store';
+import { getPublishedVintagePicksContent } from '@/lib/vintage/picksStore';
 
 export type BracketMutationDenial = {
   allowed: false;
   status: number;
   error: string;
+  reasonCode?: string;
 };
 
 export type BracketMutationAllowance = {
@@ -18,68 +18,66 @@ export type BracketMutationAllowance = {
   siteConfig: SiteConfigData | null;
 };
 
-export type BracketMutationDecision = BracketMutationDenial | BracketMutationAllowance;
-
-/**
- * Load fresh site config for mutation gates, falling back to FALLBACK_CONFIG.
- */
-async function loadSiteConfigForMutation(): Promise<SiteConfigData | null> {
-  try {
-    return await getSiteConfigFromGoogleSheetsFresh();
-  } catch (error) {
-    console.warn('[bracketMutationPolicy] Site config fetch failed; using fallback.', error);
-    return FALLBACK_CONFIG;
-  }
-}
+export type BracketMutationDecision =
+  | BracketMutationDenial
+  | BracketMutationAllowance;
 
 /**
  * Decide whether a create/update/delete mutation is allowed for a bracket year.
+ * All users use vintage Action Lock (My Picks CMS + homepage tipoff/year).
  *
- * Priority (current year only; prior years always denied):
- * 1. brackets_available + JSON presence (via picksAccessPolicy)
- * 2. stop_submit toggle / deadline
- * 3. Application Master Lock
- *
- * @param bracketYear - Year stamped on the bracket (or active year for creates)
+ * @param bracketYear - Year stamped on the bracket (DB). For creates, pass any
+ *   hint; with `forCreate: true` always evaluates against Active Tourney Year.
+ * @param action - `changing` (default) or `save_wip` (in-progress persist)
+ * @param options.forCreate - When true, evaluates against CMS active year
  */
 export async function evaluateBracketMutationAccess(
-  bracketYear: number
+  bracketYear: number,
+  action: VintageActionKind = 'changing',
+  options?: { forCreate?: boolean },
 ): Promise<BracketMutationDecision> {
-  const siteConfig = await loadSiteConfigForMutation();
-  const activeYear = siteConfig?.tournamentYear
-    ? parseInt(String(siteConfig.tournamentYear), 10)
-    : await getActiveTournamentYear();
-
+  const [home, picksCopy] = await Promise.all([
+    getPublishedVintageContent(),
+    getPublishedVintagePicksContent(),
+  ]);
+  const activeYear = parseInt(String(home.tournament.year).trim(), 10);
   if (Number.isNaN(activeYear)) {
     return {
       allowed: false,
       status: 500,
-      error: 'Tournament year is not configured.',
+      error: 'Active Tourney Year is not configured on the homepage.',
+      reasonCode: 'brackets_missing_json',
     };
   }
-
-  if (isHistoricalYear(bracketYear, activeYear)) {
-    return {
-      allowed: false,
-      status: 403,
-      error: `Brackets from ${bracketYear} are read-only. Only ${activeYear} brackets can be modified.`,
-    };
-  }
-
-  const tournamentData = await tryLoadTournamentData(String(activeYear));
-  const masterLock = await getMasterLockState();
-  const access = evaluatePicksAccess(siteConfig, {
-    tournamentJsonPresent: Boolean(tournamentData),
-    masterLockUnlocked: masterLock.unlocked,
+  const yearForLock = options?.forCreate ? activeYear : bracketYear;
+  const lock = await evaluateVintageActionLockFresh({
+    action,
+    bracketYear: yearForLock,
+    home,
+    picksCopy,
   });
-
-  if (access.blocked) {
+  if (lock.blocked) {
     return {
       allowed: false,
       status: 403,
-      error: access.message,
+      error: lock.message,
+      reasonCode: lock.reasonCode,
     };
   }
-
-  return { allowed: true, activeYear, siteConfig };
+  return {
+    allowed: true,
+    activeYear: lock.activeYear,
+    siteConfig: {
+      ...FALLBACK_CONFIG,
+      tournamentYear: String(lock.activeYear),
+      bracketsAvailable: 'YES',
+      stopSubmitToggle: 'No',
+      stopSubmitDateTime: '',
+      entryCost: lock.picksCopy.entryCost,
+      bracketsMissingErrorMessage: lock.picksCopy.bracketsMissingErrorMessage,
+      masterLockMessage: lock.picksCopy.masterLockMessage,
+      priorYearWarningMessage: lock.picksCopy.priorYearWarningMessage,
+      finalMessageSubmitOff: lock.picksCopy.tourneyActiveMessage,
+    },
+  };
 }

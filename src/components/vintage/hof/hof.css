@@ -1,0 +1,546 @@
+/* Hall of Fame — vintage record-book layout under shared chrome. */
+
+.v-hof {
+  --v-hof-gold: #c9a227;
+  padding: 8px 0 48px;
+}
+
+.v-hof-intro {
+  position: relative;
+  text-align: center;
+  margin: 0 0 28px;
+  padding: 8px 8px 0;
+}
+
+.v-hof-reigning,
+.v-hof-archive,
+.v-hof-leaders {
+  position: relative;
+}
+
+.v-hof-intro h1 {
+  margin: 0 0 10px;
+  font-family: var(--v-font-headline);
+  font-weight: 400;
+  font-size: clamp(36px, 6vw, 64px);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: var(--v-ink);
+}
+
+.v-hof-supporting {
+  margin: 0 auto;
+  max-width: 36rem;
+  font-family: var(--v-font-specialty);
+  font-size: 17px;
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--v-ink) 82%, transparent);
+}
+
+/* Reigning champion */
+.v-hof-reigning {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 24px 32px;
+  align-items: center;
+  margin: 0 0 28px;
+  padding: 22px 24px;
+  border: 2px double var(--v-ink);
+}
+
+.v-hof-reigning-label {
+  margin: 0 0 10px;
+  font-family: var(--v-font-icons);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--v-red);
+}
+
+.v-hof-reigning-name {
+  margin: 0;
+  font-family: var(--v-font-headline);
+  font-weight: 400;
+  font-size: clamp(28px, 4.5vw, 48px);
+  line-height: 1.08;
+  text-transform: uppercase;
+  color: var(--v-ink);
+  overflow-wrap: anywhere;
+}
+
+.v-hof-reigning-meta {
+  margin: 10px 0 0;
+  font-family: var(--v-font-icons);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--v-ink) 75%, transparent);
+}
+
+.v-hof-reigning-emblem {
+  justify-self: end;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.v-hof-reigning-trophy {
+  display: block;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #000;
+}
+
+.v-hof-reigning-year {
+  font-family: var(--v-font-headline);
+  font-size: 22px;
+  line-height: 1;
+  color: var(--v-ink);
+}
+
+/* Lifetime strip */
+.v-hof-lifetime {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin: 0 0 36px;
+  padding: 16px 0;
+  border-top: 1px solid var(--v-ink);
+  border-bottom: 1px solid var(--v-ink);
+}
+
+.v-hof-stat {
+  text-align: center;
+  padding: 4px 12px;
+  border-right: 1px solid var(--v-ink);
+}
+
+.v-hof-stat:last-child {
+  border-right: 0;
+}
+
+.v-hof-stat-value {
+  margin: 0 0 4px;
+  font-family: var(--v-font-headline);
+  font-size: clamp(26px, 3vw, 36px);
+  line-height: 1;
+  color: var(--v-ink);
+}
+
+.v-hof-stat-label {
+  margin: 0;
+  font-family: var(--v-font-icons);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--v-red);
+}
+
+/* Section titles */
+.v-hof-section-title {
+  margin: 0 0 18px;
+  padding-bottom: 8px;
+  font-family: var(--v-font-headline);
+  font-weight: 400;
+  font-size: clamp(22px, 3vw, 30px);
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  color: var(--v-red);
+  border-bottom: 2px double var(--v-ink);
+}
+
+.v-hof-section-title-ink {
+  color: var(--v-ink);
+}
+
+/* Season archive */
+.v-hof-archive {
+  margin: 0 0 40px;
+}
+
+.v-hof-season-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.v-hof-season-grid > li {
+  display: flex;
+  min-width: 0;
+}
+
+.v-hof-season-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 220px;
+  padding: 14px 14px 10px;
+  border: 1px solid var(--v-ink);
+  background: color-mix(in srgb, var(--v-paper) 92%, white);
+}
+
+.v-hof-season-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.v-hof-season-head > div:first-child {
+  flex: 0 0 auto;
+}
+
+.v-hof-season-year {
+  margin: 0;
+  font-family: var(--v-font-headline);
+  font-size: 28px;
+  line-height: 1;
+  color: var(--v-red);
+}
+
+.v-hof-season-entries {
+  margin: 4px 0 0;
+  font-family: var(--v-font-icons);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--v-ink);
+}
+
+.v-hof-ncaa {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  text-align: right;
+  min-width: 0;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+}
+
+.v-hof-ncaa-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.v-hof-ncaa-label {
+  font-family: var(--v-font-icons);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--v-ink);
+}
+
+.v-hof-ncaa-team {
+  font-family: var(--v-font-specialty);
+  font-size: 13px;
+  line-height: 1.2;
+  color: var(--v-ink);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.v-hof-ncaa-logo {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.v-hof-finishers {
+  margin: auto 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.v-hof-finishers li {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: baseline;
+  padding: 7px 0;
+  border-top: 1px solid var(--v-ink);
+  font-size: 14px;
+}
+
+.v-hof-finisher-place {
+  font-family: var(--v-font-icons);
+  font-weight: 700;
+  color: var(--v-hof-gold);
+}
+
+.v-hof-finisher-name {
+  font-family: var(--v-font-specialty);
+  font-weight: 700;
+  color: var(--v-ink);
+  overflow-wrap: anywhere;
+}
+
+.v-hof-finisher-pts {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--v-font-body);
+  color: var(--v-ink);
+}
+
+.v-hof-season-special-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 6px;
+  padding: 12px 4px 8px;
+}
+
+.v-hof-special-icon {
+  display: inline-flex;
+  color: var(--v-ink);
+  margin-bottom: 4px;
+}
+
+.v-hof-season-special-body h3 {
+  margin: 0;
+  font-family: var(--v-font-icons);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--v-ink);
+}
+
+.v-hof-special-note {
+  margin: 0;
+  font-family: var(--v-font-specialty);
+  font-style: italic;
+  font-size: 13px;
+  color: color-mix(in srgb, var(--v-ink) 75%, transparent);
+}
+
+.v-hof-archive-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+.v-hof-expand-btn,
+.v-hof-view-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border: 1px solid var(--v-ink);
+  background: var(--v-paper);
+  color: var(--v-ink);
+  font-family: var(--v-font-icons);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.v-hof-expand-btn:hover,
+.v-hof-view-more:hover,
+.v-hof-expand-btn:focus-visible,
+.v-hof-view-more:focus-visible {
+  outline: 2px solid var(--v-red);
+  outline-offset: 2px;
+}
+
+.v-hof-view-more {
+  margin-top: 12px;
+  border: 0;
+  background: transparent;
+  color: var(--v-red);
+  padding: 8px 0;
+}
+
+/* Leaders */
+.v-hof-leaders {
+  margin: 0 0 36px;
+}
+
+.v-hof-leaders-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+}
+
+.v-hof-leader-panel h3 {
+  margin: 0 0 4px;
+  font-family: var(--v-font-icons);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--v-ink);
+}
+
+.v-hof-leader-sub {
+  margin: 0 0 12px;
+  font-family: var(--v-font-specialty);
+  font-size: 14px;
+  color: color-mix(in srgb, var(--v-ink) 70%, transparent);
+}
+
+.v-hof-leader-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.v-hof-leader-table th {
+  background: var(--v-hof-gold);
+  color: var(--v-ink);
+  font-family: var(--v-font-icons);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: left;
+  padding: 8px 10px;
+  border: 1px solid var(--v-ink);
+}
+
+.v-hof-leader-table td {
+  padding: 9px 10px;
+  border: 1px solid color-mix(in srgb, var(--v-ink) 35%, transparent);
+  vertical-align: middle;
+  color: var(--v-ink);
+  height: 2.75rem;
+}
+
+.v-hof-rank,
+.v-hof-leader-value,
+.v-hof-leader-year {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.v-hof-leader-value {
+  text-align: right;
+  font-weight: 700;
+}
+
+.v-hof-leader-player {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: 0 0.45rem;
+  min-width: 0;
+}
+
+.v-hof-leader-name {
+  font-family: var(--v-font-specialty);
+  font-weight: 700;
+}
+
+.v-hof-leader-meta {
+  font-size: 11px;
+  color: color-mix(in srgb, var(--v-ink) 65%, transparent);
+  white-space: nowrap;
+}
+
+.v-hof-leader-meta-short {
+  display: none;
+}
+
+.v-hof-leader-meta-full {
+  display: inline;
+}
+
+.v-hof-closing {
+  margin: 8px 0 0;
+  text-align: center;
+  font-family: var(--v-font-specialty);
+  font-style: italic;
+  font-size: 15px;
+  color: color-mix(in srgb, var(--v-ink) 75%, transparent);
+}
+
+.v-hof-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 900px) {
+  .v-hof-leader-meta-full {
+    display: none;
+  }
+
+  .v-hof-leader-meta-short {
+    display: inline;
+  }
+
+  .v-hof-reigning {
+    grid-template-columns: 1fr;
+    text-align: center;
+    padding: 18px 16px;
+  }
+
+  .v-hof-reigning-emblem {
+    justify-self: center;
+    order: -1;
+  }
+
+  .v-hof-reigning-trophy {
+    width: 96px;
+    height: 96px;
+  }
+
+  .v-hof-lifetime {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .v-hof-stat:nth-child(2) {
+    border-right: 0;
+  }
+
+  .v-hof-stat:nth-child(1),
+  .v-hof-stat:nth-child(2) {
+    border-bottom: 1px solid var(--v-rule);
+    padding-bottom: 12px;
+    margin-bottom: 8px;
+  }
+
+  .v-hof-season-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .v-hof-leaders-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 900px) {
+  .v-hof-season-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

@@ -2,7 +2,7 @@
 
 **Scope:** All web applications in this organization’s portfolio (Next.js / Vercel / Neon stack and aligned patterns).  
 **Created:** February 21, 2026  
-**Last Updated:** April 4, 2026 (Organization-wide scope; configuration standards; Base App alignment)  
+**Last Updated:** October 20, 2026 (Vintage public rollout)  
 **Purpose:** Living document defining **how we implement solutions**—security, architecture, testing, APIs, and operational patterns teams should follow or consciously deviate from with Architect review.
 
 ---
@@ -227,6 +227,22 @@ components/
 **Testability:** All interactive UI components (buttons, inputs, dialogs) MUST include `data-testid` attributes for stable test automation. **For responsive components with desktop/mobile variants, use `-desktop` / `-mobile` suffixes** to ensure unique locators. See **Section 7.7** for naming conventions and the established test ID table.
 
 **Status:** Partially applied. Feature directories exist but shared components lack clear organization.
+
+**WMM2026 vintage public product:** When `VINTAGE_HOMEPAGE_ENABLED` is on (always on in local `development`), **every visitor** gets vintage UI on `/`, `/info`, `/hall-of-fame`, `/bracket`, `/standings`, and `/auth/*`. Flag off is an emergency hard-off (`notFound`). **CMS edit gears** and `/vintage/admin/*` remain **primary-admin-only** (`vintageAdminEmail` / `isPrimaryVintageAdmin`) — that identity check is not the public UX gate. Canonical CMS URLs are `/vintage/admin/*`; `/admin/vintage-*` are thin redirects. Shared Neon access: `lib/vintage/dbPool.ts`; sidecar writes: `lib/vintage/sidecarWriter.ts`.
+
+**WMM2026 ops vs CMS:** `/admin` is **ops only** (Users, Brackets, Key, Teams, Tourney, Payments, Logs). Content rebuild / validate-config / Usage / Application Master Lock chrome are not on `/admin`. **Application Master Lock** source of truth = published My Picks CMS (`masterLockUnlocked` + message); `lib/killSwitch.ts` reads that field.
+
+**WMM2026 vintage homepage (illustrative):** Countdown → three locked plate cards (Play / Champ / Excel) → explore band (Info + Hall) → announcements board. Cards share `CardFooterCaption` (Oswald Bold, ALL CAPS; `||` = two-line break). Primary-admin edit gears deep-link via `lib/vintage/adminFocus.ts`. CMS editors stack all sections on one scroll page with sticky left jump nav (`components/vintage/sectionNav.tsx`). Each toolbar slot has an **Admin only** CMS toggle (`toolbar[].adminOnly`); gated buttons use `/api/check-admin` (ops `ADMIN_EMAIL`). Details: `docs/VINTAGE_HOMEPAGE_V1.md`.
+
+**WMM2026 vintage CMS sidecars:** Homepage, Info, Hall of Fame, My Picks, and Standings each store draft/published JSON beside `vintage_homepage` (`__infoHandbook`, `__hofContent`, `__picksContent`, `__standingsContent`). Homepage admin owns **Active Tourney Year** (`tournament.year`) and critical dates (`bracketsReadyAt`, `tipoffAt`). Admined strings resolve `{year}` / `<year>` from that year. My Picks CMS owns **Application Master Lock**, brackets-published, and Action Lock messages — not Config Sheet `stop_submit_*`. Standings CMS owns Live Standings labels / empty states (not ranking data).
+
+**WMM2026 tournament field JSON:** Source of truth is Neon `tournament_fields` (per environment + year), written by Admin Tourney **Import JSON** or Tournament Builder save. `lib/tournamentLoader.ts` / `resolveTournamentData` prefer DB, then fall back to `public/data/tournament-{YYYY}.json`. Public read: `GET /api/tournament-data/[year]`. Repo files remain optional fallbacks for years never imported.
+
+**WMM2026 vintage Action Lock (My Picks):** Applies to **all users** for Changing actions (New / Edit / Submit / Return / Copy / Delete). Blocked when any of: prior year, brackets not published, tipoff passed (tourney active), or Master Lock. Message priority is that same order (first match wins). Viewing (View / Print / Email) stays allowed. **Save WIP** is allowed on the active year when only tipoff and/or Master Lock would block Submit (mid-session escape hatch). Published-but-missing tournament JSON is an error state (user message + admin email via `notifyAdminOfError`). Server mutations use `evaluateBracketMutationAccess` → `evaluateVintageActionLockFresh`. Canonical evaluator: `lib/services/vintageActionLock.ts` (client-safe); server fresh path: `vintageActionLockServer.ts`. My Picks copy is sectioned (Timer / Header / Pool / Empty / Cost) with dual flavors.
+
+**WMM2026 vintage auth pages:** `/auth/*` uses `auth/layout.tsx` — always `VintageShell` when vintage is enabled. Sign In / Create Account share `AuthForms` (`?mode=signup` tabs) with cream/navy/red panel styling in `components/auth/auth.css`. UI labels live in My Picks CMS (`__picksContent.auth`) — edited under **Sign in & account** in the My Picks admin (no on-page gear; signing in leaves `/auth`). Site Config may still own residual email-failure / registration-success strings. NextAuth credentials, register, confirmation, and `/bracket` post-login destination are unchanged.
+
+**WMM2026 vintage Live Standings:** Live-only for everyone at `/standings` (picks-style `?year=`). Daily Google Sheet standings UI is retired. Default year is CMS **Standings Year** (`__standingsContent.standingsYear`), not homepage Tourney Year. Data from `live_standings_snapshots` (rebuilt on KEY save, cold start, or admin **Regenerate** at `POST /api/admin/vintage-standings/recompute`). Copy CMS: `__standingsContent` / `/vintage/admin/standings`. Admin deep-links KEY editor via `/admin?tab=live-results&year=YYYY`. FF/Champ result chrome is shared with My Picks via `lib/pickResultChrome.ts`. `/standings/live` always redirects to `/standings`.
 
 ---
 

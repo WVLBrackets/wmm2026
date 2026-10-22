@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAllTeamReferenceData } from '@/lib/repositories/teamDataRepository';
 import { initializeTeamDataTable } from '@/lib/database/migrations';
 import { getTeamReferenceDisplayName } from '@/lib/teamDisplayName';
+import { getFallbackTeamData } from '@/lib/teamRefData';
 import {
   getCachedPublicTeamData,
   setCachedPublicTeamData,
@@ -68,13 +69,28 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (error) {
-    console.error('Error reading team data:', error);
+    // Local/dev and transient DB outages: serve hardcoded fallback so logo
+    // lookups (Hall of Fame cards, etc.) do not hard-fail with 500.
+    console.error('Error reading team data, serving fallback:', error);
+    const fallback: PublicTeamDataRow[] = getFallbackTeamData().map((row) => ({
+      abbr: row.abbr,
+      id: row.id,
+      name: row.name,
+      displayName: row.displayName,
+      customDisplayName: row.customDisplayName ?? null,
+    }));
+    setCachedPublicTeamData(fallback, now);
     return NextResponse.json(
       {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to read team data',
+        success: true,
+        data: fallback,
+        fallback: true,
       },
-      { status: 500 }
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+        },
+      },
     );
   }
 }

@@ -5,7 +5,10 @@ import {
   readVintageState,
   writeVintageContent,
 } from "@/lib/vintage/store";
-import { validateVintageContent } from "@/lib/vintage/content";
+import {
+  normalizeVintageContent,
+  validateVintageContent,
+} from "@/lib/vintage/content";
 import { vintageStorageError } from "@/lib/vintage/storageError";
 export const dynamic = "force-dynamic";
 const headers = { "Cache-Control": "private, no-store" };
@@ -49,7 +52,10 @@ export async function POST(request: NextRequest) {
         !/^[a-f0-9-]{36}$/i.test(input.revisionId)
       )
         throw new Error("Invalid revision.");
-    } else validateVintageContent(input.content);
+    } else {
+      input.content = normalizeVintageContent(input.content);
+      validateVintageContent(input.content);
+    }
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Invalid content." },

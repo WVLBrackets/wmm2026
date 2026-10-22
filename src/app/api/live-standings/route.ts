@@ -4,6 +4,8 @@ import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 import { getLiveStandingsSnapshot } from '@/lib/repositories/liveStandingsSnapshotRepository';
 import { getKeyBracketByYear } from '@/lib/repositories/bracketRepository';
 import { recomputeLiveStandingsAfterKeySave } from '@/lib/liveStandingsService';
+import { getTournamentWorkspace } from '@/lib/repositories/tournamentRepository';
+import { FIRST_MANAGED_YEAR } from '@/lib/tournamentDefinition';
 
 /**
  * GET /api/live-standings?year=2026
@@ -26,8 +28,20 @@ export async function GET(request: NextRequest) {
     }
 
     let snapshot = await getLiveStandingsSnapshot(yearNum);
+    const revision = yearNum >= FIRST_MANAGED_YEAR ? (await getTournamentWorkspace(yearNum)).revision : undefined;
+    const outdatedField = Boolean(snapshot) && revision !== undefined && snapshot!.standingsData.tournamentRevision !== revision;
 
-    if (!snapshot) {
+    /**
+     * Snapshots older than the My Entries / YOURS work omit `userId` on rows.
+     * Recompute once so filter-by-owner matches session.user.id.
+     */
+    const needsOwnerIds =
+      Boolean(snapshot) &&
+      snapshot!.standingsData.entries.some(
+        (e) => e.bracketId && !e.userId,
+      );
+
+    if (!snapshot || needsOwnerIds || outdatedField) {
       const keyBracket = await getKeyBracketByYear(yearNum);
       if (keyBracket) {
         const result = await recomputeLiveStandingsAfterKeySave(yearNum, keyBracket.id);
@@ -35,6 +49,7 @@ export async function GET(request: NextRequest) {
           snapshot = await getLiveStandingsSnapshot(yearNum);
         } else {
           console.error('[GET /api/live-standings] Lazy recompute failed:', result.error);
+          if (outdatedField) return NextResponse.json({ success: false, error: 'Standings are refreshing after a tournament update. Please retry.' }, { status: 503 });
         }
       }
     }

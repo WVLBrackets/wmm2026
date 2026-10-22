@@ -1,6 +1,20 @@
 "use client";
 import { useEffect, useState } from "react";
-export default function VintageCountdown({ at }: { at: string }) {
+
+const DEFAULT_LIVE = "The tournament is underway!";
+
+/**
+ * Tipoff countdown clock. When the target time has passed, shows the live
+ * tourney message in place of the timer digits.
+ */
+export default function VintageCountdown({
+  at,
+  liveMessage = DEFAULT_LIVE,
+}: {
+  at: string;
+  /** Shown once tipoff has passed (same copy as countdown-off mode). */
+  liveMessage?: string;
+}) {
   const target = Date.parse(at);
   const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
@@ -14,8 +28,17 @@ export default function VintageCountdown({ at }: { at: string }) {
     now === null || !configured
       ? null
       : Math.max(0, Math.floor((target - now) / 1000));
-  if (seconds === 0)
-    return <p className="v-countdown-started">Let the madness begin.</p>;
+  if (seconds === 0) {
+    const message = liveMessage.trim() || DEFAULT_LIVE;
+    return (
+      <p
+        className="v-live-tourney-message"
+        data-testid="vintage-live-tourney-message"
+      >
+        {message}
+      </p>
+    );
+  }
   const values =
     seconds === null
       ? ["—", "—", "—", "—"]

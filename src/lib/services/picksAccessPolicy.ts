@@ -3,8 +3,12 @@ import { checkSubmissionAllowed } from '@/lib/bracketSubmissionValidator';
 import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 
 export type PicksBlockReasonCode =
+  | 'prior_year'
   | 'brackets_not_available'
   | 'brackets_missing_json'
+  /** Vintage: homepage tipoff has passed. */
+  | 'tourney_active'
+  /** Legacy Config Sheet stop_submit toggle / deadline. */
   | 'submission_closed'
   | 'master_lock'
   | 'none';
