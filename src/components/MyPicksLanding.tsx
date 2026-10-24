@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import { Press_Start_2P } from 'next/font/google';
-import { Trophy, Plus, Edit, Clock, CheckCircle, LogOut, Trash2, Copy, Eye, Info, X, Mail, RotateCcw, Undo2, Search, Pencil, Send, DollarSign, ChevronDown } from 'lucide-react';
+import { Trophy, Plus, Edit, Clock, CheckCircle, CircleDashed, LogOut, Trash2, Copy, Eye, Info, X, Mail, RotateCcw, Undo2, Search, Pencil, Send, DollarSign, ChevronDown } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { useCSRF } from '@/hooks/useCSRF';
 import { TournamentData, TournamentBracket } from '@/types/tournament';
@@ -1964,79 +1964,80 @@ export default function MyPicksLanding({
   };
 
   /**
-   * Submitted rows: Paid shows $; unpaid/pending is blank (no icon).
-   * Desktop Progress column uses the blank state; mobile Status uses
-   * `renderVintageMobileStatusMark` so unpaid submitted still shows the checkmark.
-   * @param iconOnly - Compact chip (no “Paid” word) for desktop Progress col / mobile.
+   * Paid column mark. Submitted + paid → green check; submitted unpaid/pending →
+   * dashed open ring (“still on the tab”); non-submitted → blank.
+   *
+   * @param bracket - Entry to render payment state for
+   * @param iconOnly - Compact chip without the “Paid” / “Due” label
    */
   const renderVintagePayment = (bracket: Bracket, iconOnly = false) => {
+    if (bracket.status !== 'submitted') {
+      return (
+        <span
+          className={`v-picks__pay v-picks__pay--blank${iconOnly ? ' v-picks__pay--icon' : ''}`}
+          aria-hidden
+        />
+      );
+    }
     const paid = bracket.paymentStatus === 'paid';
     const pending = bracket.paymentStatus === 'pending';
     const title = paid
       ? 'Payment Confirmed'
       : pending
         ? 'Payment Pending'
-        : 'Not Paid';
-    if (!paid) {
+        : 'Payment Due';
+    if (paid) {
       return (
         <span
-          className={`v-picks__pay v-picks__pay--blank${iconOnly ? ' v-picks__pay--icon' : ''}`}
+          className={`v-picks__pay v-picks__pay--paid${iconOnly ? ' v-picks__pay--icon' : ''}`}
           title={title}
           aria-label={title}
-        />
+          data-testid="picks-pay-paid"
+        >
+          <CheckCircle className="v-picks__icon" aria-hidden />
+          {!iconOnly ? <span>Paid</span> : null}
+        </span>
       );
     }
     return (
       <span
-        className={`v-picks__pay v-picks__pay--paid${iconOnly ? ' v-picks__pay--icon' : ''}`}
+        className={`v-picks__pay v-picks__pay--due${iconOnly ? ' v-picks__pay--icon' : ''}`}
         title={title}
         aria-label={title}
+        data-testid="picks-pay-due"
       >
-        <DollarSign className="v-picks__icon" aria-hidden />
-        {!iconOnly ? <span>Paid</span> : null}
+        <CircleDashed className="v-picks__icon" aria-hidden />
+        {!iconOnly ? <span>{pending ? 'Pending' : 'Due'}</span> : null}
       </span>
     );
   };
 
   /**
-   * Mobile Status column mark: one of paid / submitted / in progress / deleted.
-   * Paid submitted entries show $; all other rows show the status icon (including
-   * unpaid submitted, which previously rendered a blank pay chip).
+   * Mobile Status column: only submitted / in progress / deleted (never payment).
    *
-   * @param bracket - Entry to render a mark for
+   * @param bracket - Entry to render a status mark for
    */
-  const renderVintageMobileStatusMark = (bracket: Bracket) => {
-    if (bracket.paymentStatus === 'paid') {
-      return renderVintagePayment(bracket, true);
-    }
-    return (
-      <button
-        type="button"
-        className={`${vintageStatusClass(bracket.status)} v-picks__status--button v-picks__status--square`}
-        onClick={() => openBracketFromLandingRow(bracket)}
-        title={getStatusText(bracket.status)}
-        aria-label={getStatusText(bracket.status)}
-      >
-        {renderVintageStatusIcon(bracket.status)}
-      </button>
-    );
-  };
+  const renderVintageMobileStatusMark = (bracket: Bracket) => (
+    <button
+      type="button"
+      className={`${vintageStatusClass(bracket.status)} v-picks__status--button v-picks__status--square`}
+      onClick={() => openBracketFromLandingRow(bracket)}
+      title={getStatusText(bracket.status)}
+      aria-label={getStatusText(bracket.status)}
+    >
+      {renderVintageStatusIcon(bracket.status)}
+    </button>
+  );
 
-  /** Progress bar (in progress / deleted) or payment marker (submitted). */
+  /** Progress bar for all statuses (payment lives in the Paid column). */
   const renderVintageProgress = (
     bracket: Bracket,
     progress: ReturnType<typeof calculateProgress>,
-    opts?: { paymentIconOnly?: boolean },
   ) => {
-    if (bracket.status === 'submitted') {
-      return (
-        <div className="v-picks__progress v-picks__progress--done">
-          {renderVintagePayment(bracket, opts?.paymentIconOnly)}
-        </div>
-      );
-    }
     return (
-      <div className="v-picks__progress">
+      <div
+        className={`v-picks__progress${bracket.status === 'submitted' ? ' v-picks__progress--done' : ''}`}
+      >
         <span className="v-picks__progress-text">
           {progress.completed} / {progress.total} picks
         </span>
@@ -2391,6 +2392,7 @@ export default function MyPicksLanding({
                 <th scope="col" className="v-picks__th v-picks__th--entry">Entry</th>
                 <th scope="col" className="v-picks__th v-picks__th--id">ID</th>
                 <th scope="col" className="v-picks__th">Status</th>
+                <th scope="col" className="v-picks__th">Paid</th>
                 <th scope="col" className="v-picks__th">Progress</th>
                 <th scope="col" className="v-picks__th">Final Four</th>
                 <th scope="col" className="v-picks__th v-picks__th--champ" title="Champion">
@@ -2406,7 +2408,7 @@ export default function MyPicksLanding({
                   <React.Fragment key={bracket.id}>
                     {ctx.showInHeader && (
                       <tr className="v-picks__section-row v-picks__section-row--in" data-testid="brackets-section-in-pool">
-                        <td colSpan={7}>{renderVintagePoolSection('in')}</td>
+                        <td colSpan={8}>{renderVintagePoolSection('in')}</td>
                       </tr>
                     )}
                     {ctx.showOutHeader && (
@@ -2414,7 +2416,7 @@ export default function MyPicksLanding({
                         className={`v-picks__section-row v-picks__section-row--out${ctx.followsInPool ? ' is-after-in' : ''}`}
                         data-testid="brackets-section-out-pool"
                       >
-                        <td colSpan={7}>{renderVintagePoolSection('out')}</td>
+                        <td colSpan={8}>{renderVintagePoolSection('out')}</td>
                       </tr>
                     )}
                     <tr className={`v-picks__row v-picks__row--${bracket.status}`}>
@@ -2443,6 +2445,9 @@ export default function MyPicksLanding({
                           {renderVintageStatusIcon(bracket.status)}
                           {getStatusText(bracket.status)}
                         </button>
+                      </td>
+                      <td className="v-picks__cell v-picks__cell--pay">
+                        {renderVintagePayment(bracket)}
                       </td>
                       <td className="v-picks__cell">
                         {renderVintageProgress(bracket, ctx.progress)}
@@ -2477,14 +2482,14 @@ export default function MyPicksLanding({
       <div className="v-picks__cards">
         <div className="v-picks__card-headers" aria-hidden>
           <span className="v-picks__card-h v-picks__card-h--entry">Entry</span>
-          <span className="v-picks__card-h v-picks__card-h--pay">Status</span>
+          <span className="v-picks__card-h v-picks__card-h--status">Status</span>
+          <span className="v-picks__card-h v-picks__card-h--pay">Paid</span>
           <span className="v-picks__card-h v-picks__card-h--ff">Final Four</span>
           <span className="v-picks__card-h v-picks__card-h--champ">Champ</span>
           <span className="v-picks__card-h v-picks__card-h--actions">Actions</span>
         </div>
         {sortedBrackets.map((bracket, index) => {
           const ctx = rowContext(bracket, index);
-          const inPool = bracket.status === 'submitted';
           return (
             <React.Fragment key={bracket.id}>
               {ctx.showInHeader && (
@@ -2505,7 +2510,7 @@ export default function MyPicksLanding({
                 data-testid="picks-entry-card"
                 data-status={bracket.status}
               >
-                {/* Name | $ or status | FF 2×2 | Champ | Actions 2×2 */}
+                {/* Name | Status | Paid | FF 2×2 | Champ | Actions 2×2 */}
                 <div className="v-picks__card-row">
                   <button
                     type="button"
@@ -2516,6 +2521,7 @@ export default function MyPicksLanding({
                     {ctx.rawEntryName}
                   </button>
                   {renderVintageMobileStatusMark(bracket)}
+                  {renderVintagePayment(bracket, true)}
                   {renderVintageFinalFour(ctx.finalFour)}
                   <div
                     className="v-picks__champ v-picks__champ--mobile"

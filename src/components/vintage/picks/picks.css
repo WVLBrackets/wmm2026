@@ -27,8 +27,6 @@
   --vp-chip-pad-x: 7.5px;
   --vp-chip-font: 11px;
   --vp-chip-icon: 14px;
-  /* Fixed width for every status chip — sized to "IN PROGRESS" + icon + light padding. */
-  --vp-status-chip-width: 7.65rem;
   /* Darker theme-green (not neon) for submitted. */
   --vp-submitted-border: #3f6b4a;
   --vp-submitted-bg: #d9e6dc;
@@ -215,8 +213,8 @@
 }
 
 /*
- * One fixed box for every status chip — count pills, Show-filters, and row/card badges.
- * Do not override width/min-width/max-width on these classes elsewhere.
+ * Status chips (count pills, Show-filters, row badges) size to their label.
+ * Height stays shared; width follows text + icon + padding.
  */
 .v-picks__pill,
 .v-picks__status,
@@ -228,9 +226,9 @@
   justify-content: center;
   gap: 6px;
   box-sizing: border-box;
-  width: var(--vp-status-chip-width);
-  min-width: var(--vp-status-chip-width);
-  max-width: var(--vp-status-chip-width);
+  width: auto;
+  min-width: 0;
+  max-width: none;
   min-height: var(--vp-chip-height);
   height: var(--vp-chip-height);
   padding: 0 var(--vp-chip-pad-x);
@@ -630,7 +628,7 @@
   cursor: pointer;
 }
 
-/* All stays content-sized; status filters use --vp-status-chip-width above. */
+/* All filter chip — same content-sized width as status filters. */
 .v-picks__chip--all {
   width: auto;
   min-width: 0;
@@ -956,14 +954,25 @@
   border-color: color-mix(in srgb, var(--vp-pay-paid-fg, #166534) 35%, transparent);
 }
 
-/* Unpaid / pending: reserve space, no icon. */
+/*
+ * Unpaid / pending submitted: open dashed ring (“still on the tab”).
+ * Distinct from the solid green paid check without looking like an error.
+ */
+.v-picks__pay--due {
+  background: color-mix(in srgb, var(--vp-ink) 4%, transparent);
+  color: color-mix(in srgb, var(--vp-ink) 55%, transparent);
+  border-color: color-mix(in srgb, var(--vp-ink) 35%, transparent);
+  border-style: dashed;
+}
+
+/* Non-submitted rows: no payment mark. */
 .v-picks__pay--blank {
   background: transparent;
   border-color: transparent;
   color: transparent;
 }
 
-/* Icon-only pay mark (compact desktop / mobile). */
+/* Icon-only pay mark (Paid column desktop / mobile). */
 .v-picks__pay--icon {
   width: 28px;
   min-width: 28px;
@@ -1506,12 +1515,12 @@
   }
 
   /*
-   * Even columns: Entry flexes; Status / FF / Champ / Actions share remaining
-   * width so content isn’t packed to the right edge.
+   * Even columns: Entry flexes; Status / Paid / FF / Champ / Actions share
+   * remaining width so content isn’t packed to the right edge.
    */
   .v-picks__cards {
-    --vp-card-cols: minmax(4.5rem, 1.15fr) minmax(2.5rem, 0.7fr) minmax(3.25rem, 0.95fr)
-      minmax(2.75rem, 0.8fr) minmax(3.5rem, 0.95fr);
+    --vp-card-cols: minmax(4rem, 1.05fr) minmax(2rem, 0.55fr) minmax(2rem, 0.55fr)
+      minmax(3rem, 0.9fr) minmax(2.5rem, 0.75fr) minmax(3.25rem, 0.9fr);
     gap: 0;
   }
 
@@ -1634,6 +1643,7 @@
   }
 
   .v-picks__card-row .v-picks__pay--icon,
+  .v-picks__card-row .v-picks__pay--blank,
   .v-picks__card-row .v-picks__status--square {
     justify-self: center;
   }
