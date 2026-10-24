@@ -395,11 +395,14 @@
   box-sizing: border-box;
   width: 44px;
   height: 44px;
-  border: 2px solid color-mix(in srgb, var(--vp-ink) 18%, transparent);
-  border-top-color: var(--vp-red);
-  border-right-color: var(--vp-ink);
-  border-radius: 0;
-  animation: v-picks-spin 0.85s linear infinite;
+  background: url('/images/vintage/basketball-loader.svg') center / contain no-repeat;
+  animation: v-picks-spin 1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v-picks__loading-spinner {
+    animation: none;
+  }
 }
 
 .v-picks__loading-text {
