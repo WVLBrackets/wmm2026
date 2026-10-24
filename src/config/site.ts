@@ -1,6 +1,10 @@
 /**
  * Warren's March Madness 2026 - Site Configuration
  * Unified configuration system with Google Sheets integration and fallbacks
+ *
+ * Browser callers use `/api/site-config`, which overlays homepage Key Data
+ * (Tourney Year, entry cost, site name, champ, contact). This module must stay
+ * free of Neon/`pg` imports so Client Components can import it safely.
  */
 
 import { getSiteConfigFromGoogleSheets, SiteConfigData } from '@/lib/siteConfig';
@@ -27,30 +31,30 @@ export function invalidateSiteConfigModuleCache(): void {
  */
 export const getSiteConfig = async (): Promise<SiteConfigData> => {
   const now = Date.now();
-  
+
   // Return cached config if it's still fresh
   if (cachedConfig && (now - lastFetchTime) < CACHE_DURATION) {
     return cachedConfig;
   }
-  
+
   try {
     // Check if we're in a server environment (Node.js) or browser
     const isServer = typeof window === 'undefined';
-    
+
     let googleConfig: SiteConfigData | null = null;
-    
+
     if (isServer) {
       // Server-side: Call getSiteConfigFromGoogleSheets directly
       googleConfig = await getSiteConfigFromGoogleSheets();
     } else {
-      // Client-side: Use API route to avoid unstable_cache issues
+      // Client-side: Use API route (includes Key Data overlays)
       const response = await fetch('/api/site-config');
       const result = await response.json();
       if (result.success) {
         googleConfig = result.data;
       }
     }
-    
+
     if (googleConfig) {
       cachedConfig = googleConfig;
       lastFetchTime = now;
@@ -59,7 +63,7 @@ export const getSiteConfig = async (): Promise<SiteConfigData> => {
   } catch (error) {
     console.warn('Failed to fetch config from Google Sheets, using fallback:', error);
   }
-  
+
   // Fallback to environment variables
   const fallbackConfig = getFallbackSiteConfig();
   cachedConfig = fallbackConfig;

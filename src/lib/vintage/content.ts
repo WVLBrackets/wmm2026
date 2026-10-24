@@ -109,10 +109,42 @@ export interface VintageContent {
     first: string;
     second: string;
   };
+  /**
+   * Season / ops controls (homepage Key Data). Source of truth for Tourney Year
+   * companions: brackets published, entry cost, Venmo / Pay gate, Application Master Lock,
+   * site name. Champ name/year live on the Reigning Champ home card; contact on `footer`.
+   */
+  keyData: {
+    /** Short product name for legacy chrome / emails (e.g. Warren's March Madness). */
+    siteName: string;
+    /** When false, My Picks shows not-published empty state. */
+    bracketsPublished: boolean;
+    /** Dollars per submitted bracket (`{cost}` and payment API). */
+    entryCost: number;
+    /**
+     * Venmo username for Pay deep links (without `@`). Empty → Pay button hidden
+     * (except admins still need a username to open the modal).
+     */
+    venmoUser: string;
+    /**
+     * When true, Pay is shown to all users with unpaid submitted brackets.
+     * When false, Pay is admin-only (ops admin check).
+     */
+    enablePayCapability: boolean;
+    /**
+     * Application Master Lock: `true` = Unlocked; `false` = Locked
+     * (Changing actions blocked).
+     */
+    masterLockUnlocked: boolean;
+    /** Shown when Master Lock is Locked. Supports `{year}` / `<year>`. */
+    masterLockMessage: string;
+  };
   tournament: {
     /**
-     * Active Tourney Year — sole source for vintage `{year}` / `<year>` tokens
-     * and My Picks active-year mutations (not Config Sheet `tournament_year`).
+     * Active Tourney Year (Key Data) — site-wide default year for mutations,
+     * New Bracket stamping, `{year}` / `<year>` tokens, and year-scoped defaults.
+     * Historical views use a toggled/`bracket.year` instead. Not Config Sheet.
+     * Standings default year is separate (`__standingsContent.standingsYear`).
      */
     year: string;
     title: string;
@@ -120,12 +152,12 @@ export interface VintageContent {
     /** Homepage heading above the tipoff clock. Supports `{year}` / `<year>`. */
     countdownTitle: string;
     /**
-     * Selection Sunday — when the bracket field is released (Brackets Ready).
-     * Used by My Picks countdown before brackets are published.
+     * Bracket Release (Key Data) — Selection Sunday / field release.
+     * My Picks countdown targets this until brackets are published.
      */
     bracketsReadyAt: string;
     /**
-     * Round 1 tipoff (Thursday). Homepage countdown always targets this when on;
+     * Tip Off (Key Data) — Round 1 tipoff. Homepage countdown targets this when on;
      * My Picks switches to it after brackets are published.
      */
     tipoffAt: string;
@@ -503,6 +535,55 @@ export function normalizeVintageContent(value: unknown): VintageContent {
             : defaults.masthead.second,
       };
     })(),
+    keyData: (() => {
+      const keyIn =
+        input.keyData && typeof input.keyData === "object"
+          ? (input.keyData as Partial<VintageContent["keyData"]> &
+              Record<string, unknown>)
+          : {};
+      const siteName =
+        typeof keyIn.siteName === "string" && keyIn.siteName.trim()
+          ? keyIn.siteName.trim()
+          : defaults.keyData.siteName;
+      const entryRaw =
+        typeof keyIn.entryCost === "number"
+          ? keyIn.entryCost
+          : typeof keyIn.entryCost === "string"
+            ? Number(keyIn.entryCost)
+            : defaults.keyData.entryCost;
+      const entryCost = Number.isFinite(entryRaw)
+        ? Math.max(0, Math.round(entryRaw))
+        : defaults.keyData.entryCost;
+      const venmoRaw =
+        typeof keyIn.venmoUser === "string" ? keyIn.venmoUser.trim() : "";
+      const venmoUser = venmoRaw.replace(/^@+/, "");
+      const masterLockMessage =
+        typeof keyIn.masterLockMessage === "string" &&
+        keyIn.masterLockMessage.trim()
+          ? keyIn.masterLockMessage.trim()
+          : defaults.keyData.masterLockMessage;
+      return {
+        siteName,
+        bracketsPublished:
+          typeof keyIn.bracketsPublished === "boolean"
+            ? keyIn.bracketsPublished
+            : defaults.keyData.bracketsPublished,
+        entryCost,
+        venmoUser:
+          typeof keyIn.venmoUser === "string"
+            ? venmoUser
+            : defaults.keyData.venmoUser,
+        enablePayCapability:
+          typeof keyIn.enablePayCapability === "boolean"
+            ? keyIn.enablePayCapability
+            : defaults.keyData.enablePayCapability,
+        masterLockUnlocked:
+          typeof keyIn.masterLockUnlocked === "boolean"
+            ? keyIn.masterLockUnlocked
+            : defaults.keyData.masterLockUnlocked,
+        masterLockMessage,
+      };
+    })(),
     tournament: (() => {
       const tournamentIn =
         input.tournament && typeof input.tournament === "object"
@@ -612,6 +693,16 @@ export const DEFAULT_VINTAGE_CONTENT: VintageContent = {
   masthead: {
     first: "WARREN’S",
     second: "MARCH MADNESS",
+  },
+  keyData: {
+    siteName: "Warren's March Madness",
+    bracketsPublished: false,
+    entryCost: 5,
+    venmoUser: "",
+    enablePayCapability: false,
+    masterLockUnlocked: true,
+    masterLockMessage:
+      "Bracket actions are temporarily locked by the administrator.",
   },
   tournament: {
     year: "2027",
@@ -736,6 +827,12 @@ export function validateVintageContent(
   const doc = normalized;
   if (!doc.masthead.first.trim() || !doc.masthead.second.trim())
     throw new Error("Masthead lines cannot be blank.");
+  if (!doc.keyData.siteName.trim())
+    throw new Error("Site name cannot be blank.");
+  if (!Number.isFinite(doc.keyData.entryCost) || doc.keyData.entryCost < 0)
+    throw new Error("Entry cost must be zero or a positive dollar amount.");
+  if (!doc.keyData.masterLockMessage.trim())
+    throw new Error("Master Lock message cannot be blank.");
   if (!doc.tournament.year.trim() || !/^\d{4}$/.test(doc.tournament.year.trim()))
     throw new Error("Active Tourney Year must be a four-digit year.");
   if (!doc.tournament.countdownTitle.trim())

@@ -15,6 +15,9 @@ import {
   splitHomepageDocument,
 } from "./homepageDocument";
 import { sidecarsFromRow } from "./sidecarPreserve";
+import {
+  rawHomepageHasKeyData,
+} from "./seasonKeyData";
 
 export interface VintageRevision {
   id: string;
@@ -43,6 +46,37 @@ function homepageFromRow(raw: unknown): VintageContent {
   return normalizeVintageContent(splitHomepageDocument(raw).homepage);
 }
 
+/**
+ * When Key Data was never saved on the homepage row, seed season gates from
+ * published My Picks so production values are not reset to defaults.
+ */
+async function inheritKeyDataFromPicksIfNeeded(
+  content: VintageContent,
+  rawRow: unknown,
+): Promise<VintageContent> {
+  const homepageFragment = splitHomepageDocument(rawRow).homepage;
+  if (rawHomepageHasKeyData(homepageFragment)) return content;
+  try {
+    const { getPublishedVintagePicksContent } = await import("./picksStore");
+    const picks = await getPublishedVintagePicksContent();
+    return {
+      ...content,
+      keyData: {
+        siteName: content.keyData.siteName,
+        bracketsPublished: picks.bracketsPublished,
+        entryCost: picks.entryCost,
+        venmoUser: content.keyData.venmoUser,
+        enablePayCapability: content.keyData.enablePayCapability,
+        masterLockUnlocked: picks.masterLockUnlocked,
+        masterLockMessage:
+          picks.masterLockMessage?.trim() || content.keyData.masterLockMessage,
+      },
+    };
+  } catch {
+    return content;
+  }
+}
+
 export async function readVintageState(): Promise<VintageState> {
   if (!hasVintageDatabase()) return EMPTY();
   const result = await getVintageDbPool().query(
@@ -53,8 +87,14 @@ export async function readVintageState(): Promise<VintageState> {
   );
   const row = result.rows[0];
   if (!row) return EMPTY();
-  const draft = homepageFromRow(row.draft);
-  const published = homepageFromRow(row.published);
+  const draft = await inheritKeyDataFromPicksIfNeeded(
+    homepageFromRow(row.draft),
+    row.draft,
+  );
+  const published = await inheritKeyDataFromPicksIfNeeded(
+    homepageFromRow(row.published),
+    row.published,
+  );
   validateVintageContent(draft);
   validateVintageContent(published);
   const homepageRevisions = revisions.rows

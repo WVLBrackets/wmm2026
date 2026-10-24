@@ -4,6 +4,7 @@ import type { VintageActionKind } from '@/lib/services/vintageActionLock';
 import { evaluateVintageActionLockFresh } from '@/lib/services/vintageActionLockServer';
 import { getPublishedVintageContent } from '@/lib/vintage/store';
 import { getPublishedVintagePicksContent } from '@/lib/vintage/picksStore';
+import { applyHomepageKeyDataToPicks } from '@/lib/vintage/seasonKeyData';
 
 export type BracketMutationDenial = {
   allowed: false;
@@ -36,10 +37,11 @@ export async function evaluateBracketMutationAccess(
   action: VintageActionKind = 'changing',
   options?: { forCreate?: boolean },
 ): Promise<BracketMutationDecision> {
-  const [home, picksCopy] = await Promise.all([
+  const [home, picksRaw] = await Promise.all([
     getPublishedVintageContent(),
     getPublishedVintagePicksContent(),
   ]);
+  const picksCopy = applyHomepageKeyDataToPicks(home, picksRaw);
   const activeYear = parseInt(String(home.tournament.year).trim(), 10);
   if (Number.isNaN(activeYear)) {
     return {
@@ -70,6 +72,7 @@ export async function evaluateBracketMutationAccess(
     siteConfig: {
       ...FALLBACK_CONFIG,
       tournamentYear: String(lock.activeYear),
+      siteName: home.keyData.siteName,
       bracketsAvailable: 'YES',
       stopSubmitToggle: 'No',
       stopSubmitDateTime: '',

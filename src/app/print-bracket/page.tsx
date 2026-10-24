@@ -23,6 +23,8 @@ export default function PrintBracketPage() {
   const [tournamentData, setTournamentData] = useState<Record<string, unknown> | null>(null);
   const [championTeam, setChampionTeam] = useState<TournamentTeam | null>(null);
   const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
+  /** Year shown on the printout — bracket’s year when historical, else active. */
+  const [printYear, setPrintYear] = useState<string>('');
   const [championMascot, setChampionMascot] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { setInPrintMode } = useBracketMode();
@@ -32,14 +34,29 @@ export default function PrintBracketPage() {
     
     const loadBracketData = async () => {
       try {
-        // Load site config first to get tournament year (via API route)
+        const storedBracketData = sessionStorage.getItem('printBracketData');
+        if (!storedBracketData) {
+          throw new Error('No bracket data available');
+        }
+        const parsedData = JSON.parse(storedBracketData) as {
+          picks?: Record<string, string>;
+          year?: number | string;
+        };
+        setBracketData(parsedData);
+
+        // Prefer the bracket’s own year (historical print); fall back to CMS active year via site-config.
         const configResponse = await fetch('/api/site-config');
         const configResult = await configResponse.json();
         const config = configResult.success ? configResult.data : null;
         setSiteConfig(config);
-        
-        // Use tournament year from config (fallback to '2025' if not available)
-        const tournamentYear = config?.tournamentYear || '2025';
+
+        const bracketYear = parsedData.year != null ? String(parsedData.year).trim() : '';
+        const tournamentYear =
+          /^\d{4}$/.test(bracketYear)
+            ? bracketYear
+            : String(config?.tournamentYear || new Date().getFullYear());
+        setPrintYear(tournamentYear);
+
         const rawTournament = await loadTournamentData(tournamentYear);
         let tournamentData = rawTournament;
         try {
@@ -57,52 +74,43 @@ export default function PrintBracketPage() {
           console.warn('[Print Bracket] Could not apply team display names:', refError);
         }
         setTournamentData(tournamentData as unknown as Record<string, unknown>);
-        
-        const storedBracketData = sessionStorage.getItem('printBracketData');
-        if (storedBracketData) {
-          const parsedData = JSON.parse(storedBracketData);
-          setBracketData(parsedData);
-          
-          // Generate bracket and update with picks
-          const generatedBracket = generate64TeamBracket(tournamentData);
-          const updatedBracket = updateBracketWithPicks(generatedBracket, parsedData.picks, tournamentData);
-          setBracket(updatedBracket as unknown as Record<string, unknown>);
-          
-          // Load champion team info and mascot
-          const championshipPick = parsedData.picks['championship'];
-          if (championshipPick) {
-            const champion = tournamentData.regions.flatMap(r => r.teams).find(t => t.id === championshipPick);
-            if (champion) {
+
+        const generatedBracket = generate64TeamBracket(tournamentData);
+        const updatedBracket = updateBracketWithPicks(
+          generatedBracket,
+          parsedData.picks || {},
+          tournamentData
+        );
+        setBracket(updatedBracket as unknown as Record<string, unknown>);
+
+        const championshipPick = parsedData.picks?.['championship'];
+        if (championshipPick) {
+          const champion = tournamentData.regions.flatMap(r => r.teams).find(t => t.id === championshipPick);
+          if (champion) {
+            try {
+              setChampionTeam({
+                ...champion,
+                logo: champion.logo || getTeamLogoUrl(champion.id),
+              });
               try {
-                setChampionTeam({
-                  ...champion,
-                  logo: champion.logo || getTeamLogoUrl(champion.id),
-                });
-                
-                // Fetch mascot from API
-                try {
-                  const mascotResponse = await fetch(`/api/team-mascot/${champion.id}`);
-                  if (mascotResponse.ok) {
-                    const mascotData = await mascotResponse.json();
-                    if (mascotData.success && mascotData.mascot) {
-                      setChampionMascot(mascotData.mascot);
-                    }
+                const mascotResponse = await fetch(`/api/team-mascot/${champion.id}`);
+                if (mascotResponse.ok) {
+                  const mascotData = await mascotResponse.json();
+                  if (mascotData.success && mascotData.mascot) {
+                    setChampionMascot(mascotData.mascot);
                   }
-                } catch (mascotError) {
-                  console.error('Error loading champion mascot:', mascotError);
                 }
-              } catch (error) {
-                console.error('Error loading champion team info:', error);
-                setChampionTeam(champion);
+              } catch (mascotError) {
+                console.error('Error loading champion mascot:', mascotError);
               }
+            } catch (error) {
+              console.error('Error loading champion team info:', error);
+              setChampionTeam(champion);
             }
           }
-          
-          // Clear the stored data after use
-          sessionStorage.removeItem('printBracketData');
-        } else {
-          throw new Error('No bracket data available');
         }
+
+        sessionStorage.removeItem('printBracketData');
       } catch (error) {
         console.error('Error loading bracket data:', error);
       } finally {
@@ -745,7 +753,7 @@ export default function PrintBracketPage() {
         
         {/* Center: Year only */}
         <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <span>{siteConfig?.tournamentYear || ''}</span>
+          <span>{printYear || siteConfig?.tournamentYear || ''}</span>
         </div>
         
         {/* Right: Champ: Team Mascot Logo */}

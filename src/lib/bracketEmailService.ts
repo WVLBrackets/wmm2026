@@ -43,7 +43,11 @@ export async function sendSubmissionConfirmationEmail(
   totalCost: number
 ): Promise<void> {
   // Calculate tournament year outside try block so it's available in catch block
-  const tournamentYear = siteConfig?.tournamentYear || bracket.year?.toString() || new Date().getFullYear().toString();
+  // Prefer the bracket’s stamped year (historical email/print), else CMS/sheet config.
+  const tournamentYear =
+    bracket.year?.toString() ||
+    siteConfig?.tournamentYear ||
+    new Date().getFullYear().toString();
   
   try {
     // Load tournament data
@@ -186,8 +190,11 @@ export async function sendOnDemandPdfEmail(
   siteConfig: SiteConfigData | null
 ): Promise<void> {
   try {
-    // Load tournament data
-    const tournamentYear = siteConfig?.tournamentYear || bracket.year?.toString() || new Date().getFullYear().toString();
+    // Prefer the bracket’s stamped year (historical email/print), else CMS/sheet config.
+    const tournamentYear =
+      bracket.year?.toString() ||
+      siteConfig?.tournamentYear ||
+      new Date().getFullYear().toString();
     
     const { loadTournamentWithDisplayNames } = await import('@/lib/loadTournamentWithDisplayNames');
     const tournamentData = await loadTournamentWithDisplayNames(tournamentYear);
@@ -270,7 +277,10 @@ export async function sendOnDemandPdfEmail(
     
     // Log error to database
     const err = error instanceof Error ? error : new Error(String(error));
-    const tournamentYear = siteConfig?.tournamentYear || bracket.year?.toString() || new Date().getFullYear().toString();
+    const tournamentYear =
+      bracket.year?.toString() ||
+      siteConfig?.tournamentYear ||
+      new Date().getFullYear().toString();
     await logError(err, 'Bracket Email - PDF Generation (On-Demand)', {
       username: user.email,
       isLoggedIn: true,

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Loader2, X } from 'lucide-react';
 import { generate64TeamBracket, updateBracketWithPicks } from '@/lib/bracketGenerator';
-import { loadTournamentData } from '@/lib/tournamentLoader';
+import { tryLoadTournamentData, unpublishedTournamentMessage } from '@/lib/tournamentLoader';
 import {
   applyDisplayNamesToTournamentData,
   buildTeamIdToDisplayNameMapFromApi,
@@ -52,6 +52,8 @@ export default function KeyBracketPreviewModal({
 }: KeyBracketPreviewModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** True when published field JSON is missing — expected pre-publish, not a hard failure. */
+  const [isUnpublished, setIsUnpublished] = useState(false);
   const [picks, setPicks] = useState<Record<string, string>>({});
   const [tournamentData, setTournamentData] = useState<TournamentData | null>(null);
   const [updatedBracket, setUpdatedBracket] = useState<TournamentBracket | null>(null);
@@ -80,12 +82,24 @@ export default function KeyBracketPreviewModal({
     const loadPreviewData = async () => {
       setLoading(true);
       setError(null);
+      setIsUnpublished(false);
+      setTournamentData(null);
+      setUpdatedBracket(null);
 
       try {
-        const [previewResponse, rawTournament] = await Promise.all([
-          fetch(`/api/admin/live-results?year=${encodeURIComponent(year)}`),
-          loadTournamentData(year),
-        ]);
+        const rawTournament = await tryLoadTournamentData(year);
+        if (!rawTournament) {
+          // Expected before Tourney publish — calm UI message, no console throw.
+          setIsUnpublished(true);
+          setError(unpublishedTournamentMessage(year));
+          setPicks({});
+          setKeyBracketId(null);
+          return;
+        }
+
+        const previewResponse = await fetch(
+          `/api/admin/live-results?year=${encodeURIComponent(year)}`,
+        );
 
         let tournament = rawTournament;
         try {
@@ -105,7 +119,8 @@ export default function KeyBracketPreviewModal({
 
         const previewResult = (await previewResponse.json()) as LiveResultsPreviewResponse;
         if (!previewResponse.ok || !previewResult.success) {
-          throw new Error(previewResult.error || 'Failed to load KEY preview data.');
+          setError(previewResult.error || 'Failed to load KEY preview data.');
+          return;
         }
 
         const previewPicks = previewResult.data?.picks ?? {};
@@ -879,7 +894,16 @@ export default function KeyBracketPreviewModal({
           )}
 
           {!loading && error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+            <div
+              className={
+                isUnpublished
+                  ? 'rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900'
+                  : 'rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700'
+              }
+              data-testid="key-bracket-preview-status"
+            >
+              {error}
+            </div>
           )}
 
           {!loading && !error && tournamentData && updatedBracket && (

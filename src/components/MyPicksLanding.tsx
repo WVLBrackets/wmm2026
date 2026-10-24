@@ -31,8 +31,11 @@ import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 import { useIsMdUp } from '@/hooks/useIsMdUp';
 import {
   DEFAULT_VINTAGE_PICKS_CONTENT,
+  formatMessageBoxText,
   formatVintagePicksLabel,
+  messageBoxCssVars,
   vintagePicksChromeCssVars,
+  type VintageMessageBoxStateKey,
   type VintagePicksContent,
 } from '@/lib/vintage/picksContent';
 import {
@@ -603,11 +606,32 @@ export default function MyPicksLanding({
       .catch(() => setIsCurrentUserAdmin(false));
   }, [session?.user?.email]);
 
-  const showPayButton =
-    !isHistoricalView &&
-    venmoUser &&
-    unpaidSubmittedBrackets.length > 0 &&
-    (payCapabilityEnabled || isCurrentUserAdmin);
+  /**
+   * Why Pay is disabled (hover / title). Null when Pay can open the Venmo modal.
+   */
+  const payDisabledReason = useMemo(() => {
+    if (isHistoricalView) {
+      return `Payments apply to ${activeYear} only. Switch back to the current year to pay.`;
+    }
+    if (!venmoUser) {
+      return 'Venmo payments are not configured yet.';
+    }
+    if (unpaidSubmittedBrackets.length === 0) {
+      return 'No unpaid submitted brackets to pay for.';
+    }
+    if (!payCapabilityEnabled && !isCurrentUserAdmin) {
+      return 'Pay is currently available to administrators only.';
+    }
+    return null;
+  }, [
+    isHistoricalView,
+    activeYear,
+    venmoUser,
+    unpaidSubmittedBrackets.length,
+    payCapabilityEnabled,
+    isCurrentUserAdmin,
+  ]);
+  const payEnabled = payDisabledReason === null;
 
   const [statusVisibility, setStatusVisibility] = useState<BracketStatusVisibility>(DEFAULT_STATUS_VISIBILITY);
   const [entrySearchQuery, setEntrySearchQuery] = useState('');
@@ -653,8 +677,34 @@ export default function MyPicksLanding({
     return list;
   }, [bracketsForYear, statusVisibility, entrySearchQuery]);
 
+  /** True when every status is included — “All” mode (individuals look unshaded). */
   const allStatusFiltersOn =
     statusVisibility.submitted && statusVisibility.in_progress && statusVisibility.deleted;
+
+  /**
+   * Toggle a single status chip.
+   * From All mode, the first click enters filter mode with only that status on
+   * (so the chip acts as a filter, not an “unfilter”). Further clicks toggle
+   * each status independently; turning all three on returns to All mode.
+   *
+   * @param key - Status flag to toggle
+   */
+  const toggleStatusFilter = useCallback(
+    (key: keyof BracketStatusVisibility) => {
+      updateStatusVisibility((prev) => {
+        const inAllMode = prev.submitted && prev.in_progress && prev.deleted;
+        if (inAllMode) {
+          return {
+            submitted: key === 'submitted',
+            in_progress: key === 'in_progress',
+            deleted: key === 'deleted',
+          };
+        }
+        return { ...prev, [key]: !prev[key] };
+      });
+    },
+    [updateStatusVisibility],
+  );
 
   // Calculate bracket progress (number of picks out of 63)
   const calculateProgress = (picks: { [gameId: string]: string }) => {
@@ -856,11 +906,11 @@ export default function MyPicksLanding({
    */
   const getDynamicMessage = (): string | null => {
     const { submittedCount, inProgressCount, totalCost } = getBracketsInfo();
-
+    
     let message = '';
-
+    
     if (isVintage) {
-      if (submittedCount === 0 && inProgressCount === 0) {
+    if (submittedCount === 0 && inProgressCount === 0) {
         if (mutationsBlocked) return null;
         message = picksFlavor.costNoBrackets;
       } else if (submittedCount > 0 && inProgressCount === 0) {
@@ -886,7 +936,7 @@ export default function MyPicksLanding({
         siteConfig?.welcomeYourBrackets ||
         `Your total cost so far is $${totalCost}. In Progress brackets are not included in the contest until submitted.`;
     }
-
+    
     return formatVintagePicksLabel(message, picksTokenVars)
       .replace(/{Submitted}/g, submittedCount.toString())
       .replace(/{In Progress}/g, inProgressCount.toString())
@@ -1005,7 +1055,11 @@ export default function MyPicksLanding({
     if (hours > 100) {
       const daysAway = Math.max(1, Math.ceil(remainingMs / (24 * 60 * 60 * 1000)));
       if (isVintage) {
-        return `${daysAway} day${daysAway === 1 ? '' : 's'} to go`;
+        const template =
+          daysAway === 1
+            ? picksCopy.countdownDayAwayMessage
+            : picksCopy.countdownDaysAwayMessage;
+        return template.replace(/\{days\}/g, String(daysAway));
       }
       const desktopTemplate = siteConfig?.countdownTimerMessage?.trim() || 'X Days Away';
       const mobileTemplate =
@@ -1058,22 +1112,44 @@ export default function MyPicksLanding({
     ? 'Countdown to tipoff'
     : 'Countdown to brackets ready';
 
-  /** Adminable vintage timer label: Ready message pre-publish, tipoff message after. */
-  const vintageCountdownLabel = formatVintagePicksLabel(
-    bracketsFieldOpen
-      ? picksCopy.countdownToTipoffLabel
-      : picksCopy.countdownToBracketLabel,
-    { year: viewingYear, activeYear },
-  );
+  /**
+   * Which Message Box CMS state applies for the active side panel.
+   */
+  const messageBoxStateKey: VintageMessageBoxStateKey = isHistoricalView
+    ? 'priorYear'
+    : vintageTourneyLive
+      ? 'live'
+      : bracketsFieldOpen
+        ? 'preTipoff'
+        : 'preBracket';
 
-  const vintageLiveMessage =
-    liveTourneyMessage.trim() || 'The tournament is underway!';
+  const messageBoxState =
+    picksCopy.messageBox?.[messageBoxStateKey] ??
+    DEFAULT_VINTAGE_PICKS_CONTENT.messageBox[messageBoxStateKey];
 
-  /** Adminable prior-year switch copy that replaces the timer. */
-  const vintagePriorYearSwitchLabel = formatVintagePicksLabel(
-    picksCopy.viewingPriorYearLabel,
-    { year: viewingYear, activeYear },
-  );
+  const messageBoxCountdownToken = isMdUp
+    ? scoreboardTimeDesktop
+    : scoreboardTimeMobile;
+
+  /** Days remaining when the long-horizon countdown phrase applies (&gt;100 hours). */
+  const messageBoxDays =
+    countdownMs != null && countdownMs / 3600000 > 100
+      ? Math.max(1, Math.ceil(countdownMs / 86400000))
+      : undefined;
+
+  const messageBoxTitle = formatMessageBoxText(messageBoxState.title, {
+    year: viewingYear,
+    activeYear,
+    days: messageBoxDays,
+    countdown: messageBoxCountdownToken,
+  });
+
+  const messageBoxMessage = formatMessageBoxText(messageBoxState.message, {
+    year: viewingYear,
+    activeYear,
+    days: messageBoxDays,
+    countdown: messageBoxCountdownToken,
+  });
 
   /**
    * Get tooltip/disable reason for user actions.
@@ -1113,7 +1189,7 @@ export default function MyPicksLanding({
     if (submittingBracketId === row.id) return 'Submitting…';
     if (mutationsBlocked) return accessBlockMessage;
     if (!tournamentData || !emptyBracketTemplate) {
-      return (
+  return (
         siteConfig?.bracketsMissingErrorMessage ||
         FALLBACK_CONFIG.bracketsMissingErrorMessage ||
         'Tournament data not loaded. Try refreshing.'
@@ -1390,21 +1466,21 @@ export default function MyPicksLanding({
           >
             <div className="flex h-full w-full items-center justify-center">
               {siteConfig?.wmmLogo && !logoError ? (
-                <Image
+                          <Image
                   src={`/images/${siteConfig.wmmLogo}`}
-                  alt="Site Logo"
+                            alt="Site Logo"
                   width={isDesktop ? 220 : 140}
                   height={isDesktop ? 118 : 76}
                   className="h-full w-full object-contain"
-                  onError={() => setLogoError(true)}
-                />
+                            onError={() => setLogoError(true)}
+                          />
               ) : (
                 <span className="px-1 text-center text-[10px] font-semibold text-gray-300">
                   {logoError ? 'Image not Found' : 'WMM'}
                 </span>
-              )}
-            </div>
-          </div>
+                        )}
+                      </div>
+                    </div>
         </div>
         {/*
           Year tab: bumped up into the logo blue, bottom flush with the thick
@@ -1823,7 +1899,7 @@ export default function MyPicksLanding({
   };
 
   /**
-   * Compact year selector (no visible label) for the New / Year / Logout row.
+   * Compact year selector (no visible label) for the status / message box.
    * Native select: calls `onViewingYearChange` directly, so the year picker modal is never opened.
    */
   const renderVintageYearSelect = () => {
@@ -2126,78 +2202,104 @@ export default function MyPicksLanding({
     );
   };
 
-  /** New / Year / Logout row, optional Pay, and the countdown timer (or prior-year switch). */
-  const renderVintageActions = () => (
-    <div className="v-picks__side">
-      <div className="v-picks__buttons">
+  /**
+   * Line 1: New Bracket / Pay / Logout (Pay always visible; disabled with reason when inactive).
+   * Line 2: Message Box — year select + CMS title/message for the active season state.
+   */
+  const renderVintageActions = () => {
+    const boardBodyInner = (
+      <>
+        <span className="v-picks__board-title">{messageBoxTitle}</span>
+        <span className="v-picks__board-message">{messageBoxMessage}</span>
+      </>
+    );
+
+    const boardBody =
+      messageBoxStateKey === 'priorYear' ? (
         <button
           type="button"
-          onClick={onCreateNew}
-          disabled={Boolean(getActionDisabledReason('new'))}
-          title={getActionDisabledReason('new') || 'Create a new bracket'}
-          data-testid={`new-bracket-button-${viewportSuffix}`}
-          className="v-picks__btn v-picks__btn--primary"
-        >
-          <Plus className="v-picks__icon" aria-hidden />
-          <span>New Bracket</span>
-        </button>
-        {renderVintageYearSelect()}
-        <LoggedButton
-          onClick={() => signOut({ callbackUrl: '/auth/signin' })}
-          logLocation="Logout"
-          className="v-picks__btn v-picks__btn--ghost v-picks__btn--icon"
-          data-testid={`logout-button-${viewportSuffix}`}
-          title="Logout"
-          aria-label="Logout"
-        >
-          <LogOut className="v-picks__icon" aria-hidden />
-        </LoggedButton>
-        {showPayButton && (
-          <button
-            type="button"
-            onClick={() => setPayModalOpen(true)}
-            className="v-picks__btn v-picks__btn--secondary"
-            data-testid={`pay-button-${viewportSuffix}`}
-            title="Pay for submitted brackets via Venmo"
-          >
-            <DollarSign className="v-picks__icon" aria-hidden />
-            <span>Pay</span>
-          </button>
-        )}
-      </div>
-      {isHistoricalView ? (
-        <button
-          type="button"
-          className="v-picks__year-switch"
+          className="v-picks__board-body"
           data-testid="picks-switch-to-active-year"
           disabled={isYearSwitching}
           onClick={() => onViewingYearChange?.(activeYear)}
+          title={messageBoxMessage}
         >
-          {vintagePriorYearSwitchLabel}
+          {boardBodyInner}
         </button>
-      ) : vintageTourneyLive ? (
+      ) : (
         <div
-          className="v-picks__timer v-picks__timer--live"
-          data-testid="picks-live-tourney"
-          title={vintageLiveMessage}
+          className="v-picks__board-body"
+          data-testid={
+            messageBoxStateKey === 'live'
+              ? 'picks-live-tourney'
+              : 'picks-countdown-timer'
+          }
+          title={messageBoxTitle}
         >
-          <span className="v-picks__timer-label">Live</span>
-          <span className="v-picks__timer-live-text">{vintageLiveMessage}</span>
+          {boardBodyInner}
         </div>
-      ) : isVintage || showCountdownTimer ? (
-        <div
-          className="v-picks__timer"
-          title={vintageCountdownLabel}
-          data-testid="picks-countdown-timer"
-        >
-          <span className="v-picks__timer-label">{vintageCountdownLabel}</span>
-          <span className="v-picks__timer-value">
-            {isMdUp ? scoreboardTimeDesktop : scoreboardTimeMobile}
+      );
+
+    return (
+      <div className="v-picks__side">
+        <div className="v-picks__buttons">
+          <button
+            type="button"
+            onClick={onCreateNew}
+            disabled={Boolean(getActionDisabledReason('new'))}
+            title={getActionDisabledReason('new') || 'Create a new bracket'}
+            data-testid={`new-bracket-button-${viewportSuffix}`}
+            className="v-picks__btn v-picks__btn--primary"
+          >
+            <Plus className="v-picks__icon" aria-hidden />
+            <span>New Bracket</span>
+          </button>
+          <span
+            className="v-picks__pay-wrap"
+            title={
+              payEnabled
+                ? 'Pay for submitted brackets via Venmo'
+                : (payDisabledReason ?? 'Pay unavailable')
+            }
+          >
+            <button
+              type="button"
+              onClick={() => {
+                if (payEnabled) setPayModalOpen(true);
+              }}
+              className="v-picks__btn v-picks__btn--secondary"
+              data-testid={`pay-button-${viewportSuffix}`}
+              aria-label="Pay"
+              aria-disabled={!payEnabled}
+              disabled={!payEnabled}
+            >
+              <DollarSign className="v-picks__icon" aria-hidden />
+              <span>Pay</span>
+            </button>
           </span>
+          <LoggedButton
+            onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+            logLocation="Logout"
+            className="v-picks__btn v-picks__btn--ghost v-picks__btn--icon"
+            data-testid={`logout-button-${viewportSuffix}`}
+            title="Logout"
+            aria-label="Logout"
+          >
+            <LogOut className="v-picks__icon" aria-hidden />
+          </LoggedButton>
         </div>
-      ) : null}
-    </div>
-  );
+        <div
+          className="v-picks__board"
+          data-testid="picks-status-box"
+          data-message-box-state={messageBoxStateKey}
+          style={messageBoxCssVars(messageBoxState) as React.CSSProperties}
+        >
+          <div className="v-picks__board-year">{renderVintageYearSelect()}</div>
+          {boardBody}
+        </div>
+      </div>
+    );
+  };
 
   /** Empty-state panel (CMS flavors for editorial; siteConfig for access gates). */
   const renderVintageEmptyState = () => {
@@ -2269,25 +2371,25 @@ export default function MyPicksLanding({
             {chip(
               'bracket-filter-submitted',
               'Submitted',
-              statusVisibility.submitted,
+              statusVisibility.submitted && !allStatusFiltersOn,
               'submitted',
-              () => updateStatusVisibility((v) => ({ ...v, submitted: !v.submitted })),
+              () => toggleStatusFilter('submitted'),
               'submitted',
             )}
             {chip(
               'bracket-filter-in-progress',
               'In progress',
-              statusVisibility.in_progress,
+              statusVisibility.in_progress && !allStatusFiltersOn,
               'progress',
-              () => updateStatusVisibility((v) => ({ ...v, in_progress: !v.in_progress })),
+              () => toggleStatusFilter('in_progress'),
               'in_progress',
             )}
             {chip(
               'bracket-filter-deleted',
               'Deleted',
-              statusVisibility.deleted,
+              statusVisibility.deleted && !allStatusFiltersOn,
               'deleted',
-              () => updateStatusVisibility((v) => ({ ...v, deleted: !v.deleted })),
+              () => toggleStatusFilter('deleted'),
               'deleted',
             )}
           </div>
@@ -2643,7 +2745,7 @@ export default function MyPicksLanding({
                     {/* Line 1: Welcome message with full name */}
                     <h1 className="text-2xl font-bold text-gray-900 flex flex-wrap items-center gap-2">
                       <span>
-                        Welcome {session?.user?.name || 'User'}
+                      Welcome {session?.user?.name || 'User'}
                       </span>
                       {renderProfileEditButton('desktop')}
                     </h1>
@@ -2656,9 +2758,9 @@ export default function MyPicksLanding({
                     ) : (
                       !mutationsBlocked &&
                       siteConfig?.bracketsMessage && (
-                        <p className="text-sm text-gray-600 mt-1">
-                          {renderMessageWithLineBreaks(siteConfig.bracketsMessage)}
-                        </p>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {renderMessageWithLineBreaks(siteConfig.bracketsMessage)}
+                      </p>
                       )
                     )}
                     
@@ -2682,52 +2784,62 @@ export default function MyPicksLanding({
                     
                     {/* Line 4: Dynamic message — hidden when it would push a disabled New Bracket */}
                     {dynamicMessage && (
-                      <p className="text-sm text-gray-600 mt-2">
+                    <p className="text-sm text-gray-600 mt-2">
                         {renderMessageWithLineBreaks(dynamicMessage)}
-                      </p>
+                    </p>
                     )}
                   </div>
                   
                   {/* Action buttons */}
                   <div className="flex flex-col gap-2 flex-shrink-0 ml-4">
                     <div className="flex items-center space-x-3">
-                      <button
-                        onClick={onCreateNew}
+                    <button
+                      onClick={onCreateNew}
                         disabled={Boolean(getActionDisabledReason('new'))}
                         title={getActionDisabledReason('new') || 'Create a new bracket'}
                         data-testid="new-bracket-button-desktop"
-                        className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
+                      className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
                           getActionDisabledReason('new')
-                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                            : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                        }`}
-                      >
-                        <Plus className="h-4 w-4" />
-                        <span>New Bracket</span>
-                      </button>
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                      }`}
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>New Bracket</span>
+                    </button>
 
-                      {showPayButton && (
-                        <button
-                          onClick={() => setPayModalOpen(true)}
-                          className="px-4 py-2 rounded-lg flex items-center space-x-2 bg-green-600 text-white hover:bg-green-700 cursor-pointer"
-                          data-testid="pay-button-desktop"
-                          title="Pay for submitted brackets via Venmo"
-                        >
-                          <DollarSign className="h-4 w-4" />
-                          <span>Pay</span>
-                        </button>
-                      )}
-                      
-                      <LoggedButton
-                        onClick={() => signOut({ callbackUrl: '/auth/signin' })}
-                        logLocation="Logout"
-                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
-                        data-testid="logout-button-desktop"
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (payEnabled) setPayModalOpen(true);
+                        }}
+                        disabled={!payEnabled}
+                        className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
+                          payEnabled
+                            ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`}
+                        data-testid="pay-button-desktop"
+                        title={
+                          payEnabled
+                            ? 'Pay for submitted brackets via Venmo'
+                            : (payDisabledReason ?? 'Pay unavailable')
+                        }
                       >
-                        <LogOut className="h-4 w-4" />
-                        <span>Logout</span>
-                      </LoggedButton>
-                    </div>
+                        <DollarSign className="h-4 w-4" />
+                        <span>Pay</span>
+                      </button>
+                    
+                    <LoggedButton
+                      onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+                      logLocation="Logout"
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
+                        data-testid="logout-button-desktop"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>Logout</span>
+                    </LoggedButton>
+                  </div>
                     {showCountdownTimer && (
                       <div
                         className="flex w-full items-center justify-center rounded border border-gray-700 bg-black px-4 py-2.5 shadow-inner text-amber-300"
@@ -2773,9 +2885,9 @@ export default function MyPicksLanding({
                       ) : (
                         !mutationsBlocked &&
                         siteConfig?.mobileBracketsMessage && (
-                          <p className="text-sm text-gray-600 mt-1">
-                            {renderMessageWithLineBreaks(siteConfig.mobileBracketsMessage)}
-                          </p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {renderMessageWithLineBreaks(siteConfig.mobileBracketsMessage)}
+                        </p>
                         )
                       )}
                     </div>
@@ -2783,41 +2895,51 @@ export default function MyPicksLanding({
                     {/* Action buttons */}
                     <div className="flex flex-col items-end flex-shrink-0 gap-2">
                       <div className="flex items-center space-x-2">
-                        <button
-                          onClick={onCreateNew}
+                      <button
+                        onClick={onCreateNew}
                           disabled={Boolean(getActionDisabledReason('new'))}
                           title={getActionDisabledReason('new') || 'Create a new bracket'}
                           aria-label="New Bracket"
                           data-testid="new-bracket-button-mobile"
-                          className={`px-2 py-2 rounded-lg flex items-center space-x-2 ${
+                        className={`px-2 py-2 rounded-lg flex items-center space-x-2 ${
                             getActionDisabledReason('new')
-                              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                              : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                          }`}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </button>
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                        }`}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
 
-                        {showPayButton && (
-                          <button
-                            onClick={() => setPayModalOpen(true)}
-                            className="px-2 py-2 rounded-lg flex items-center bg-green-600 text-white hover:bg-green-700 cursor-pointer"
-                            data-testid="pay-button-mobile"
-                            aria-label="Pay"
-                            title="Pay for submitted brackets via Venmo"
-                          >
-                            <DollarSign className="h-4 w-4" />
-                          </button>
-                        )}
-                        
-                        <LoggedButton
-                          onClick={() => signOut({ callbackUrl: '/auth/signin' })}
-                          logLocation="Logout"
-                          className="bg-blue-600 text-white px-2 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
-                          data-testid="logout-button-mobile"
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (payEnabled) setPayModalOpen(true);
+                          }}
+                          disabled={!payEnabled}
+                          className={`px-2 py-2 rounded-lg flex items-center ${
+                            payEnabled
+                              ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
+                              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          }`}
+                          data-testid="pay-button-mobile"
+                          aria-label="Pay"
+                          title={
+                            payEnabled
+                              ? 'Pay for submitted brackets via Venmo'
+                              : (payDisabledReason ?? 'Pay unavailable')
+                          }
                         >
-                          <LogOut className="h-4 w-4" />
-                        </LoggedButton>
+                          <DollarSign className="h-4 w-4" />
+                        </button>
+                      
+                      <LoggedButton
+                        onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+                        logLocation="Logout"
+                        className="bg-blue-600 text-white px-2 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
+                          data-testid="logout-button-mobile"
+                      >
+                        <LogOut className="h-4 w-4" />
+                      </LoggedButton>
                       </div>
                       {showCountdownTimer && (
                         <div
@@ -2863,14 +2985,14 @@ export default function MyPicksLanding({
                     
                     {/* Info icon — only when there is header status copy to reveal */}
                     {dynamicMessage && (
-                      <button
-                        onClick={() => setExpandedStatus(expandedStatus === 'info' ? null : 'info')}
-                        className="text-blue-600 hover:text-blue-700 cursor-pointer flex-shrink-0"
-                        style={{ width: '16px', marginLeft: '8px' }}
+                    <button
+                      onClick={() => setExpandedStatus(expandedStatus === 'info' ? null : 'info')}
+                      className="text-blue-600 hover:text-blue-700 cursor-pointer flex-shrink-0"
+                      style={{ width: '16px', marginLeft: '8px' }}
                         aria-label="Show bracket status details"
-                      >
-                        <Info className="h-4 w-4" />
-                      </button>
+                    >
+                      <Info className="h-4 w-4" />
+                    </button>
                     )}
                   </div>
                 </div>
@@ -2930,13 +3052,13 @@ export default function MyPicksLanding({
                 </>
               ) : (
                 <>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No brackets yet</h3>
-                  <p className="text-gray-600">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No brackets yet</h3>
+              <p className="text-gray-600">
                     <span className="hidden md:inline">
                       Use the &quot;New Bracket&quot; button to create your first bracket.
                     </span>
-                    <span className="md:hidden">Use the &quot;+&quot; button to create your first bracket.</span>
-                  </p>
+                <span className="md:hidden">Use the &quot;+&quot; button to create your first bracket.</span>
+              </p>
                 </>
               )}
             </div>
@@ -2964,13 +3086,11 @@ export default function MyPicksLanding({
                     </button>
                     <button
                       type="button"
-                      onClick={() =>
-                        updateStatusVisibility((v) => ({ ...v, submitted: !v.submitted }))
-                      }
-                      aria-pressed={statusVisibility.submitted}
+                      onClick={() => toggleStatusFilter('submitted')}
+                      aria-pressed={statusVisibility.submitted && !allStatusFiltersOn}
                       data-testid="bracket-filter-submitted"
                       className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
-                        statusVisibility.submitted
+                        statusVisibility.submitted && !allStatusFiltersOn
                           ? 'border-green-400 bg-green-100 text-green-900'
                           : 'border-gray-200 bg-gray-50 text-gray-400'
                       }`}
@@ -2979,13 +3099,11 @@ export default function MyPicksLanding({
                     </button>
                     <button
                       type="button"
-                      onClick={() =>
-                        updateStatusVisibility((v) => ({ ...v, in_progress: !v.in_progress }))
-                      }
-                      aria-pressed={statusVisibility.in_progress}
+                      onClick={() => toggleStatusFilter('in_progress')}
+                      aria-pressed={statusVisibility.in_progress && !allStatusFiltersOn}
                       data-testid="bracket-filter-in-progress"
                       className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
-                        statusVisibility.in_progress
+                        statusVisibility.in_progress && !allStatusFiltersOn
                           ? 'border-amber-400 bg-amber-100 text-amber-900'
                           : 'border-gray-200 bg-gray-50 text-gray-400'
                       }`}
@@ -2994,13 +3112,11 @@ export default function MyPicksLanding({
                     </button>
                     <button
                       type="button"
-                      onClick={() =>
-                        updateStatusVisibility((v) => ({ ...v, deleted: !v.deleted }))
-                      }
-                      aria-pressed={statusVisibility.deleted}
+                      onClick={() => toggleStatusFilter('deleted')}
+                      aria-pressed={statusVisibility.deleted && !allStatusFiltersOn}
                       data-testid="bracket-filter-deleted"
                       className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
-                        statusVisibility.deleted
+                        statusVisibility.deleted && !allStatusFiltersOn
                           ? 'border-gray-400 bg-gray-200 text-gray-800'
                           : 'border-gray-200 bg-gray-50 text-gray-400'
                       }`}
@@ -3047,8 +3163,8 @@ export default function MyPicksLanding({
                   >
                     Reset filters
                   </button>
-                </div>
-              ) : (
+            </div>
+          ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -3146,7 +3262,7 @@ export default function MyPicksLanding({
                                 <Info className="h-4 w-4" aria-hidden />
                               </button>
                             ) : null}
-                          </div>
+                        </div>
                           {poolBannerExpanded === 'in-pool' && inPoolCopy.detail ? (
                             <div className="relative mt-2 rounded bg-blue-50 p-2 pr-8 text-sm text-gray-700 md:hidden">
                               <button
@@ -3161,7 +3277,7 @@ export default function MyPicksLanding({
                               <div>{renderMessageWithLineBreaks(inPoolCopy.detail)}</div>
                             </div>
                           ) : null}
-                        </td>
+                      </td>
                       </tr>
                     )}
                     {showOutHeader && (
@@ -3199,7 +3315,7 @@ export default function MyPicksLanding({
                                 <Info className="h-4 w-4" aria-hidden />
                               </button>
                             ) : null}
-                          </div>
+                        </div>
                           {poolBannerExpanded === 'out-pool' && outPoolCopy.detail ? (
                             <div className="relative mt-2 rounded bg-blue-50 p-2 pr-8 text-sm text-gray-700 md:hidden">
                               <button
@@ -3214,7 +3330,7 @@ export default function MyPicksLanding({
                               <div>{renderMessageWithLineBreaks(outPoolCopy.detail)}</div>
                             </div>
                           ) : null}
-                        </td>
+                      </td>
                       </tr>
                     )}
                     <tr className={`hover:bg-gray-50 ${isDeletedRow ? 'bg-gray-50/80' : ''}`}>
@@ -3296,17 +3412,17 @@ export default function MyPicksLanding({
                             )}
                           </div>
                         ) : (
-                          <div className="flex flex-col items-center space-y-1 mx-auto" style={{ width: 'fit-content' }}>
-                            <div className="text-xs text-gray-600">
-                              {progress.completed} / {progress.total} picks
-                            </div>
-                            <div className="bg-gray-200 rounded-full h-2" style={{ width: '60px' }}>
-                              <div
-                                className={`${getProgressBarFillClass(bracket.status)} h-2 rounded-full transition-all duration-300`}
-                                style={{ width: `${progress.percentage}%` }}
-                              />
-                            </div>
+                        <div className="flex flex-col items-center space-y-1 mx-auto" style={{ width: 'fit-content' }}>
+                          <div className="text-xs text-gray-600">
+                            {progress.completed} / {progress.total} picks
                           </div>
+                          <div className="bg-gray-200 rounded-full h-2" style={{ width: '60px' }}>
+                            <div 
+                                className={`${getProgressBarFillClass(bracket.status)} h-2 rounded-full transition-all duration-300`}
+                              style={{ width: `${progress.percentage}%` }}
+                              />
+                          </div>
+                        </div>
                         )}
                       </td>
                       <td className="px-4 py-3 text-center max-md:px-2">
@@ -3397,7 +3513,7 @@ export default function MyPicksLanding({
                         <div className="mx-auto grid w-max grid-cols-2 justify-items-center max-md:content-start max-md:items-start max-md:gap-1 md:mx-0 md:flex md:w-auto md:max-w-none md:flex-wrap md:items-center md:justify-center md:gap-2">
                           {/* Action buttons - icon-only squares with tooltips; 2×2 grid on mobile, row on md+ */}
                           {renderRowActionButtons(bracket, number, submitDisabledReason, accessForcesViewOnly)}
-                        </div>
+                                  </div>
                       </td>
                     </tr>
                     </React.Fragment>
@@ -3408,8 +3524,8 @@ export default function MyPicksLanding({
               </table>
             </div>
               )}
-            </>
-          )}
+                                </>
+                              )}
         </div>
       </div>
       </>
@@ -3437,7 +3553,7 @@ export default function MyPicksLanding({
               >
                 <X className="h-5 w-5" />
               </button>
-            </div>
+                        </div>
 
             {profileLoading ? (
               <p className="text-sm text-gray-600">Loading…</p>
@@ -3468,7 +3584,7 @@ export default function MyPicksLanding({
                         dateStyle: 'long',
                       })}
                     </dd>
-                  </div>
+            </div>
                   <div className="flex justify-between gap-4">
                     <dt className="text-gray-500 shrink-0">Email</dt>
                     <dd className="text-right break-all text-gray-900">{profileDetails.email}</dd>
@@ -3507,8 +3623,8 @@ export default function MyPicksLanding({
                   >
                     {profileSaving ? 'Saving…' : 'Save'}
                   </button>
-                </div>
-              </div>
+        </div>
+      </div>
             ) : null}
           </div>
         </div>

@@ -5,7 +5,7 @@ import { listLiveStandingsYears } from "@/lib/repositories/liveStandingsSnapshot
 import {
   mergeAvailableYears,
   parseViewingYear,
-} from "@/lib/services/tournamentYearService";
+} from "@/lib/services/tournamentYearHelpers";
 import { vintageAdminEmail } from "@/lib/vintage/admin";
 import { isVintageEnabled } from "@/lib/vintage/access";
 import { getPublishedVintageStandingsContent } from "@/lib/vintage/standingsStore";

@@ -266,7 +266,7 @@ Preserve the welcome/entry summary, current versus historical context, year sele
 
 Mobile baseline below 768px: Entry | Status/payment | Final Four | Champ | Actions; entry name 13px Oswald 600; FF 2 × 2 tiles of 26px with 2px gaps; champ 39px; actions 2 × 2 of 28px with 2px gaps. These dense controls are a documented exception to ordinary 44–48px controls; retain accessible names and target separation, and reassess their usability during the audit.
 
-Status chips share geometry: 7.65rem width, 30px height, 11px Oswald 600, 14px icon. Do not let In Progress, Submitted, and Deleted acquire unrelated shapes. Empty, unavailable, historical/read-only, and action-locked states are part of the component.
+**Locked — status chips (Warren, 2026-10-24):** Short ovals with one shared fixed width for Submitted, In Progress, and Deleted everywhere they appear (welcome count pills, Show filters, and entry-row badges). Geometry lives in `picks.css` as `--vp-status-chip-width` / `--vp-chip-height` / `--vp-chip-radius` (and related pad/font/icon tokens). Current locked values: **7.25rem** wide, **22px** tall, **pill radius** (`999px`), **10px** Oswald 600, **12px** icon, horizontal pad **8px**. Width is sized to the longest label (“In Progress”); do not shrink-to-fit per label or invent a different shape per status. Color/border semantics stay as in §2 (solid green Submitted, gold In Progress, dashed gray Deleted). Changing chip geometry requires an explicit product decision — not a drive-by layout tweak. Empty, unavailable, historical/read-only, and action-locked states remain part of the component.
 
 ### 4.7 Live Standings
 

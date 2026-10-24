@@ -9,6 +9,7 @@ import { tryLoadTournamentData } from '@/lib/tournamentLoaderServer';
 import type { VintageContent } from '@/lib/vintage/content';
 import type { VintagePicksContent } from '@/lib/vintage/picksContent';
 import { getPublishedVintagePicksContent } from '@/lib/vintage/picksStore';
+import { applyHomepageKeyDataToPicks } from '@/lib/vintage/seasonKeyData';
 import { getPublishedVintageContent } from '@/lib/vintage/store';
 import {
   evaluateVintageActionLock,
@@ -34,7 +35,7 @@ export async function evaluateVintageActionLockFresh(options: {
     picksCopy: VintagePicksContent;
   }
 > {
-  const [home, picksCopy] = await Promise.all([
+  const [home, picksRaw] = await Promise.all([
     options.home
       ? Promise.resolve(options.home)
       : getPublishedVintageContent(),
@@ -42,6 +43,8 @@ export async function evaluateVintageActionLockFresh(options: {
       ? Promise.resolve(options.picksCopy)
       : getPublishedVintagePicksContent(),
   ]);
+  // Season gates (published / cost / master lock) come from homepage Key Data.
+  const picksCopy = applyHomepageKeyDataToPicks(home, picksRaw);
 
   const activeYear = parseInt(String(home.tournament.year).trim(), 10);
   if (Number.isNaN(activeYear)) {

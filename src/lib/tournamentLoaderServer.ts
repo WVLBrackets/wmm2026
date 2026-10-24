@@ -25,8 +25,17 @@ export async function tryLoadTournamentData(year = String(FALLBACK_CONFIG.tourna
   return loadLegacyTournament(year);
 }
 
+/**
+ * Friendly copy when a year’s published field JSON is missing.
+ *
+ * @param year - Tournament year to name in the message
+ */
+export function unpublishedTournamentMessage(year: string): string {
+  return `The Tournament Bracket for ${year} is not published yet.`;
+}
+
 export async function loadTournamentData(year = String(FALLBACK_CONFIG.tournamentYear)): Promise<TournamentData> {
   const data = await tryLoadTournamentData(year);
-  if (!data) throw new Error(`Tournament ${year} is not published yet.`);
+  if (!data) throw new Error(unpublishedTournamentMessage(year));
   return data;
 }

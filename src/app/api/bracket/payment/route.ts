@@ -3,12 +3,12 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getUserByEmail } from '@/lib/repositories/userRepository';
 import { getBracketsByUserId } from '@/lib/repositories/bracketRepository';
-import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
 import { sql } from '@/lib/databaseAdapter';
 import { getCurrentEnvironment } from '@/lib/databaseConfig';
 import { csrfProtection } from '@/lib/csrf';
 import { getActiveTournamentYear, isHistoricalYear } from '@/lib/services/tournamentYearService';
 import { getMasterLockDisabledMessage } from '@/lib/killSwitch';
+import { getPublishedVintageContent } from '@/lib/vintage/store';
 
 /**
  * POST /api/bracket/payment — Create a payment request (Venmo deep-link flow).
@@ -99,8 +99,10 @@ export async function POST(request: NextRequest) {
 
     let entryCost = 5;
     try {
-      const config = await getSiteConfigFromGoogleSheets();
-      if (config?.entryCost) entryCost = config.entryCost;
+      const home = await getPublishedVintageContent();
+      if (Number.isFinite(home.keyData.entryCost) && home.keyData.entryCost >= 0) {
+        entryCost = home.keyData.entryCost;
+      }
     } catch {
       /* fallback */
     }

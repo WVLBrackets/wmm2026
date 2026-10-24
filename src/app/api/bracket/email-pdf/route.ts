@@ -687,7 +687,9 @@ async function generatePrintPageHTML(
   siteConfig: SiteConfigData | null
 ): Promise<string> {
   const entryName = bracket.entryName || `Bracket ${bracket.id}`;
-  const tournamentYear = siteConfig?.tournamentYear || '2025';
+  // Prefer the bracket’s stamped year so historical PDFs show the correct field.
+  const tournamentYear =
+    bracket.year?.toString() || siteConfig?.tournamentYear || String(new Date().getFullYear());
   const picks = bracket.picks || {};
   const tieBreaker = bracket.tieBreaker;
   

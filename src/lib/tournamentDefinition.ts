@@ -3,6 +3,8 @@ import { getPlayInDisplayName, PLAY_IN_LABEL_MAX_LENGTH } from './playInDisplayN
 
 export const MATCHUP_SEEDS = [1, 16, 8, 9, 5, 12, 4, 13, 6, 11, 3, 14, 7, 10, 2, 15];
 export const REGION_POSITIONS = ['Top Left', 'Bottom Left', 'Top Right', 'Bottom Right'];
+/** Canonical NCAA region names for builder dropdowns (custom names still allowed). */
+export const STANDARD_REGION_NAMES = ['East', 'West', 'South', 'Midwest'] as const;
 export const FIRST_MANAGED_YEAR = 2027;
 export type FirstFourResults = Record<string, string>;
 

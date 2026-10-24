@@ -34,7 +34,7 @@ import {
   buildYearScopedPath,
   isHistoricalYear,
   parseViewingYear,
-} from '@/lib/services/tournamentYearService';
+} from '@/lib/services/tournamentYearHelpers';
 import type { VintageContent } from '@/lib/vintage/content';
 import {
   formatVintagePicksLabel,

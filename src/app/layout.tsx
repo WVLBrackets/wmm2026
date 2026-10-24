@@ -79,7 +79,6 @@ export default function RootLayout({
       <head>
         <meta name="format-detection" content="telephone=no" />
         <link rel="icon" href="/basketball-favicon.png" type="image/png" />
-        <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="shortcut icon" href="/basketball-favicon.png" type="image/png" />
         <link rel="apple-touch-icon" href="/basketball-favicon.png" />
       </head>

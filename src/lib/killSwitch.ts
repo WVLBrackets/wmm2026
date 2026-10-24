@@ -1,17 +1,18 @@
 /**
- * Application Master Lock — reads published My Picks CMS.
- * Legacy DB feature-flag kill-switch is retired; CMS is source of truth.
+ * Application Master Lock — reads published homepage Key Data.
+ * Legacy DB feature-flag kill-switch and My Picks CMS ownership are retired
+ * for this gate; homepage Key Data is source of truth.
  */
 
 import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
-import { getPublishedVintagePicksContent } from '@/lib/vintage/picksStore';
+import { getPublishedVintageContent } from '@/lib/vintage/store';
 
 const DEFAULT_LOCK_MESSAGE =
   FALLBACK_CONFIG.masterLockMessage ||
   'Bracket actions are temporarily locked by the administrator.';
 
 /**
- * Resolve Application Master Lock from published My Picks CMS.
+ * Resolve Application Master Lock from published homepage Key Data.
  *
  * Vocabulary:
  * - `enabled: true` → **Unlocked** — no impact on mutations
@@ -22,14 +23,14 @@ export async function getKillSwitchState(): Promise<{
   message: string;
 }> {
   try {
-    const picks = await getPublishedVintagePicksContent();
+    const home = await getPublishedVintageContent();
     return {
-      enabled: Boolean(picks.masterLockUnlocked),
-      message: picks.masterLockMessage?.trim() || DEFAULT_LOCK_MESSAGE,
+      enabled: Boolean(home.keyData.masterLockUnlocked),
+      message: home.keyData.masterLockMessage?.trim() || DEFAULT_LOCK_MESSAGE,
     };
   } catch (error) {
     console.warn(
-      '[killSwitch] Failed to load My Picks CMS lock; treating as unlocked.',
+      '[killSwitch] Failed to load homepage Key Data lock; treating as unlocked.',
       error instanceof Error ? error.message : error,
     );
     return { enabled: true, message: DEFAULT_LOCK_MESSAGE };

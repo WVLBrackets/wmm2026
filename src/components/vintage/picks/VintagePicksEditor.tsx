@@ -33,6 +33,7 @@ import {
 
 const TABS = [
   "Timer & year",
+  "Message box",
   "Header",
   "Pool sections",
   "Empty states",
@@ -40,6 +41,43 @@ const TABS = [
   "Row chrome",
   "Sign in & account",
 ] as const;
+
+const MESSAGE_BOX_STATES: {
+  key: keyof VintagePicksContent["messageBox"];
+  label: string;
+  help: string;
+}[] = [
+  {
+    key: "preBracket",
+    label: "1 · Current year — bracket not defined",
+    help: "Tournament not started; brackets not published yet.",
+  },
+  {
+    key: "preTipoff",
+    label: "2 · Current year — bracket defined",
+    help: "Tournament not started; brackets are published (countdown to tipoff).",
+  },
+  {
+    key: "live",
+    label: "3 · Current year — tournament started",
+    help: "Tipoff has passed; tourney is live.",
+  },
+  {
+    key: "priorYear",
+    label: "4 · Previous year",
+    help: "Viewing an archive year (message body switches back to the active year).",
+  },
+];
+
+const MESSAGE_BOX_COLOR_FIELDS: {
+  key: keyof VintagePicksContent["messageBox"]["preBracket"];
+  label: string;
+}[] = [
+  { key: "borderColor", label: "Border (also eyebrow)" },
+  { key: "backgroundColor", label: "Background" },
+  { key: "titleColor", label: "Title color" },
+  { key: "messageColor", label: "Message color" },
+];
 
 const ACTION_KEYS: { key: keyof VintagePicksActionButtons; label: string }[] = [
   { key: "view", label: "View" },
@@ -67,9 +105,8 @@ const SECTION_IDS = SECTIONS.map((section) => section.id);
 
 type SharedStringKey = keyof Pick<
   VintagePicksContent,
-  | "countdownToBracketLabel"
-  | "countdownToTipoffLabel"
-  | "viewingPriorYearLabel"
+  | "countdownDayAwayMessage"
+  | "countdownDaysAwayMessage"
   | "bracketsNotPublishedMessage"
   | "emptyCtaBody"
   | "masterLockMessage"
@@ -533,59 +570,12 @@ export default function VintagePicksEditor() {
         <div className="ve-sections">
           <SectionPanel id={sectionIdFor("Timer & year")} title="Timer & year" disabled={busy}>
             <>
-              <h3>Application Master Lock</h3>
-              <p className="ve-help">
-                Locked blocks Changing actions (New / Edit / Submit / Return /
-                Copy / Delete). Save WIP remains allowed if tipoff or Master
-                Lock closes the field mid-session. Unlocked subject to brackets
-                published, tipoff, and field JSON. No Config Sheet stop-submit.
+              <p className="ve-help" data-testid="vintage-picks-key-data-note">
+                Application Master Lock, Brackets published, Entry cost, Tourney
+                Year, and Tip Off are administered under homepage{" "}
+                <a href="/vintage/admin?focus=keyData">Key Data</a>. Edit the
+                messages and countdown labels here.
               </p>
-              <div
-                className="ve-lock-toggle"
-                role="group"
-                aria-label="Application Master Lock"
-              >
-                <button
-                  type="button"
-                  className={`ve-lock-btn ve-lock-btn--unlocked${
-                    content.masterLockUnlocked ? " is-on" : ""
-                  }`}
-                  data-testid="vintage-picks-master-lock-unlocked"
-                  aria-pressed={content.masterLockUnlocked}
-                  onClick={() => {
-                    setContent((previous) => ({
-                      ...previous,
-                      masterLockUnlocked: true,
-                    }));
-                    setDirty(true);
-                  }}
-                >
-                  Unlocked
-                </button>
-                <button
-                  type="button"
-                  className={`ve-lock-btn ve-lock-btn--locked${
-                    !content.masterLockUnlocked ? " is-on" : ""
-                  }`}
-                  data-testid="vintage-picks-master-lock-locked"
-                  aria-pressed={!content.masterLockUnlocked}
-                  onClick={() => {
-                    setContent((previous) => ({
-                      ...previous,
-                      masterLockUnlocked: false,
-                    }));
-                    setDirty(true);
-                  }}
-                >
-                  Locked
-                </button>
-              </div>
-              {sharedField(
-                "masterLockMessage",
-                "Message when Locked",
-                "Shown when Master Lock is the winning reason. Tokens: {year} or <year>.",
-                true,
-              )}
               {sharedField(
                 "tourneyActiveMessage",
                 "Message when tipoff has passed",
@@ -605,56 +595,139 @@ export default function VintagePicksEditor() {
                 true,
               )}
 
-              <h3>Brackets & countdown</h3>
-              <p className="ve-help">
-                Shared controls. The countdown shows on the active year; the
-                switch control replaces it when browsing an archive year. The
-                published toggle replaces the Config Sheet{" "}
-                <code>brackets_available</code> flag for vintage My Picks.
-              </p>
+              <h3>Brackets empty-state</h3>
               <div className="ve-grid">
-                <label className="ve-field" htmlFor="vintage-picks-bracketsPublished">
-                  <span>Brackets published</span>
-                  <span className="ve-help">
-                    Off → show the not-published empty state. On → field is open
-                    (subject to JSON / other gates).
-                  </span>
-                  <input
-                    id="vintage-picks-bracketsPublished"
-                    data-testid="vintage-picks-bracketsPublished"
-                    type="checkbox"
-                    checked={content.bracketsPublished}
-                    onChange={(e) => {
-                      setContent((previous) => ({
-                        ...previous,
-                        bracketsPublished: e.target.checked,
-                      }));
-                      setDirty(true);
-                    }}
-                  />
-                </label>
                 {sharedField(
                   "bracketsNotPublishedMessage",
                   "Not-published message",
                   "Tokens: {year}, {date} (from homepage tipoff). Use || for a line break.",
                   true,
                 )}
+              </div>
+              <p className="ve-help">
+                Season Message Box title, message, and colors are under{" "}
+                <strong>Message box</strong>.
+              </p>
+            </>
+          </SectionPanel>
+
+          <SectionPanel id={sectionIdFor("Message box")} title="Message box" disabled={busy}>
+            <>
+              <p className="ve-help" data-testid="vintage-picks-message-box-help">
+                Four states share the same layout and font sizes (year select +
+                title + message). Only copy and colors change. Tokens:{" "}
+                <code>{"{year}"}</code>, <code>{"{activeYear}"}</code>,{" "}
+                <code>{"{days}"}</code>, <code>{"{countdown}"}</code> (clock or
+                days-away phrase).
+              </p>
+              <h3>Days-away phrasing</h3>
+              <p className="ve-help">
+                Builds the <code>{"{countdown}"}</code> token when more than 100
+                hours remain before tipoff / bracket release.
+              </p>
+              <div className="ve-grid">
                 {sharedField(
-                  "countdownToBracketLabel",
-                  "Countdown — brackets not yet available",
-                  "Token: {year}",
+                  "countdownDayAwayMessage",
+                  "Singular (1 day)",
+                  "Token: {days}",
                 )}
                 {sharedField(
-                  "countdownToTipoffLabel",
-                  "Countdown — tip-off",
-                  "Token: {year}",
-                )}
-                {sharedField(
-                  "viewingPriorYearLabel",
-                  "Prior-year switch control",
-                  "Tokens: {year}, {activeYear}",
+                  "countdownDaysAwayMessage",
+                  "Plural (2+ days)",
+                  "Token: {days}",
                 )}
               </div>
+              {MESSAGE_BOX_STATES.map(({ key, label, help }) => {
+                const state = content.messageBox[key];
+                const patchState = (
+                  patch: Partial<VintagePicksContent["messageBox"]["preBracket"]>,
+                ) => {
+                  setContent((previous) => ({
+                    ...previous,
+                    messageBox: {
+                      ...previous.messageBox,
+                      [key]: { ...previous.messageBox[key], ...patch },
+                    },
+                  }));
+                  setDirty(true);
+                };
+                return (
+                  <div
+                    key={key}
+                    className="ve-message-box-state"
+                    data-testid={`vintage-picks-message-box-${key}`}
+                  >
+                    <h3>{label}</h3>
+                    <p className="ve-help">{help}</p>
+                    <div className="ve-grid">
+                      <label
+                        className="ve-field"
+                        htmlFor={`vintage-picks-mb-${key}-title`}
+                      >
+                        <span>Title</span>
+                        <input
+                          id={`vintage-picks-mb-${key}-title`}
+                          data-testid={`vintage-picks-mb-${key}-title`}
+                          type="text"
+                          value={state.title}
+                          onChange={(e) => patchState({ title: e.target.value })}
+                        />
+                      </label>
+                      <label
+                        className="ve-field"
+                        htmlFor={`vintage-picks-mb-${key}-message`}
+                      >
+                        <span>Message</span>
+                        <input
+                          id={`vintage-picks-mb-${key}-message`}
+                          data-testid={`vintage-picks-mb-${key}-message`}
+                          type="text"
+                          value={state.message}
+                          onChange={(e) =>
+                            patchState({ message: e.target.value })
+                          }
+                        />
+                      </label>
+                    </div>
+                    <div className="ve-grid">
+                      {MESSAGE_BOX_COLOR_FIELDS.map(({ key: colorKey, label: colorLabel }) => (
+                        <label
+                          key={colorKey}
+                          className="ve-field"
+                          htmlFor={`vintage-picks-mb-${key}-${colorKey}`}
+                        >
+                          <span>{colorLabel}</span>
+                          <div className="ve-color-row">
+                            <input
+                              id={`vintage-picks-mb-${key}-${colorKey}-swatch`}
+                              data-testid={`vintage-picks-mb-${key}-${colorKey}-swatch`}
+                              type="color"
+                              value={
+                                /^#[0-9A-Fa-f]{6}$/.test(state[colorKey])
+                                  ? state[colorKey]
+                                  : "#152c3a"
+                              }
+                              onChange={(e) =>
+                                patchState({ [colorKey]: e.target.value })
+                              }
+                              aria-label={`${label} ${colorLabel} swatch`}
+                            />
+                            <input
+                              id={`vintage-picks-mb-${key}-${colorKey}`}
+                              data-testid={`vintage-picks-mb-${key}-${colorKey}`}
+                              type="text"
+                              value={state[colorKey]}
+                              onChange={(e) =>
+                                patchState({ [colorKey]: e.target.value })
+                              }
+                            />
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </>
           </SectionPanel>
 
@@ -726,43 +799,14 @@ export default function VintagePicksEditor() {
           <SectionPanel id={sectionIdFor("Cost & status")} title="Cost & status" disabled={busy}>
             <>
               <p className="ve-help">
-                Dynamic line under the status chips (replaces Config Sheet{" "}
-                <code>welcome_*</code> + <code>entry_cost</code>). Tokens:{" "}
+                Dynamic line under the status chips. Entry cost ($) is set in
+                homepage{" "}
+                <a href="/vintage/admin?focus=keyData">Key Data</a>. Tokens:{" "}
                 <code>{"{cost}"}</code>, <code>{"{Submitted}"}</code>,{" "}
                 <code>{"{In Progress}"}</code>, <code>{"{year}"}</code>. Use{" "}
                 <code>||</code> for a line break. Write <code>{"${cost}"}</code>{" "}
                 when you want a dollar sign before the amount.
               </p>
-              <div className="ve-grid">
-                <label
-                  className="ve-field"
-                  htmlFor="vintage-picks-entryCost"
-                >
-                  <span>Entry cost ($ per submitted bracket)</span>
-                  <span className="ve-help">
-                    Used to compute <code>{"{cost}"}</code> = submitted × this
-                    amount.
-                  </span>
-                  <input
-                    id="vintage-picks-entryCost"
-                    data-testid="vintage-picks-entryCost"
-                    type="number"
-                    min={0}
-                    step={1}
-                    value={content.entryCost}
-                    onChange={(e) => {
-                      const next = Number(e.target.value);
-                      setContent((previous) => ({
-                        ...previous,
-                        entryCost: Number.isFinite(next)
-                          ? Math.max(0, Math.round(next))
-                          : previous.entryCost,
-                      }));
-                      setDirty(true);
-                    }}
-                  />
-                </label>
-              </div>
               {flavorPair(
                 "costNoBrackets",
                 "No brackets yet",

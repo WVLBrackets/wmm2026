@@ -12,6 +12,43 @@
 
 import { resolveVintageYearTokens } from "./yearTokens";
 
+/** Which Message Box state is shown on My Picks. */
+export type VintageMessageBoxStateKey =
+  | "preBracket"
+  | "preTipoff"
+  | "live"
+  | "priorYear";
+
+/**
+ * One Message Box state: title + message + colors.
+ * Layout/font sizes are shared in CSS; only copy and colors vary.
+ */
+export interface VintageMessageBoxState {
+  /** Eyebrow / title line. Tokens: `{year}`, `{activeYear}`. */
+  title: string;
+  /**
+   * Primary message line. Tokens: `{year}`, `{activeYear}`, `{days}`, `{countdown}`.
+   * `{countdown}` is the live clock or days-away phrase for pre-bracket / pre-tipoff.
+   */
+  message: string;
+  borderColor: string;
+  backgroundColor: string;
+  titleColor: string;
+  messageColor: string;
+}
+
+/** Adminable Message Box for all four season states. */
+export interface VintageMessageBox {
+  /** Current year, tournament not started, bracket not published. */
+  preBracket: VintageMessageBoxState;
+  /** Current year, tournament not started, bracket published. */
+  preTipoff: VintageMessageBoxState;
+  /** Current year, tipoff has passed (tourney live). */
+  live: VintageMessageBoxState;
+  /** Viewing a prior year. */
+  priorYear: VintageMessageBoxState;
+}
+
 /** One year-view flavor: header, pool banners, empty-state, and cost/status copy. */
 export interface VintagePicksFlavor {
   /** Supporting line under Welcome. Supports `{year}`. */
@@ -45,18 +82,36 @@ export interface VintagePicksFlavor {
 }
 
 export interface VintagePicksContent {
-  /** Shown before brackets are published. Supports `{year}`. */
+  /**
+   * Season Message Box (year select + title + message) for four states.
+   * Prefer this over the deprecated countdown label fields below.
+   */
+  messageBox: VintageMessageBox;
+  /**
+   * @deprecated Prefer `messageBox.preBracket.title`. Kept for older drafts.
+   */
   countdownToBracketLabel: string;
-  /** Shown once brackets are available (countdown to tip-off). Supports `{year}`. */
+  /**
+   * @deprecated Prefer `messageBox.preTipoff.title`. Kept for older drafts.
+   */
   countdownToTipoffLabel: string;
   /**
-   * Replaces the timer when viewing a prior year.
-   * Supports `{year}` (viewing) and `{activeYear}` (switch target).
+   * Long-horizon countdown phrase when exactly one day remains (`{days}`).
+   * Used to build the `{countdown}` token in Message Box messages.
+   */
+  countdownDayAwayMessage: string;
+  /**
+   * Long-horizon countdown phrase when 2+ days remain (`{days}`).
+   * Used to build the `{countdown}` token in Message Box messages.
+   */
+  countdownDaysAwayMessage: string;
+  /**
+   * @deprecated Prefer `messageBox.priorYear`. Kept for older drafts.
    */
   viewingPriorYearLabel: string;
   /**
-   * When false, My Picks shows the not-published empty state (no Config Sheet).
-   * Date in that message comes from the homepage tipoff countdown.
+   * @deprecated Runtime source of truth is homepage Key Data (`keyData.bracketsPublished`).
+   * Kept on the picks sidecar for older drafts; overlaid at read time.
    */
   bracketsPublished: boolean;
   /**
@@ -70,16 +125,14 @@ export interface VintagePicksContent {
    */
   emptyCtaBody: string;
   /**
-   * Dollars per submitted bracket for `{cost}` in cost/status messages.
-   * Shared across year flavors (no Config Sheet `entry_cost`).
+   * @deprecated Runtime SOT is homepage Key Data (`keyData.entryCost`).
    */
   entryCost: number;
   /**
-   * Application Master Lock for vintage My Picks (no Config Sheet / feature flag).
-   * `true` = Unlocked (edits allowed); `false` = Locked (Changing actions blocked).
+   * @deprecated Runtime SOT is homepage Key Data (`keyData.masterLockUnlocked`).
    */
   masterLockUnlocked: boolean;
-  /** Shown when master lock is Locked. Supports `{year}` / `<year>`. */
+  /** @deprecated Runtime SOT is homepage Key Data (`keyData.masterLockMessage`). */
   masterLockMessage: string;
   /**
    * Shown when tipoff has passed (tourney active). Replaces Config Sheet
@@ -313,9 +366,50 @@ export function defaultVintagePicksAuthCopy(): VintagePicksAuthCopy {
   };
 }
 
+/** Default Message Box colors: active year = blue/cream; prior = cream/blue/red. */
+function defaultMessageBox(): VintageMessageBox {
+  const activeColors = {
+    borderColor: "#f2ead8",
+    backgroundColor: "#152c3a",
+    titleColor: "#f2ead8",
+    messageColor: "#f2ead8",
+  };
+  const priorColors = {
+    borderColor: "#152c3a",
+    backgroundColor: "#f2ead8",
+    titleColor: "#b52c26",
+    messageColor: "#b52c26",
+  };
+  return {
+    preBracket: {
+      title: "Countdown to {year} bracket",
+      message: "{countdown}",
+      ...activeColors,
+    },
+    preTipoff: {
+      title: "Countdown to {year} tipoff",
+      message: "{countdown}",
+      ...activeColors,
+    },
+    live: {
+      title: "Live",
+      message: "{year} Tourney Active!",
+      ...activeColors,
+    },
+    priorYear: {
+      title: "Viewing {year}",
+      message: "Click here to switch back to {activeYear}",
+      ...priorColors,
+    },
+  };
+}
+
 export const DEFAULT_VINTAGE_PICKS_CONTENT: VintagePicksContent = {
+  messageBox: defaultMessageBox(),
   countdownToBracketLabel: "Countdown to {year} bracket",
   countdownToTipoffLabel: "Countdown to {year} tipoff",
+  countdownDayAwayMessage: "{days} day to go",
+  countdownDaysAwayMessage: "{days} days to go",
   viewingPriorYearLabel:
     "Viewing {year}. Click here to switch back to {activeYear}",
   bracketsPublished: false,
@@ -482,10 +576,32 @@ export function normalizeVintagePicksContent(
       typeof input.countdownToTipoffLabel === "string"
         ? input.countdownToTipoffLabel
         : defaults.countdownToTipoffLabel,
+    countdownDayAwayMessage:
+      typeof input.countdownDayAwayMessage === "string"
+        ? input.countdownDayAwayMessage
+        : defaults.countdownDayAwayMessage,
+    countdownDaysAwayMessage:
+      typeof input.countdownDaysAwayMessage === "string"
+        ? input.countdownDaysAwayMessage
+        : defaults.countdownDaysAwayMessage,
     viewingPriorYearLabel:
       typeof input.viewingPriorYearLabel === "string"
         ? input.viewingPriorYearLabel
         : defaults.viewingPriorYearLabel,
+    messageBox: normalizeMessageBox(input.messageBox, defaults.messageBox, {
+      countdownToBracketLabel:
+        typeof input.countdownToBracketLabel === "string"
+          ? input.countdownToBracketLabel
+          : defaults.countdownToBracketLabel,
+      countdownToTipoffLabel:
+        typeof input.countdownToTipoffLabel === "string"
+          ? input.countdownToTipoffLabel
+          : defaults.countdownToTipoffLabel,
+      viewingPriorYearLabel:
+        typeof input.viewingPriorYearLabel === "string"
+          ? input.viewingPriorYearLabel
+          : defaults.viewingPriorYearLabel,
+    }),
     bracketsPublished:
       typeof input.bracketsPublished === "boolean"
         ? input.bracketsPublished
@@ -756,6 +872,78 @@ function normalizePayment(
 }
 
 /**
+ * Normalize one Message Box state (copy + colors).
+ */
+function normalizeMessageBoxState(
+  value: unknown,
+  defaults: VintageMessageBoxState,
+): VintageMessageBoxState {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { ...defaults };
+  }
+  const input = value as Partial<VintageMessageBoxState>;
+  return {
+    title:
+      typeof input.title === "string" && input.title.trim()
+        ? input.title
+        : defaults.title,
+    message:
+      typeof input.message === "string" && input.message.trim()
+        ? input.message
+        : defaults.message,
+    borderColor: normalizeCssColor(input.borderColor, defaults.borderColor),
+    backgroundColor: normalizeCssColor(
+      input.backgroundColor,
+      defaults.backgroundColor,
+    ),
+    titleColor: normalizeCssColor(input.titleColor, defaults.titleColor),
+    messageColor: normalizeCssColor(input.messageColor, defaults.messageColor),
+  };
+}
+
+/**
+ * Normalize Message Box; seed titles from deprecated countdown labels when absent.
+ */
+function normalizeMessageBox(
+  value: unknown,
+  defaults: VintageMessageBox,
+  legacy: {
+    countdownToBracketLabel: string;
+    countdownToTipoffLabel: string;
+    viewingPriorYearLabel: string;
+  },
+): VintageMessageBox {
+  const seeded: VintageMessageBox = {
+    preBracket: {
+      ...defaults.preBracket,
+      title: legacy.countdownToBracketLabel || defaults.preBracket.title,
+    },
+    preTipoff: {
+      ...defaults.preTipoff,
+      title: legacy.countdownToTipoffLabel || defaults.preTipoff.title,
+    },
+    live: { ...defaults.live },
+    priorYear: {
+      ...defaults.priorYear,
+      message:
+        legacy.viewingPriorYearLabel
+          .replace(/^Viewing\s*\{year\}\.\s*/i, "")
+          .trim() || defaults.priorYear.message,
+    },
+  };
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return seeded;
+  }
+  const input = value as Partial<Record<VintageMessageBoxStateKey, unknown>>;
+  return {
+    preBracket: normalizeMessageBoxState(input.preBracket, seeded.preBracket),
+    preTipoff: normalizeMessageBoxState(input.preTipoff, seeded.preTipoff),
+    live: normalizeMessageBoxState(input.live, seeded.live),
+    priorYear: normalizeMessageBoxState(input.priorYear, seeded.priorYear),
+  };
+}
+
+/**
  * CSS custom properties for row chrome (logo gap, actions, payment chips).
  * Apply on the `.v-picks` root so descendants inherit.
  */
@@ -802,14 +990,26 @@ export function validateVintagePicksContent(
   value: unknown,
 ): asserts value is VintagePicksContent {
   const doc = normalizeVintagePicksContent(value);
-  if (!doc.countdownToBracketLabel.trim()) {
-    throw new Error("Countdown-to-bracket label cannot be blank.");
+  if (!doc.countdownDayAwayMessage.trim()) {
+    throw new Error("Countdown day-away message cannot be blank.");
   }
-  if (!doc.countdownToTipoffLabel.trim()) {
-    throw new Error("Countdown-to-tipoff label cannot be blank.");
+  if (!doc.countdownDaysAwayMessage.trim()) {
+    throw new Error("Countdown days-away message cannot be blank.");
   }
-  if (!doc.viewingPriorYearLabel.trim()) {
-    throw new Error("Prior-year viewing label cannot be blank.");
+  const boxKeys: { key: VintageMessageBoxStateKey; label: string }[] = [
+    { key: "preBracket", label: "Pre-bracket Message Box" },
+    { key: "preTipoff", label: "Pre-tipoff Message Box" },
+    { key: "live", label: "Live Message Box" },
+    { key: "priorYear", label: "Prior-year Message Box" },
+  ];
+  for (const { key, label } of boxKeys) {
+    const state = doc.messageBox[key];
+    if (!state.title.trim()) {
+      throw new Error(`${label} title cannot be blank.`);
+    }
+    if (!state.message.trim()) {
+      throw new Error(`${label} message cannot be blank.`);
+    }
   }
   if (!doc.emptyCtaBody.trim()) {
     throw new Error("Empty-state CTA body cannot be blank.");
@@ -891,4 +1091,44 @@ export function formatVintagePicksLabel(
   return withYear
     .replace(/\{activeYear\}/g, active)
     .replace(/<activeYear>/gi, active);
+}
+
+/**
+ * Format Message Box title/message with year, days, and countdown tokens.
+ *
+ * @param template - CMS string
+ * @param vars - Token values (`countdown` is the ready-to-display clock/days phrase)
+ */
+export function formatMessageBoxText(
+  template: string,
+  vars: {
+    year: number | string;
+    activeYear?: number | string;
+    days?: number | string;
+    countdown?: string;
+  },
+): string {
+  let out = formatVintagePicksLabel(template, vars);
+  if (vars.days != null) {
+    out = out.replace(/\{days\}/g, String(vars.days));
+  }
+  if (vars.countdown != null) {
+    out = out.replace(/\{countdown\}/g, vars.countdown);
+  }
+  return out;
+}
+
+/**
+ * CSS custom properties for a Message Box state (apply on `.v-picks__board`).
+ */
+export function messageBoxCssVars(
+  state: VintageMessageBoxState,
+): Record<string, string> {
+  return {
+    "--vp-board-border": state.borderColor,
+    "--vp-board-bg": state.backgroundColor,
+    "--vp-board-title": state.titleColor,
+    "--vp-board-message": state.messageColor,
+    "--vp-board-eyebrow": state.borderColor,
+  };
 }

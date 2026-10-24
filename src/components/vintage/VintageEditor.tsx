@@ -63,6 +63,7 @@ import {
   useSectionNav,
 } from "./sectionNav";
 const tabs = [
+  "Key Data",
   "Masthead",
   "Toolbar & theme",
   "Home cards",
@@ -146,6 +147,11 @@ export default function VintageEditor() {
     );
     if (!focus) return;
     focusApplied.current = true;
+    if (focus.kind === "keyData") {
+      markActive(sectionIdFor(VINTAGE_EDITOR_TAB.keyData));
+      setFocusCardId("__keyData__");
+      return;
+    }
     if (focus.kind === "countdown") {
       markActive(sectionIdFor(VINTAGE_EDITOR_TAB.countdown));
       setFocusCardId("__countdown__");
@@ -169,25 +175,30 @@ export default function VintageEditor() {
    */
   useEffect(() => {
     if (!focusCardId) return;
+    const isKeyData = focusCardId === "__keyData__";
     const isCountdown = focusCardId === "__countdown__";
     const isExplore = focusCardId === "__explore__";
     const isAnnouncements = focusCardId === "__announcements__";
 
-    const el = isCountdown
+    const el = isKeyData
       ? document.querySelector<HTMLElement>(
-          '[data-testid="vintage-editor-countdown-panel"]',
+          '[data-testid="vintage-editor-key-data-panel"]',
         )
-      : isExplore
+      : isCountdown
         ? document.querySelector<HTMLElement>(
-            '[data-testid="vintage-editor-explore-panel"]',
+            '[data-testid="vintage-editor-countdown-panel"]',
           )
-        : isAnnouncements
+        : isExplore
           ? document.querySelector<HTMLElement>(
-              '[data-testid="vintage-editor-announcements-panel"]',
+              '[data-testid="vintage-editor-explore-panel"]',
             )
-          : document.querySelector<HTMLElement>(
-              `[data-editor-card-id="${CSS.escape(focusCardId)}"]`,
-            );
+          : isAnnouncements
+            ? document.querySelector<HTMLElement>(
+                '[data-testid="vintage-editor-announcements-panel"]',
+              )
+            : document.querySelector<HTMLElement>(
+                `[data-editor-card-id="${CSS.escape(focusCardId)}"]`,
+              );
     if (!el) return;
     el.classList.add("ve-focus-target");
     el.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -585,6 +596,296 @@ export default function VintageEditor() {
           testIdPrefix="vintage-tab"
         />
         <div className="ve-sections">
+          <SectionPanel id={sectionIdFor("Key Data")} title="Key Data" disabled={busy}>
+            {(() => {
+              const champIndex = content.homeCards.findIndex(
+                (card) => card.type === "reigningChamp",
+              );
+              const champCard =
+                champIndex >= 0 ? content.homeCards[champIndex] : null;
+              return (
+                <div data-testid="vintage-editor-key-data-panel">
+                  <p className="ve-help">
+                    Site-wide season controls. Tourney Year powers New Bracket,
+                    My Picks defaults, and {"{year}"} / {"<year>"} tokens.
+                    Historical Brackets / Standings / print use a toggled year
+                    or the bracket’s own year. Standings default year stays on
+                    the Standings CMS (separate on purpose).
+                  </p>
+                  <h3>Tourney Year</h3>
+                  {field("tournament.year", "Tourney Year", {
+                    hint: "Four-digit year (e.g. 2027). Publish homepage after changing.",
+                  })}
+                  <h3>Site name</h3>
+                  {field("keyData.siteName", "Site name", {
+                    hint: "Used in admin chrome / emails (e.g. Warren's March Madness).",
+                  })}
+                  <h3>Current Champ</h3>
+                  {champCard && champIndex >= 0 ? (
+                    <div className="ve-grid">
+                      <label className="ve-field">
+                        <span>Champ name</span>
+                        <input
+                          value={champCard.champName}
+                          data-testid="vintage-key-data-champ-name"
+                          onChange={(e) =>
+                            updateHomeCard(champIndex, {
+                              champName: e.target.value,
+                            })
+                          }
+                        />
+                        <small className="ve-help">
+                          Shown on the Reigning Champ home card (ALL CAPS). Card
+                          art and motto remain under Home cards.
+                        </small>
+                      </label>
+                      <label className="ve-field">
+                        <span>Champ year (on wreath)</span>
+                        <input
+                          value={champCard.champYear}
+                          data-testid="vintage-key-data-champ-year"
+                          onChange={(e) =>
+                            updateHomeCard(champIndex, {
+                              champYear: e.target.value,
+                            })
+                          }
+                        />
+                      </label>
+                    </div>
+                  ) : (
+                    <p className="ve-help">
+                      No Reigning Champ card found — add one under Home cards.
+                    </p>
+                  )}
+                  <h3>Brackets published</h3>
+                  <label
+                    className="ve-field"
+                    htmlFor="vintage-key-data-bracketsPublished"
+                  >
+                    <span>Brackets published</span>
+                    <span className="ve-help">
+                      Off → My Picks shows the not-published empty state. On →
+                      field is open (subject to JSON / tipoff / Master Lock).
+                    </span>
+                    <input
+                      id="vintage-key-data-bracketsPublished"
+                      data-testid="vintage-key-data-bracketsPublished"
+                      type="checkbox"
+                      checked={content.keyData.bracketsPublished}
+                      onChange={(e) =>
+                        update("keyData.bracketsPublished", e.target.checked)
+                      }
+                    />
+                  </label>
+                  <h3>Entry cost</h3>
+                  <label
+                    className="ve-field"
+                    htmlFor="vintage-key-data-entryCost"
+                  >
+                    <span>Entry cost ($ per submitted bracket)</span>
+                    <span className="ve-help">
+                      Powers My Picks <code>{"{cost}"}</code> lines and the
+                      payment API.
+                    </span>
+                    <input
+                      id="vintage-key-data-entryCost"
+                      data-testid="vintage-key-data-entryCost"
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={content.keyData.entryCost}
+                      onChange={(e) => {
+                        const next = Number(e.target.value);
+                        if (!Number.isFinite(next)) return;
+                        setContent((previous) => ({
+                          ...previous,
+                          keyData: {
+                            ...previous.keyData,
+                            entryCost: Math.max(0, Math.round(next)),
+                          },
+                        }));
+                        setDirty(true);
+                      }}
+                    />
+                  </label>
+                  <h3>Pay (Venmo)</h3>
+                  <label
+                    className="ve-field"
+                    htmlFor="vintage-key-data-venmoUser"
+                  >
+                    <span>Venmo username</span>
+                    <span className="ve-help">
+                      Without <code>@</code>. Required for the Pay button / deep
+                      link. Leave blank to hide Pay until set.
+                    </span>
+                    <input
+                      id="vintage-key-data-venmoUser"
+                      data-testid="vintage-key-data-venmoUser"
+                      type="text"
+                      autoComplete="off"
+                      spellCheck={false}
+                      placeholder="YourVenmoName"
+                      value={content.keyData.venmoUser}
+                      onChange={(e) => {
+                        const next = e.target.value.replace(/^@+/, "").trim();
+                        setContent((previous) => ({
+                          ...previous,
+                          keyData: {
+                            ...previous.keyData,
+                            venmoUser: next,
+                          },
+                        }));
+                        setDirty(true);
+                      }}
+                    />
+                  </label>
+                  <label
+                    className="ve-field"
+                    htmlFor="vintage-key-data-enablePayCapability"
+                  >
+                    <span>Enable Pay for all users</span>
+                    <span className="ve-help">
+                      On → anyone with unpaid submitted brackets sees Pay. Off →
+                      Pay is admin-only (ops admin). Still requires a Venmo
+                      username.
+                    </span>
+                    <input
+                      id="vintage-key-data-enablePayCapability"
+                      data-testid="vintage-key-data-enablePayCapability"
+                      type="checkbox"
+                      checked={content.keyData.enablePayCapability}
+                      onChange={(e) =>
+                        update(
+                          "keyData.enablePayCapability",
+                          e.target.checked,
+                        )
+                      }
+                    />
+                  </label>
+                  <h3>Application Master Lock</h3>
+                  <p className="ve-help">
+                    Locked blocks Changing actions (New / Edit / Submit /
+                    Return / Copy / Delete). Save WIP remains allowed if tipoff
+                    or Master Lock closes the field mid-session.
+                  </p>
+                  <div
+                    className="ve-lock-toggle"
+                    role="group"
+                    aria-label="Application Master Lock"
+                  >
+                    <button
+                      type="button"
+                      className={`ve-lock-btn ve-lock-btn--unlocked${
+                        content.keyData.masterLockUnlocked ? " is-on" : ""
+                      }`}
+                      data-testid="vintage-key-data-master-lock-unlocked"
+                      aria-pressed={content.keyData.masterLockUnlocked}
+                      onClick={() =>
+                        update("keyData.masterLockUnlocked", true)
+                      }
+                    >
+                      Unlocked
+                    </button>
+                    <button
+                      type="button"
+                      className={`ve-lock-btn ve-lock-btn--locked${
+                        !content.keyData.masterLockUnlocked ? " is-on" : ""
+                      }`}
+                      data-testid="vintage-key-data-master-lock-locked"
+                      aria-pressed={!content.keyData.masterLockUnlocked}
+                      onClick={() =>
+                        update("keyData.masterLockUnlocked", false)
+                      }
+                    >
+                      Locked
+                    </button>
+                  </div>
+                  {field(
+                    "keyData.masterLockMessage",
+                    "Message when Locked",
+                    {
+                      multiline: true,
+                      hint: "Shown when Master Lock is the winning reason. Tokens: {year} or <year>.",
+                    },
+                  )}
+                  <h3>Contact email</h3>
+                  {field("footer.contactEmail", "Contact email", {
+                    hint: "Mailto for the vintage footer (and legacy chrome contact).",
+                  })}
+                  <h3>Critical dates</h3>
+                  <label
+                    className="ve-field"
+                    htmlFor="vintage-tournament-bracketsReadyAt"
+                  >
+                    <span id="vintage-brackets-ready-label">
+                      Bracket Release Date Time
+                    </span>
+                    <span className="ve-help">
+                      Selection Sunday — when the field is released. My Picks
+                      counts down to this until brackets are published.
+                    </span>
+                    <input
+                      id="vintage-tournament-bracketsReadyAt"
+                      data-testid="vintage-tournament-bracketsReadyAt"
+                      type="datetime-local"
+                      step="60"
+                      value={toDatetimeLocalValue(
+                        content.tournament.bracketsReadyAt,
+                      )}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        if (!value) {
+                          update("tournament.bracketsReadyAt", "");
+                          return;
+                        }
+                        const date = new Date(value);
+                        if (!Number.isNaN(date.getTime()))
+                          update(
+                            "tournament.bracketsReadyAt",
+                            date.toISOString(),
+                          );
+                      }}
+                      aria-labelledby="vintage-brackets-ready-label"
+                      aria-describedby="vintage-key-data-timezone"
+                    />
+                  </label>
+                  <label
+                    className="ve-field"
+                    htmlFor="vintage-tournament-tipoffAt"
+                  >
+                    <span id="vintage-tipoff-label">Tip Off Date Time</span>
+                    <span className="ve-help">
+                      Round 1 tipoff. Homepage countdown always targets this.
+                      My Picks switches to it after brackets are published.
+                    </span>
+                    <input
+                      id="vintage-tournament-tipoffAt"
+                      data-testid="vintage-tournament-tipoffAt"
+                      type="datetime-local"
+                      step="60"
+                      value={toDatetimeLocalValue(content.tournament.tipoffAt)}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        if (!value) {
+                          update("tournament.tipoffAt", "");
+                          return;
+                        }
+                        const date = new Date(value);
+                        if (!Number.isNaN(date.getTime()))
+                          update("tournament.tipoffAt", date.toISOString());
+                      }}
+                      aria-labelledby="vintage-tipoff-label"
+                      aria-describedby="vintage-key-data-timezone"
+                    />
+                  </label>
+                  <small id="vintage-key-data-timezone">
+                    Time zone: {timeZone || "your device’s local time zone"}.
+                    Saved as one exact moment for all visitors.
+                  </small>
+                </div>
+              );
+            })()}
+          </SectionPanel>
           <SectionPanel id={sectionIdFor("Masthead")} title="Masthead" disabled={busy}>
             <>
               <p className="ve-help">
@@ -1024,8 +1325,8 @@ export default function VintageEditor() {
                         <div className="ve-grid">
                           <p className="ve-help" style={{ gridColumn: "1 / -1" }}>
                             Exact card art with three text holes: name, year on
-                            the wreath, and motto. Header chrome stays in the
-                            image.
+                            the wreath, and motto. Champ name / year also edit
+                            under Key Data. Header chrome stays in the image.
                           </p>
                           <div
                             className="ve-image-fields"
@@ -1526,83 +1827,18 @@ export default function VintageEditor() {
           <SectionPanel id={sectionIdFor("Tournament & countdown")} title="Tournament & countdown" disabled={busy}>
             <div data-testid="vintage-editor-countdown-panel">
               <p className="ve-help">
-                Active year and the two critical dates are administered here
-                only (not the Config Sheet). Use <code>{"{year}"}</code> or{" "}
-                <code>{"<year>"}</code> in countdown / live messages — they
-                resolve to Active Tourney Year.
+                Homepage countdown clock copy. Tourney Year, Bracket Release,
+                and Tip Off live in{" "}
+                <button
+                  type="button"
+                  className="ve-inline-link"
+                  onClick={() => jumpTo(sectionIdFor("Key Data"))}
+                >
+                  Key Data
+                </button>
+                . Use <code>{"{year}"}</code> or <code>{"<year>"}</code> in
+                messages — they resolve to Tourney Year.
               </p>
-              <h3>Active Tourney Year</h3>
-              {field("tournament.year", "Active Tourney Year", {
-                hint: "Four-digit year (e.g. 2027). Drives My Picks mutations and all <year> / {year} tokens.",
-              })}
-              <h3>Critical dates</h3>
-              <label
-                className="ve-field"
-                htmlFor="vintage-tournament-bracketsReadyAt"
-              >
-                <span id="vintage-brackets-ready-label">Brackets Ready</span>
-                <span className="ve-help">
-                  Selection Sunday — when the field is released. My Picks
-                  counts down to this until brackets are published.
-                </span>
-                <input
-                  id="vintage-tournament-bracketsReadyAt"
-                  data-testid="vintage-tournament-bracketsReadyAt"
-                  type="datetime-local"
-                  step="60"
-                  value={toDatetimeLocalValue(
-                    content.tournament.bracketsReadyAt,
-                  )}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    if (!value) {
-                      update("tournament.bracketsReadyAt", "");
-                      return;
-                    }
-                    const date = new Date(value);
-                    if (!Number.isNaN(date.getTime()))
-                      update(
-                        "tournament.bracketsReadyAt",
-                        date.toISOString(),
-                      );
-                  }}
-                  aria-labelledby="vintage-brackets-ready-label"
-                  aria-describedby="vintage-countdown-timezone"
-                />
-              </label>
-              <label
-                className="ve-field"
-                htmlFor="vintage-tournament-tipoffAt"
-              >
-                <span id="vintage-tipoff-label">Tourney Tipoff</span>
-                <span className="ve-help">
-                  Round 1 tipoff. Homepage countdown always targets this.
-                  My Picks switches to it after brackets are published.
-                </span>
-                <input
-                  id="vintage-tournament-tipoffAt"
-                  data-testid="vintage-tournament-tipoffAt"
-                  type="datetime-local"
-                  step="60"
-                  value={toDatetimeLocalValue(content.tournament.tipoffAt)}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    if (!value) {
-                      update("tournament.tipoffAt", "");
-                      return;
-                    }
-                    const date = new Date(value);
-                    if (!Number.isNaN(date.getTime()))
-                      update("tournament.tipoffAt", date.toISOString());
-                  }}
-                  aria-labelledby="vintage-tipoff-label"
-                  aria-describedby="vintage-countdown-timezone"
-                />
-              </label>
-              <small id="vintage-countdown-timezone">
-                Time zone: {timeZone || "your device’s local time zone"}.
-                Saved as one exact moment for all visitors.
-              </small>
               <h3>Homepage countdown clock</h3>
               {field("tournament.countdownTitle", "Countdown heading", {
                 hint: "Shown above the tipoff clock when the countdown is on. Tokens: {year} or <year>.",
@@ -1746,7 +1982,7 @@ export default function VintageEditor() {
               {field("footer.contactLabel", "Contact link label", {
                 hint: "Shown next to the envelope when a contact email is set.",
               })}
-              {field("footer.contactEmail", "Contact email (optional)", {
+              {field("footer.contactEmail", "Contact email (optional — also in Key Data)", {
                 type: "email",
               })}
             </>

@@ -23,6 +23,7 @@ The system is a v1 proposal pending Warren’s review. Use it to make decisions 
 - [ ] Make full-card links and nested controls semantically valid.
 - [ ] Keep long names/captions readable; use the shared fit/abbreviation helpers.
 - [ ] Preserve distinct meanings for entry status, payment, result correctness, and selection.
+- [ ] My Picks status chips are **locked** (short oval, shared fixed width). Do not alter `--vp-status-chip-*` / `--vp-chip-*` geometry without an explicit product decision.
 
 ## Verification appropriate to the change
 

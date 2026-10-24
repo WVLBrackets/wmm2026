@@ -8,6 +8,7 @@ import {
   applyDisplayNamesToTournamentData,
   buildTeamIdToDisplayNameMapFromApi,
 } from '@/lib/teamDisplayName';
+import { tryLoadTournamentData, unpublishedTournamentMessage } from '@/lib/tournamentLoader';
 
 const REGION_POSITION_ORDER = ['Top Left', 'Bottom Left', 'Top Right', 'Bottom Right'] as const;
 
@@ -92,13 +93,15 @@ export default function TourneyR1BracketPreview({ year }: TourneyR1BracketPrevie
     setLoadError(null);
     setData(null);
     try {
-      const response = await fetch(`/api/tournament-data?year=${year}`, { cache: 'no-store' });
-      if (!response.ok) {
-        throw new Error(`Could not load tournament field for ${year} (${response.status})`);
+      const json = await tryLoadTournamentData(year);
+      if (!json) {
+        // Expected before publish — friendly notice, not a hard failure.
+        setLoadError(unpublishedTournamentMessage(year));
+        return;
       }
-      const json = (await response.json()) as TournamentData;
       if (!json.regions || !Array.isArray(json.regions)) {
-        throw new Error('Invalid tournament file: missing regions');
+        setLoadError('Invalid tournament file: missing regions');
+        return;
       }
       let enriched = json;
       try {
@@ -137,7 +140,7 @@ export default function TourneyR1BracketPreview({ year }: TourneyR1BracketPrevie
         <div>
           <h4 className="text-lg font-semibold text-gray-900">Round of 64 preview</h4>
           <p className="text-xs text-gray-500 mt-0.5">
-            Published tournament for {year}.
+            {data ? `Published tournament for ${year}.` : `Tournament year ${year}.`}
           </p>
         </div>
         <button
@@ -158,7 +161,10 @@ export default function TourneyR1BracketPreview({ year }: TourneyR1BracketPrevie
       )}
 
       {!loading && loadError && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <div
+          className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900"
+          data-testid="tourney-r1-preview-status"
+        >
           {loadError}
         </div>
       )}

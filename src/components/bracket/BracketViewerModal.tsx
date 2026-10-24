@@ -148,6 +148,7 @@ export default function BracketViewerModal({
     if (typeof window === 'undefined' || !canOpenPrintLayout) return;
     const payload = {
       picks,
+      year,
       tieBreaker: tieBreaker !== '' ? tieBreaker : undefined,
       entryName: entryLabel || title || '',
     };

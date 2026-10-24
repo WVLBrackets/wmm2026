@@ -8,8 +8,7 @@
 import { sql } from '../databaseAdapter';
 import crypto from 'crypto';
 import { getCurrentEnvironment } from '../databaseConfig';
-import { getSiteConfigFromGoogleSheets } from '../siteConfig';
-import { FALLBACK_CONFIG } from '../fallbackConfig';
+import { getActiveTournamentYear } from '@/lib/services/tournamentYearService';
 import type { Bracket, BracketWithUser, UpdateBracketInput } from '../types/database';
 import { normalizeStoredDisplayName } from '../stringNormalize';
 import { parseDbInstant } from '../dbInstant';
@@ -86,22 +85,11 @@ export async function createBracket(
   const storedEntryName = normalizeStoredDisplayName(entryName);
   const bracketId = crypto.randomUUID();
   
-  // Get tournament year from config
-  let year = new Date().getFullYear();
-  try {
-    const config = await getSiteConfigFromGoogleSheets();
-    if (config?.tournamentYear) {
-      year = parseInt(config.tournamentYear);
-    }
-  } catch {
-    if (FALLBACK_CONFIG.tournamentYear) {
-      year = parseInt(FALLBACK_CONFIG.tournamentYear);
-    }
-  }
-  
-  if (yearOverride) {
-    year = yearOverride;
-  }
+  // Stamp year from caller override, else published homepage CMS Tourney Year.
+  const year =
+    yearOverride != null && !Number.isNaN(yearOverride)
+      ? yearOverride
+      : await getActiveTournamentYear();
 
   const bracketNumber = await getNextBracketNumber(year, environment);
   

@@ -12,7 +12,7 @@
  * `evaluateVintageActionLockFresh` from `vintageActionLockServer.ts`.
  */
 
-import { isHistoricalYear } from '@/lib/services/tournamentYearService';
+import { isHistoricalYear } from '@/lib/services/tournamentYearHelpers';
 import {
   formatVintageBracketsNotPublishedMessage,
   formatVintagePicksLabel,

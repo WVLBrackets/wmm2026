@@ -25,7 +25,7 @@ import {
 } from "@/lib/pickResultChrome";
 import { getLogoUrlSync, getTeamInfo } from "@/lib/teamLogos";
 import { getTeamRefData, type TeamRefData } from "@/lib/teamRefData";
-import { buildYearScopedPath } from "@/lib/services/tournamentYearService";
+import { buildYearScopedPath } from "@/lib/services/tournamentYearHelpers";
 import {
   formatVintageStandingsLabel,
   isStandingsFlagOn,

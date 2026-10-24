@@ -210,9 +210,17 @@ export interface SiteConfigData {
   cta6Title?: string;
   cta6Destination?: string;
   cta6Image?: string;
-  /** Venmo username (without @) for payment deep links; parsed from `venmo_user` in the Google Sheets config. */
+  /**
+   * Venmo username (without @) for payment deep links.
+   * Runtime SOT: homepage Key Data (`keyData.venmoUser`) via `/api/site-config` overlay;
+   * sheet `venmo_user` is fallback until CMS Pay fields are set.
+   */
   venmoUser?: string;
-  /** When "YES", the Pay button is shown to all users; otherwise admin-only. Parsed from `enable_pay_capability`. */
+  /**
+   * When "YES", the Pay button is shown to all users; otherwise admin-only.
+   * Runtime SOT: homepage Key Data (`keyData.enablePayCapability`) via `/api/site-config`;
+   * sheet `enable_pay_capability` is fallback until CMS Pay fields are set.
+   */
   enablePayCapability?: string;
 }
 

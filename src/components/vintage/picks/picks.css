@@ -22,13 +22,18 @@
   /* Result chrome sizes from Standings CMS (desktop default; mobile override below). */
   --vs-ff-size: var(--vs-ff-size-desktop, 34px);
   --vs-champ-size: var(--vs-champ-size-desktop, 34px);
-  /* Shared status-chip geometry (count pills, filters, row badges). */
-  --vp-chip-height: 30px;
-  --vp-chip-pad-x: 7.5px;
-  --vp-chip-font: 11px;
-  --vp-chip-icon: 14px;
-  /* Fixed width for every status chip — sized to "IN PROGRESS" + icon + light padding. */
-  --vp-status-chip-width: 7.65rem;
+  /*
+   * LOCKED status-chip geometry (Warren 2026-10-24) — short ovals, one fixed width.
+   * Count pills, Show filters, and entry-row badges share these tokens.
+   * Do not change without an explicit product decision. See DESIGN_SYSTEM.md §4.6.
+   */
+  --vp-chip-height: 22px;
+  --vp-chip-pad-x: 8px;
+  --vp-chip-font: 10px;
+  --vp-chip-icon: 12px;
+  /* Fixed width for every status chip — sized to "IN PROGRESS" + icon. */
+  --vp-status-chip-width: 7.25rem;
+  --vp-chip-radius: 999px;
   /* Darker theme-green (not neon) for submitted. */
   --vp-submitted-border: #3f6b4a;
   --vp-submitted-bg: #d9e6dc;
@@ -235,7 +240,7 @@
   height: var(--vp-chip-height);
   padding: 0 var(--vp-chip-pad-x);
   border: 1px solid var(--vp-ink);
-  border-radius: 0;
+  border-radius: var(--vp-chip-radius);
   font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
   font-size: var(--vp-chip-font);
   font-weight: 600;
@@ -294,14 +299,14 @@
   color: color-mix(in srgb, var(--vp-ink) 88%, transparent);
 }
 
-/* ---------- Side column: year, actions, timer ---------- */
+/* ---------- Side column: actions + status message box ---------- */
 
 .v-picks__side {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 14px;
-  /* Size to the New / Year / Logout row — not the status-box copy. */
+  /* Size to the New / Pay / Logout row (Pay always rendered). */
   width: max-content;
   max-width: 100%;
   min-width: 0;
@@ -311,6 +316,7 @@
   display: flex;
   flex: 0 0 auto;
   align-items: stretch;
+  height: 40px;
   min-width: 0;
 }
 
@@ -491,20 +497,34 @@
   opacity: 0.75;
 }
 
-/* ---------- Countdown timer / prior-year switch (locked footprint) ---------- */
+/* Carries title/tooltip when the nested Pay button is disabled. */
+.v-picks__pay-wrap {
+  display: inline-flex;
+  align-items: stretch;
+}
 
-.v-picks__timer,
-.v-picks__year-switch {
-  /* Shared box so year toggles don’t hop. Height fits the two-line countdown;
-     width tracks the buttons row (width:0 / min-width:100% ignores long copy). */
+.v-picks__pay-wrap .v-picks__btn:disabled {
+  pointer-events: none;
+}
+
+/* ---------- Message Box (locked footprint; year select + title + message) ----------
+ * Named `board` so it never collides with entry `.v-picks__status` chips.
+ * All four CMS states share geometry; colors come from inline CSS variables. */
+
+.v-picks__board {
   --vp-status-box-height: 5rem;
+  --vp-board-eyebrow-width: 6px;
+  --vp-board-border: var(--vp-ink);
+  --vp-board-bg: var(--vp-ink);
+  --vp-board-title: var(--vp-paper);
+  --vp-board-message: var(--vp-paper);
+  --vp-board-eyebrow: var(--vp-board-border);
 
   box-sizing: border-box;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
+  gap: 10px;
   width: 0;
   min-width: 100%;
   max-width: 100%;
@@ -512,72 +532,90 @@
   min-height: var(--vp-status-box-height);
   max-height: var(--vp-status-box-height);
   margin: 0;
-  padding: 10px 14px;
-  border: 1px solid var(--vp-ink);
+  padding: 8px 12px 8px calc(12px + var(--vp-board-eyebrow-width));
+  border: 2px solid var(--vp-board-border);
+  border-radius: 0;
+  background: var(--vp-board-bg);
+  box-shadow: inset var(--vp-board-eyebrow-width) 0 0 var(--vp-board-eyebrow);
   overflow: hidden;
+}
+
+.v-picks__board-year {
+  flex: 0 0 auto;
+  align-self: center;
+}
+
+.v-picks__board-year .v-picks__select {
+  width: 3.5rem;
+  min-width: 3.5rem;
+  max-width: 3.5rem;
+  padding: 0 16px 0 6px;
+  background: var(--vp-paper);
+  color: var(--vp-ink);
+  border-color: var(--vp-ink);
+}
+
+.v-picks__board-year .v-picks__select-icon {
+  right: 3px;
+  width: 12px;
+  height: 12px;
+}
+
+.v-picks__board-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
   text-align: center;
+  overflow: hidden;
+  color: inherit;
 }
 
-.v-picks__timer {
-  outline: 1px solid color-mix(in srgb, var(--vp-gold) 55%, transparent);
-  outline-offset: -5px;
-  background: var(--vp-ink);
-  color: var(--vp-gold);
+button.v-picks__board-body {
+  cursor: pointer;
+  font: inherit;
 }
 
-.v-picks__timer-label {
+button.v-picks__board-body:hover:not(:disabled) .v-picks__board-message,
+button.v-picks__board-body:focus-visible:not(:disabled) .v-picks__board-message {
+  text-decoration: underline;
+  outline: none;
+}
+
+button.v-picks__board-body:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+/* Shared title size/location for every Message Box state. */
+.v-picks__board-title {
   font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--vp-paper) 72%, transparent);
+  line-height: 1.2;
+  color: var(--vp-board-title);
 }
 
-.v-picks__timer-value {
+/* Shared message size/location for every Message Box state. */
+.v-picks__board-message {
   font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
-  font-size: 28px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  line-height: 1.1;
-  font-variant-numeric: tabular-nums;
-}
-
-/* After tipoff — same footprint as the countdown; live tourney message. */
-.v-picks__timer--live {
-  outline-color: color-mix(in srgb, var(--vp-red) 55%, transparent);
-  color: var(--vp-paper);
-}
-
-.v-picks__timer-live-text {
-  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
-  font-size: 15px;
+  font-size: 22px;
   font-weight: 600;
   letter-spacing: 0.06em;
-  line-height: 1.2;
-  text-transform: uppercase;
-  color: var(--vp-gold);
-}
-
-/* Prior-year control — same footprint as the countdown timer. */
-.v-picks__year-switch {
-  border-left: 6px solid var(--vp-red);
-  background: var(--vp-gold-tint);
-  color: var(--vp-ink);
-  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  line-height: 1.25;
-  cursor: pointer;
-}
-
-.v-picks__year-switch:hover,
-.v-picks__year-switch:focus-visible {
-  background: color-mix(in srgb, var(--vp-gold) 34%, transparent);
-  /* Inset ring — outline would add outside width and hop vs the timer. */
-  outline: none;
-  box-shadow: inset 0 0 0 2px var(--vp-red);
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  color: var(--vp-board-message);
+  max-width: 100%;
+  overflow-wrap: break-word;
 }
 
 /* ---------- Filters ---------- */
@@ -621,7 +659,7 @@
   height: var(--vp-chip-height);
   padding: 0 var(--vp-chip-pad-x);
   border: 1px solid var(--vp-rule);
-  border-radius: 0;
+  border-radius: var(--vp-chip-radius);
   background: transparent;
   color: var(--vp-muted);
   font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
@@ -653,7 +691,11 @@
   color: #fff;
 }
 
-/* Off-state status filters stay muted; on-state matches count/row badges. */
+/*
+ * Status filter UX: All mode → All is-on, individuals look off (unshaded).
+ * Filter mode → All off, selected statuses is-on. First click on a status from
+ * All enters filter mode with only that status (see toggleStatusFilter).
+ */
 .v-picks__chip--submitted:not(.is-on),
 .v-picks__chip--progress:not(.is-on),
 .v-picks__chip--deleted:not(.is-on) {
@@ -1431,8 +1473,7 @@
     width: 100%;
   }
 
-  .v-picks__timer,
-  .v-picks__year-switch {
+  .v-picks__board {
     /* Full row under the button strip — keep the width:0 / min-width:100% trick. */
     flex: 1 1 100%;
     width: 0;
@@ -1480,8 +1521,7 @@
     max-width: none;
   }
 
-  .v-picks__timer,
-  .v-picks__year-switch {
+  .v-picks__board {
     /* Do NOT set min-width: 0 — that collapses width:0 into a one-character column. */
     flex: 0 0 auto;
     width: 100%;
@@ -1490,17 +1530,16 @@
     align-self: stretch;
   }
 
-  .v-picks__timer-label,
-  .v-picks__timer-live-text,
-  .v-picks__year-switch {
+  .v-picks__board-title,
+  .v-picks__board-message {
     max-width: 100%;
     overflow-wrap: break-word;
     word-break: normal;
     white-space: normal;
   }
 
-  .v-picks__timer-value {
-    font-size: 24px;
+  .v-picks__board-message {
+    font-size: 20px;
   }
 
   /* Compact entry cards — tight stack, column headers, 2×2 FF + actions */

@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { createBracket, getBracketsByUserId, updateBracket } from '@/lib/repositories/bracketRepository';
 import { getUserByEmail } from '@/lib/repositories/userRepository';
-import { getSiteConfigFromGoogleSheets, getSiteConfigFromGoogleSheetsFresh } from '@/lib/siteConfig';
+import { getSiteConfigFromGoogleSheetsFresh } from '@/lib/siteConfig';
 import { sendSubmissionConfirmationEmail, processEmailAsync } from '@/lib/bracketEmailService';
 import { validateBracketSubmission } from '@/lib/bracketSubmissionValidator';
 import { tryLoadTournamentData } from '@/lib/tournamentLoaderServer';
@@ -157,12 +157,13 @@ export async function POST(request: NextRequest) {
       siteConfig
     );
 
-    // Create new bracket (always create, even if invalid data)
+    // Create new bracket stamped with CMS active Tourney Year (always create, even if invalid data)
     const bracket = await createBracket(
       user.id,
       body.entryName,
       body.tieBreaker,
-      picks
+      picks,
+      tournamentYear
     );
     
     // Determine status: 'Invalid' if validation failed (invalid data), otherwise 'submitted'
@@ -362,11 +363,13 @@ export async function PUT(request: NextRequest) {
 
     // Always create a new in-progress bracket when using PUT without an ID
     // Users can have multiple in-progress brackets with the same name
+    // Year comes from mutation policy (homepage CMS Tourney Year).
     const bracket = await createBracket(
       user.id,
       body.entryName,
       body.tieBreaker,
-      body.picks
+      body.picks,
+      createYear
     );
     
     // Set status to in_progress
@@ -434,16 +437,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { mergeAvailableYears, parseViewingYear } = await import(
+    const { getActiveTournamentYear, mergeAvailableYears, parseViewingYear } = await import(
       '@/lib/services/tournamentYearService'
     );
 
-    // Get tournament year from config
-    const config = await getSiteConfigFromGoogleSheets();
-    const activeYear = config?.tournamentYear
-      ? parseInt(String(config.tournamentYear), 10)
-      : new Date().getFullYear();
-    const safeActiveYear = Number.isNaN(activeYear) ? new Date().getFullYear() : activeYear;
+    // Active year = published homepage CMS Tourney Year (not Config Sheet).
+    const safeActiveYear = await getActiveTournamentYear();
 
     const yearParam = request.nextUrl.searchParams.get('year');
     const viewingYear = parseViewingYear(yearParam, safeActiveYear);
