@@ -1965,6 +1965,8 @@ export default function MyPicksLanding({
 
   /**
    * Submitted rows: Paid shows $; unpaid/pending is blank (no icon).
+   * Desktop Progress column uses the blank state; mobile Status uses
+   * `renderVintageMobileStatusMark` so unpaid submitted still shows the checkmark.
    * @param iconOnly - Compact chip (no “Paid” word) for desktop Progress col / mobile.
    */
   const renderVintagePayment = (bracket: Bracket, iconOnly = false) => {
@@ -1993,6 +1995,30 @@ export default function MyPicksLanding({
         <DollarSign className="v-picks__icon" aria-hidden />
         {!iconOnly ? <span>Paid</span> : null}
       </span>
+    );
+  };
+
+  /**
+   * Mobile Status column mark: one of paid / submitted / in progress / deleted.
+   * Paid submitted entries show $; all other rows show the status icon (including
+   * unpaid submitted, which previously rendered a blank pay chip).
+   *
+   * @param bracket - Entry to render a mark for
+   */
+  const renderVintageMobileStatusMark = (bracket: Bracket) => {
+    if (bracket.paymentStatus === 'paid') {
+      return renderVintagePayment(bracket, true);
+    }
+    return (
+      <button
+        type="button"
+        className={`${vintageStatusClass(bracket.status)} v-picks__status--button v-picks__status--square`}
+        onClick={() => openBracketFromLandingRow(bracket)}
+        title={getStatusText(bracket.status)}
+        aria-label={getStatusText(bracket.status)}
+      >
+        {renderVintageStatusIcon(bracket.status)}
+      </button>
     );
   };
 
@@ -2489,19 +2515,7 @@ export default function MyPicksLanding({
                   >
                     {ctx.rawEntryName}
                   </button>
-                  {inPool ? (
-                    renderVintagePayment(bracket, true)
-                  ) : (
-                    <button
-                      type="button"
-                      className={`${vintageStatusClass(bracket.status)} v-picks__status--button v-picks__status--square`}
-                      onClick={() => openBracketFromLandingRow(bracket)}
-                      title={getStatusText(bracket.status)}
-                      aria-label={getStatusText(bracket.status)}
-                    >
-                      {renderVintageStatusIcon(bracket.status)}
-                    </button>
-                  )}
+                  {renderVintageMobileStatusMark(bracket)}
                   {renderVintageFinalFour(ctx.finalFour)}
                   <div
                     className="v-picks__champ v-picks__champ--mobile"
