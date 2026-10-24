@@ -18,6 +18,7 @@ import {
   type VintagePicksActionStyle,
   type VintagePicksAuthCreateAccount,
   type VintagePicksAuthSignIn,
+  type VintagePaymentBadgeStyle,
   type VintagePicksContent,
   type VintagePicksFlavor,
 } from "@/lib/vintage/picksContent";
@@ -837,9 +838,9 @@ export default function VintagePicksEditor() {
           <SectionPanel id={sectionIdFor("Row chrome")} title="Row chrome" disabled={busy}>
             <>
               <p className="ve-help">
-                Desktop row density and action / payment chip colors. Icons stay
-                fixed per action (View, Edit, Submit, …); colors apply to active
-                and disabled states.
+                Desktop row density, payment badges, and action button colors.
+                Action icons stay fixed (View, Edit, Submit, …); colors apply to
+                active and disabled states.
               </p>
               <div className="ve-grid">
                 <label className="ve-field" htmlFor="vintage-picks-rowLogoGapPx">
@@ -870,39 +871,112 @@ export default function VintagePicksEditor() {
                 </label>
               </div>
 
-              <h3>Payment chips</h3>
-              <div className="ve-grid">
-                {(
-                  [
-                    ["paidBackground", "Paid background"],
-                    ["paidColor", "Paid text"],
-                    ["unpaidBackground", "Unpaid background"],
-                    ["unpaidColor", "Unpaid text"],
-                  ] as const
-                ).map(([key, label]) => (
-                  <label
+              <h3>Payment badges</h3>
+              <p className="ve-help">
+                Shown on submitted entries beside the name (desktop) or under
+                it (mobile). Status stays Submitted / In Progress / Deleted.
+                Leave Icon blank to hide the circle glyph (Unpaid default).
+              </p>
+              {(
+                [
+                  { key: "paid", label: "Paid" },
+                  { key: "pending", label: "Pending" },
+                  { key: "unpaid", label: "Unpaid" },
+                ] as const
+              ).map(({ key, label }) => {
+                const badge = content.payment[key];
+                const setBadge = (patch: Partial<VintagePaymentBadgeStyle>) => {
+                  setContent((previous) => ({
+                    ...previous,
+                    payment: {
+                      ...previous.payment,
+                      [key]: { ...previous.payment[key], ...patch },
+                    },
+                  }));
+                  setDirty(true);
+                };
+                return (
+                  <div
                     key={key}
-                    className="ve-field"
-                    htmlFor={`vintage-picks-payment-${key}`}
+                    className="ve-grid"
+                    data-testid={`vintage-picks-payment-${key}`}
                   >
-                    <span>{label}</span>
-                    <input
-                      id={`vintage-picks-payment-${key}`}
-                      data-testid={`vintage-picks-payment-${key}`}
-                      type="text"
-                      value={content.payment[key]}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setContent((previous) => ({
-                          ...previous,
-                          payment: { ...previous.payment, [key]: value },
-                        }));
-                        setDirty(true);
-                      }}
-                    />
-                  </label>
-                ))}
-              </div>
+                    <p className="ve-help" style={{ gridColumn: "1 / -1" }}>
+                      <strong>{label}</strong>
+                    </p>
+                    <label
+                      className="ve-field"
+                      htmlFor={`vintage-picks-payment-${key}-caption`}
+                    >
+                      <span>Caption</span>
+                      <input
+                        id={`vintage-picks-payment-${key}-caption`}
+                        data-testid={`vintage-picks-payment-${key}-caption`}
+                        type="text"
+                        value={badge.caption}
+                        onChange={(e) => setBadge({ caption: e.target.value })}
+                      />
+                    </label>
+                    <label
+                      className="ve-field"
+                      htmlFor={`vintage-picks-payment-${key}-icon`}
+                    >
+                      <span>Icon</span>
+                      <input
+                        id={`vintage-picks-payment-${key}-icon`}
+                        data-testid={`vintage-picks-payment-${key}-icon`}
+                        type="text"
+                        maxLength={4}
+                        placeholder="$ or blank"
+                        value={badge.icon}
+                        onChange={(e) => setBadge({ icon: e.target.value })}
+                      />
+                    </label>
+                    {(
+                      [
+                        ["iconBackground", "Badge / icon fill"],
+                        ["iconColor", "Icon glyph"],
+                        ["background", "Shading"],
+                        ["color", "Font color"],
+                        ["borderColor", "Border"],
+                      ] as const
+                    ).map(([field, fieldLabel]) => (
+                      <label
+                        key={field}
+                        className="ve-field"
+                        htmlFor={`vintage-picks-payment-${key}-${field}`}
+                      >
+                        <span>{fieldLabel}</span>
+                        <div className="ve-color-row">
+                          <input
+                            id={`vintage-picks-payment-${key}-${field}-swatch`}
+                            data-testid={`vintage-picks-payment-${key}-${field}-swatch`}
+                            type="color"
+                            value={
+                              /^#[0-9A-Fa-f]{6}$/.test(badge[field])
+                                ? badge[field]
+                                : "#000000"
+                            }
+                            onChange={(e) =>
+                              setBadge({ [field]: e.target.value })
+                            }
+                            aria-label={`${label} ${fieldLabel} swatch`}
+                          />
+                          <input
+                            id={`vintage-picks-payment-${key}-${field}`}
+                            data-testid={`vintage-picks-payment-${key}-${field}`}
+                            type="text"
+                            value={badge[field]}
+                            onChange={(e) =>
+                              setBadge({ [field]: e.target.value })
+                            }
+                          />
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                );
+              })}
 
               <h3>Action buttons</h3>
               {ACTION_KEYS.map(({ key, label }) => {

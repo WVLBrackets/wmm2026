@@ -81,6 +81,27 @@ export interface VintagePicksFlavor {
   costBoth: string;
 }
 
+/**
+ * One payment-status badge (Paid / Pending / Unpaid) — caption + icon + colors.
+ * Empty `icon` hides the circle glyph.
+ */
+export interface VintagePaymentBadgeStyle {
+  /** Visible label, e.g. "Paid". */
+  caption: string;
+  /** Glyph inside the icon circle (e.g. "$"); blank = no icon. */
+  icon: string;
+  /** Icon circle fill (“badge color”). */
+  iconBackground: string;
+  /** Icon glyph color. */
+  iconColor: string;
+  /** Pill fill (shading). */
+  background: string;
+  /** Caption font color. */
+  color: string;
+  /** Pill border color. */
+  borderColor: string;
+}
+
 export interface VintagePicksContent {
   /**
    * Season Message Box (year select + title + message) for four states.
@@ -155,13 +176,13 @@ export interface VintagePicksContent {
    */
   rowLogoGapPx: number;
   /**
-   * Paid / unpaid chip colors on submitted rows (words optional on mobile).
+   * Payment status badges on submitted rows (Paid / Pending / Unpaid).
+   * Desktop: beside the entry name. Mobile: under the entry name.
    */
   payment: {
-    paidBackground: string;
-    paidColor: string;
-    unpaidBackground: string;
-    unpaidColor: string;
+    paid: VintagePaymentBadgeStyle;
+    pending: VintagePaymentBadgeStyle;
+    unpaid: VintagePaymentBadgeStyle;
   };
   /**
    * Row action button colors (active + disabled). Icons stay Lucide per action.
@@ -428,10 +449,33 @@ export const DEFAULT_VINTAGE_PICKS_CONTENT: VintagePicksContent = {
     "Bracket field data is missing for {year}. Please contact the administrator.",
   rowLogoGapPx: 5,
   payment: {
-    paidBackground: "#dcfce7",
-    paidColor: "#166534",
-    unpaidBackground: "#fee2e2",
-    unpaidColor: "#991b1b",
+    paid: {
+      caption: "Paid",
+      icon: "$",
+      iconBackground: "#166534",
+      iconColor: "#ffffff",
+      background: "#dcfce7",
+      color: "#166534",
+      borderColor: "#86efac",
+    },
+    pending: {
+      caption: "Pending",
+      icon: "$",
+      iconBackground: "#d1d5db",
+      iconColor: "#374151",
+      background: "#f9fafb",
+      color: "#4b5563",
+      borderColor: "#d1d5db",
+    },
+    unpaid: {
+      caption: "Unpaid",
+      icon: "",
+      iconBackground: "#9ca3af",
+      iconColor: "#ffffff",
+      background: "#e5e7eb",
+      color: "#374151",
+      borderColor: "#9ca3af",
+    },
   },
   actions: defaultActionButtons(),
   flavors: {
@@ -850,24 +894,71 @@ function normalizeActionButtons(
 }
 
 /**
- * Normalize paid / unpaid chip colors.
+ * Normalize one payment badge (caption, icon, colors).
+ */
+function normalizePaymentBadge(
+  value: unknown,
+  defaults: VintagePaymentBadgeStyle,
+): VintagePaymentBadgeStyle {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { ...defaults };
+  }
+  const input = value as Partial<VintagePaymentBadgeStyle>;
+  return {
+    caption:
+      typeof input.caption === "string" && input.caption.trim()
+        ? input.caption.trim().slice(0, 24)
+        : defaults.caption,
+    icon:
+      typeof input.icon === "string" ? input.icon.trim().slice(0, 4) : defaults.icon,
+    iconBackground: normalizeCssColor(input.iconBackground, defaults.iconBackground),
+    iconColor: normalizeCssColor(input.iconColor, defaults.iconColor),
+    background: normalizeCssColor(input.background, defaults.background),
+    color: normalizeCssColor(input.color, defaults.color),
+    borderColor: normalizeCssColor(input.borderColor, defaults.borderColor),
+  };
+}
+
+/**
+ * Normalize Paid / Pending / Unpaid badges. Migrates legacy flat
+ * `paidBackground` / `paidColor` / `unpaidBackground` / `unpaidColor` keys.
  */
 function normalizePayment(
   value: unknown,
   defaults: VintagePicksContent["payment"],
 ): VintagePicksContent["payment"] {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return { ...defaults };
+    return {
+      paid: { ...defaults.paid },
+      pending: { ...defaults.pending },
+      unpaid: { ...defaults.unpaid },
+    };
   }
-  const input = value as Partial<VintagePicksContent["payment"]>;
+  const input = value as Record<string, unknown>;
+  const legacyPaidBg =
+    typeof input.paidBackground === "string" ? input.paidBackground : undefined;
+  const legacyPaidFg =
+    typeof input.paidColor === "string" ? input.paidColor : undefined;
+  const legacyUnpaidBg =
+    typeof input.unpaidBackground === "string" ? input.unpaidBackground : undefined;
+  const legacyUnpaidFg =
+    typeof input.unpaidColor === "string" ? input.unpaidColor : undefined;
+
+  const paidSeed: VintagePaymentBadgeStyle = {
+    ...defaults.paid,
+    ...(legacyPaidBg ? { background: legacyPaidBg } : {}),
+    ...(legacyPaidFg ? { color: legacyPaidFg, iconBackground: legacyPaidFg } : {}),
+  };
+  const unpaidSeed: VintagePaymentBadgeStyle = {
+    ...defaults.unpaid,
+    ...(legacyUnpaidBg ? { background: legacyUnpaidBg } : {}),
+    ...(legacyUnpaidFg ? { color: legacyUnpaidFg } : {}),
+  };
+
   return {
-    paidBackground: normalizeCssColor(input.paidBackground, defaults.paidBackground),
-    paidColor: normalizeCssColor(input.paidColor, defaults.paidColor),
-    unpaidBackground: normalizeCssColor(
-      input.unpaidBackground,
-      defaults.unpaidBackground,
-    ),
-    unpaidColor: normalizeCssColor(input.unpaidColor, defaults.unpaidColor),
+    paid: normalizePaymentBadge(input.paid, paidSeed),
+    pending: normalizePaymentBadge(input.pending, defaults.pending),
+    unpaid: normalizePaymentBadge(input.unpaid, unpaidSeed),
   };
 }
 
@@ -952,11 +1043,16 @@ export function vintagePicksChromeCssVars(
 ): Record<string, string> {
   const vars: Record<string, string> = {
     "--vp-row-logo-gap": `${content.rowLogoGapPx}px`,
-    "--vp-pay-paid-bg": content.payment.paidBackground,
-    "--vp-pay-paid-fg": content.payment.paidColor,
-    "--vp-pay-unpaid-bg": content.payment.unpaidBackground,
-    "--vp-pay-unpaid-fg": content.payment.unpaidColor,
   };
+  const payStates = ["paid", "pending", "unpaid"] as const;
+  for (const state of payStates) {
+    const badge = content.payment[state];
+    vars[`--vp-pay-${state}-bg`] = badge.background;
+    vars[`--vp-pay-${state}-fg`] = badge.color;
+    vars[`--vp-pay-${state}-border`] = badge.borderColor;
+    vars[`--vp-pay-${state}-icon-bg`] = badge.iconBackground;
+    vars[`--vp-pay-${state}-icon-fg`] = badge.iconColor;
+  }
   const keys = Object.keys(content.actions) as (keyof VintagePicksActionButtons)[];
   for (const key of keys) {
     const style = content.actions[key];
