@@ -977,53 +977,82 @@ button.v-picks__board-body:disabled {
   background: var(--vp-muted);
 }
 
-.v-picks__pay {
+/*
+ * Payment status badge (Paid / Pending / Unpaid) — beside entry name on
+ * desktop, under it on mobile. Colors from CMS CSS vars.
+ */
+.v-picks__entry {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  min-width: 0;
+}
+
+.v-picks__pay-badge {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
-  min-height: 28px;
-  padding: 0 8px;
-  border: 1px solid transparent;
-  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
-  font-size: 11px;
+  gap: 5px;
+  box-sizing: border-box;
+  max-width: 100%;
+  min-height: 22px;
+  padding: 2px 9px 2px 4px;
+  border: 1px solid var(--vp-pay-badge-border, #9ca3af);
+  border-radius: 999px;
+  background: var(--vp-pay-badge-bg, #e5e7eb);
+  color: var(--vp-pay-badge-fg, #374151);
+  font-family: var(--v-font-body, Arial, Helvetica, sans-serif);
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
-.v-picks__pay--paid {
-  background: var(--vp-pay-paid-bg, #dcfce7);
-  color: var(--vp-pay-paid-fg, #166534);
-  border-color: color-mix(in srgb, var(--vp-pay-paid-fg, #166534) 35%, transparent);
+.v-picks__pay-badge--paid {
+  --vp-pay-badge-bg: var(--vp-pay-paid-bg, #dcfce7);
+  --vp-pay-badge-fg: var(--vp-pay-paid-fg, #166534);
+  --vp-pay-badge-border: var(--vp-pay-paid-border, #86efac);
+  --vp-pay-badge-icon-bg: var(--vp-pay-paid-icon-bg, #166534);
+  --vp-pay-badge-icon-fg: var(--vp-pay-paid-icon-fg, #ffffff);
 }
 
-/*
- * Unpaid / pending submitted: open dashed ring (“still on the tab”).
- * Distinct from the solid green paid check without looking like an error.
- */
-.v-picks__pay--due {
-  background: color-mix(in srgb, var(--vp-ink) 4%, transparent);
-  color: color-mix(in srgb, var(--vp-ink) 55%, transparent);
-  border-color: color-mix(in srgb, var(--vp-ink) 35%, transparent);
-  border-style: dashed;
+.v-picks__pay-badge--pending {
+  --vp-pay-badge-bg: var(--vp-pay-pending-bg, #f9fafb);
+  --vp-pay-badge-fg: var(--vp-pay-pending-fg, #4b5563);
+  --vp-pay-badge-border: var(--vp-pay-pending-border, #d1d5db);
+  --vp-pay-badge-icon-bg: var(--vp-pay-pending-icon-bg, #d1d5db);
+  --vp-pay-badge-icon-fg: var(--vp-pay-pending-icon-fg, #374151);
 }
 
-/* Non-submitted rows: no payment mark. */
-.v-picks__pay--blank {
-  background: transparent;
-  border-color: transparent;
-  color: transparent;
+.v-picks__pay-badge--unpaid {
+  --vp-pay-badge-bg: var(--vp-pay-unpaid-bg, #e5e7eb);
+  --vp-pay-badge-fg: var(--vp-pay-unpaid-fg, #374151);
+  --vp-pay-badge-border: var(--vp-pay-unpaid-border, #9ca3af);
+  --vp-pay-badge-icon-bg: var(--vp-pay-unpaid-icon-bg, #9ca3af);
+  --vp-pay-badge-icon-fg: var(--vp-pay-unpaid-icon-fg, #ffffff);
+  padding-left: 9px;
 }
 
-/* Icon-only pay mark (Paid column desktop / mobile). */
-.v-picks__pay--icon {
-  width: 28px;
-  min-width: 28px;
-  max-width: 28px;
-  height: 28px;
-  min-height: 28px;
-  padding: 0;
+.v-picks__pay-badge__icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--vp-pay-badge-icon-bg);
+  color: var(--vp-pay-badge-icon-fg);
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.v-picks__pay-badge__caption {
+  padding-right: 2px;
 }
 
 /* Compact status square (mobile): icon only, fixed chip. */
@@ -1556,12 +1585,13 @@ button.v-picks__board-body:disabled {
   }
 
   /*
-   * Even columns: Entry flexes; Status / Paid / FF / Champ / Actions share
-   * remaining width so content isn’t packed to the right edge.
+   * Even columns: Entry flexes; Status / FF / Champ / Actions share remaining
+   * width so content isn’t packed to the right edge. Payment badge sits under
+   * the entry name (not its own column).
    */
   .v-picks__cards {
-    --vp-card-cols: minmax(4rem, 1.05fr) minmax(2rem, 0.55fr) minmax(2rem, 0.55fr)
-      minmax(3rem, 0.9fr) minmax(2.5rem, 0.75fr) minmax(3.25rem, 0.9fr);
+    --vp-card-cols: minmax(4.5rem, 1.15fr) minmax(2.5rem, 0.7fr) minmax(3.25rem, 0.95fr)
+      minmax(2.75rem, 0.8fr) minmax(3.5rem, 0.95fr);
     gap: 0;
   }
 
@@ -1627,6 +1657,14 @@ button.v-picks__board-body:disabled {
     width: 100%;
   }
 
+  .v-picks__card-row .v-picks__entry {
+    justify-self: stretch;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    min-width: 0;
+  }
+
   .v-picks__card-row .v-picks__entry-name {
     justify-self: stretch;
     min-width: 0;
@@ -1635,6 +1673,11 @@ button.v-picks__board-body:disabled {
     white-space: nowrap;
     font-size: 13px;
     text-align: left;
+  }
+
+  .v-picks__card-row .v-picks__pay-badge {
+    font-size: 11px;
+    min-height: 20px;
   }
 
   /*
@@ -1683,8 +1726,6 @@ button.v-picks__board-body:disabled {
     height: 39px;
   }
 
-  .v-picks__card-row .v-picks__pay--icon,
-  .v-picks__card-row .v-picks__pay--blank,
   .v-picks__card-row .v-picks__status--square {
     justify-self: center;
   }
