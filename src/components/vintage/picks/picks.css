@@ -1587,12 +1587,17 @@
     text-align: left;
   }
 
-  /* Final Four: 2×2 (slot order TL, BL, TR, BR → place columns explicitly) */
+  /*
+   * Final Four: 2×2 (slot order TL, BL, TR, BR → place columns explicitly).
+   * Tracks and cells must share --vs-ff-size. Hardcoded 26px tracks left
+   * min-width/min-height at the CMS tile size (~32px), so cells overlapped
+   * and painted over adjacent finalist borders.
+   */
   .v-picks__card-row .v-picks__ff {
     display: grid;
-    grid-template-columns: 26px 26px;
-    grid-template-rows: 26px 26px;
-    gap: 2px;
+    grid-template-columns: repeat(2, var(--vs-ff-size, 34px));
+    grid-template-rows: repeat(2, var(--vs-ff-size, 34px));
+    gap: 3px;
     justify-self: center;
   }
 
@@ -1610,8 +1615,12 @@
   }
 
   .v-picks__card-row .v-picks__ff-cell {
-    width: 26px;
-    height: 26px;
+    width: var(--vs-ff-size, 34px);
+    height: var(--vs-ff-size, 34px);
+    min-width: var(--vs-ff-size, 34px);
+    min-height: var(--vs-ff-size, 34px);
+    max-width: var(--vs-ff-size, 34px);
+    max-height: var(--vs-ff-size, 34px);
   }
 
   /* Champ ≈ 1.5× a Final Four cell */
