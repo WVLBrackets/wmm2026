@@ -148,9 +148,11 @@ const result = await sql`SELECT * FROM users WHERE id = ${userId}`;
 | **GitHub** | Source control, CI/CD integration |
 
 **Environments:**
-- `production` - Live site
-- `preview` - Branch deployments (staging)
+- `production` - Live site (`main` branch)
+- `preview` - Staging site (`staging` branch)
 - `development` - Local development
+
+**Vercel Git deploys (`vercel.json`):** only `main` and `staging` create deployments. Feature / cloud-agent / Dependabot branches do **not** get Preview builds (avoids unused build waste). Review those branches via PR diff, then merge to `staging` (or run locally). The deny pattern must be `"**": false` (not `"*"`) so slash-containing branch names like `cursor/…` are matched.
 
 ---
 
@@ -1370,9 +1372,11 @@ Tests run automatically via GitHub Actions:
 **Workflows:**
 | Workflow | Trigger | Scope |
 |----------|---------|-------|
-| `test-smoke.yml` | Push to staging | Smoke tests only |
-| `test-full-regression.yml` | Manual / PR merge | All tests, all browsers |
-| `test-pr.yml` | Pull request | Smoke + API + Security |
+| `test-smoke.yml` | Manual only | Smoke tests |
+| `test-full-regression.yml` | Manual only | All tests, all browsers |
+| `test-pr.yml` | **Paused** — manual only until QA is rewritten for vintage UI | Smoke + API + Security |
+
+> **Pause note (2026-10-26):** Automated PR checks in `test-pr.yml` are disabled (`workflow_dispatch` only). Re-enable the commented `pull_request` trigger when Playwright suites match the current product.
 
 **Parallel Execution:**
 ```yaml
@@ -1675,6 +1679,7 @@ Cache appropriate responses:
 | 2026-02-22 | **Test Updates:** Migrated E2E tests to use data-testid locators (sign-out.spec.ts, bracket-full-workflow.spec.ts, bracket-interaction.spec.ts); Added data-testid to Testing Checklist | QA Engineer |
 | 2026-02-22 | **Responsive Test ID Standard:** Formalized requirement for unique `-desktop` / `-mobile` suffixes on responsive elements; Updated test usage examples in Section 7.7 | QA Engineer |
 | 2026-04-04 | **Portfolio scope:** Document applies to all org applications; linked Base App Requirements + checklist; widened “How to Use” (apply relevant sections); configuration §10 rewritten—**no silent fallbacks** as standard; WMM fallbacks noted as optional future hardening; generalized architecture examples and module reference | Architect |
+| 2026-10-26 | **Vercel deploys:** `vercel.json` allows Git deployments only for `main` and `staging` (deny pattern `"**"` so `cursor/…` branches match). **CI:** `test-pr.yml` automated PR QA paused (manual `workflow_dispatch` only) until Playwright suites match vintage UI | Architect |
 
 ---
 
