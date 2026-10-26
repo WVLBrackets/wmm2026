@@ -18,7 +18,7 @@ The homepage uses `force-dynamic` and private/no-store response headers. Primary
 
 Production uses a dedicated `vintage-content-production` Neon branch (`br-divine-salad-ad5eiaj7`) in the existing `lively-unit-34313220` project. The provider project retains its legacy Preview name; the production CMS branch and endpoint are separate from both the app database and the feature Preview CMS branch.
 
-The production branch was copied from the working `vintage-content-preview` branch (`br-shy-thunder-adxk07yz`) after the user authorized the private production release. It includes the published edition and countdown, draft, revision history, and inherited `vintage-homepage-media` bucket. Its application role is `vintage_production_app`, with the required grants on the three vintage tables. Its storage credential is newly issued and anchored to the production CMS branch. Neither bracket data nor existing application database settings are modified. No bracket initializer or production schema migration runs during release.
+The production branch was copied from the working `vintage-content-preview` branch (`br-shy-thunder-adxk07yz`) after the user authorized the private production release. It includes the published edition and countdown, draft, and inherited `vintage-homepage-media` bucket. Its application role is `vintage_production_app`, with the required grants on the three vintage tables. Its storage credential is newly issued and anchored to the production CMS branch. Neither bracket data nor existing application database settings are modified. No bracket initializer or production schema migration runs during release.
 
 Set the following variables only in the matching Vercel environment. Production and feature Preview use different database endpoints and image credentials.
 
@@ -36,10 +36,10 @@ The production CMS role and image credential were verified with the actual appli
 
 Open `/vintage/admin` while signed in as the primary administrator. Edit masthead, toolbar/theme, the three home cards, explore band, announcements, tipoff countdown, media, and footer. All mutations require server-side primary-admin authorization, CSRF validation, and rate limiting.
 
-- **Save draft** persists a new revision while retaining the last published edition.
+- **Save draft** updates the draft while retaining the last published edition. No revision history is kept.
 - **Preview saved draft** opens the primary-admin-only draft page.
 - **Publish homepage** updates the new experience seen only by the primary administrator. It does not alter the original homepage shown to everyone else.
-- **Restore as draft** retrieves an older revision without publishing it.
+- **CMS export / import** on the Home admin desk downloads or applies a full `vintage_homepage` package (draft + published, including Guidebook / HoF / Standings / Picks sidecars). Import previews every changed field and requires confirm. Use this to promote local CMS values to Staging/Prod; code deploy alone does not move Neon CMS rows. Image URLs are not remapped across buckets.
 - Optimistic versions reject stale edits rather than overwriting newer saves.
 - Images accept JPEG, PNG, and WebP under 3 MB with validated signatures and required alt text. Image assets are public-read even while draft page copy stays private. Uploads use unique immutable keys; failed metadata saves attempt to remove their new object.
 
@@ -49,7 +49,7 @@ Excel workbook links live on the Excel Downloads home card (not a separate page 
 
 ## Validation and release
 
-`npm run test:vintage` covers schema validation, unsafe URLs, exact primary identity, availability flags, database isolation, safe error messages, and draft/publication/revision behavior in isolated SQL tests.
+`npm run test:vintage` covers schema validation, unsafe URLs, exact primary identity, availability flags, database isolation, safe error messages, and draft/publication behavior in isolated SQL tests.
 
 `npm run test:vintage:browser` starts a local server. It checks signed-out and ordinary users, another configured admin, the primary administrator, direct-route/API denial, no toggles or query overrides, no-store headers, responsive layout, countdown timezone conversion, pending workbooks, and editor save/publish contracts. HTTP storage is mocked in UI contract tests; SQL behavior is checked separately. The explicit test subprocess preload stubs Sheets failures and blocks other external requests, so the old homepage exercises its existing fallback without contacting Google or any live app database.
 
@@ -119,7 +119,7 @@ The following legacy document fields are stripped on normalize and are no longer
 
 Primary-admin visitors see a vintage **Tournament Handbook** at `/info` (same gate as the homepage). Everyone else still gets the legacy Sheets-backed Info page.
 
-- **CMS:** Handbook JSON is stored as a `__infoHandbook` sidecar on the existing `vintage_homepage` draft/published row (the app role cannot create new tables). Types in `src/lib/vintage/infoContent.ts`. Handbook revisions are tagged `{ kind: "info", doc }` in `vintage_homepage_revisions`. Homepage saves preserve the sidecar.
+- **CMS:** Handbook JSON is stored as a `__infoHandbook` sidecar on the existing `vintage_homepage` draft/published row (the app role cannot create new tables). Types in `src/lib/vintage/infoContent.ts`. Homepage saves preserve the sidecar.
 - **Editor:** `/vintage/admin/info` (preview `/vintage/admin/info/preview`) with left-rail section index. Draft / publish / restore mirrors the homepage editor. On-page gears deep-link with `?focus=`. Linked from the homepage editor desk.
 - **Shared chrome:** `VintageShell` (toolbar, masthead, footer, theme) from the **published homepage** content.
 - **Shared tipoff deadline:** Quick-facts deadline formats `tournament.countdownAt` from the homepage CMS (Tournament & countdown). Not duplicated in the handbook editor; not from Google Sheets.

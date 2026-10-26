@@ -24,6 +24,7 @@ import {
 import { getAdvancementResultTone, getChampionKeyTone } from '@/lib/fullBracket/keyPickResultStyles';
 import { fullBracketDebugOutline } from '@/lib/fullBracket/fullBracketViewChrome';
 import { filterTieBreakerIntegerString } from '@/lib/bracketTieBreakerHint';
+import { formatBracketPreviewPickAccessibleName } from '@/lib/pickResultChrome';
 
 export type { FullBracketSizeMode } from '@/lib/fullBracket/fullBracketGeometry';
 
@@ -97,6 +98,11 @@ function TeamRow({
   }
 
   const highlighted = Boolean(isWinner || pickResultTone);
+  const accessibleName = formatBracketPreviewPickAccessibleName(
+    team.seed,
+    team.name,
+    pickResultTone,
+  );
 
   return (
     <div
@@ -105,8 +111,10 @@ function TeamRow({
       } ${onClick ? 'cursor-pointer select-none hover:border-gray-500' : ''}`}
       style={{ height: `${heightPx}px`, width: widthPx ? `${widthPx}px` : undefined, fontSize: `${fontSizePx ?? 12}px` }}
       onClick={onClick}
-      role={onClick ? 'button' : undefined}
+      role={onClick ? 'button' : 'img'}
       tabIndex={onClick ? 0 : undefined}
+      aria-label={accessibleName}
+      title={accessibleName}
       onKeyDown={
         onClick
           ? (event) => {
@@ -118,11 +126,22 @@ function TeamRow({
           : undefined
       }
     >
-      <span className="font-bold">#{team.seed}</span>
+      <span className="font-bold" aria-hidden>
+        #{team.seed}
+      </span>
       {team.logo && (
-        <Image src={team.logo} alt={team.name} width={12} height={12} className="h-3 w-3 flex-shrink-0 object-contain" unoptimized />
+        <Image
+          src={team.logo}
+          alt=""
+          width={12}
+          height={12}
+          className="h-3 w-3 flex-shrink-0 object-contain"
+          unoptimized
+        />
       )}
-      <span className="truncate">{team.name}</span>
+      <span className="truncate" aria-hidden>
+        {team.name}
+      </span>
     </div>
   );
 }

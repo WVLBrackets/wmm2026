@@ -1,0 +1,8126 @@
+{
+  "teamLogos": {
+    "Auburn": "/logos/teams/2.png",
+    "Arkansas": "/logos/teams/8.png",
+    "Arizona State": "/logos/teams/9.png",
+    "Arizona": "/logos/teams/12.png",
+    "San Diego State": "/logos/teams/21.png",
+    "UCLA": "/logos/teams/26.png",
+    "UC San Diego": "/logos/teams/28.png",
+    "USC": "/logos/teams/30.png",
+    "Colorado State": "/logos/teams/36.png",
+    "Colorado": "/logos/teams/38.png",
+    "Connecticut": "/logos/teams/41.png",
+    "Hartford": "/logos/teams/42.png",
+    "Yale": "/logos/teams/43.png",
+    "Georgetown": "/logos/teams/46.png",
+    "Florida State": "/logos/teams/52.png",
+    "Florida": "/logos/teams/57.png",
+    "Georgia Tech": "/logos/teams/59.png",
+    "Georgia": "/logos/teams/61.png",
+    "Iowa State": "/logos/teams/66.png",
+    "Boise State": "/logos/teams/68.png",
+    "Northwestern": "/logos/teams/77.png",
+    "Indiana": "/logos/teams/84.png",
+    "Notre Dame": "/logos/teams/87.png",
+    "Murray State": "/logos/teams/93.png",
+    "Kentucky": "/logos/teams/96.png",
+    "Louisville": "/logos/teams/97.png",
+    "LSU": "/logos/teams/99.png",
+    "Maryland": "/logos/teams/120.png",
+    "Michigan State": "/logos/teams/127.png",
+    "Michigan": "/logos/teams/130.png",
+    "Minnesota": "/logos/teams/135.png",
+    "Missouri": "/logos/teams/142.png",
+    "Ole Miss": "/logos/teams/145.png",
+    "Montana": "/logos/teams/149.png",
+    "Duke": "/logos/teams/150.png",
+    "NC State": "/logos/teams/152.png",
+    "North Carolina": "/logos/teams/153.png",
+    "Creighton": "/logos/teams/156.png",
+    "Nebraska": "/logos/teams/158.png",
+    "Princeton": "/logos/teams/163.png",
+    "New Mexico": "/logos/teams/167.png",
+    "Syracuse": "/logos/teams/183.png",
+    "Ohio State": "/logos/teams/194.png",
+    "Ohio": "/logos/teams/195.png",
+    "Oklahoma State": "/logos/teams/197.png",
+    "Oral Roberts": "/logos/teams/198.png",
+    "Oklahoma": "/logos/teams/201.png",
+    "Oregon State": "/logos/teams/204.png",
+    "Penn State": "/logos/teams/213.png",
+    "Pennsylvania": "/logos/teams/219.png",
+    "Villanova": "/logos/teams/222.png",
+    "Clemson": "/logos/teams/228.png",
+    "Charleston": "/logos/teams/232.png",
+    "Memphis": "/logos/teams/235.png",
+    "Vanderbilt": "/logos/teams/238.png",
+    "Baylor": "/logos/teams/239.png",
+    "Texas A&M": "/logos/teams/245.png",
+    "Houston": "/logos/teams/248.png",
+    "Texas": "/logos/teams/251.png",
+    "BYU": "/logos/teams/252.png",
+    "James Madison": "/logos/teams/256.png",
+    "Virginia": "/logos/teams/258.png",
+    "Virginia Tech": "/logos/teams/259.png",
+    "Vermont": "/logos/teams/261.png",
+    "Washington": "/logos/teams/264.png",
+    "Washington State": "/logos/teams/265.png",
+    "Marquette": "/logos/teams/269.png",
+    "Wisconsin": "/logos/teams/275.png",
+    "Marshall": "/logos/teams/276.png",
+    "West Virginia": "/logos/teams/277.png",
+    "Utah State": "/logos/teams/328.png",
+    "Alabama": "/logos/teams/333.png",
+    "Mississippi State": "/logos/teams/344.png",
+    "Illinois": "/logos/teams/356.png",
+    "Abilene Christian": "/logos/teams/2000.png",
+    "Bucknell": "/logos/teams/2083.png",
+    "Buffalo": "/logos/teams/2084.png",
+    "Butler": "/logos/teams/2086.png",
+    "Cincinnati": "/logos/teams/2132.png",
+    "Colgate": "/logos/teams/2142.png",
+    "Davidson": "/logos/teams/2166.png",
+    "Drake": "/logos/teams/2181.png",
+    "Florida Atlantic": "/logos/teams/2226.png",
+    "Gonzaga": "/logos/teams/2250.png",
+    "Grand Canyon": "/logos/teams/2253.png",
+    "Iowa": "/logos/teams/2294.png",
+    "Kansas": "/logos/teams/2305.png",
+    "Kansas State": "/logos/teams/2306.png",
+    "Liberty": "/logos/teams/2335.png",
+    "Loyola Chicago": "/logos/teams/2350.png",
+    "McNeese": "/logos/teams/2377.png",
+    "UMBC": "/logos/teams/2378.png",
+    "Miami": "/logos/teams/2390.png",
+    "Omaha": "/logos/teams/2437.png",
+    "Nevada": "/logos/teams/2440.png",
+    "Oakland": "/logos/teams/2473.png",
+    "Oregon": "/logos/teams/2483.png",
+    "Providence": "/logos/teams/2507.png",
+    "Purdue": "/logos/teams/2509.png",
+    "SMU": "/logos/teams/2567.png",
+    "South Carolina": "/logos/teams/2579.png",
+    "St. John's": "/logos/teams/2599.png",
+    "Saint Mary's": "/logos/teams/2608.png",
+    "TCU": "/logos/teams/2628.png",
+    "Tennessee": "/logos/teams/2633.png",
+    "Texas Tech": "/logos/teams/2641.png",
+    "VCU": "/logos/teams/2670.png",
+    "Wichita State": "/logos/teams/2724.png",
+    "Wofford": "/logos/teams/2747.png",
+    "Xavier": "/logos/teams/2752.png"
+  },
+  "day": "Final",
+  "entries": [
+    {
+      "rank": 1,
+      "player": "#DOGE Patrolers",
+      "points": 156,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Florida",
+      "tb": 154,
+      "paid": true
+    },
+    {
+      "rank": 2,
+      "player": "Creig Veldhuizen 1",
+      "points": 155,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Florida",
+      "tb": 152,
+      "paid": true
+    },
+    {
+      "rank": 3,
+      "player": "Tim Roche 4",
+      "points": 152,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Florida",
+      "tb": 153,
+      "paid": true
+    },
+    {
+      "rank": 4,
+      "player": "Joey Frontczak 4",
+      "points": 151,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Florida",
+      "tb": 140,
+      "paid": true
+    },
+    {
+      "rank": 5,
+      "player": "Mike Gleason",
+      "points": 151,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Florida",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 6,
+      "player": "Rafael Barretto",
+      "points": 150,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Florida",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 7,
+      "player": "Lou Shubin 1",
+      "points": 148,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 8,
+      "player": "Beth White",
+      "points": 148,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Florida",
+      "tb": 146,
+      "paid": true
+    },
+    {
+      "rank": 9,
+      "player": "Kevan \"Coach K\" Shafizadeh I",
+      "points": 147,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 136,
+      "paid": true
+    },
+    {
+      "rank": 10,
+      "player": "AnnieM 1",
+      "points": 146,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Florida",
+      "tb": 147,
+      "paid": true
+    },
+    {
+      "rank": 11,
+      "player": "steve ciano",
+      "points": 145,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Florida",
+      "tb": 159,
+      "paid": true
+    },
+    {
+      "rank": 12,
+      "player": "Brook Evans 2",
+      "points": 145,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Alabama"
+      ],
+      "champion": "Florida",
+      "tb": 165,
+      "paid": true
+    },
+    {
+      "rank": 13,
+      "player": "JI #01",
+      "points": 144,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 126,
+      "paid": true
+    },
+    {
+      "rank": 14,
+      "player": "Krishna Prasad",
+      "points": 144,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Florida",
+      "tb": 139,
+      "paid": true
+    },
+    {
+      "rank": 15,
+      "player": "Jean Luc and Fat Bastard",
+      "points": 143,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 136,
+      "paid": true
+    },
+    {
+      "rank": 16,
+      "player": "ava kulas 1",
+      "points": 142,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 144,
+      "paid": true
+    },
+    {
+      "rank": 17,
+      "player": "Christian Ciciarelli #1",
+      "points": 142,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Florida",
+      "tb": 154,
+      "paid": true
+    },
+    {
+      "rank": 18,
+      "player": "Rafi Maljian 2",
+      "points": 140,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 152,
+      "paid": true
+    },
+    {
+      "rank": 19,
+      "player": "#A Tranny Keyed My Tesla",
+      "points": 140,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 154,
+      "paid": true
+    },
+    {
+      "rank": 20,
+      "player": "Jude Rolfes",
+      "points": 139,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 130,
+      "paid": true
+    },
+    {
+      "rank": 21,
+      "player": "Kevan \"Coach K\" Shafizadeh II",
+      "points": 139,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 136,
+      "paid": true
+    },
+    {
+      "rank": 21,
+      "player": "TifSeb",
+      "points": 139,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Florida",
+      "tb": 136,
+      "paid": true
+    },
+    {
+      "rank": 23,
+      "player": "Kirk Sibley",
+      "points": 139,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 24,
+      "player": "Mims",
+      "points": 139,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Alabama"
+      ],
+      "champion": "Florida",
+      "tb": 163,
+      "paid": true
+    },
+    {
+      "rank": 25,
+      "player": "Calvin Gleason",
+      "points": 138,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Florida",
+      "tb": 162,
+      "paid": true
+    },
+    {
+      "rank": 26,
+      "player": "Gerry Schneider GW2",
+      "points": 137,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Florida",
+      "tb": 151,
+      "paid": true
+    },
+    {
+      "rank": 27,
+      "player": "Magoo45",
+      "points": 137,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Florida",
+      "tb": 195,
+      "paid": true
+    },
+    {
+      "rank": 28,
+      "player": "Harvey Abenes",
+      "points": 136,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Wisconsin",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Florida",
+      "tb": 140,
+      "paid": true
+    },
+    {
+      "rank": 29,
+      "player": "David Arreguin 2",
+      "points": 136,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 152,
+      "paid": true
+    },
+    {
+      "rank": 29,
+      "player": "Kyle Anema #2",
+      "points": 136,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Florida",
+      "tb": 152,
+      "paid": true
+    },
+    {
+      "rank": 31,
+      "player": "Patrick Corcoran",
+      "points": 136,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 176,
+      "paid": true
+    },
+    {
+      "rank": 32,
+      "player": "Brad Morris",
+      "points": 135,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 136,
+      "paid": true
+    },
+    {
+      "rank": 33,
+      "player": "Brian Ochipinti1 3",
+      "points": 135,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 137,
+      "paid": true
+    },
+    {
+      "rank": 34,
+      "player": "Brett Barry 3",
+      "points": 135,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 152,
+      "paid": true
+    },
+    {
+      "rank": 35,
+      "player": "Preston Mezger",
+      "points": 135,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Tennessee"
+      ],
+      "champion": "Florida",
+      "tb": 163,
+      "paid": true
+    },
+    {
+      "rank": 36,
+      "player": "John Ferguson 2",
+      "points": 135,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Clemson"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 172,
+      "paid": true
+    },
+    {
+      "rank": 37,
+      "player": "Gerry Schneider GW1",
+      "points": 134,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 148,
+      "paid": true
+    },
+    {
+      "rank": 38,
+      "player": "Michael Orendain 1",
+      "points": 134,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Florida",
+      "tb": 163,
+      "paid": true
+    },
+    {
+      "rank": 39,
+      "player": "Eddie Lynn v2",
+      "points": 133,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 135,
+      "paid": true
+    },
+    {
+      "rank": 40,
+      "player": "Pito 02",
+      "points": 133,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 137,
+      "paid": true
+    },
+    {
+      "rank": 41,
+      "player": "Brett Barry 2",
+      "points": 133,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 139,
+      "paid": true
+    },
+    {
+      "rank": 42,
+      "player": "ClemsonWestWhite",
+      "points": 133,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 160,
+      "paid": true
+    },
+    {
+      "rank": 42,
+      "player": "Dom - Daryl",
+      "points": 133,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 160,
+      "paid": true
+    },
+    {
+      "rank": 44,
+      "player": "JSC III",
+      "points": 132,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 45,
+      "player": "Ainsley Tria",
+      "points": 132,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 110,
+      "paid": true
+    },
+    {
+      "rank": 46,
+      "player": "Chad Sawinski 1",
+      "points": 132,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Alabama"
+      ],
+      "champion": "Florida",
+      "tb": 160,
+      "paid": true
+    },
+    {
+      "rank": 47,
+      "player": "Clint T 3",
+      "points": 132,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 165,
+      "paid": true
+    },
+    {
+      "rank": 48,
+      "player": "Brad McKinzie",
+      "points": 132,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Alabama"
+      ],
+      "champion": "Florida",
+      "tb": 167,
+      "paid": true
+    },
+    {
+      "rank": 49,
+      "player": "Charlie Jabara",
+      "points": 131,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 127,
+      "paid": true
+    },
+    {
+      "rank": 50,
+      "player": "jdb 2",
+      "points": 131,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Houston"
+      ],
+      "champion": "Auburn",
+      "tb": 135,
+      "paid": true
+    },
+    {
+      "rank": 51,
+      "player": "Joey Frontczak 3",
+      "points": 131,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 52,
+      "player": "Matt Hauge 6",
+      "points": 131,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 146,
+      "paid": true
+    },
+    {
+      "rank": 53,
+      "player": "Heather Mayfield",
+      "points": 130,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Alabama"
+      ],
+      "champion": "Florida",
+      "tb": 121,
+      "paid": true
+    },
+    {
+      "rank": 54,
+      "player": "Psbracket",
+      "points": 130,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 55,
+      "player": "CMO",
+      "points": 130,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 149,
+      "paid": true
+    },
+    {
+      "rank": 56,
+      "player": "AZFIREMAN ….. 2",
+      "points": 130,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Tennessee"
+      ],
+      "champion": "Florida",
+      "tb": 164,
+      "paid": true
+    },
+    {
+      "rank": 57,
+      "player": "Erik Librader #1",
+      "points": 129,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Florida",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 58,
+      "player": "Tim Roche 2",
+      "points": 128,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 156,
+      "paid": true
+    },
+    {
+      "rank": 59,
+      "player": "Jimenez 10",
+      "points": 128,
+      "tbDiff": 0,
+      "finalFour": [
+        "North Carolina",
+        "Florida",
+        "Wisconsin",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Florida",
+      "tb": 181,
+      "paid": true
+    },
+    {
+      "rank": 60,
+      "player": "Don Mayfield",
+      "points": 127,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 148,
+      "paid": true
+    },
+    {
+      "rank": 61,
+      "player": "BMoran2",
+      "points": 127,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 163,
+      "paid": true
+    },
+    {
+      "rank": 62,
+      "player": "Clint T 1",
+      "points": 127,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 165,
+      "paid": true
+    },
+    {
+      "rank": 63,
+      "player": "Lou Shubin 2",
+      "points": 127,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 167,
+      "paid": true
+    },
+    {
+      "rank": 64,
+      "player": "Stella",
+      "points": 127,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 200,
+      "paid": true
+    },
+    {
+      "rank": 65,
+      "player": "Kahuna's Kooks",
+      "points": 126,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 143,
+      "paid": true
+    },
+    {
+      "rank": 66,
+      "player": "Matt Hauge 10",
+      "points": 126,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 146,
+      "paid": true
+    },
+    {
+      "rank": 66,
+      "player": "Addison H.",
+      "points": 126,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Florida",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Florida",
+      "tb": 146,
+      "paid": true
+    },
+    {
+      "rank": 68,
+      "player": "Brook Evans 1",
+      "points": 126,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Florida",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 152,
+      "paid": true
+    },
+    {
+      "rank": 69,
+      "player": "JI #02",
+      "points": 125,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Arizona",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Tennessee"
+      ],
+      "champion": "Florida",
+      "tb": 126,
+      "paid": true
+    },
+    {
+      "rank": 70,
+      "player": "Andy Rah 1",
+      "points": 125,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 135,
+      "paid": true
+    },
+    {
+      "rank": 71,
+      "player": "Oscar F 2",
+      "points": 125,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 142,
+      "paid": true
+    },
+    {
+      "rank": 72,
+      "player": "Matt Hauge 7",
+      "points": 125,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 146,
+      "paid": true
+    },
+    {
+      "rank": 73,
+      "player": "Curran Pendergraft",
+      "points": 125,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 152,
+      "paid": true
+    },
+    {
+      "rank": 74,
+      "player": "#Dirty Dirty Martini Girl",
+      "points": 125,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 154,
+      "paid": true
+    },
+    {
+      "rank": 75,
+      "player": "Brian H.",
+      "points": 124,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Alabama"
+      ],
+      "champion": "Alabama",
+      "tb": 135,
+      "paid": true
+    },
+    {
+      "rank": 76,
+      "player": "X-Man 01",
+      "points": 124,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 147,
+      "paid": true
+    },
+    {
+      "rank": 77,
+      "player": "Rafi Maljian 1",
+      "points": 124,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 152,
+      "paid": true
+    },
+    {
+      "rank": 78,
+      "player": "Creig Veldhuizen 2",
+      "points": 124,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 155,
+      "paid": true
+    },
+    {
+      "rank": 79,
+      "player": "Chad Sawinski 2",
+      "points": 124,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 160,
+      "paid": true
+    },
+    {
+      "rank": 80,
+      "player": "colleen Arreguin",
+      "points": 124,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "BYU",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Tennessee"
+      ],
+      "champion": "Florida",
+      "tb": 162,
+      "paid": true
+    },
+    {
+      "rank": 81,
+      "player": "Eddie Lynn",
+      "points": 123,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Texas Tech",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Texas Tech",
+        "Houston"
+      ],
+      "champion": "Texas Tech",
+      "tb": 135,
+      "paid": true
+    },
+    {
+      "rank": 81,
+      "player": "jdb 1",
+      "points": 123,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Houston"
+      ],
+      "champion": "Auburn",
+      "tb": 135,
+      "paid": true
+    },
+    {
+      "rank": 83,
+      "player": "ellie g 3",
+      "points": 123,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Tennessee"
+      ],
+      "champion": "Florida",
+      "tb": 138,
+      "paid": true
+    },
+    {
+      "rank": 84,
+      "player": "Oscar F 1",
+      "points": 123,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 85,
+      "player": "Tony Pelosi 1",
+      "points": 123,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Alabama",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Alabama"
+      ],
+      "champion": "Florida",
+      "tb": 152,
+      "paid": true
+    },
+    {
+      "rank": 86,
+      "player": "ADS Night Night",
+      "points": 123,
+      "tbDiff": 0,
+      "finalFour": [
+        "Texas A&M",
+        "Florida",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Florida",
+      "tb": 169,
+      "paid": true
+    },
+    {
+      "rank": 87,
+      "player": "Beau",
+      "points": 122,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Wisconsin",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Florida",
+      "tb": 138,
+      "paid": true
+    },
+    {
+      "rank": 88,
+      "player": "Matt Hauge 1",
+      "points": 122,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 146,
+      "paid": true
+    },
+    {
+      "rank": 88,
+      "player": "Jennifer Parker 2",
+      "points": 122,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 110,
+      "paid": true
+    },
+    {
+      "rank": 90,
+      "player": "Hank Mayfield",
+      "points": 122,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Alabama",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Tennessee"
+      ],
+      "champion": "Florida",
+      "tb": 153,
+      "paid": true
+    },
+    {
+      "rank": 91,
+      "player": "Braxton Tria #2",
+      "points": 121,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 132,
+      "paid": true
+    },
+    {
+      "rank": 92,
+      "player": "Mike Bink - Corrected",
+      "points": 121,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 135,
+      "paid": true
+    },
+    {
+      "rank": 93,
+      "player": "ellie g 5",
+      "points": 121,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 138,
+      "paid": true
+    },
+    {
+      "rank": 94,
+      "player": "Brian Hodack 01",
+      "points": 121,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Gonzaga"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 111,
+      "paid": true
+    },
+    {
+      "rank": 94,
+      "player": "Pito 01",
+      "points": 121,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 96,
+      "player": "David Arreguin 3",
+      "points": 121,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 150,
+      "paid": true
+    },
+    {
+      "rank": 97,
+      "player": "Cameron Walts",
+      "points": 121,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Illinois"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 164,
+      "paid": true
+    },
+    {
+      "rank": 98,
+      "player": "Elstner 3",
+      "points": 120,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Tennessee"
+      ],
+      "champion": "Tennessee",
+      "tb": 142,
+      "paid": true
+    },
+    {
+      "rank": 99,
+      "player": "Jimenez ai 02",
+      "points": 120,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 168,
+      "paid": true
+    },
+    {
+      "rank": 100,
+      "player": "David Harrell",
+      "points": 119,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 130,
+      "paid": true
+    },
+    {
+      "rank": 101,
+      "player": "Jeff_F",
+      "points": 119,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 123,
+      "paid": true
+    },
+    {
+      "rank": 102,
+      "player": "Brian Ochipinti1 1",
+      "points": 119,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 137,
+      "paid": true
+    },
+    {
+      "rank": 103,
+      "player": "Christopher M. Giordano",
+      "points": 119,
+      "tbDiff": 0,
+      "finalFour": [
+        "Marquette",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 141,
+      "paid": true
+    },
+    {
+      "rank": 104,
+      "player": "Chad Walker",
+      "points": 119,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Houston"
+      ],
+      "champion": "Auburn",
+      "tb": 144,
+      "paid": true
+    },
+    {
+      "rank": 104,
+      "player": "Kip Brown 1",
+      "points": 119,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Michigan State",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 144,
+      "paid": true
+    },
+    {
+      "rank": 106,
+      "player": "#Elon Rescued My Granny",
+      "points": 119,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Alabama",
+        "Clemson"
+      ],
+      "finals": [
+        "Florida",
+        "Alabama"
+      ],
+      "champion": "Florida",
+      "tb": 154,
+      "paid": true
+    },
+    {
+      "rank": 107,
+      "player": "Micah Maljian",
+      "points": 119,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 157,
+      "paid": true
+    },
+    {
+      "rank": 108,
+      "player": "Michael Kulas 1",
+      "points": 119,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 158,
+      "paid": true
+    },
+    {
+      "rank": 109,
+      "player": "Rachel-UNT_1",
+      "points": 119,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 160,
+      "paid": true
+    },
+    {
+      "rank": 110,
+      "player": "Ant-man1",
+      "points": 119,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Kentucky"
+      ],
+      "finals": [
+        "Florida",
+        "Kentucky"
+      ],
+      "champion": "Florida",
+      "tb": 168,
+      "paid": true
+    },
+    {
+      "rank": 111,
+      "player": "Matt Hauge 9",
+      "points": 118,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 146,
+      "paid": true
+    },
+    {
+      "rank": 112,
+      "player": "#The Bracket of America",
+      "points": 118,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 154,
+      "paid": true
+    },
+    {
+      "rank": 113,
+      "player": "heshy bregman 4",
+      "points": 118,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Gonzaga"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 155,
+      "paid": true
+    },
+    {
+      "rank": 114,
+      "player": "Brian Britton",
+      "points": 118,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Alabama",
+        "Tennessee"
+      ],
+      "finals": [
+        "Auburn",
+        "Alabama"
+      ],
+      "champion": "Auburn",
+      "tb": 156,
+      "paid": true
+    },
+    {
+      "rank": 115,
+      "player": "Scott S 2",
+      "points": 118,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 158,
+      "paid": true
+    },
+    {
+      "rank": 116,
+      "player": "Mike Kulas 2",
+      "points": 118,
+      "tbDiff": 0,
+      "finalFour": [
+        "Texas A&M",
+        "Florida",
+        "Duke",
+        "Clemson"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 172,
+      "paid": true
+    },
+    {
+      "rank": 117,
+      "player": "Rafi Maljian 3",
+      "points": 117,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Auburn",
+      "tb": 137,
+      "paid": true
+    },
+    {
+      "rank": 118,
+      "player": "Matt Hauge 5",
+      "points": 117,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 146,
+      "paid": true
+    },
+    {
+      "rank": 119,
+      "player": "Scott Clifton",
+      "points": 117,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Michigan State",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 147,
+      "paid": true
+    },
+    {
+      "rank": 120,
+      "player": "Ed Melo MONT",
+      "points": 117,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Auburn",
+      "tb": 157,
+      "paid": true
+    },
+    {
+      "rank": 121,
+      "player": "AZFIREMAN …... 4",
+      "points": 117,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Tennessee"
+      ],
+      "champion": "Tennessee",
+      "tb": 171,
+      "paid": true
+    },
+    {
+      "rank": 122,
+      "player": "The Players Lounge",
+      "points": 116,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 138,
+      "paid": true
+    },
+    {
+      "rank": 123,
+      "player": "Elstner 2",
+      "points": 116,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 142,
+      "paid": true
+    },
+    {
+      "rank": 124,
+      "player": "Billy Bruin 2",
+      "points": 116,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 147,
+      "paid": true
+    },
+    {
+      "rank": 125,
+      "player": "Brook Evans 4",
+      "points": 116,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 160,
+      "paid": true
+    },
+    {
+      "rank": 126,
+      "player": "Brook Evans 5",
+      "points": 116,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 162,
+      "paid": true
+    },
+    {
+      "rank": 127,
+      "player": "Dan Mezger",
+      "points": 116,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Alabama",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Alabama"
+      ],
+      "champion": "Florida",
+      "tb": 163,
+      "paid": true
+    },
+    {
+      "rank": 128,
+      "player": "Jennifer Parker 1",
+      "points": 115,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 110,
+      "paid": true
+    },
+    {
+      "rank": 128,
+      "player": "Garrett Johnson 1",
+      "points": 115,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 146,
+      "paid": true
+    },
+    {
+      "rank": 130,
+      "player": "Lance Robles 1",
+      "points": 115,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Auburn",
+      "tb": 153,
+      "paid": true
+    },
+    {
+      "rank": 131,
+      "player": "Jack Woodard 2",
+      "points": 115,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 155,
+      "paid": true
+    },
+    {
+      "rank": 132,
+      "player": "Ant-man2",
+      "points": 115,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Kentucky"
+      ],
+      "finals": [
+        "Florida",
+        "Kentucky"
+      ],
+      "champion": "Florida",
+      "tb": 168,
+      "paid": true
+    },
+    {
+      "rank": 133,
+      "player": "Don Mulder",
+      "points": 114,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 140,
+      "paid": true
+    },
+    {
+      "rank": 133,
+      "player": "Nate O'Neil",
+      "points": 114,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Alabama",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Tennessee"
+      ],
+      "champion": "Florida",
+      "tb": 140,
+      "paid": true
+    },
+    {
+      "rank": 135,
+      "player": "Fai-3",
+      "points": 114,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Alabama",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Alabama"
+      ],
+      "champion": "Florida",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 136,
+      "player": "Ed Melo",
+      "points": 114,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Tennessee"
+      ],
+      "champion": "Florida",
+      "tb": 163,
+      "paid": true
+    },
+    {
+      "rank": 137,
+      "player": "Brett McCormick",
+      "points": 113,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Alabama",
+        "Kentucky"
+      ],
+      "finals": [
+        "Florida",
+        "Alabama"
+      ],
+      "champion": "Florida",
+      "tb": 126,
+      "paid": true
+    },
+    {
+      "rank": 137,
+      "player": "JI #03",
+      "points": 113,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 126,
+      "paid": true
+    },
+    {
+      "rank": 139,
+      "player": "Amar Joshi",
+      "points": 113,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Houston"
+      ],
+      "champion": "Auburn",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 140,
+      "player": "Christine McCormick",
+      "points": 113,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Florida",
+        "Arizona",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Florida",
+      "tb": 148,
+      "paid": true
+    },
+    {
+      "rank": 141,
+      "player": "DCP2",
+      "points": 113,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Alabama",
+        "Kentucky"
+      ],
+      "finals": [
+        "Florida",
+        "Kentucky"
+      ],
+      "champion": "Florida",
+      "tb": 155,
+      "paid": true
+    },
+    {
+      "rank": 142,
+      "player": "Jason Hines",
+      "points": 113,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Clemson"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 158,
+      "paid": true
+    },
+    {
+      "rank": 143,
+      "player": "Ant-man3",
+      "points": 113,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Kentucky"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 168,
+      "paid": true
+    },
+    {
+      "rank": 144,
+      "player": "Jimenez ai 01",
+      "points": 113,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 170,
+      "paid": true
+    },
+    {
+      "rank": 145,
+      "player": "Carson Wulf",
+      "points": 112,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Clemson"
+      ],
+      "finals": [
+        "Florida",
+        "Clemson"
+      ],
+      "champion": "Florida",
+      "tb": 140,
+      "paid": true
+    },
+    {
+      "rank": 146,
+      "player": "Christine F.",
+      "points": 112,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Kentucky"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 161,
+      "paid": true
+    },
+    {
+      "rank": 147,
+      "player": "Leo Kulas 2",
+      "points": 112,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Tennessee"
+      ],
+      "champion": "Florida",
+      "tb": 163,
+      "paid": true
+    },
+    {
+      "rank": 147,
+      "player": "Peter Bernstein",
+      "points": 112,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 163,
+      "paid": true
+    },
+    {
+      "rank": 149,
+      "player": "orlando gutierrez",
+      "points": 112,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Alabama",
+        "Tennessee"
+      ],
+      "finals": [
+        "Auburn",
+        "Alabama"
+      ],
+      "champion": "Auburn",
+      "tb": 178,
+      "paid": true
+    },
+    {
+      "rank": 150,
+      "player": "anniem 3",
+      "points": 111,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 132,
+      "paid": true
+    },
+    {
+      "rank": 151,
+      "player": "Andy Rah 2",
+      "points": 111,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 135,
+      "paid": true
+    },
+    {
+      "rank": 151,
+      "player": "Isaac M1",
+      "points": 111,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Michigan State",
+        "Houston"
+      ],
+      "champion": "Michigan State",
+      "tb": 135,
+      "paid": true
+    },
+    {
+      "rank": 153,
+      "player": "Adrian Arnakis",
+      "points": 111,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Wisconsin",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Wisconsin"
+      ],
+      "champion": "Florida",
+      "tb": 144,
+      "paid": true
+    },
+    {
+      "rank": 154,
+      "player": "David Arreguin",
+      "points": 111,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "St. John's",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 146,
+      "paid": true
+    },
+    {
+      "rank": 155,
+      "player": "Rob Simpson",
+      "points": 111,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 156,
+      "paid": true
+    },
+    {
+      "rank": 156,
+      "player": "Leo Kulas 1",
+      "points": 111,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Auburn",
+      "tb": 164,
+      "paid": true
+    },
+    {
+      "rank": 157,
+      "player": "Jimenez 06",
+      "points": 111,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 178,
+      "paid": true
+    },
+    {
+      "rank": 158,
+      "player": "Keith Anema",
+      "points": 110,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Alabama",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Tennessee"
+      ],
+      "champion": "Florida",
+      "tb": 120,
+      "paid": true
+    },
+    {
+      "rank": 159,
+      "player": "WLS Sr",
+      "points": 110,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Texas Tech",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Houston"
+      ],
+      "champion": "Auburn",
+      "tb": 138,
+      "paid": true
+    },
+    {
+      "rank": 160,
+      "player": "James Anema",
+      "points": 110,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "St. John's",
+        "Houston"
+      ],
+      "champion": "St. John's",
+      "tb": 143,
+      "paid": true
+    },
+    {
+      "rank": 161,
+      "player": "Zachary Carter",
+      "points": 110,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 144,
+      "paid": true
+    },
+    {
+      "rank": 162,
+      "player": "Karl Brown",
+      "points": 110,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 163,
+      "player": "Ad Mulder",
+      "points": 110,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Kentucky"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 146,
+      "paid": true
+    },
+    {
+      "rank": 164,
+      "player": "anniem 2",
+      "points": 110,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Texas Tech",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Michigan State",
+        "Houston"
+      ],
+      "champion": "Michigan State",
+      "tb": 157,
+      "paid": true
+    },
+    {
+      "rank": 165,
+      "player": "Cal Surfer 1",
+      "points": 110,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 158,
+      "paid": true
+    },
+    {
+      "rank": 165,
+      "player": "FarOutFarley3",
+      "points": 110,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 158,
+      "paid": true
+    },
+    {
+      "rank": 167,
+      "player": "Ed Melo LIV",
+      "points": 110,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 183,
+      "paid": true
+    },
+    {
+      "rank": 168,
+      "player": "Lilly Arreguin",
+      "points": 110,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "St. John's",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 185,
+      "paid": true
+    },
+    {
+      "rank": 169,
+      "player": "EJP",
+      "points": 109,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Alabama",
+        "UCLA"
+      ],
+      "finals": [
+        "Florida",
+        "Alabama"
+      ],
+      "champion": "Alabama",
+      "tb": 136,
+      "paid": true
+    },
+    {
+      "rank": 170,
+      "player": "ellie g 4",
+      "points": 109,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "St. John's",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 138,
+      "paid": true
+    },
+    {
+      "rank": 171,
+      "player": "Ryan Anema",
+      "points": 109,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 140,
+      "paid": true
+    },
+    {
+      "rank": 172,
+      "player": "Fai-Chalk",
+      "points": 109,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Auburn",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 172,
+      "player": "Fred Chang",
+      "points": 109,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 174,
+      "player": "Chad Sawinski_chalk",
+      "points": 109,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Auburn",
+      "tb": 155,
+      "paid": true
+    },
+    {
+      "rank": 175,
+      "player": "Bruce B 1",
+      "points": 109,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 164,
+      "paid": true
+    },
+    {
+      "rank": 176,
+      "player": "Erik Librader #2",
+      "points": 109,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "St. John's",
+      "tb": 165,
+      "paid": true
+    },
+    {
+      "rank": 177,
+      "player": "Travis Jabara",
+      "points": 108,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Michigan State",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 127,
+      "paid": true
+    },
+    {
+      "rank": 178,
+      "player": "Billy Bruin 1",
+      "points": 108,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Auburn",
+      "tb": 133,
+      "paid": true
+    },
+    {
+      "rank": 179,
+      "player": "Tony Pelosi 3",
+      "points": 108,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 135,
+      "paid": true
+    },
+    {
+      "rank": 180,
+      "player": "Matt Hauge 8",
+      "points": 108,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 146,
+      "paid": true
+    },
+    {
+      "rank": 181,
+      "player": "David Privett - 2",
+      "points": 107,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "St. John's",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 135,
+      "paid": true
+    },
+    {
+      "rank": 182,
+      "player": "Brian Ochipinti1 2",
+      "points": 107,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Auburn",
+      "tb": 137,
+      "paid": true
+    },
+    {
+      "rank": 183,
+      "player": "Gabriel Sevegnani 2",
+      "points": 107,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 144,
+      "paid": true
+    },
+    {
+      "rank": 183,
+      "player": "Joey Frontczak 1",
+      "points": 107,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 144,
+      "paid": true
+    },
+    {
+      "rank": 185,
+      "player": "Joey Frontczak 2",
+      "points": 107,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 186,
+      "player": "Matt Hauge 2",
+      "points": 107,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Arkansas",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Houston"
+      ],
+      "champion": "Auburn",
+      "tb": 146,
+      "paid": true
+    },
+    {
+      "rank": 187,
+      "player": "Ted Leland",
+      "points": 107,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Michigan State",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 158,
+      "paid": true
+    },
+    {
+      "rank": 188,
+      "player": "Tyson Arreguin",
+      "points": 107,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "St. John's",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 168,
+      "paid": true
+    },
+    {
+      "rank": 189,
+      "player": "PurdyRidesAgain",
+      "points": 106,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Florida",
+        "Arizona",
+        "Houston"
+      ],
+      "finals": [
+        "Iowa State",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 142,
+      "paid": true
+    },
+    {
+      "rank": 189,
+      "player": "Stephen Johnson 2",
+      "points": 106,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 142,
+      "paid": true
+    },
+    {
+      "rank": 191,
+      "player": "BMoran1",
+      "points": 106,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Michigan State",
+        "Houston"
+      ],
+      "champion": "Michigan State",
+      "tb": 158,
+      "paid": true
+    },
+    {
+      "rank": 191,
+      "player": "FarOutFarley2",
+      "points": 106,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 158,
+      "paid": true
+    },
+    {
+      "rank": 193,
+      "player": "Lou Shubin 3",
+      "points": 106,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Clemson"
+      ],
+      "finals": [
+        "Florida",
+        "Clemson"
+      ],
+      "champion": "Clemson",
+      "tb": 159,
+      "paid": true
+    },
+    {
+      "rank": 194,
+      "player": "Michael Orendain 2",
+      "points": 106,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Auburn",
+      "tb": 167,
+      "paid": true
+    },
+    {
+      "rank": 195,
+      "player": "Tom Corcoran-1",
+      "points": 105,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Michigan State",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 144,
+      "paid": true
+    },
+    {
+      "rank": 196,
+      "player": "Chris Massey",
+      "points": 105,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Gonzaga"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 157,
+      "paid": true
+    },
+    {
+      "rank": 196,
+      "player": "WLS Jr 2",
+      "points": 105,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Arizona",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Arizona"
+      ],
+      "champion": "Florida",
+      "tb": 157,
+      "paid": true
+    },
+    {
+      "rank": 198,
+      "player": "Fai-2",
+      "points": 104,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Texas Tech",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 199,
+      "player": "AZFIREMAN …... 1",
+      "points": 104,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 167,
+      "paid": true
+    },
+    {
+      "rank": 200,
+      "player": "Dylan Sawinski",
+      "points": 103,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 139,
+      "paid": true
+    },
+    {
+      "rank": 201,
+      "player": "Lauren&amp;Lucy",
+      "points": 103,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Arizona",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Houston"
+      ],
+      "champion": "Auburn",
+      "tb": 142,
+      "paid": true
+    },
+    {
+      "rank": 202,
+      "player": "Matt Hauge 4",
+      "points": 103,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Wisconsin",
+        "Gonzaga"
+      ],
+      "finals": [
+        "Florida",
+        "Gonzaga"
+      ],
+      "champion": "Florida",
+      "tb": 146,
+      "paid": true
+    },
+    {
+      "rank": 203,
+      "player": "Kasper J 01",
+      "points": 103,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Maryland",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Maryland",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 148,
+      "paid": true
+    },
+    {
+      "rank": 203,
+      "player": "Kasper J 02",
+      "points": 103,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Connecticut",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Connecticut",
+        "Houston"
+      ],
+      "champion": "Connecticut",
+      "tb": 148,
+      "paid": true
+    },
+    {
+      "rank": 205,
+      "player": "Andy Rah 3",
+      "points": 103,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Kansas",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 150,
+      "paid": true
+    },
+    {
+      "rank": 206,
+      "player": "Adam Drvenkar 5",
+      "points": 103,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 151,
+      "paid": true
+    },
+    {
+      "rank": 207,
+      "player": "Lance Robles 2",
+      "points": 103,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Arizona",
+        "Tennessee"
+      ],
+      "finals": [
+        "Auburn",
+        "Arizona"
+      ],
+      "champion": "Arizona",
+      "tb": 153,
+      "paid": true
+    },
+    {
+      "rank": 208,
+      "player": "Dom - Ben",
+      "points": 103,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 158,
+      "paid": true
+    },
+    {
+      "rank": 209,
+      "player": "Robert Arnakis",
+      "points": 103,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Auburn",
+      "tb": 168,
+      "paid": true
+    },
+    {
+      "rank": 210,
+      "player": "Elise Miranda",
+      "points": 102,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Clemson"
+      ],
+      "finals": [
+        "Auburn",
+        "Clemson"
+      ],
+      "champion": "Clemson",
+      "tb": 135,
+      "paid": true
+    },
+    {
+      "rank": 211,
+      "player": "JCAN 7",
+      "points": 102,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Florida",
+        "Alabama",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Tennessee"
+      ],
+      "champion": "Florida",
+      "tb": 150,
+      "paid": true
+    },
+    {
+      "rank": 212,
+      "player": "WLS Jr 1",
+      "points": 102,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Missouri",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 151,
+      "paid": true
+    },
+    {
+      "rank": 213,
+      "player": "ava kulas 3",
+      "points": 101,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Purdue"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Auburn",
+      "tb": 128,
+      "paid": true
+    },
+    {
+      "rank": 214,
+      "player": "High Tide",
+      "points": 101,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Alabama",
+        "Tennessee"
+      ],
+      "finals": [
+        "Auburn",
+        "Alabama"
+      ],
+      "champion": "Alabama",
+      "tb": 132,
+      "paid": true
+    },
+    {
+      "rank": 215,
+      "player": "Rohan Prasad",
+      "points": 101,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Florida",
+        "Duke",
+        "Kentucky"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 119,
+      "paid": true
+    },
+    {
+      "rank": 216,
+      "player": "Brook Evans 3",
+      "points": 101,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Auburn",
+      "tb": 139,
+      "paid": true
+    },
+    {
+      "rank": 217,
+      "player": "CJP",
+      "points": 101,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Florida",
+        "Alabama",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Tennessee"
+      ],
+      "champion": "Florida",
+      "tb": 144,
+      "paid": true
+    },
+    {
+      "rank": 217,
+      "player": "Gerry Schneider GW4",
+      "points": 101,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Maryland",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Auburn",
+      "tb": 144,
+      "paid": true
+    },
+    {
+      "rank": 219,
+      "player": "ellie g 1",
+      "points": 100,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Wisconsin",
+        "Houston"
+      ],
+      "finals": [
+        "Michigan State",
+        "Houston"
+      ],
+      "champion": "Michigan State",
+      "tb": 138,
+      "paid": true
+    },
+    {
+      "rank": 220,
+      "player": "Elstner 1",
+      "points": 100,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Alabama",
+        "Kentucky"
+      ],
+      "finals": [
+        "Auburn",
+        "Alabama"
+      ],
+      "champion": "Alabama",
+      "tb": 142,
+      "paid": true
+    },
+    {
+      "rank": 221,
+      "player": "Gabriel Sevegnani 1",
+      "points": 100,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 144,
+      "paid": true
+    },
+    {
+      "rank": 221,
+      "player": "WVL 1",
+      "points": 100,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Tennessee"
+      ],
+      "champion": "Tennessee",
+      "tb": 144,
+      "paid": true
+    },
+    {
+      "rank": 223,
+      "player": "Brett Nenn1",
+      "points": 100,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Florida",
+        "Arizona",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Tennessee"
+      ],
+      "champion": "Florida",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 224,
+      "player": "Eric Anthony Galvez",
+      "points": 100,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Michigan State",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 150,
+      "paid": true
+    },
+    {
+      "rank": 225,
+      "player": "FarOutFarley1",
+      "points": 100,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Florida",
+      "tb": 158,
+      "paid": true
+    },
+    {
+      "rank": 225,
+      "player": "Calvin_2",
+      "points": 100,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Texas Tech",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Michigan State",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 158,
+      "paid": true
+    },
+    {
+      "rank": 227,
+      "player": "Gerald2",
+      "points": 99,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Alabama",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Tennessee"
+      ],
+      "champion": "Tennessee",
+      "tb": 135,
+      "paid": true
+    },
+    {
+      "rank": 227,
+      "player": "Emily H.",
+      "points": 99,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "St. John's",
+        "Houston"
+      ],
+      "champion": "St. John's",
+      "tb": 135,
+      "paid": true
+    },
+    {
+      "rank": 227,
+      "player": "David Privett - 1 2",
+      "points": 99,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 135,
+      "paid": true
+    },
+    {
+      "rank": 230,
+      "player": "Tate Vander laan",
+      "points": 99,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Texas Tech",
+        "Duke",
+        "Purdue"
+      ],
+      "finals": [
+        "Iowa State",
+        "Duke"
+      ],
+      "champion": "Iowa State",
+      "tb": 138,
+      "paid": true
+    },
+    {
+      "rank": 231,
+      "player": "Gerald3",
+      "points": 99,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Wisconsin",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Tennessee"
+      ],
+      "champion": "Tennessee",
+      "tb": 140,
+      "paid": true
+    },
+    {
+      "rank": 232,
+      "player": "Chris Minervini",
+      "points": 99,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Alabama",
+        "Kentucky"
+      ],
+      "finals": [
+        "Florida",
+        "Alabama"
+      ],
+      "champion": "Alabama",
+      "tb": 151,
+      "paid": true
+    },
+    {
+      "rank": 233,
+      "player": "Red Tracton's",
+      "points": 99,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "St. John's",
+      "tb": 162,
+      "paid": true
+    },
+    {
+      "rank": 234,
+      "player": "Levi M",
+      "points": 98,
+      "tbDiff": 0,
+      "finalFour": [
+        "Texas A&M",
+        "Florida",
+        "Arizona",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Arizona"
+      ],
+      "champion": "Florida",
+      "tb": 135,
+      "paid": true
+    },
+    {
+      "rank": 235,
+      "player": "Brant Houston",
+      "points": 98,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 140,
+      "paid": true
+    },
+    {
+      "rank": 236,
+      "player": "Madison Maljian",
+      "points": 98,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Michigan State",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 141,
+      "paid": true
+    },
+    {
+      "rank": 237,
+      "player": "Matt Hauge 3",
+      "points": 98,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 146,
+      "paid": true
+    },
+    {
+      "rank": 238,
+      "player": "Brett Barry 1",
+      "points": 98,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Maryland",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 147,
+      "paid": true
+    },
+    {
+      "rank": 239,
+      "player": "Tony Pelosi 4",
+      "points": 98,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Alabama"
+      ],
+      "champion": "Auburn",
+      "tb": 148,
+      "paid": true
+    },
+    {
+      "rank": 240,
+      "player": "DCP",
+      "points": 98,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Wisconsin",
+        "Houston"
+      ],
+      "finals": [
+        "St. John's",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 149,
+      "paid": true
+    },
+    {
+      "rank": 241,
+      "player": "Ethan Chang",
+      "points": 98,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Texas Tech",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Michigan State",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 151,
+      "paid": true
+    },
+    {
+      "rank": 242,
+      "player": "Jack Woodard 1",
+      "points": 98,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Maryland",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Auburn",
+      "tb": 154,
+      "paid": true
+    },
+    {
+      "rank": 243,
+      "player": "jhb 2",
+      "points": 97,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Texas Tech",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Texas Tech",
+        "Houston"
+      ],
+      "champion": "Texas Tech",
+      "tb": 135,
+      "paid": true
+    },
+    {
+      "rank": 244,
+      "player": "Kip Brown 2",
+      "points": 97,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Auburn",
+        "Tennessee"
+      ],
+      "champion": "Auburn",
+      "tb": 144,
+      "paid": true
+    },
+    {
+      "rank": 245,
+      "player": "Bill Reich",
+      "points": 97,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 147,
+      "paid": true
+    },
+    {
+      "rank": 246,
+      "player": "Chris Harrison",
+      "points": 97,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 164,
+      "paid": true
+    },
+    {
+      "rank": 247,
+      "player": "Tim Roche 1",
+      "points": 96,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Alabama",
+        "Tennessee"
+      ],
+      "finals": [
+        "Michigan State",
+        "Tennessee"
+      ],
+      "champion": "Michigan State",
+      "tb": 138,
+      "paid": true
+    },
+    {
+      "rank": 248,
+      "player": "Sammy Sawinski",
+      "points": 96,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Auburn",
+        "Tennessee"
+      ],
+      "champion": "Auburn",
+      "tb": 149,
+      "paid": true
+    },
+    {
+      "rank": 249,
+      "player": "Kyle Anema #1",
+      "points": 96,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Michigan State",
+        "Duke"
+      ],
+      "champion": "Michigan State",
+      "tb": 152,
+      "paid": true
+    },
+    {
+      "rank": 250,
+      "player": "Ashby Spruiell",
+      "points": 96,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Auburn",
+      "tb": 160,
+      "paid": true
+    },
+    {
+      "rank": 251,
+      "player": "AlliSeb08",
+      "points": 95,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "VCU",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Tennessee"
+      ],
+      "champion": "Florida",
+      "tb": 128,
+      "paid": true
+    },
+    {
+      "rank": 252,
+      "player": "Neal Miranda #1",
+      "points": 95,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Kansas",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 137,
+      "paid": true
+    },
+    {
+      "rank": 253,
+      "player": "Elstner 4",
+      "points": 95,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 142,
+      "paid": true
+    },
+    {
+      "rank": 254,
+      "player": "Adam Drvenkar 2",
+      "points": 95,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 151,
+      "paid": true
+    },
+    {
+      "rank": 255,
+      "player": "#Big Bottom Luva's",
+      "points": 95,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Auburn",
+        "Tennessee"
+      ],
+      "champion": "Auburn",
+      "tb": 154,
+      "paid": true
+    },
+    {
+      "rank": 256,
+      "player": "Nathan Riedel",
+      "points": 95,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Maryland",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Maryland",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 156,
+      "paid": true
+    },
+    {
+      "rank": 257,
+      "player": "Bunz",
+      "points": 95,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Purdue"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Auburn",
+      "tb": 162,
+      "paid": true
+    },
+    {
+      "rank": 258,
+      "player": "Isaac M4",
+      "points": 94,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 135,
+      "paid": true
+    },
+    {
+      "rank": 259,
+      "player": "Carter Payne",
+      "points": 94,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Purdue"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 141,
+      "paid": true
+    },
+    {
+      "rank": 260,
+      "player": "Christian Ciciarelli #3",
+      "points": 94,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Maryland",
+        "Arizona",
+        "Gonzaga"
+      ],
+      "finals": [
+        "Auburn",
+        "Gonzaga"
+      ],
+      "champion": "Auburn",
+      "tb": 153,
+      "paid": true
+    },
+    {
+      "rank": 260,
+      "player": "Satyam Mehta",
+      "points": 94,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Michigan State",
+        "Alabama"
+      ],
+      "champion": "Michigan State",
+      "tb": 153,
+      "paid": true
+    },
+    {
+      "rank": 262,
+      "player": "heshy bregman 1",
+      "points": 94,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Florida",
+        "Wisconsin",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 155,
+      "paid": true
+    },
+    {
+      "rank": 263,
+      "player": "Andrew Warnick",
+      "points": 94,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 157,
+      "paid": true
+    },
+    {
+      "rank": 264,
+      "player": "Scott S 1",
+      "points": 94,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 160,
+      "paid": true
+    },
+    {
+      "rank": 265,
+      "player": "Carrie Anema",
+      "points": 93,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 131,
+      "paid": true
+    },
+    {
+      "rank": 266,
+      "player": "Megan Edwards 2",
+      "points": 93,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "St. John's",
+        "Houston"
+      ],
+      "champion": "St. John's",
+      "tb": 147,
+      "paid": true
+    },
+    {
+      "rank": 267,
+      "player": "Nathan H.",
+      "points": 93,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Texas Tech",
+        "Duke",
+        "McNeese"
+      ],
+      "finals": [
+        "Texas Tech",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 149,
+      "paid": true
+    },
+    {
+      "rank": 268,
+      "player": "GO Blue",
+      "points": 92,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Michigan State",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 126,
+      "paid": true
+    },
+    {
+      "rank": 269,
+      "player": "Bruce Tria #1",
+      "points": 92,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 135,
+      "paid": true
+    },
+    {
+      "rank": 270,
+      "player": "Chicken…good",
+      "points": 92,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Michigan State",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 136,
+      "paid": true
+    },
+    {
+      "rank": 271,
+      "player": "Sahil Prasad",
+      "points": 92,
+      "tbDiff": 0,
+      "finalFour": [
+        "Texas A&M",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Texas A&M",
+        "Tennessee"
+      ],
+      "champion": "Tennessee",
+      "tb": 114,
+      "paid": true
+    },
+    {
+      "rank": 272,
+      "player": "Scott Beckett",
+      "points": 92,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Arizona",
+        "UCLA"
+      ],
+      "finals": [
+        "Florida",
+        "Arizona"
+      ],
+      "champion": "Arizona",
+      "tb": 143,
+      "paid": true
+    },
+    {
+      "rank": 273,
+      "player": "Kip Brown 3",
+      "points": 92,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Texas Tech",
+        "Duke",
+        "Kentucky"
+      ],
+      "finals": [
+        "Michigan State",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 144,
+      "paid": true
+    },
+    {
+      "rank": 274,
+      "player": "Chad McCormick",
+      "points": 92,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Michigan State",
+        "Duke"
+      ],
+      "champion": "Michigan State",
+      "tb": 146,
+      "paid": true
+    },
+    {
+      "rank": 275,
+      "player": "Luke",
+      "points": 92,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Kentucky"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 154,
+      "paid": true
+    },
+    {
+      "rank": 276,
+      "player": "BMoran3",
+      "points": 92,
+      "tbDiff": 0,
+      "finalFour": [
+        "Texas A&M",
+        "Texas Tech",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Texas Tech",
+        "Houston"
+      ],
+      "champion": "Texas Tech",
+      "tb": 163,
+      "paid": true
+    },
+    {
+      "rank": 277,
+      "player": "Gerry Schneider GW3",
+      "points": 91,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Maryland",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Iowa State",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 151,
+      "paid": true
+    },
+    {
+      "rank": 278,
+      "player": "AZFIREMAN ….. 3",
+      "points": 91,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Texas Tech",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Auburn",
+      "tb": 161,
+      "paid": true
+    },
+    {
+      "rank": 279,
+      "player": "Chuck Brown",
+      "points": 91,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Wisconsin",
+        "Tennessee"
+      ],
+      "finals": [
+        "Auburn",
+        "Wisconsin"
+      ],
+      "champion": "Auburn",
+      "tb": 169,
+      "paid": true
+    },
+    {
+      "rank": 280,
+      "player": "Central Coast Chokers",
+      "points": 90,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "St. John's",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 124,
+      "paid": true
+    },
+    {
+      "rank": 281,
+      "player": "Pazong Abenes",
+      "points": 90,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Clemson"
+      ],
+      "finals": [
+        "Michigan State",
+        "Clemson"
+      ],
+      "champion": "Michigan State",
+      "tb": 138,
+      "paid": true
+    },
+    {
+      "rank": 282,
+      "player": "Garrett Johnson 2",
+      "points": 90,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Alabama",
+        "Tennessee"
+      ],
+      "finals": [
+        "St. John's",
+        "Alabama"
+      ],
+      "champion": "St. John's",
+      "tb": 146,
+      "paid": true
+    },
+    {
+      "rank": 283,
+      "player": "Tim Roche 3",
+      "points": 90,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Auburn",
+        "Tennessee"
+      ],
+      "champion": "Auburn",
+      "tb": 148,
+      "paid": true
+    },
+    {
+      "rank": 284,
+      "player": "Grant Nakatani",
+      "points": 90,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "St. John's",
+      "tb": 149,
+      "paid": true
+    },
+    {
+      "rank": 285,
+      "player": "Kaitlin H.",
+      "points": 90,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Arkansas",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Michigan State",
+        "Duke"
+      ],
+      "champion": "Michigan State",
+      "tb": 150,
+      "paid": true
+    },
+    {
+      "rank": 286,
+      "player": "Lou Shubin 4",
+      "points": 90,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan",
+        "Maryland",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Maryland",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 151,
+      "paid": true
+    },
+    {
+      "rank": 287,
+      "player": "Holland",
+      "points": 90,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Kentucky"
+      ],
+      "finals": [
+        "Florida",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 154,
+      "paid": true
+    },
+    {
+      "rank": 288,
+      "player": "Ant-man4",
+      "points": 90,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Texas Tech",
+        "Duke",
+        "Kentucky"
+      ],
+      "finals": [
+        "Michigan State",
+        "Kentucky"
+      ],
+      "champion": "Michigan State",
+      "tb": 162,
+      "paid": true
+    },
+    {
+      "rank": 289,
+      "player": "Frank Fodero #3",
+      "points": 89,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Maryland",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Michigan State",
+        "Duke"
+      ],
+      "champion": "Michigan State",
+      "tb": 141,
+      "paid": true
+    },
+    {
+      "rank": 289,
+      "player": "Frank Fodero #1",
+      "points": 89,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Maryland",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Maryland",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 141,
+      "paid": true
+    },
+    {
+      "rank": 291,
+      "player": "E.J. Bacalzo 1",
+      "points": 89,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 149,
+      "paid": true
+    },
+    {
+      "rank": 291,
+      "player": "E.J. Bacalzo 2",
+      "points": 89,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 149,
+      "paid": true
+    },
+    {
+      "rank": 293,
+      "player": "Ant-man7",
+      "points": 89,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Texas Tech",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Texas Tech",
+        "Duke"
+      ],
+      "champion": "Texas Tech",
+      "tb": 162,
+      "paid": true
+    },
+    {
+      "rank": 294,
+      "player": "Ant-man8",
+      "points": 89,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Texas Tech",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Texas Tech",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 172,
+      "paid": true
+    },
+    {
+      "rank": 295,
+      "player": "X the dude man 02",
+      "points": 89,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Auburn",
+      "tb": 179,
+      "paid": true
+    },
+    {
+      "rank": 296,
+      "player": "SRV",
+      "points": 88,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Texas Tech",
+        "Duke",
+        "Kentucky"
+      ],
+      "finals": [
+        "Michigan State",
+        "Duke"
+      ],
+      "champion": "Michigan State",
+      "tb": 126,
+      "paid": true
+    },
+    {
+      "rank": 297,
+      "player": "Jacob Gray 1",
+      "points": 88,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Colorado State",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Colorado State",
+        "Duke"
+      ],
+      "champion": "Colorado State",
+      "tb": 139,
+      "paid": true
+    },
+    {
+      "rank": 298,
+      "player": "kevin parker",
+      "points": 88,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Texas Tech",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Alabama"
+      ],
+      "champion": "Auburn",
+      "tb": 140,
+      "paid": true
+    },
+    {
+      "rank": 299,
+      "player": "Frank Fodero #2",
+      "points": 88,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Maryland",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Maryland",
+        "Duke"
+      ],
+      "champion": "Maryland",
+      "tb": 141,
+      "paid": true
+    },
+    {
+      "rank": 300,
+      "player": "Aaron Matas",
+      "points": 88,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Maryland",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Auburn",
+      "tb": 152,
+      "paid": true
+    },
+    {
+      "rank": 301,
+      "player": "Rose S",
+      "points": 87,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Texas Tech",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Michigan State",
+        "Duke"
+      ],
+      "champion": "Michigan State",
+      "tb": 128,
+      "paid": true
+    },
+    {
+      "rank": 302,
+      "player": "Peluso",
+      "points": 87,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "Oregon",
+        "Houston"
+      ],
+      "finals": [
+        "St. John's",
+        "Houston"
+      ],
+      "champion": "St. John's",
+      "tb": 133,
+      "paid": true
+    },
+    {
+      "rank": 303,
+      "player": "Isaac M2",
+      "points": 87,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Michigan State",
+        "Alabama"
+      ],
+      "champion": "Michigan State",
+      "tb": 135,
+      "paid": true
+    },
+    {
+      "rank": 304,
+      "player": "Neal Miranda #2",
+      "points": 87,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Arizona",
+        "Tennessee"
+      ],
+      "finals": [
+        "Florida",
+        "Tennessee"
+      ],
+      "champion": "Tennessee",
+      "tb": 146,
+      "paid": true
+    },
+    {
+      "rank": 305,
+      "player": "ClemsonWestPurple",
+      "points": 87,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "St. John's",
+      "tb": 150,
+      "paid": true
+    },
+    {
+      "rank": 305,
+      "player": "Luke Anema",
+      "points": 87,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Texas Tech",
+        "Oregon",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Oregon"
+      ],
+      "champion": "Auburn",
+      "tb": 150,
+      "paid": true
+    },
+    {
+      "rank": 305,
+      "player": "Kevin Payne 3",
+      "points": 87,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "St. John's",
+        "Houston"
+      ],
+      "champion": "St. John's",
+      "tb": 150,
+      "paid": true
+    },
+    {
+      "rank": 308,
+      "player": "Julie Tria",
+      "points": 87,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Michigan State",
+        "Duke"
+      ],
+      "champion": "Michigan State",
+      "tb": 105,
+      "paid": true
+    },
+    {
+      "rank": 309,
+      "player": "Eli Anema",
+      "points": 87,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Texas Tech",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Michigan State",
+        "Duke"
+      ],
+      "champion": "Michigan State",
+      "tb": 154,
+      "paid": true
+    },
+    {
+      "rank": 310,
+      "player": "Kinley McCormick",
+      "points": 86,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Wisconsin",
+        "Houston"
+      ],
+      "finals": [
+        "Michigan State",
+        "Wisconsin"
+      ],
+      "champion": "Wisconsin",
+      "tb": 136,
+      "paid": true
+    },
+    {
+      "rank": 311,
+      "player": "ellie g 2",
+      "points": 86,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 138,
+      "paid": true
+    },
+    {
+      "rank": 312,
+      "player": "Calvin_1",
+      "points": 86,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 142,
+      "paid": true
+    },
+    {
+      "rank": 313,
+      "player": "Howard Hom",
+      "points": 86,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Texas Tech",
+        "Duke",
+        "Kentucky"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 314,
+      "player": "Tony Pelosi 2",
+      "points": 86,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Iowa State",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 165,
+      "paid": true
+    },
+    {
+      "rank": 315,
+      "player": "Alberto F.",
+      "points": 85,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Kentucky"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 132,
+      "paid": true
+    },
+    {
+      "rank": 315,
+      "player": "ava kulas 2",
+      "points": 85,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Maryland",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Michigan State",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 124,
+      "paid": true
+    },
+    {
+      "rank": 317,
+      "player": "Riley Allen 1",
+      "points": 85,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Connecticut",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 318,
+      "player": "Isaac M3",
+      "points": 84,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Alabama",
+        "Kentucky"
+      ],
+      "finals": [
+        "Auburn",
+        "Alabama"
+      ],
+      "champion": "Alabama",
+      "tb": 135,
+      "paid": true
+    },
+    {
+      "rank": 319,
+      "player": "ANAND MEHTA",
+      "points": 84,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Texas Tech",
+        "Arizona",
+        "Kentucky"
+      ],
+      "finals": [
+        "Texas Tech",
+        "Kentucky"
+      ],
+      "champion": "Kentucky",
+      "tb": 137,
+      "paid": true
+    },
+    {
+      "rank": 320,
+      "player": "BLP",
+      "points": 84,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Texas Tech",
+        "Saint Mary's",
+        "Houston"
+      ],
+      "finals": [
+        "Michigan State",
+        "Houston"
+      ],
+      "champion": "Michigan State",
+      "tb": 139,
+      "paid": true
+    },
+    {
+      "rank": 321,
+      "player": "Tom Corcoran-2",
+      "points": 84,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "St. John's",
+      "tb": 146,
+      "paid": true
+    },
+    {
+      "rank": 322,
+      "player": "Braxton Tria #1",
+      "points": 84,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "Duke",
+        "Kentucky"
+      ],
+      "finals": [
+        "Michigan State",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 147,
+      "paid": true
+    },
+    {
+      "rank": 323,
+      "player": "Jacob Gray 2",
+      "points": 84,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Florida",
+        "Wisconsin",
+        "Houston"
+      ],
+      "finals": [
+        "Florida",
+        "Wisconsin"
+      ],
+      "champion": "Wisconsin",
+      "tb": 148,
+      "paid": true
+    },
+    {
+      "rank": 324,
+      "player": "Kevin Payne 1",
+      "points": 84,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Purdue"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 159,
+      "paid": true
+    },
+    {
+      "rank": 325,
+      "player": "Ant-man5",
+      "points": 84,
+      "tbDiff": 0,
+      "finalFour": [
+        "Louisville",
+        "Texas Tech",
+        "Duke",
+        "Kentucky"
+      ],
+      "finals": [
+        "Louisville",
+        "Kentucky"
+      ],
+      "champion": "Louisville",
+      "tb": 162,
+      "paid": true
+    },
+    {
+      "rank": 325,
+      "player": "Ant-man6",
+      "points": 84,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Texas Tech",
+        "Duke",
+        "Kentucky"
+      ],
+      "finals": [
+        "Michigan State",
+        "Kentucky"
+      ],
+      "champion": "Kentucky",
+      "tb": 162,
+      "paid": true
+    },
+    {
+      "rank": 327,
+      "player": "Chooch",
+      "points": 84,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "St. John's",
+      "tb": 163,
+      "paid": true
+    },
+    {
+      "rank": 328,
+      "player": "Jackson Riedel",
+      "points": 83,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 142,
+      "paid": true
+    },
+    {
+      "rank": 329,
+      "player": "Brett Nenn2",
+      "points": 83,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Kansas",
+        "Wisconsin",
+        "Houston"
+      ],
+      "finals": [
+        "Kansas",
+        "Houston"
+      ],
+      "champion": "Houston",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 330,
+      "player": "Stephen Johnson 3",
+      "points": 83,
+      "tbDiff": 0,
+      "finalFour": [
+        "Texas A&M",
+        "Florida",
+        "Alabama",
+        "Kentucky"
+      ],
+      "finals": [
+        "Florida",
+        "Kentucky"
+      ],
+      "champion": "Kentucky",
+      "tb": 149,
+      "paid": true
+    },
+    {
+      "rank": 331,
+      "player": "Megan Edwards 1",
+      "points": 83,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 153,
+      "paid": true
+    },
+    {
+      "rank": 332,
+      "player": "Gerald4",
+      "points": 83,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Texas Tech",
+        "Wisconsin",
+        "Tennessee"
+      ],
+      "finals": [
+        "Auburn",
+        "Tennessee"
+      ],
+      "champion": "Tennessee",
+      "tb": 160,
+      "paid": true
+    },
+    {
+      "rank": 333,
+      "player": "Tara Sawinski",
+      "points": 83,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Wisconsin",
+        "Tennessee"
+      ],
+      "finals": [
+        "Auburn",
+        "Tennessee"
+      ],
+      "champion": "Auburn",
+      "tb": 163,
+      "paid": true
+    },
+    {
+      "rank": 334,
+      "player": "Grover Beach Grommies",
+      "points": 83,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "Duke",
+        "Kentucky"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 171,
+      "paid": true
+    },
+    {
+      "rank": 335,
+      "player": "Anna Parker",
+      "points": 82,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Texas Tech",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Michigan State",
+        "Alabama"
+      ],
+      "champion": "Michigan State",
+      "tb": 135,
+      "paid": true
+    },
+    {
+      "rank": 336,
+      "player": "Reagan McCormick",
+      "points": 82,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Texas Tech",
+        "Duke",
+        "Purdue"
+      ],
+      "finals": [
+        "Michigan State",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 137,
+      "paid": true
+    },
+    {
+      "rank": 337,
+      "player": "Tracy Hays",
+      "points": 82,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "St. John's",
+        "Tennessee"
+      ],
+      "champion": "St. John's",
+      "tb": 155,
+      "paid": true
+    },
+    {
+      "rank": 338,
+      "player": "John Ferguson 1",
+      "points": 82,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Alabama",
+        "Clemson"
+      ],
+      "finals": [
+        "Auburn",
+        "Clemson"
+      ],
+      "champion": "Auburn",
+      "tb": 168,
+      "paid": true
+    },
+    {
+      "rank": 339,
+      "player": "Ryan Abenes",
+      "points": 81,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "BYU",
+        "Tennessee"
+      ],
+      "finals": [
+        "Michigan State",
+        "Tennessee"
+      ],
+      "champion": "Michigan State",
+      "tb": 135,
+      "paid": true
+    },
+    {
+      "rank": 340,
+      "player": "Daffnei Riedel",
+      "points": 81,
+      "tbDiff": 0,
+      "finalFour": [
+        "Louisville",
+        "St. John's",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 141,
+      "paid": true
+    },
+    {
+      "rank": 341,
+      "player": "heshy bregman 2",
+      "points": 81,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Texas Tech",
+        "Alabama",
+        "Purdue"
+      ],
+      "finals": [
+        "Auburn",
+        "Alabama"
+      ],
+      "champion": "Alabama",
+      "tb": 144,
+      "paid": true
+    },
+    {
+      "rank": 342,
+      "player": "Jimenez 03",
+      "points": 81,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Connecticut",
+        "Duke",
+        "Clemson"
+      ],
+      "finals": [
+        "Connecticut",
+        "Duke"
+      ],
+      "champion": "Connecticut",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 342,
+      "player": "Jimenez 04",
+      "points": 81,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Connecticut",
+        "Duke",
+        "Clemson"
+      ],
+      "finals": [
+        "Auburn",
+        "Clemson"
+      ],
+      "champion": "Auburn",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 342,
+      "player": "Jimenez 05",
+      "points": 81,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Connecticut",
+        "Duke",
+        "Clemson"
+      ],
+      "finals": [
+        "Auburn",
+        "Clemson"
+      ],
+      "champion": "Clemson",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 345,
+      "player": "Garrett Johnson 3",
+      "points": 81,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Alabama",
+        "Kentucky"
+      ],
+      "finals": [
+        "St. John's",
+        "Alabama"
+      ],
+      "champion": "St. John's",
+      "tb": 146,
+      "paid": true
+    },
+    {
+      "rank": 345,
+      "player": "Garrett Johnson 4",
+      "points": 81,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Texas Tech",
+        "Alabama",
+        "Tennessee"
+      ],
+      "finals": [
+        "Iowa State",
+        "Tennessee"
+      ],
+      "champion": "Iowa State",
+      "tb": 146,
+      "paid": true
+    },
+    {
+      "rank": 347,
+      "player": "Casey Girard",
+      "points": 81,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Texas Tech",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Texas Tech",
+        "Tennessee"
+      ],
+      "champion": "Tennessee",
+      "tb": 155,
+      "paid": true
+    },
+    {
+      "rank": 348,
+      "player": "Eryn Payne 1",
+      "points": 80,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Kansas",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Iowa State",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 149,
+      "paid": true
+    },
+    {
+      "rank": 349,
+      "player": "Jimenez 11",
+      "points": 80,
+      "tbDiff": 0,
+      "finalFour": [
+        "North Carolina",
+        "Florida",
+        "Alabama",
+        "Tennessee"
+      ],
+      "finals": [
+        "North Carolina",
+        "Tennessee"
+      ],
+      "champion": "Tennessee",
+      "tb": 181,
+      "paid": true
+    },
+    {
+      "rank": 350,
+      "player": "ellie g 6",
+      "points": 79,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Kentucky"
+      ],
+      "finals": [
+        "Michigan State",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 138,
+      "paid": true
+    },
+    {
+      "rank": 351,
+      "player": "Elstner 5",
+      "points": 79,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "Duke",
+        "Kentucky"
+      ],
+      "finals": [
+        "Michigan State",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 142,
+      "paid": true
+    },
+    {
+      "rank": 352,
+      "player": "Gerald1",
+      "points": 78,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Texas Tech",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Iowa State",
+        "Tennessee"
+      ],
+      "champion": "Tennessee",
+      "tb": 130,
+      "paid": true
+    },
+    {
+      "rank": 353,
+      "player": "The Monster",
+      "points": 78,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Texas Tech",
+        "Arizona",
+        "Purdue"
+      ],
+      "finals": [
+        "Texas Tech",
+        "Arizona"
+      ],
+      "champion": "Arizona",
+      "tb": 132,
+      "paid": true
+    },
+    {
+      "rank": 354,
+      "player": "sharol degroot",
+      "points": 78,
+      "tbDiff": 0,
+      "finalFour": [
+        "Ole Miss",
+        "Florida",
+        "Liberty",
+        "Tennessee"
+      ],
+      "finals": [
+        "Ole Miss",
+        "Tennessee"
+      ],
+      "champion": "Tennessee",
+      "tb": 122,
+      "paid": true
+    },
+    {
+      "rank": 355,
+      "player": "Brett Nenn3",
+      "points": 78,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Texas Tech",
+        "Duke",
+        "Purdue"
+      ],
+      "finals": [
+        "Michigan State",
+        "Duke"
+      ],
+      "champion": "Michigan State",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 356,
+      "player": "ClemsonWestOrange",
+      "points": 78,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "Duke",
+        "Clemson"
+      ],
+      "finals": [
+        "St. John's",
+        "Clemson"
+      ],
+      "champion": "Clemson",
+      "tb": 150,
+      "paid": true
+    },
+    {
+      "rank": 357,
+      "player": "Krissy H.",
+      "points": 78,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Connecticut",
+        "Oregon",
+        "Tennessee"
+      ],
+      "finals": [
+        "Auburn",
+        "Tennessee"
+      ],
+      "champion": "Tennessee",
+      "tb": 153,
+      "paid": true
+    },
+    {
+      "rank": 358,
+      "player": "Stephen Johnson 1",
+      "points": 77,
+      "tbDiff": 0,
+      "finalFour": [
+        "Texas A&M",
+        "Arkansas",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Texas A&M",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 139,
+      "paid": true
+    },
+    {
+      "rank": 359,
+      "player": "Kurt Brown",
+      "points": 77,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Illinois"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 142,
+      "paid": true
+    },
+    {
+      "rank": 360,
+      "player": "Garrett Pendergraft",
+      "points": 77,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Texas Tech",
+        "Alabama",
+        "Tennessee"
+      ],
+      "finals": [
+        "Texas Tech",
+        "Tennessee"
+      ],
+      "champion": "Tennessee",
+      "tb": 144,
+      "paid": true
+    },
+    {
+      "rank": 361,
+      "player": "Meena Prasad",
+      "points": 77,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Duke",
+        "Illinois"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Auburn",
+      "tb": 103,
+      "paid": true
+    },
+    {
+      "rank": 362,
+      "player": "Rhonda Fallon",
+      "points": 76,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Illinois"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Auburn",
+      "tb": 140,
+      "paid": true
+    },
+    {
+      "rank": 363,
+      "player": "William Anema",
+      "points": 76,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "St. John's",
+        "Duke",
+        "Purdue"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 149,
+      "paid": true
+    },
+    {
+      "rank": 364,
+      "player": "Clint T 2",
+      "points": 76,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Colorado State",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Michigan State",
+        "Tennessee"
+      ],
+      "champion": "Tennessee",
+      "tb": 155,
+      "paid": true
+    },
+    {
+      "rank": 365,
+      "player": "Mike Kulas 3",
+      "points": 76,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Texas Tech",
+        "Duke",
+        "Kentucky"
+      ],
+      "finals": [
+        "Texas Tech",
+        "Duke"
+      ],
+      "champion": "Texas Tech",
+      "tb": 172,
+      "paid": true
+    },
+    {
+      "rank": 366,
+      "player": "Laurie Hopkins",
+      "points": 75,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Wisconsin",
+        "Tennessee"
+      ],
+      "finals": [
+        "Auburn",
+        "Wisconsin"
+      ],
+      "champion": "Wisconsin",
+      "tb": 141,
+      "paid": true
+    },
+    {
+      "rank": 367,
+      "player": "CJP2",
+      "points": 75,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Arizona",
+        "Tennessee"
+      ],
+      "finals": [
+        "Auburn",
+        "Tennessee"
+      ],
+      "champion": "Auburn",
+      "tb": 144,
+      "paid": true
+    },
+    {
+      "rank": 368,
+      "player": "Cal Surfer",
+      "points": 74,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "Duke",
+        "UCLA"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 151,
+      "paid": true
+    },
+    {
+      "rank": 369,
+      "player": "PopScar2",
+      "points": 72,
+      "tbDiff": 0,
+      "finalFour": [
+        "Marquette",
+        "St. John's",
+        "Duke",
+        "Purdue"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "St. John's",
+      "tb": 135,
+      "paid": true
+    },
+    {
+      "rank": 370,
+      "player": "Ezra Anema",
+      "points": 72,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Texas Tech",
+        "Wisconsin",
+        "Kentucky"
+      ],
+      "finals": [
+        "Texas Tech",
+        "Kentucky"
+      ],
+      "champion": "Texas Tech",
+      "tb": 147,
+      "paid": true
+    },
+    {
+      "rank": 371,
+      "player": "Al Lehn",
+      "points": 72,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Saint Mary's",
+        "Clemson"
+      ],
+      "finals": [
+        "Auburn",
+        "Clemson"
+      ],
+      "champion": "Clemson",
+      "tb": 151,
+      "paid": true
+    },
+    {
+      "rank": 372,
+      "player": "Bruce Tria #2",
+      "points": 71,
+      "tbDiff": 0,
+      "finalFour": [
+        "Louisville",
+        "St. John's",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "St. John's",
+      "tb": 131,
+      "paid": true
+    },
+    {
+      "rank": 373,
+      "player": "Mike Bink 2",
+      "points": 71,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "Alabama",
+        "Houston"
+      ],
+      "finals": [
+        "Michigan State",
+        "Alabama"
+      ],
+      "champion": "Michigan State",
+      "tb": 135,
+      "paid": true
+    },
+    {
+      "rank": 374,
+      "player": "Fai-Four",
+      "points": 71,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "Texas Tech",
+        "Arizona",
+        "Houston"
+      ],
+      "finals": [
+        "Iowa State",
+        "Arizona"
+      ],
+      "champion": "Arizona",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 374,
+      "player": "PopScar1",
+      "points": 71,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Kentucky"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 145,
+      "paid": true
+    },
+    {
+      "rank": 376,
+      "player": "Ed Johnson",
+      "points": 71,
+      "tbDiff": 0,
+      "finalFour": [
+        "Texas A&M",
+        "Texas Tech",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Texas Tech",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 146,
+      "paid": true
+    },
+    {
+      "rank": 377,
+      "player": "Adam Drvenkar 1",
+      "points": 71,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Clemson"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 151,
+      "paid": true
+    },
+    {
+      "rank": 377,
+      "player": "Becky Wulf",
+      "points": 71,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Texas Tech",
+        "Wisconsin",
+        "Tennessee"
+      ],
+      "finals": [
+        "Auburn",
+        "Wisconsin"
+      ],
+      "champion": "Wisconsin",
+      "tb": 151,
+      "paid": true
+    },
+    {
+      "rank": 377,
+      "player": "Kevin Payne 2",
+      "points": 71,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "Duke",
+        "Purdue"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 151,
+      "paid": true
+    },
+    {
+      "rank": 380,
+      "player": "Hoseinator",
+      "points": 71,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "Duke",
+        "Kentucky"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 182,
+      "paid": true
+    },
+    {
+      "rank": 381,
+      "player": "Maddy Nenninger",
+      "points": 70,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan",
+        "Florida",
+        "Wisconsin",
+        "Tennessee"
+      ],
+      "finals": [
+        "Michigan",
+        "Wisconsin"
+      ],
+      "champion": "Wisconsin",
+      "tb": 110,
+      "paid": true
+    },
+    {
+      "rank": 382,
+      "player": "Christian Ciciarelli #4",
+      "points": 70,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "St. John's",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "St. John's",
+      "tb": 155,
+      "paid": true
+    },
+    {
+      "rank": 383,
+      "player": "Jimenez 07",
+      "points": 70,
+      "tbDiff": 0,
+      "finalFour": [
+        "North Carolina",
+        "Connecticut",
+        "Duke",
+        "Clemson"
+      ],
+      "finals": [
+        "North Carolina",
+        "Duke"
+      ],
+      "champion": "North Carolina",
+      "tb": 177,
+      "paid": true
+    },
+    {
+      "rank": 384,
+      "player": "Sarah McConn",
+      "points": 69,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Wisconsin",
+        "Tennessee"
+      ],
+      "finals": [
+        "Michigan State",
+        "Wisconsin"
+      ],
+      "champion": "Michigan State",
+      "tb": 122,
+      "paid": true
+    },
+    {
+      "rank": 385,
+      "player": "jhb 1",
+      "points": 69,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Auburn",
+        "Tennessee"
+      ],
+      "champion": "Auburn",
+      "tb": 135,
+      "paid": true
+    },
+    {
+      "rank": 386,
+      "player": "AlliSeb05",
+      "points": 69,
+      "tbDiff": 0,
+      "finalFour": [
+        "Marquette",
+        "Florida",
+        "Duke",
+        "UCLA"
+      ],
+      "finals": [
+        "Marquette",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 144,
+      "paid": true
+    },
+    {
+      "rank": 386,
+      "player": "heshy bregman 3",
+      "points": 69,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Maryland",
+        "Duke",
+        "Kentucky"
+      ],
+      "finals": [
+        "Maryland",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 144,
+      "paid": true
+    },
+    {
+      "rank": 388,
+      "player": "Mimo Anema",
+      "points": 69,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Florida",
+        "Arizona",
+        "Gonzaga"
+      ],
+      "finals": [
+        "Auburn",
+        "Arizona"
+      ],
+      "champion": "Auburn",
+      "tb": 152,
+      "paid": true
+    },
+    {
+      "rank": 389,
+      "player": "Riley Allen 2",
+      "points": 69,
+      "tbDiff": 0,
+      "finalFour": [
+        "Louisville",
+        "St. John's",
+        "Duke",
+        "Gonzaga"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 154,
+      "paid": true
+    },
+    {
+      "rank": 390,
+      "player": "Riley Allen 3",
+      "points": 69,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Duke",
+        "Tennessee"
+      ],
+      "finals": [
+        "Michigan State",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 156,
+      "paid": true
+    },
+    {
+      "rank": 391,
+      "player": "Max M",
+      "points": 68,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan",
+        "Florida",
+        "Alabama",
+        "Georgia"
+      ],
+      "finals": [
+        "Michigan",
+        "Georgia"
+      ],
+      "champion": "Georgia",
+      "tb": 129,
+      "paid": true
+    },
+    {
+      "rank": 392,
+      "player": "Cassandra Bielicki",
+      "points": 67,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Texas Tech",
+        "Duke",
+        "Houston"
+      ],
+      "finals": [
+        "Auburn",
+        "Duke"
+      ],
+      "champion": "Auburn",
+      "tb": 162,
+      "paid": true
+    },
+    {
+      "rank": 393,
+      "player": "Kevin Payne 4",
+      "points": 66,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Kansas",
+        "Alabama",
+        "Purdue"
+      ],
+      "finals": [
+        "Michigan State",
+        "Purdue"
+      ],
+      "champion": "Michigan State",
+      "tb": 155,
+      "paid": true
+    },
+    {
+      "rank": 394,
+      "player": "Lindsay Harding",
+      "points": 66,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Memphis",
+        "Arizona",
+        "Purdue"
+      ],
+      "finals": [
+        "Auburn",
+        "Arizona"
+      ],
+      "champion": "Arizona",
+      "tb": 163,
+      "paid": true
+    },
+    {
+      "rank": 395,
+      "player": "AlliSeb09",
+      "points": 64,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Wisconsin",
+        "Kentucky"
+      ],
+      "finals": [
+        "St. John's",
+        "Kentucky"
+      ],
+      "champion": "Kentucky",
+      "tb": 132,
+      "paid": true
+    },
+    {
+      "rank": 396,
+      "player": "chris congo",
+      "points": 64,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Texas Tech",
+        "Wisconsin",
+        "Illinois"
+      ],
+      "finals": [
+        "Texas Tech",
+        "Illinois"
+      ],
+      "champion": "Texas Tech",
+      "tb": 143,
+      "paid": true
+    },
+    {
+      "rank": 397,
+      "player": "WinWinWin",
+      "points": 64,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Florida",
+        "Wisconsin",
+        "Tennessee"
+      ],
+      "finals": [
+        "Michigan State",
+        "Tennessee"
+      ],
+      "champion": "Michigan State",
+      "tb": 102,
+      "paid": true
+    },
+    {
+      "rank": 398,
+      "player": "Hoseination",
+      "points": 64,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Texas Tech",
+        "Duke",
+        "Kentucky"
+      ],
+      "finals": [
+        "Texas Tech",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 191,
+      "paid": true
+    },
+    {
+      "rank": 399,
+      "player": "B mama J 02",
+      "points": 62,
+      "tbDiff": 0,
+      "finalFour": [
+        "Texas A&M",
+        "Florida",
+        "Wisconsin",
+        "Houston"
+      ],
+      "finals": [
+        "Texas A&M",
+        "Wisconsin"
+      ],
+      "champion": "Texas A&M",
+      "tb": 153,
+      "paid": true
+    },
+    {
+      "rank": 400,
+      "player": "Adam Drvenkar 3",
+      "points": 62,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "St. John's",
+        "Oregon",
+        "Kentucky"
+      ],
+      "finals": [
+        "Auburn",
+        "Kentucky"
+      ],
+      "champion": "Auburn",
+      "tb": 157,
+      "paid": true
+    },
+    {
+      "rank": 401,
+      "player": "Christian Ciciarelli #2",
+      "points": 61,
+      "tbDiff": 0,
+      "finalFour": [
+        "UC San Diego",
+        "St. John's",
+        "Duke",
+        "Kentucky"
+      ],
+      "finals": [
+        "St. John's",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 154,
+      "paid": true
+    },
+    {
+      "rank": 402,
+      "player": "Auntie Crusher",
+      "points": 60,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Memphis",
+        "Wisconsin",
+        "Tennessee"
+      ],
+      "finals": [
+        "Auburn",
+        "Tennessee"
+      ],
+      "champion": "Auburn",
+      "tb": 139,
+      "paid": true
+    },
+    {
+      "rank": 403,
+      "player": "Jimenez 08",
+      "points": 60,
+      "tbDiff": 0,
+      "finalFour": [
+        "North Carolina",
+        "St. John's",
+        "Alabama",
+        "Xavier"
+      ],
+      "finals": [
+        "St. John's",
+        "Alabama"
+      ],
+      "champion": "St. John's",
+      "tb": 180,
+      "paid": true
+    },
+    {
+      "rank": 403,
+      "player": "Jimenez 09",
+      "points": 60,
+      "tbDiff": 0,
+      "finalFour": [
+        "North Carolina",
+        "St. John's",
+        "Alabama",
+        "Xavier"
+      ],
+      "finals": [
+        "St. John's",
+        "Alabama"
+      ],
+      "champion": "Alabama",
+      "tb": 180,
+      "paid": true
+    },
+    {
+      "rank": 405,
+      "player": "Reuben Kapadia",
+      "points": 60,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Kansas",
+        "Arizona",
+        "Tennessee"
+      ],
+      "finals": [
+        "Kansas",
+        "Tennessee"
+      ],
+      "champion": "Tennessee",
+      "tb": 182,
+      "paid": true
+    },
+    {
+      "rank": 406,
+      "player": "Codi Harris #2",
+      "points": 59,
+      "tbDiff": 0,
+      "finalFour": [
+        "Iowa State",
+        "St. John's",
+        "Alabama",
+        "Purdue"
+      ],
+      "finals": [
+        "St. John's",
+        "Purdue"
+      ],
+      "champion": "St. John's",
+      "tb": 137,
+      "paid": true
+    },
+    {
+      "rank": 407,
+      "player": "Addy Payne",
+      "points": 59,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan",
+        "Memphis",
+        "Duke",
+        "Purdue"
+      ],
+      "finals": [
+        "Michigan",
+        "Duke"
+      ],
+      "champion": "Michigan",
+      "tb": 154,
+      "paid": true
+    },
+    {
+      "rank": 408,
+      "player": "Bruce B 2",
+      "points": 59,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Kansas",
+        "Oregon",
+        "UCLA"
+      ],
+      "finals": [
+        "Michigan State",
+        "Oregon"
+      ],
+      "champion": "Oregon",
+      "tb": 178,
+      "paid": true
+    },
+    {
+      "rank": 409,
+      "player": "Codi Harris #1",
+      "points": 58,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "BYU",
+        "Clemson"
+      ],
+      "finals": [
+        "Michigan State",
+        "Clemson"
+      ],
+      "champion": "Clemson",
+      "tb": 137,
+      "paid": true
+    },
+    {
+      "rank": 410,
+      "player": "PopScar4",
+      "points": 57,
+      "tbDiff": 0,
+      "finalFour": [
+        "Marquette",
+        "St. John's",
+        "Arizona",
+        "Purdue"
+      ],
+      "finals": [
+        "St. John's",
+        "Purdue"
+      ],
+      "champion": "Purdue",
+      "tb": 137,
+      "paid": true
+    },
+    {
+      "rank": 411,
+      "player": "Kevin Payne 5",
+      "points": 55,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "St. John's",
+        "Arizona",
+        "Purdue"
+      ],
+      "finals": [
+        "St. John's",
+        "Purdue"
+      ],
+      "champion": "Purdue",
+      "tb": 161,
+      "paid": true
+    },
+    {
+      "rank": 412,
+      "player": "Kim O'Neil",
+      "points": 54,
+      "tbDiff": 0,
+      "finalFour": [
+        "North Carolina",
+        "St. John's",
+        "Alabama",
+        "Gonzaga"
+      ],
+      "finals": [
+        "St. John's",
+        "Alabama"
+      ],
+      "champion": "St. John's",
+      "tb": 162,
+      "paid": true
+    },
+    {
+      "rank": 413,
+      "player": "B mama J 01",
+      "points": 53,
+      "tbDiff": 0,
+      "finalFour": [
+        "Creighton",
+        "Drake",
+        "Duke",
+        "Xavier"
+      ],
+      "finals": [
+        "Creighton",
+        "Duke"
+      ],
+      "champion": "Duke",
+      "tb": 143,
+      "paid": true
+    },
+    {
+      "rank": 414,
+      "player": "Eryn Payne 2",
+      "points": 52,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Kansas",
+        "Arizona",
+        "Kentucky"
+      ],
+      "finals": [
+        "Michigan State",
+        "Arizona"
+      ],
+      "champion": "Michigan State",
+      "tb": 143,
+      "paid": true
+    },
+    {
+      "rank": 415,
+      "player": "Jimenez 12",
+      "points": 49,
+      "tbDiff": 0,
+      "finalFour": [
+        "North Carolina",
+        "Maryland",
+        "Alabama",
+        "Clemson"
+      ],
+      "finals": [
+        "Maryland",
+        "Clemson"
+      ],
+      "champion": "Maryland",
+      "tb": 192,
+      "paid": true
+    },
+    {
+      "rank": 416,
+      "player": "Bruce B 3",
+      "points": 47,
+      "tbDiff": 0,
+      "finalFour": [
+        "UC San Diego",
+        "Oklahoma",
+        "Oregon",
+        "Purdue"
+      ],
+      "finals": [
+        "UC San Diego",
+        "Purdue"
+      ],
+      "champion": "Purdue",
+      "tb": 178,
+      "paid": true
+    },
+    {
+      "rank": 417,
+      "player": "PopScar3",
+      "points": 46,
+      "tbDiff": 0,
+      "finalFour": [
+        "Marquette",
+        "Connecticut",
+        "Arizona",
+        "Purdue"
+      ],
+      "finals": [
+        "Connecticut",
+        "Arizona"
+      ],
+      "champion": "Arizona",
+      "tb": 137,
+      "paid": true
+    },
+    {
+      "rank": 418,
+      "player": "Dom - Derek",
+      "points": 43,
+      "tbDiff": 0,
+      "finalFour": [
+        "Auburn",
+        "Omaha",
+        "Liberty",
+        "UCLA"
+      ],
+      "finals": [
+        "Auburn",
+        "UCLA"
+      ],
+      "champion": "UCLA",
+      "tb": 197,
+      "paid": true
+    },
+    {
+      "rank": 419,
+      "player": "Nisey",
+      "points": 40,
+      "tbDiff": 0,
+      "finalFour": [
+        "Michigan State",
+        "Connecticut",
+        "Wisconsin",
+        "Gonzaga"
+      ],
+      "finals": [
+        "Connecticut",
+        "Gonzaga"
+      ],
+      "champion": "Gonzaga",
+      "tb": 125,
+      "paid": true
+    },
+    {
+      "rank": 420,
+      "player": "Karyn Librader #1",
+      "points": 27,
+      "tbDiff": 0,
+      "finalFour": [
+        "Louisville",
+        "Kansas",
+        "Baylor",
+        "McNeese"
+      ],
+      "finals": [
+        "Kansas",
+        "Baylor"
+      ],
+      "champion": "Kansas",
+      "tb": 145,
+      "paid": true
+    }
+  ],
+  "lastUpdated": "2025-04-08T00:00:00.000Z",
+  "regionalChampionKey": [
+    "Auburn",
+    "Florida",
+    "Duke",
+    "Houston"
+  ],
+  "quarterfinalWinners": [
+    "Auburn",
+    "Florida",
+    "Duke",
+    "Houston"
+  ],
+  "semifinalWinners": [
+    "Florida",
+    "Houston"
+  ],
+  "semifinalKey": [
+    "Florida",
+    "Houston"
+  ],
+  "finalWinner": "Florida",
+  "eliminatedTeams": [
+    "Auburn",
+    "Duke",
+    "Houston"
+  ],
+  "keyTieBreakerPopulated": false,
+  "legacyArchive": true
+}

@@ -19,10 +19,12 @@ import {
   type VintagePicksAuthCreateAccount,
   type VintagePicksAuthSignIn,
   type VintagePaymentBadgeStyle,
+  type VintagePicksConfirmCopy,
   type VintagePicksContent,
   type VintagePicksFlavor,
 } from "@/lib/vintage/picksContent";
 import type { VintagePicksState } from "@/lib/vintage/picksStore";
+import AdminColorField from "../AdminColorField";
 import VintageAdminNav from "../VintageAdminNav";
 import "../editor.css";
 import {
@@ -40,8 +42,31 @@ const TABS = [
   "Empty states",
   "Cost & status",
   "Row chrome",
+  "Confirmations",
   "Sign in & account",
 ] as const;
+
+const CONFIRM_KEYS: {
+  key: keyof VintagePicksContent["confirms"];
+  label: string;
+  help: string;
+}[] = [
+  {
+    key: "delete",
+    label: "Delete (move to Deleted)",
+    help: "Shown when deleting an In Progress entry.",
+  },
+  {
+    key: "permanentDelete",
+    label: "Permanent delete",
+    help: "Shown when permanently removing a Deleted entry.",
+  },
+  {
+    key: "return",
+    label: "Return to In Progress",
+    help: "Shown when returning a Submitted entry to In Progress.",
+  },
+];
 
 const MESSAGE_BOX_STATES: {
   key: keyof VintagePicksContent["messageBox"];
@@ -66,7 +91,7 @@ const MESSAGE_BOX_STATES: {
   {
     key: "priorYear",
     label: "4 · Previous year",
-    help: "Viewing an archive year (message body switches back to the active year).",
+    help: "Archive year: title + “Viewing {year}”. A separate Back to {activeYear} link returns to the current year (not the whole panel).",
   },
 ];
 
@@ -438,18 +463,14 @@ export default function VintagePicksEditor() {
     return data.csrfToken;
   }
 
-  async function save(
-    action: "save" | "publish" | "restore",
-    revisionId?: string,
-  ) {
+  async function save(action: "save" | "publish") {
     if (!state) return;
     setError("");
     setMessage("");
     setBusy(true);
     try {
-      const payload =
-        action === "restore" ? undefined : normalizeVintagePicksContent(content);
-      if (payload) validateVintagePicksContent(payload);
+      const payload = normalizeVintagePicksContent(content);
+      validateVintagePicksContent(payload);
       const token = await csrfToken();
       const response = await fetch("/api/admin/vintage-picks", {
         method: "POST",
@@ -461,7 +482,6 @@ export default function VintagePicksEditor() {
           action,
           content: payload,
           version: state.version,
-          revisionId,
         }),
       });
       const data = await response.json();
@@ -474,11 +494,7 @@ export default function VintagePicksEditor() {
         router.refresh();
         return;
       }
-      setMessage(
-        action === "restore"
-          ? "Revision restored as a draft. Publish when ready."
-          : "Draft saved.",
-      );
+      setMessage("Draft saved.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save changes.");
     } finally {
@@ -615,8 +631,9 @@ export default function VintagePicksEditor() {
           <SectionPanel id={sectionIdFor("Message box")} title="Message box" disabled={busy}>
             <>
               <p className="ve-help" data-testid="vintage-picks-message-box-help">
-                Four states share the same layout and font sizes (year select +
-                title + message). Only copy and colors change. Tokens:{" "}
+                Four states share one season-panel footprint (Year label + dropdown,
+                vertical rule, title + message). Only copy and colors change; the
+                prior-year return link is fixed in the UI. Tokens:{" "}
                 <code>{"{year}"}</code>, <code>{"{activeYear}"}</code>,{" "}
                 <code>{"{days}"}</code>, <code>{"{countdown}"}</code> (clock or
                 days-away phrase).
@@ -691,40 +708,21 @@ export default function VintagePicksEditor() {
                       </label>
                     </div>
                     <div className="ve-grid">
-                      {MESSAGE_BOX_COLOR_FIELDS.map(({ key: colorKey, label: colorLabel }) => (
-                        <label
-                          key={colorKey}
-                          className="ve-field"
-                          htmlFor={`vintage-picks-mb-${key}-${colorKey}`}
-                        >
-                          <span>{colorLabel}</span>
-                          <div className="ve-color-row">
-                            <input
-                              id={`vintage-picks-mb-${key}-${colorKey}-swatch`}
-                              data-testid={`vintage-picks-mb-${key}-${colorKey}-swatch`}
-                              type="color"
-                              value={
-                                /^#[0-9A-Fa-f]{6}$/.test(state[colorKey])
-                                  ? state[colorKey]
-                                  : "#152c3a"
-                              }
-                              onChange={(e) =>
-                                patchState({ [colorKey]: e.target.value })
-                              }
-                              aria-label={`${label} ${colorLabel} swatch`}
-                            />
-                            <input
-                              id={`vintage-picks-mb-${key}-${colorKey}`}
-                              data-testid={`vintage-picks-mb-${key}-${colorKey}`}
-                              type="text"
-                              value={state[colorKey]}
-                              onChange={(e) =>
-                                patchState({ [colorKey]: e.target.value })
-                              }
-                            />
-                          </div>
-                        </label>
-                      ))}
+                      {MESSAGE_BOX_COLOR_FIELDS.map(({ key: colorKey, label: colorLabel }) => {
+                        const testId = `vintage-picks-mb-${key}-${colorKey}`;
+                        return (
+                          <AdminColorField
+                            key={colorKey}
+                            id={testId}
+                            testId={testId}
+                            label={colorLabel}
+                            value={state[colorKey]}
+                            onChange={(next) =>
+                              patchState({ [colorKey]: next })
+                            }
+                          />
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -940,45 +938,29 @@ export default function VintagePicksEditor() {
                         ["color", "Font color"],
                         ["borderColor", "Border"],
                       ] as const
-                    ).map(([field, fieldLabel]) => (
-                      <label
-                        key={field}
-                        className="ve-field"
-                        htmlFor={`vintage-picks-payment-${key}-${field}`}
-                      >
-                        <span>{fieldLabel}</span>
-                        <div className="ve-color-row">
-                          <input
-                            id={`vintage-picks-payment-${key}-${field}-swatch`}
-                            data-testid={`vintage-picks-payment-${key}-${field}-swatch`}
-                            type="color"
-                            value={
-                              /^#[0-9A-Fa-f]{6}$/.test(badge[field])
-                                ? badge[field]
-                                : "#000000"
-                            }
-                            onChange={(e) =>
-                              setBadge({ [field]: e.target.value })
-                            }
-                            aria-label={`${label} ${fieldLabel} swatch`}
-                          />
-                          <input
-                            id={`vintage-picks-payment-${key}-${field}`}
-                            data-testid={`vintage-picks-payment-${key}-${field}`}
-                            type="text"
-                            value={badge[field]}
-                            onChange={(e) =>
-                              setBadge({ [field]: e.target.value })
-                            }
-                          />
-                        </div>
-                      </label>
-                    ))}
+                    ).map(([field, fieldLabel]) => {
+                      const testId = `vintage-picks-payment-${key}-${field}`;
+                      return (
+                        <AdminColorField
+                          key={field}
+                          id={testId}
+                          testId={testId}
+                          label={fieldLabel}
+                          value={badge[field]}
+                          onChange={(next) => setBadge({ [field]: next })}
+                        />
+                      );
+                    })}
                   </div>
                 );
               })}
 
               <h3>Action buttons</h3>
+              <p className="ve-help">
+                Row-action colors are design-locked (navy utility, red Submit,
+                paper+red Delete). The swatches below are retained for draft
+                inspection but do not override the live My Picks chrome.
+              </p>
               {ACTION_KEYS.map(({ key, label }) => {
                 const style = content.actions[key];
                 const setStyle = (patch: Partial<VintagePicksActionStyle>) => {
@@ -1003,20 +985,91 @@ export default function VintagePicksEditor() {
                         ["disabledBackground", "Disabled fill"],
                         ["disabledColor", "Disabled icon"],
                       ] as const
-                    ).map(([field, fieldLabel]) => (
+                    ).map(([field, fieldLabel]) => {
+                      const testId = `vintage-picks-action-${key}-${field}`;
+                      return (
+                        <AdminColorField
+                          key={field}
+                          id={testId}
+                          testId={testId}
+                          label={fieldLabel}
+                          value={style[field]}
+                          onChange={(next) => setStyle({ [field]: next })}
+                        />
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </>
+          </SectionPanel>
+
+          <SectionPanel id={sectionIdFor("Confirmations")} title="Confirmations" disabled={busy}>
+            <>
+              <p className="ve-help">
+                Popup copy for Delete, Permanent delete, and Return. Use{" "}
+                <code>{"{entry}"}</code> for the entry name. Use <code>||</code>{" "}
+                for a line break in the message body.
+              </p>
+              {CONFIRM_KEYS.map(({ key, label, help }) => {
+                const bag = content.confirms[key];
+                const setConfirm = (patch: Partial<VintagePicksConfirmCopy>) => {
+                  setContent((previous) => ({
+                    ...previous,
+                    confirms: {
+                      ...previous.confirms,
+                      [key]: { ...previous.confirms[key], ...patch },
+                    },
+                  }));
+                  setDirty(true);
+                };
+                return (
+                  <div
+                    key={key}
+                    className="ve-grid"
+                    data-testid={`vintage-picks-confirm-${key}`}
+                  >
+                    <p className="ve-help" style={{ gridColumn: "1 / -1" }}>
+                      <strong>{label}</strong>
+                      <br />
+                      {help}
+                    </p>
+                    {(
+                      [
+                        ["title", "Title", false],
+                        ["message", "Message", true],
+                        ["confirmLabel", "Confirm button", false],
+                        ["cancelLabel", "Cancel button", false],
+                      ] as const
+                    ).map(([field, fieldLabel, multiline]) => (
                       <label
                         key={field}
                         className="ve-field"
-                        htmlFor={`vintage-picks-action-${key}-${field}`}
+                        htmlFor={`vintage-picks-confirm-${key}-${field}`}
+                        style={multiline ? { gridColumn: "1 / -1" } : undefined}
                       >
                         <span>{fieldLabel}</span>
-                        <input
-                          id={`vintage-picks-action-${key}-${field}`}
-                          data-testid={`vintage-picks-action-${key}-${field}`}
-                          type="text"
-                          value={style[field]}
-                          onChange={(e) => setStyle({ [field]: e.target.value })}
-                        />
+                        {multiline ? (
+                          <textarea
+                            id={`vintage-picks-confirm-${key}-${field}`}
+                            data-testid={`vintage-picks-confirm-${key}-${field}`}
+                            rows={3}
+                            value={bag[field]}
+                            onChange={(e) =>
+                              setConfirm({ [field]: e.target.value })
+                            }
+                          />
+                        ) : (
+                          <input
+                            id={`vintage-picks-confirm-${key}-${field}`}
+                            data-testid={`vintage-picks-confirm-${key}-${field}`}
+                            type="text"
+                            value={bag[field]}
+                            onChange={(e) =>
+                              setConfirm({ [field]: e.target.value })
+                            }
+                          />
+                        )}
                       </label>
                     ))}
                   </div>
@@ -1131,30 +1184,6 @@ export default function VintagePicksEditor() {
           </SectionPanel>
         </div>
       </div>
-
-      {state.revisions.length ? (
-        <>
-          <h2>Revisions</h2>
-          <ul className="ve-revisions">
-            {state.revisions.map((revision) => (
-              <li key={revision.id}>
-                <span>
-                  {revision.action} · {revision.author} ·{" "}
-                  {new Date(revision.createdAt).toLocaleString()}
-                </span>
-                <button
-                  type="button"
-                  className="ve-button"
-                  disabled={busy || dirty}
-                  onClick={() => void save("restore", revision.id)}
-                >
-                  Restore
-                </button>
-              </li>
-            ))}
-          </ul>
-        </>
-      ) : null}
     </main>
   );
 }

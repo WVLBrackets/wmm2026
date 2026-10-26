@@ -1,0 +1,148 @@
+/* 2020 pandemic cancellation — one-page newspaper edition inside Standings. */
+
+.v-paper-2020 {
+  margin: 0.35rem 0 1.25rem;
+  padding: 0.15rem 0 0.5rem;
+  color: var(--v-ink);
+}
+
+.v-paper-2020__dateline {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.35rem 1rem;
+  margin-bottom: 0.65rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 3px double var(--v-ink);
+  font-family: var(--v-font-specialty);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.v-paper-2020__kicker {
+  margin: 0;
+  color: var(--v-red);
+  font-weight: 700;
+}
+
+.v-paper-2020__vol {
+  margin: 0;
+  opacity: 0.75;
+}
+
+.v-paper-2020__headline {
+  margin: 0.4rem 0 0.35rem;
+  font-family: var(--v-font-headline);
+  font-size: clamp(1.55rem, 3.2vw, 2.35rem);
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: 0.01em;
+  color: var(--v-ink);
+}
+
+.v-paper-2020__deck {
+  margin: 0 0 0.75rem;
+  max-width: 42rem;
+  font-family: var(--v-font-specialty);
+  font-size: 1.05rem;
+  font-style: italic;
+  line-height: 1.35;
+}
+
+.v-paper-2020__rule {
+  height: 0;
+  margin: 0.85rem 0;
+  border: none;
+  border-top: 3px double var(--v-ink);
+}
+
+.v-paper-2020__columns {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 1.25rem 1.75rem;
+  align-items: start;
+}
+
+.v-paper-2020__subhead {
+  margin: 0 0 0.45rem;
+  font-family: var(--v-font-icons);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--v-red);
+}
+
+.v-paper-2020__lead p,
+.v-paper-2020__sidebar p,
+.v-paper-2020__wire p {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.v-paper-2020__sidebar {
+  padding-left: 1.1rem;
+  border-left: 1px solid var(--v-rule);
+}
+
+.v-paper-2020__pull {
+  margin: 0.75rem 0 0 !important;
+  padding: 0.65rem 0.75rem;
+  border-top: 1px solid var(--v-rule);
+  border-bottom: 1px solid var(--v-rule);
+  font-family: var(--v-font-specialty);
+  font-size: 0.98rem !important;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.v-paper-2020__pull cite {
+  display: block;
+  margin-top: 0.35rem;
+  font-style: normal;
+  font-size: 0.82rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.v-paper-2020__wire {
+  max-width: 48rem;
+}
+
+.v-paper-2020__footer-note {
+  margin-top: 0.85rem !important;
+  font-size: 0.78rem !important;
+  line-height: 1.4;
+  opacity: 0.8;
+}
+
+.v-paper-2020__footer-note a {
+  color: var(--v-ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.v-paper-2020__footer-note a:hover {
+  color: var(--v-red);
+}
+
+@media (max-width: 720px) {
+  .v-paper-2020__columns {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+
+  .v-paper-2020__sidebar {
+    padding-left: 0;
+    padding-top: 0.65rem;
+    border-left: none;
+    border-top: 1px solid var(--v-rule);
+  }
+
+  .v-paper-2020__headline {
+    font-size: 1.55rem;
+  }
+}

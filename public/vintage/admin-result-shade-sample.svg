@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="120" viewBox="0 0 420 120" role="img" aria-label="Result shade reference: correct green fill, incorrect red fill, pending white fill">
+  <rect width="420" height="120" fill="#f2ead8"/>
+  <text x="16" y="22" font-family="Georgia, serif" font-size="12" fill="#152c3a">Result shade — cell fill (Final Four / Champ)</text>
+  <g transform="translate(24,40)">
+    <rect width="56" height="56" fill="#dcfce7" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="28" y="72" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#152c3a">Correct</text>
+  </g>
+  <g transform="translate(120,40)">
+    <rect width="56" height="56" fill="#fee2e2" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="28" y="72" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#152c3a">Incorrect</text>
+  </g>
+  <g transform="translate(216,40)">
+    <rect width="56" height="56" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="28" y="72" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#152c3a">Pending</text>
+  </g>
+  <text x="300" y="62" font-family="Arial,sans-serif" font-size="10" fill="#5a6570">Fill only —</text>
+  <text x="300" y="76" font-family="Arial,sans-serif" font-size="10" fill="#5a6570">not the heavy</text>
+  <text x="300" y="90" font-family="Arial,sans-serif" font-size="10" fill="#5a6570">finalist frame.</text>
+</svg>

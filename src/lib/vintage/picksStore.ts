@@ -1,10 +1,5 @@
 import { getVintageDbPool, hasVintageDatabase } from "./dbPool";
-import {
-  isPicksRevisionContent,
-  splitHomepageDocument,
-  unwrapPicksRevisionContent,
-  wrapPicksRevisionContent,
-} from "./homepageDocument";
+import { splitHomepageDocument } from "./homepageDocument";
 import {
   DEFAULT_VINTAGE_PICKS_CONTENT,
   normalizeVintagePicksContent,
@@ -12,20 +7,17 @@ import {
   validateVintagePicksContent,
 } from "./picksContent";
 import { writeVintageSidecarContent } from "./sidecarWriter";
-import type { VintageRevision } from "./store";
 
 export interface VintagePicksState {
   version: number;
   draft: VintagePicksContent;
   published: VintagePicksContent;
-  revisions: VintageRevision[];
 }
 
 const EMPTY = (): VintagePicksState => ({
   version: 0,
   draft: structuredClone(DEFAULT_VINTAGE_PICKS_CONTENT),
   published: structuredClone(DEFAULT_VINTAGE_PICKS_CONTENT),
-  revisions: [],
 });
 
 export function hasVintagePicksDatabase(): boolean {
@@ -40,9 +32,6 @@ export async function readVintagePicksState(): Promise<VintagePicksState> {
   const result = await getVintageDbPool().query(
     "SELECT version, draft, published FROM vintage_homepage WHERE id = 1",
   );
-  const revisions = await getVintageDbPool().query(
-    'SELECT id, created_at AS "createdAt", author, action, content FROM vintage_homepage_revisions ORDER BY created_at DESC LIMIT 40',
-  );
   const row = result.rows[0];
   if (!row) return EMPTY();
   const draftPicks = normalizeVintagePicksContent(
@@ -53,20 +42,10 @@ export async function readVintagePicksState(): Promise<VintagePicksState> {
   );
   validateVintagePicksContent(draftPicks);
   validateVintagePicksContent(publishedPicks);
-  const picksRevisions = revisions.rows
-    .filter((item) => isPicksRevisionContent(item.content))
-    .slice(0, 20)
-    .map(({ id, createdAt, author, action }) => ({
-      id,
-      createdAt,
-      author,
-      action,
-    }));
   return {
     version: Number(row.version),
     draft: draftPicks,
     published: publishedPicks,
-    revisions: picksRevisions,
   };
 }
 
@@ -86,25 +65,19 @@ export async function getPublishedVintagePicksContent(): Promise<VintagePicksCon
 }
 
 /**
- * Save / publish / restore My Picks copy on the shared homepage row.
+ * Save or publish My Picks copy on the shared homepage row.
  */
 export async function writeVintagePicksContent(
   input: {
-    action: "save" | "publish" | "restore";
+    action: "save" | "publish";
     version: number;
-    content?: VintagePicksContent;
-    revisionId?: string;
+    content: VintagePicksContent;
   },
-  author: string,
+  _author: string,
 ): Promise<VintagePicksState> {
   await writeVintageSidecarContent<VintagePicksContent>({
     slot: "picks",
     input,
-    author,
-    isRevisionContent: isPicksRevisionContent,
-    unwrapRevision: unwrapPicksRevisionContent,
-    wrapRevision: wrapPicksRevisionContent,
-    wrongRevisionMessage: "That revision is not a My Picks copy revision.",
     normalizeSidecar: normalizeVintagePicksContent,
     validateSidecar: validateVintagePicksContent,
     readPublishedSidecar: (publishedRow) =>

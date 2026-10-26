@@ -20,8 +20,8 @@
   --vp-gold-tint: color-mix(in srgb, var(--vp-gold) 22%, transparent);
   --vp-card: rgb(255 255 255 / 0.38);
   /* Result chrome sizes from Standings CMS (desktop default; mobile override below). */
-  --vs-ff-size: var(--vs-ff-size-desktop, 34px);
-  --vs-champ-size: var(--vs-champ-size-desktop, 34px);
+  --vs-ff-size: var(--vs-ff-size-desktop, 32px);
+  --vs-champ-size: var(--vs-champ-size-desktop, 42px);
   /*
    * Status-chip geometry (Warren 2026-10-24 short ovals) — shared height/type.
    * Width is content-sized (not fixed); see DESIGN_SYSTEM.md §4.6 for shape tokens.
@@ -187,7 +187,9 @@
 
 .v-picks__note,
 .v-picks__notice {
+  /* Reserve one intro line so current ↔ prior year switches do not shift pills. */
   margin: 10px 0 0;
+  min-height: 1.45em;
   font-family: var(--v-font-specialty, Georgia, "Times New Roman", serif);
   font-size: 15px;
   line-height: 1.45;
@@ -279,16 +281,10 @@
   color: var(--vp-deleted-fg);
 }
 
-.v-picks__status--button {
-  cursor: pointer;
-}
-
-.v-picks__status--button:hover {
-  box-shadow: 2px 2px 0 color-mix(in srgb, var(--vp-ink) 35%, transparent);
-}
-
 .v-picks__cost {
+  /* Reserve ~2 lines so cost/guidance length does not move the header bottom rule. */
   margin: 14px 0 0;
+  min-height: 3em;
   max-width: 46rem;
   font-family: var(--v-font-specialty, Georgia, "Times New Roman", serif);
   font-size: 15px;
@@ -312,9 +308,26 @@
 .v-picks__year {
   display: flex;
   flex: 0 0 auto;
+  flex-direction: column;
   align-items: stretch;
-  height: 40px;
-  min-width: 0;
+  justify-content: center;
+  gap: 4px;
+  width: 4.25rem;
+  min-width: 4.25rem;
+  max-width: 4.25rem;
+  min-height: 0;
+}
+
+.v-picks__year-label {
+  display: block;
+  margin: 0;
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--vp-board-title, var(--vp-paper));
 }
 
 .v-picks__label,
@@ -356,7 +369,7 @@
 }
 
 .v-picks__select:disabled {
-  cursor: default;
+  cursor: not-allowed;
   opacity: 0.7;
 }
 
@@ -466,14 +479,17 @@
   border-color: var(--vp-ink);
 }
 
+/* Pay — solid navy with paper text/icon (design system §4.6) */
 .v-picks__btn--secondary {
-  background: var(--vp-gold);
-  color: var(--vp-ink);
+  background: var(--vp-ink, #152c3a);
+  border-color: var(--vp-ink, #152c3a);
+  color: var(--vp-paper, #f2ead8);
 }
 
 .v-picks__btn--secondary:hover:not(:disabled) {
-  background: var(--vp-ink);
-  color: var(--vp-paper);
+  background: color-mix(in srgb, var(--vp-ink, #152c3a) 88%, black);
+  border-color: color-mix(in srgb, var(--vp-ink, #152c3a) 88%, black);
+  color: var(--vp-paper, #f2ead8);
 }
 
 .v-picks__btn--ghost {
@@ -486,42 +502,56 @@
   color: var(--vp-paper);
 }
 
-.v-picks__btn:disabled {
-  border-color: var(--vp-rule);
-  background: var(--vp-tint);
-  color: var(--vp-muted);
+.v-picks__btn:disabled,
+.v-picks__btn[aria-disabled="true"] {
+  border: 1px solid #9ca3af;
+  background: #d1d5db;
+  color: #6b7280;
   cursor: not-allowed;
-  opacity: 0.75;
+  opacity: 1;
 }
 
-/* Carries title/tooltip when the nested Pay button is disabled. */
+/*
+ * Pay wrap owns the tooltip when the nested button is disabled
+ * (`pointer-events: none` so hover reaches the wrap). The wrap must
+ * show the same not-allowed cursor as New Bracket / other disabled CTAs.
+ */
 .v-picks__pay-wrap {
   display: inline-flex;
   align-items: stretch;
 }
 
-.v-picks__pay-wrap .v-picks__btn:disabled {
-  pointer-events: none;
+.v-picks__pay-wrap:has(.v-picks__btn:disabled),
+.v-picks__pay-wrap:has(.v-picks__btn[aria-disabled="true"]) {
+  cursor: not-allowed;
 }
 
-/* ---------- Message Box (locked footprint; year select + title + message) ----------
+.v-picks__pay-wrap .v-picks__btn:disabled,
+.v-picks__pay-wrap .v-picks__btn[aria-disabled="true"] {
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+/* ---------- Season panel / Message Box (locked footprint) ----------
  * Named `board` so it never collides with entry `.v-picks__status` chips.
- * All four CMS states share geometry; colors come from inline CSS variables. */
+ * Current + prior year share outer size, year-column geometry, and vertical rule.
+ * Colors come from inline CMS CSS variables; return link is UI-only (prior year). */
 
 .v-picks__board {
-  --vp-status-box-height: 5rem;
+  --vp-status-box-height: 5.75rem;
   --vp-board-eyebrow-width: 6px;
   --vp-board-border: var(--vp-ink);
   --vp-board-bg: var(--vp-ink);
   --vp-board-title: var(--vp-paper);
   --vp-board-message: var(--vp-paper);
   --vp-board-eyebrow: var(--vp-board-border);
+  --vp-board-year-col: 4.25rem;
 
   box-sizing: border-box;
-  display: flex;
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: var(--vp-board-year-col) 1px minmax(0, 1fr);
   align-items: center;
-  gap: 10px;
+  column-gap: 10px;
   width: 0;
   min-width: 100%;
   max-width: 100%;
@@ -538,18 +568,27 @@
 }
 
 .v-picks__board-year {
-  flex: 0 0 auto;
+  grid-column: 1;
+  justify-self: stretch;
   align-self: center;
+  min-width: 0;
+}
+
+.v-picks__board-year .v-picks__select-wrap {
+  height: 32px;
 }
 
 .v-picks__board-year .v-picks__select {
-  width: 3.5rem;
-  min-width: 3.5rem;
-  max-width: 3.5rem;
-  padding: 0 16px 0 6px;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  height: 32px;
+  min-height: 32px;
+  padding: 0 18px 0 6px;
   background: var(--vp-paper);
   color: var(--vp-ink);
   border-color: var(--vp-ink);
+  font-size: 13px;
 }
 
 .v-picks__board-year .v-picks__select-icon {
@@ -558,44 +597,37 @@
   height: 12px;
 }
 
+.v-picks__board-rule {
+  grid-column: 2;
+  align-self: stretch;
+  width: 1px;
+  margin: 4px 0;
+  background: color-mix(in srgb, var(--vp-board-title) 42%, transparent);
+  pointer-events: none;
+}
+
 .v-picks__board-body {
-  flex: 1 1 auto;
+  grid-column: 3;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  gap: 4px;
+  gap: 2px;
   margin: 0;
   padding: 0;
   border: 0;
   background: transparent;
-  text-align: center;
+  text-align: left;
   overflow: hidden;
   color: inherit;
-}
-
-button.v-picks__board-body {
-  cursor: pointer;
-  font: inherit;
-}
-
-button.v-picks__board-body:hover:not(:disabled) .v-picks__board-message,
-button.v-picks__board-body:focus-visible:not(:disabled) .v-picks__board-message {
-  text-decoration: underline;
-  outline: none;
-}
-
-button.v-picks__board-body:disabled {
-  cursor: default;
-  opacity: 0.7;
 }
 
 /* Shared title size/location for every Message Box state. */
 .v-picks__board-title {
   font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   line-height: 1.2;
@@ -605,14 +637,58 @@ button.v-picks__board-body:disabled {
 /* Shared message size/location for every Message Box state. */
 .v-picks__board-message {
   font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   line-height: 1.15;
   font-variant-numeric: tabular-nums;
   color: var(--vp-board-message);
   max-width: 100%;
   overflow-wrap: break-word;
+}
+
+/*
+ * Always reserve a return-link row so prior ↔ current year keeps identical panel height.
+ * Only the link is interactive (not the panel).
+ */
+.v-picks__board-return-slot {
+  display: flex;
+  align-items: center;
+  min-height: 1.25rem;
+  margin-top: 2px;
+}
+
+.v-picks__board-return {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin: -12px 0;
+  padding: 12px 0;
+  border: 0;
+  background: transparent;
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  color: var(--vp-red);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.v-picks__board-return:hover:not(:disabled) {
+  color: color-mix(in srgb, var(--vp-red) 82%, #000);
+}
+
+.v-picks__board-return:focus-visible {
+  outline: 3px solid var(--vp-red);
+  outline-offset: 4px;
+}
+
+.v-picks__board-return:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 /* ---------- Filters ---------- */
@@ -623,9 +699,10 @@ button.v-picks__board-body:disabled {
 
 .v-picks__filters {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px 20px;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 12px;
   margin: 0 0 8px;
   padding: 0 0 16px;
   border-bottom: 1px solid var(--vp-rule);
@@ -675,17 +752,22 @@ button.v-picks__board-body:disabled {
   max-width: none;
 }
 
-.v-picks__chip:hover {
+.v-picks__chip:hover:not(:disabled) {
   border-color: var(--vp-ink);
   color: var(--vp-ink);
 }
 
-/* All keeps a clear blue selected state. Status filters use the shared
-   submitted/progress/deleted treatments defined with the count pills above. */
+.v-picks__chip:disabled,
+.v-picks__chip[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+/* All selected — navy (not bright blue). Unselected filters stay distinguishable. */
 .v-picks__chip--all.is-on {
-  border-color: #1d4ed8;
-  background: #2563eb;
-  color: #fff;
+  border-color: var(--vp-ink, #152c3a);
+  background: var(--vp-ink, #152c3a);
+  color: var(--vp-paper, #f2ead8);
 }
 
 /*
@@ -705,8 +787,9 @@ button.v-picks__board-body:disabled {
 
 .v-picks__search {
   position: relative;
-  flex: 1 1 240px;
-  max-width: 28rem;
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: none;
   min-width: 0;
 }
 
@@ -731,6 +814,11 @@ button.v-picks__board-body:disabled {
   color: var(--vp-ink);
   font-family: var(--v-font-body, Arial, Helvetica, sans-serif);
   font-size: 16px;
+}
+
+.v-picks__search-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
 }
 
 .v-picks__search-input::placeholder {
@@ -767,27 +855,26 @@ button.v-picks__board-body:disabled {
   text-align: left;
 }
 
-.v-picks__th--id {
-  color: var(--vp-muted);
-}
-
 .v-picks__th--champ {
   color: var(--vp-ink);
   background: var(--vp-paper);
 }
 
 .v-picks__row > td {
-  padding: 6px 10px;
+  padding: 8px 10px;
   border-bottom: 1px solid var(--vp-rule);
   text-align: center;
   vertical-align: middle;
 }
 
-/* Logo columns: adminable vertical gap (--vp-row-logo-gap, default 5px). */
+/* Keep these as table-cells (do not set display:flex — it collapses columns). */
 .v-picks__row > td.v-picks__cell--ff,
 .v-picks__row > td.v-picks__cell--champ {
-  padding-top: var(--vp-row-logo-gap, 5px);
-  padding-bottom: var(--vp-row-logo-gap, 5px);
+  padding-top: var(--vp-row-logo-gap, 8px);
+  padding-bottom: var(--vp-row-logo-gap, 8px);
+  vertical-align: middle;
+  /* Kill the text-line strut that otherwise adds empty space under inline logos. */
+  line-height: 0;
 }
 
 .v-picks__row:hover > td {
@@ -803,19 +890,14 @@ button.v-picks__board-body:disabled {
   min-width: 12rem;
 }
 
-.v-picks__cell--id {
-  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
-  font-size: 13px;
-  letter-spacing: 0.1em;
-  font-variant-numeric: tabular-nums;
-  color: var(--vp-muted);
-  white-space: nowrap;
+.v-picks__cell--status {
+  width: 2.5rem;
 }
 
 .v-picks__cell--champ {
   border-left: 1px solid var(--vp-rule);
   border-right: 1px solid var(--vp-rule);
-  /* Column gutter stays cream; logo tiles themselves stay white. */
+  /* Column gutter and undecided champ tile match page cream. */
   background: var(--vp-paper);
 }
 
@@ -824,7 +906,8 @@ button.v-picks__board-body:disabled {
 }
 
 .v-picks__cell--actions {
-  min-width: 11rem;
+  /* Four actions sized to Final Four tiles + gaps */
+  min-width: calc(4 * var(--vs-ff-size, 32px) + 3 * 4px);
 }
 
 .v-picks__entry-name {
@@ -844,10 +927,38 @@ button.v-picks__board-body:disabled {
   cursor: pointer;
 }
 
-.v-picks__entry-name:hover {
+.v-picks__entry-name:hover:not(:disabled) {
   color: var(--vp-red);
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.v-picks__entry-name:disabled,
+.v-picks__entry-name[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.72;
+  text-decoration: none;
+}
+
+.v-picks__entry .v-picks__tip {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.v-picks__entry .v-picks__tip-bubble {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 5;
+  max-width: min(16rem, 70vw);
+  padding: 6px 10px;
+  border: 1px solid var(--vp-ink, #152c3a);
+  background: var(--vp-ink, #152c3a);
+  color: var(--vp-paper, #f2ead8);
+  font-size: 12px;
+  line-height: 1.35;
+  pointer-events: none;
 }
 
 /* ---------- Pool section headings ---------- */
@@ -943,13 +1054,12 @@ button.v-picks__board-body:disabled {
   gap: 5px;
   font-size: 12px;
   color: var(--vp-ink);
+  vertical-align: middle;
 }
 
-.v-picks__progress--done {
-  flex-direction: row;
-  flex-wrap: wrap;
+.v-picks__progress--payment {
+  align-items: center;
   justify-content: center;
-  gap: 6px 12px;
 }
 
 .v-picks__progress-text {
@@ -978,8 +1088,9 @@ button.v-picks__board-body:disabled {
 }
 
 /*
- * Payment status badge (Paid / Pending / Unpaid) — beside entry name on
- * desktop, under it on mobile. Colors from CMS CSS vars.
+ * Payment status badge (Paid / Pending / Unpaid).
+ * Desktop: Progress column for submitted rows. Mobile: under entry name.
+ * Colors from CMS CSS vars.
  */
 .v-picks__entry {
   display: flex;
@@ -1055,8 +1166,12 @@ button.v-picks__board-body:disabled {
   padding-right: 2px;
 }
 
-/* Compact status square (mobile): icon only, fixed chip. */
+/* Compact status square (desktop + mobile): icon only, not clickable. */
 .v-picks__status--square {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   width: 28px;
   min-width: 28px;
   max-width: 28px;
@@ -1064,6 +1179,8 @@ button.v-picks__board-body:disabled {
   min-height: 28px;
   padding: 0;
   gap: 0;
+  cursor: default;
+  vertical-align: middle;
 }
 
 /* ---------- Final Four + champion ---------- */
@@ -1072,16 +1189,19 @@ button.v-picks__board-body:disabled {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  /* Avoid the inline baseline gap that leaves empty space under the logos. */
+  vertical-align: middle;
 }
 
 .v-picks__ff-cell {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: var(--vs-ff-size, 34px);
-  height: var(--vs-ff-size, 34px);
-  min-width: var(--vs-ff-size, 34px);
-  min-height: var(--vs-ff-size, 34px);
+  width: var(--vs-ff-size, 32px);
+  height: var(--vs-ff-size, 32px);
+  min-width: var(--vs-ff-size, 32px);
+  min-height: var(--vs-ff-size, 32px);
   flex: 0 0 auto;
   aspect-ratio: 1 / 1;
   overflow: hidden;
@@ -1089,6 +1209,16 @@ button.v-picks__board-body:disabled {
   border: 1px solid transparent;
   border-radius: 0;
   background-color: var(--vs-shade-pending, #fff);
+}
+
+.v-picks__ff-cell img,
+.v-picks__champ-cell img {
+  width: var(--vs-logo-fill, 100%);
+  height: var(--vs-logo-fill, 100%);
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center;
 }
 
 .v-picks__ff-cell[data-status="correct"] {
@@ -1125,23 +1255,27 @@ button.v-picks__board-body:disabled {
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  /* Same baseline fix as Final Four — centers the tile in the row. */
+  vertical-align: middle;
 }
 
 .v-picks__champ-cell {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: var(--vs-champ-size, 34px);
-  height: var(--vs-champ-size, 34px);
-  min-width: var(--vs-champ-size, 34px);
-  min-height: var(--vs-champ-size, 34px);
+  width: var(--vs-champ-size, 42px);
+  height: var(--vs-champ-size, 42px);
+  min-width: var(--vs-champ-size, 42px);
+  min-height: var(--vs-champ-size, 42px);
   flex: 0 0 auto;
   aspect-ratio: 1 / 1;
   overflow: hidden;
   box-sizing: border-box;
   border: 1px solid transparent;
   border-radius: 0;
-  background-color: var(--vs-shade-pending, #fff);
+  /* Trial: cream (paper) instead of white for undecided champ tiles. */
+  background-color: var(--vp-paper);
 }
 
 .v-picks__champ-cell[data-status="correct"] {
@@ -1153,7 +1287,7 @@ button.v-picks__board-body:disabled {
 }
 
 .v-picks__champ-cell[data-status="pending"] {
-  background-color: var(--vs-shade-pending, #fff);
+  background-color: var(--vp-paper);
 }
 
 .v-picks__champ-cell[data-border="correct"] {
@@ -1178,119 +1312,179 @@ button.v-picks__board-body:disabled {
   overflow-wrap: anywhere;
 }
 
-/* ---------- Row actions (CMS colors via --vp-action-* on .v-picks) ---------- */
+/* ---------- Row actions (design-locked navy / red / paper; §4.6) ---------- */
 
 .v-picks__actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
 }
 
+.v-picks__actions .v-picks__tip {
+  position: relative;
+  display: inline-flex;
+}
+
+.v-picks__actions .v-picks__tip-bubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: 5;
+  max-width: min(16rem, 70vw);
+  padding: 6px 10px;
+  border: 1px solid var(--vp-ink, #152c3a);
+  border-radius: 0;
+  background: var(--vp-ink, #152c3a);
+  color: var(--vp-paper, #f2ead8);
+  font-family: var(--v-font-body, Arial, Helvetica, sans-serif);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.35;
+  text-transform: none;
+  white-space: normal;
+  text-align: center;
+  box-shadow: none;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+@media (hover: none) {
+  .v-picks__actions .v-picks__tip-bubble {
+    display: none;
+  }
+}
+
+/*
+ * Action hit targets match Final Four tile size (CMS --vs-ff-size), not the
+ * general 44px public-control guideline — intentional density override.
+ */
 .v-picks__actions button[data-vp-action] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: var(--vs-ff-size, 32px);
+  height: var(--vs-ff-size, 32px);
+  min-width: var(--vs-ff-size, 32px);
+  min-height: var(--vs-ff-size, 32px);
   padding: 0;
   border: 1px solid transparent;
   border-radius: 0;
   box-shadow: none;
   cursor: pointer;
-  transition: filter 0.12s ease, opacity 0.12s ease;
+  transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease,
+    filter 0.14s ease;
 }
 
-.v-picks__actions button[data-vp-action="view"] {
-  background: var(--vp-action-view-bg, #1e3a5f);
-  color: var(--vp-action-view-fg, #fff);
-  border-color: var(--vp-action-view-bg, #1e3a5f);
+.v-picks__actions button[data-vp-action] svg {
+  width: calc(var(--vs-ff-size, 32px) * 0.55);
+  height: calc(var(--vs-ff-size, 32px) * 0.55);
+  flex-shrink: 0;
 }
-.v-picks__actions button[data-vp-action="edit"] {
-  background: var(--vp-action-edit-bg, #2563eb);
-  color: var(--vp-action-edit-fg, #fff);
-  border-color: var(--vp-action-edit-bg, #2563eb);
+
+@media (prefers-reduced-motion: reduce) {
+  .v-picks__actions button[data-vp-action] {
+    transition: none;
+  }
 }
-.v-picks__actions button[data-vp-action="submit"] {
-  background: var(--vp-action-submit-bg, #4f46e5);
-  color: var(--vp-action-submit-fg, #fff);
-  border-color: var(--vp-action-submit-bg, #4f46e5);
-}
-.v-picks__actions button[data-vp-action="copy"] {
-  background: var(--vp-action-copy-bg, #16a34a);
-  color: var(--vp-action-copy-fg, #fff);
-  border-color: var(--vp-action-copy-bg, #16a34a);
-}
-.v-picks__actions button[data-vp-action="delete"] {
-  background: var(--vp-action-delete-bg, #dc2626);
-  color: var(--vp-action-delete-fg, #fff);
-  border-color: var(--vp-action-delete-bg, #dc2626);
-}
+
+/* Utility: View, Edit, Unsubmit (return), Copy, Email, Restore */
+.v-picks__actions button[data-vp-action="view"],
+.v-picks__actions button[data-vp-action="edit"],
+.v-picks__actions button[data-vp-action="return"],
+.v-picks__actions button[data-vp-action="copy"],
+.v-picks__actions button[data-vp-action="email"],
 .v-picks__actions button[data-vp-action="restore"] {
-  background: var(--vp-action-restore-bg, #d97706);
-  color: var(--vp-action-restore-fg, #fff);
-  border-color: var(--vp-action-restore-bg, #d97706);
-}
-.v-picks__actions button[data-vp-action="return"] {
-  background: var(--vp-action-return-bg, #d97706);
-  color: var(--vp-action-return-fg, #fff);
-  border-color: var(--vp-action-return-bg, #d97706);
-}
-.v-picks__actions button[data-vp-action="email"] {
-  background: var(--vp-action-email-bg, #4f46e5);
-  color: var(--vp-action-email-fg, #fff);
-  border-color: var(--vp-action-email-bg, #4f46e5);
-}
-.v-picks__actions button[data-vp-action="permanentDelete"] {
-  background: var(--vp-action-permanent-delete-bg, #7f1d1d);
-  color: var(--vp-action-permanent-delete-fg, #fff);
-  border-color: var(--vp-action-permanent-delete-bg, #7f1d1d);
+  background: var(--vp-action-view-bg, #152c3a);
+  color: var(--vp-action-view-fg, #f2ead8);
+  border-color: var(--vp-action-view-bg, #152c3a);
 }
 
-.v-picks__actions button[data-vp-action]:hover:not(:disabled) {
+/* Primary: Submit */
+.v-picks__actions button[data-vp-action="submit"] {
+  background: var(--vp-action-submit-bg, #b52c26);
+  color: var(--vp-action-submit-fg, #f2ead8);
+  border-color: var(--vp-action-submit-bg, #b52c26);
+}
+
+/* Destructive outline: Delete / Permanent delete */
+.v-picks__actions button[data-vp-action="delete"],
+.v-picks__actions button[data-vp-action="permanentDelete"] {
+  background: var(--vp-action-delete-bg, #f2ead8);
+  color: var(--vp-action-delete-fg, #b52c26);
+  border-color: var(--vp-action-delete-fg, #b52c26);
+}
+
+.v-picks__actions button[data-vp-action]:hover:not(:disabled):not([aria-disabled="true"]) {
   filter: brightness(0.92);
 }
 
-.v-picks__actions button[data-vp-action]:disabled {
-  background: var(--vp-action-view-disabled-bg, #d1d5db);
-  color: var(--vp-action-view-disabled-fg, #6b7280);
-  border-color: transparent;
-  border-style: solid;
+.v-picks__actions button[data-vp-action]:active:not(:disabled):not([aria-disabled="true"]) {
+  filter: brightness(0.86);
+}
+
+.v-picks__actions button[data-vp-action]:focus-visible {
+  outline: 3px solid var(--vp-red, #b52c26);
+  outline-offset: 4px;
+}
+
+.v-picks__actions button[data-vp-action]:disabled,
+.v-picks__actions button[data-vp-action][aria-disabled="true"] {
+  background: #d1d5db;
+  color: #6b7280;
+  border: 1px solid #9ca3af;
   cursor: not-allowed;
   filter: none;
   opacity: 1;
 }
 
-.v-picks__actions button[data-vp-action="view"]:disabled {
-  background: var(--vp-action-view-disabled-bg, #d1d5db);
-  color: var(--vp-action-view-disabled-fg, #6b7280);
+/* In-flight: keep active treatment + pulse; do not gray the busy control */
+.v-picks__actions button[data-vp-action].is-busy:disabled,
+.v-picks__actions button[data-vp-action].is-busy[aria-disabled="true"] {
+  cursor: wait;
+  animation: v-picks-action-busy 0.9s ease-in-out infinite;
 }
-.v-picks__actions button[data-vp-action="edit"]:disabled {
-  background: var(--vp-action-edit-disabled-bg, #d1d5db);
-  color: var(--vp-action-edit-disabled-fg, #6b7280);
+
+.v-picks__actions button[data-vp-action="view"].is-busy:disabled,
+.v-picks__actions button[data-vp-action="edit"].is-busy:disabled,
+.v-picks__actions button[data-vp-action="return"].is-busy:disabled,
+.v-picks__actions button[data-vp-action="copy"].is-busy:disabled,
+.v-picks__actions button[data-vp-action="email"].is-busy:disabled,
+.v-picks__actions button[data-vp-action="restore"].is-busy:disabled {
+  background: var(--vp-action-view-bg, #152c3a);
+  color: var(--vp-action-view-fg, #f2ead8);
+  border-color: var(--vp-action-view-bg, #152c3a);
 }
-.v-picks__actions button[data-vp-action="submit"]:disabled {
-  background: var(--vp-action-submit-disabled-bg, #d1d5db);
-  color: var(--vp-action-submit-disabled-fg, #6b7280);
+
+.v-picks__actions button[data-vp-action="submit"].is-busy:disabled {
+  background: var(--vp-action-submit-bg, #b52c26);
+  color: var(--vp-action-submit-fg, #f2ead8);
+  border-color: var(--vp-action-submit-bg, #b52c26);
 }
-.v-picks__actions button[data-vp-action="copy"]:disabled {
-  background: var(--vp-action-copy-disabled-bg, #d1d5db);
-  color: var(--vp-action-copy-disabled-fg, #6b7280);
+
+.v-picks__actions button[data-vp-action="delete"].is-busy:disabled,
+.v-picks__actions button[data-vp-action="permanentDelete"].is-busy:disabled {
+  background: var(--vp-action-delete-bg, #f2ead8);
+  color: var(--vp-action-delete-fg, #b52c26);
+  border-color: var(--vp-action-delete-fg, #b52c26);
 }
-.v-picks__actions button[data-vp-action="delete"]:disabled,
-.v-picks__actions button[data-vp-action="permanentDelete"]:disabled {
-  background: var(--vp-action-delete-disabled-bg, #d1d5db);
-  color: var(--vp-action-delete-disabled-fg, #6b7280);
+
+@keyframes v-picks-action-busy {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.14);
+  }
 }
-.v-picks__actions button[data-vp-action="restore"]:disabled,
-.v-picks__actions button[data-vp-action="return"]:disabled {
-  background: var(--vp-action-restore-disabled-bg, #d1d5db);
-  color: var(--vp-action-restore-disabled-fg, #6b7280);
-}
-.v-picks__actions button[data-vp-action="email"]:disabled {
-  background: var(--vp-action-email-disabled-bg, #d1d5db);
-  color: var(--vp-action-email-disabled-fg, #6b7280);
+
+@media (prefers-reduced-motion: reduce) {
+  .v-picks__actions button[data-vp-action].is-busy:disabled {
+    animation: none;
+  }
 }
 
 /* Inline confirmations (delete / permanent delete / return). */
@@ -1495,8 +1689,8 @@ button.v-picks__board-body:disabled {
 
 @media (max-width: 899px) {
   .v-picks {
-    --vs-ff-size: var(--vs-ff-size-mobile, 34px);
-    --vs-champ-size: var(--vs-champ-size-mobile, 34px);
+    --vs-ff-size: var(--vs-ff-size-mobile, 32px);
+    --vs-champ-size: var(--vs-champ-size-mobile, 42px);
   }
 
   .v-picks__panel {
@@ -1547,16 +1741,20 @@ button.v-picks__board-body:disabled {
     flex: 0 0 auto;
   }
 
-  .v-picks__select,
+  /* Search keeps a 44px touch target; season-panel year select stays locked. */
   .v-picks__search-input {
     min-height: 44px;
   }
 
-
-  .v-picks__search {
-    flex-basis: 100%;
-    max-width: none;
+  .v-picks__board-year .v-picks__select {
+    min-height: 32px;
+    height: 32px;
   }
+
+  .v-picks__board-message {
+    font-size: 18px;
+  }
+
 
   .v-picks__board {
     /* Do NOT set min-width: 0 — that collapses width:0 into a one-character column. */
@@ -1688,8 +1886,9 @@ button.v-picks__board-body:disabled {
    */
   .v-picks__card-row .v-picks__ff {
     display: grid;
-    grid-template-columns: repeat(2, var(--vs-ff-size, 34px));
-    grid-template-rows: repeat(2, var(--vs-ff-size, 34px));
+    /* Card tile size from Standings CMS; max constraints prevent overlap over finalist frames. */
+    grid-template-columns: repeat(2, var(--vs-ff-size-card, 26px));
+    grid-template-rows: repeat(2, var(--vs-ff-size-card, 26px));
     gap: 3px;
     justify-self: center;
   }
@@ -1708,34 +1907,38 @@ button.v-picks__board-body:disabled {
   }
 
   .v-picks__card-row .v-picks__ff-cell {
-    width: var(--vs-ff-size, 34px);
-    height: var(--vs-ff-size, 34px);
-    min-width: var(--vs-ff-size, 34px);
-    min-height: var(--vs-ff-size, 34px);
-    max-width: var(--vs-ff-size, 34px);
-    max-height: var(--vs-ff-size, 34px);
+    width: var(--vs-ff-size-card, 26px);
+    height: var(--vs-ff-size-card, 26px);
+    min-width: var(--vs-ff-size-card, 26px);
+    min-height: var(--vs-ff-size-card, 26px);
+    max-width: var(--vs-ff-size-card, 26px);
+    max-height: var(--vs-ff-size-card, 26px);
   }
 
-  /* Champ ≈ 1.5× a Final Four cell */
   .v-picks__card-row .v-picks__champ--mobile {
     justify-self: center;
   }
 
   .v-picks__card-row .v-picks__champ--mobile .v-picks__champ-cell {
-    width: 39px;
-    height: 39px;
+    width: var(--vs-champ-size-card, 39px);
+    height: var(--vs-champ-size-card, 39px);
+    min-width: var(--vs-champ-size-card, 39px);
+    min-height: var(--vs-champ-size-card, 39px);
   }
 
   .v-picks__card-row .v-picks__status--square {
     justify-self: center;
   }
 
-  /* Actions: 2×2, no separator line */
+  /*
+   * Actions: 2×2 at every mobile width. Tile size matches Final Four card
+   * tiles (--vs-ff-size-card, default 26px) — same density override as desktop.
+   */
   .v-picks__card-row .v-picks__actions--grid {
     display: grid;
-    grid-template-columns: 28px 28px;
-    grid-auto-rows: 28px;
-    gap: 2px;
+    grid-template-columns: repeat(2, var(--vs-ff-size-card, 26px));
+    grid-auto-rows: var(--vs-ff-size-card, 26px);
+    gap: 3px;
     margin: 0;
     padding: 0;
     border: none;
@@ -1743,15 +1946,120 @@ button.v-picks__board-body:disabled {
   }
 
   .v-picks__card-row .v-picks__actions--grid button[data-vp-action] {
-    width: 28px;
-    height: 28px;
+    width: var(--vs-ff-size-card, 26px);
+    height: var(--vs-ff-size-card, 26px);
+    min-width: var(--vs-ff-size-card, 26px);
+    min-height: var(--vs-ff-size-card, 26px);
   }
 
-  /* Confirm dialogs still need full width when open */
-  .v-picks__card-row .v-picks__actions--grid [data-testid="delete-confirmation-dialog"],
-  .v-picks__card-row .v-picks__actions--grid [data-testid="permanent-delete-confirmation"],
-  .v-picks__card-row .v-picks__actions--grid [data-testid="return-bracket-confirmation"] {
-    grid-column: 1 / -1;
-    width: 100%;
+  .v-picks__card-row .v-picks__actions--grid button[data-vp-action] svg {
+    width: calc(var(--vs-ff-size-card, 26px) * 0.55);
+    height: calc(var(--vs-ff-size-card, 26px) * 0.55);
   }
+
+}
+
+/* ---------------------------------------------------------------------------
+ * Action confirmation popup (delete / permanent delete / return)
+ * --------------------------------------------------------------------------- */
+
+.v-picks__confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.v-picks__confirm-dialog {
+  width: min(100%, 22rem);
+  padding: 1.25rem 1.35rem 1.1rem;
+  border-radius: 10px;
+  border: 1px solid #fecaca;
+  background: #fff7f7;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.28);
+}
+
+.v-picks__confirm-dialog--warn {
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+
+.v-picks__confirm-title {
+  margin: 0 0 0.65rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #7f1d1d;
+  line-height: 1.3;
+}
+
+.v-picks__confirm-dialog--warn .v-picks__confirm-title {
+  color: #92400e;
+}
+
+.v-picks__confirm-message {
+  margin: 0 0 1.1rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: #374151;
+}
+
+.v-picks__confirm-message p {
+  margin: 0 0 0.55rem;
+}
+
+.v-picks__confirm-message p:last-child {
+  margin-bottom: 0;
+}
+
+.v-picks__confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.v-picks__confirm-btn {
+  min-width: 4.5rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.v-picks__confirm-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.v-picks__confirm-btn--yes {
+  background: #dc2626;
+  color: #fff;
+}
+
+.v-picks__confirm-btn--yes:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.v-picks__confirm-dialog--warn .v-picks__confirm-btn--yes {
+  background: #b45309;
+}
+
+.v-picks__confirm-dialog--warn .v-picks__confirm-btn--yes:hover:not(:disabled) {
+  background: #92400e;
+}
+
+.v-picks__confirm-btn--no {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  color: #374151;
+}
+
+.v-picks__confirm-btn--no:hover:not(:disabled) {
+  background: #e5e7eb;
 }

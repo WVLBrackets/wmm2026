@@ -53,7 +53,6 @@ const tabs = [
   VINTAGE_INFO_EDITOR_TAB.prizes,
   VINTAGE_INFO_EDITOR_TAB.tracker,
   VINTAGE_INFO_EDITOR_TAB.questions,
-  VINTAGE_INFO_EDITOR_TAB.revisions,
 ] as const;
 
 /**
@@ -276,18 +275,14 @@ export default function VintageInfoEditor() {
     );
   }
 
-  async function save(
-    action: "save" | "publish" | "restore",
-    revisionId?: string,
-  ) {
+  async function save(action: "save" | "publish") {
     if (!state) return;
     setError("");
     setMessage("");
     setBusy(true);
     try {
-      const payload =
-        action === "restore" ? undefined : normalizeVintageInfoContent(content);
-      if (payload) validateVintageInfoContent(payload);
+      const payload = normalizeVintageInfoContent(content);
+      validateVintageInfoContent(payload);
       const token = await csrfToken();
       const response = await fetch("/api/admin/vintage-info", {
         method: "POST",
@@ -299,7 +294,6 @@ export default function VintageInfoEditor() {
           action,
           content: payload,
           version: state.version,
-          revisionId,
         }),
       });
       const data = await response.json();
@@ -312,11 +306,7 @@ export default function VintageInfoEditor() {
         router.refresh();
         return;
       }
-      setMessage(
-        action === "restore"
-          ? "Revision restored as a draft. Preview it before publishing."
-          : "Draft saved. It is ready to preview.",
-      );
+      setMessage("Draft saved. It is ready to preview.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save changes.");
     } finally {
@@ -682,40 +672,6 @@ export default function VintageInfoEditor() {
             {field("questions.actionLabel", "Contact link label")}
             {field("questions.contactEmail", "Commissioner email")}
           </div>
-        </SectionPanel>
-
-        <SectionPanel id={sectionIdFor("Revisions")} title="Revisions" disabled={busy}>
-          <>
-            <p className="ve-help">
-              Restoring replaces your draft. It does not change the published
-              handbook until you publish again.
-            </p>
-            {dirty && (
-              <p className="ve-help">
-                Save your current changes before restoring another revision.
-              </p>
-            )}
-            <ul className="ve-revisions">
-              {state.revisions.map((revision) => (
-                <li key={revision.id}>
-                  <div>
-                    <strong>{revision.action}</strong> · {revision.author}
-                    <br />
-                    <small>{revision.createdAt}</small>
-                  </div>
-                  <button
-                    type="button"
-                    className="ve-button"
-                    disabled={busy || dirty}
-                    onClick={() => void save("restore", revision.id)}
-                    data-testid={`vintage-info-restore-${revision.id}`}
-                  >
-                    Restore as draft
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </>
         </SectionPanel>
         </div>
       </div>

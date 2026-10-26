@@ -190,12 +190,6 @@ test("homepage document split/merge preserves handbook, HoF, and My Picks sideca
     PICKS_CONTENT_KEY,
     mergeHomepageDocument,
     splitHomepageDocument,
-    isInfoRevisionContent,
-    isHofRevisionContent,
-    isPicksRevisionContent,
-    wrapInfoRevisionContent,
-    wrapHofRevisionContent,
-    wrapPicksRevisionContent,
   } = await import("../src/lib/vintage/homepageDocument");
   const { DEFAULT_VINTAGE_CONTENT } = await import("../src/lib/vintage/content");
   const { DEFAULT_VINTAGE_INFO_CONTENT } = await import(
@@ -232,15 +226,6 @@ test("homepage document split/merge preserves handbook, HoF, and My Picks sideca
     (split.homepage as typeof DEFAULT_VINTAGE_CONTENT).masthead.first,
     DEFAULT_VINTAGE_CONTENT.masthead.first,
   );
-  assert.equal(isInfoRevisionContent(wrapInfoRevisionContent(DEFAULT_VINTAGE_INFO_CONTENT)), true);
-  assert.equal(isInfoRevisionContent(DEFAULT_VINTAGE_CONTENT), false);
-  assert.equal(isHofRevisionContent(wrapHofRevisionContent(DEFAULT_VINTAGE_HOF_CONTENT)), true);
-  assert.equal(isHofRevisionContent(DEFAULT_VINTAGE_CONTENT), false);
-  assert.equal(
-    isPicksRevisionContent(wrapPicksRevisionContent(DEFAULT_VINTAGE_PICKS_CONTENT)),
-    true,
-  );
-  assert.equal(isPicksRevisionContent(DEFAULT_VINTAGE_CONTENT), false);
   assert.equal(
     formatVintagePicksLabel("Countdown to {year} tipoff", { year: 2027 }),
     "Countdown to 2027 tipoff",

@@ -6,10 +6,13 @@ import { getKeyBracketByYear } from '@/lib/repositories/bracketRepository';
 import { recomputeLiveStandingsAfterKeySave } from '@/lib/liveStandingsService';
 import { getTournamentWorkspace } from '@/lib/repositories/tournamentRepository';
 import { FIRST_MANAGED_YEAR } from '@/lib/tournamentDefinition';
+import { getLegacyStandings } from '@/lib/legacyStandings';
+import { isLegacyStandingsYear } from '@/lib/legacyStandings/years';
 
 /**
  * GET /api/live-standings?year=2026
  * Public read of cached live standings snapshot (recomputed when KEY is saved).
+ * Years ≤2025 with a packaged archive return that frozen final (no KEY recompute).
  * If no snapshot exists yet but a KEY bracket does, recomputes once on this request (cold start).
  */
 export async function GET(request: NextRequest) {
@@ -24,6 +27,30 @@ export async function GET(request: NextRequest) {
       yearNum = parseInt(String(sy).trim(), 10);
       if (Number.isNaN(yearNum)) {
         yearNum = new Date().getFullYear();
+      }
+    }
+
+    if (isLegacyStandingsYear(yearNum)) {
+      const standingsData = getLegacyStandings(yearNum);
+      if (standingsData) {
+        const computedAt = standingsData.lastUpdated || '2025-04-08T00:00:00.000Z';
+        return NextResponse.json(
+          {
+            success: true,
+            available: true,
+            legacy: true,
+            year: yearNum,
+            keyBracketId: null,
+            keyUpdatedAt: computedAt,
+            computedAt,
+            standingsData,
+          },
+          {
+            headers: {
+              'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
+            },
+          },
+        );
       }
     }
 

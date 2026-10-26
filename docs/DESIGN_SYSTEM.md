@@ -54,9 +54,9 @@ My Picks landing and Standings are **public data pages**. The interactive bracke
 | Newspaper red | `#b52c26` | `--v-red` | Masthead, primary actions, editorial emphasis |
 | Paper / cream | `#f2ead8` | `--v-paper` | Main page material |
 | Quiet rule | `#b7b09f` | `--v-rule` | Row separators, secondary divisions |
-| First-place gold | `#c9a227` | `--v-first` | Wreaths, champion accents, first place |
-| Second-place silver | `#a8a9ad` | `--v-second` | Second-place accents |
-| Third-place bronze | `#cd7f32` | `--v-third` | Third-place accents |
+| First-place gold | `#c9a227` | `--v-first` | Wreaths, champion accents, first-place medal fills |
+| Second-place silver | `#a8a9ad` | `--v-second` | Second-place medal fills and accents |
+| Third-place bronze | `#cd7f32` | `--v-third` | Third-place medal fills and accents |
 | Outside-paper canvas | `#dcd5c6` | Current literal | Desktop surround only |
 | White | `#ffffff` | Semantic surface | Inputs and neutral result tiles |
 | Black | `#000000` | Semantic frame | Pending finalist frame |
@@ -264,23 +264,81 @@ Baseline archive grid: three columns above 900px, two at 601–900px, one at 600
 
 Preserve the welcome/entry summary, current versus historical context, year selector, search, status filters, entry list, and appropriate actions. Desktop uses a table; the compact mobile pattern keeps aligned columns rather than turning each entry into a tall generic card.
 
-Mobile baseline below 768px: Entry | Status/payment | Final Four | Champ | Actions; entry name 13px Oswald 600; FF 2 × 2 tiles of 26px with 2px gaps; champ 39px; actions 2 × 2 of 28px with 2px gaps. These dense controls are a documented exception to ordinary 44–48px controls; retain accessible names and target separation, and reassess their usability during the audit.
+Mobile baseline below 768px: Entry | Status/payment | Final Four | Champ | Actions; entry name 13px Oswald 600; FF 2 × 2 tiles of 26px with 2px gaps; champ 39px (both CMS-editable). Payment chip stacks under the entry name on mobile. Empty, unavailable, historical/read-only, and action-locked states remain part of the component. Desktop My Picks no longer shows an ID column (search may still match bracket ID).
 
-**Locked — status chips (Warren, 2026-10-24):** Short ovals with one shared fixed width for Submitted, In Progress, and Deleted everywhere they appear (welcome count pills, Show filters, and entry-row badges). Geometry lives in `picks.css` as `--vp-status-chip-width` / `--vp-chip-height` / `--vp-chip-radius` (and related pad/font/icon tokens). Current locked values: **7.25rem** wide, **22px** tall, **pill radius** (`999px`), **10px** Oswald 600, **12px** icon, horizontal pad **8px**. Width is sized to the longest label (“In Progress”); do not shrink-to-fit per label or invent a different shape per status. Color/border semantics stay as in §2 (solid green Submitted, gold In Progress, dashed gray Deleted). Changing chip geometry requires an explicit product decision — not a drive-by layout tweak. Empty, unavailable, historical/read-only, and action-locked states remain part of the component.
+**Desktop Progress column (Warren, 2026-10-25):** Submitted rows show the payment status chip (Paid / Pending / Unpaid) instead of a 63/63 pick bar—submission already implies a complete bracket. In-progress and deleted rows keep the pick-count progress bar. Payment remains relevant only for submitted entries; entry Status remains the signal for non-submitted rows.
+
+**Season panel / Message Box (Warren, 2026-10-25) — approved two-state header**
+
+One shared season panel under New Bracket / Pay / Logout. Current-year and prior-year states must keep **identical outer height, Year-column geometry, dropdown size/position, and vertical rule**. Color and message identify the season; switching years must not move the header bottom rule, filters, or entry list.
+
+| Region | Geometry | Current year | Prior year |
+| --- | --- | --- | --- |
+| Year column | Fixed left column; visible **Year** label + cream select | Cream select, navy text | Same select position |
+| Rule | 1px vertical divider | Quiet paper-tint on navy | Quiet ink-tint on paper |
+| Message | Title + primary line; reserved return-link slot | **Tipoff countdown** (or live CMS replacement) + live `{countdown}` | **Past season** + **Viewing {year}** + red underlined **Back to {activeYear} →** link only |
+
+- Current fill: solid navy `#152c3a`, paper text `#f2ead8`.
+- Prior fill: paper `#f2ead8`, navy outline, navy left accent (inset eyebrow).
+- Only the return link is clickable (not the panel). Keyboard year selection and a clear focus ring on the link are required.
+- Intro + cost lines use reserved min-heights so wrapping differences do not jump the layout. Defaults: current “Create and manage your {year} brackets.” / prior “Review your {year} brackets. Editing is closed.”; cost lines keep real `{cost}` totals with current-year submission guidance vs historical read-only guidance.
+- Tournament year comes from application config (`activeYear` / viewing year), never the browser calendar. Do not hardcode years or countdown values in components.
+
+**Status chips (Warren, 2026-10-24 / 2026-10-25):** Welcome count pills and Show filters remain short labeled ovals (content-sized width, shared height/radius tokens in `picks.css`). **Entry-row Status** (desktop table and mobile cards) is icon-only (`v-picks__status--square`), not clickable; `title` / `aria-label` carry the status name. Show filters remain the way to filter by status. Color/border semantics stay as in §2 (solid green Submitted, gold In Progress, dashed gray Deleted).
+
+**Action buttons (Warren, 2026-10-25) — component variants**
+
+| Variant | Fill | Icon / text | Border | Use |
+| --- | --- | --- | --- | --- |
+| Utility | `#152c3a` navy | `#f2ead8` paper | navy | View, Edit, Unsubmit (return), Copy, Email, Restore |
+| Primary | `#b52c26` red | paper | red | Submit; also **New Bracket** header CTA |
+| Destructive outline | `#f2ead8` paper | red | red 1px | Delete, Permanent delete |
+| Disabled | `#d1d5db` | `#6b7280` | `#9ca3af` subtle | Unavailable; do not fade an active fill |
+| Header Pay | navy | paper | navy | Venmo pay CTA (not gold) |
+| Header New Bracket | red | paper | red | Create entry (current year only when available) |
+| Filter All (selected) | navy | paper | navy | Replaces bright blue selected All |
+
+Prior-year **New Bracket** and **Pay** stay in place but use the Disabled gray treatment; Logout remains available. Square corners, no decorative shadows. Focus: 3px red ring, 4px offset. Hover/pressed: restrained brightness (~120–150ms); respect `prefers-reduced-motion`. Status/payment/result colors stay separate from action fills.
+
+**Desktop:** four actions in one horizontal row. **Size matches the Final Four logo tile** (`--vs-ff-size` / Standings CMS desktop FF size, default 32px), 4px gaps — intentional override of the ordinary 44px public-control target for row density. Order — Submitted: View, Unsubmit, Copy, Email; In progress: Edit, Submit, Copy, Delete. Deleted rows keep View, Copy, Restore, Permanent delete.
+
+**Mobile:** keep a **2×2 grid at every width including 320px** (no More menu / horizontal scroll). Same action order as the table maps onto the grid (top-left / top-right / bottom-left / bottom-right). **Size matches the mobile Final Four card tile** (`--vs-ff-size-card`, default 26px) with the same 3px gap as the FF grid — same density override as desktop.
+
+**Busy / in-flight:** while any confirm is open or any mutation runs, disable **all** row actions, entry-name drill-in (View/Edit), Email, New Bracket, and Pay. The active control keeps its variant colors with a loading pulse; siblings use the disabled gray treatment. Preserve grid positions when an action disables.
+
+**Tooltips:** every icon action exposes an accessible name and a hover/focus tip (not `title` alone). Touch devices must not require a first tap for the tip before activation. Unsubmit describes returning a submitted entry to In Progress (out of the pool until resubmitted).
 
 ### 4.7 Live Standings
 
 Live is the public standings experience. Do not add a Daily/Live switch. Preserve year selection, search, and All Entries / My Entries filters.
 
+**Legacy finals (≤2025):** Packaged static snapshots from old Webnode final pages (2017–2019, 2021–2025) load through the same Standings UI. Names are display-only (no owner link, no bracket click-through); All / My Entries is hidden. Every archive entry is Paid Yes on Standings (Webnode `NPcell` / Paid?=N is ignored for ≤2025). Final Four / Champ shades use a hardcoded KEY for that year’s real NCAA results — not a live KEY bracket. Rebuild with `node scripts/build-legacy-standings.mjs`. Finalist heavy frames: wide years (2017–2019, 2021–2022) use explicit Finals columns; compact HTML years (2023–2025) recover frames from Webnode `W2`/`L2`/`U2` FF cell classes (3px black border). Entry nicknames need not match Hall of Fame display names (HoF is editorial). First Four placeholder labels (`FF1` / `FF2` / `FF4`) have no ESPN logos. The Standings admin gear stays inline with the year select (including year 2020 newspaper).
+
+**2020 newspaper edition:** Selecting year 2020 shows a short vintage newspaper page (cancellation / no brackets) instead of a standings table. No search, filters, or KEY chrome. Admin gear on year 2020 opens Standings Admin at `#ve-section-2020-newspaper` (CMS nested under Standings as `paper2020`; legacy `/vintage/admin/standings/2020` redirects there). Per-section hide checkboxes omit dateline, headline, lead, sidebar, desk, sources, and page subhead without deleting copy. Publish updates the live 2020 view.
+
 Desktop preserves a readable table with rank, entry, payment when enabled, points, points behind, TB, Final Four, and champion. Mobile uses the compact **Option B** row: rank; entry name with points / gap / TB below; payment when enabled; 2 × 2 FF; champion. It has no My Picks action-button grid.
+
+**Rank numerals (F03, 2026-10-25):** Rank numbers use navy (`--v-ink`) on paper for ordinary-text contrast (≥4.5:1). Do not color rank digits gold/silver/bronze — those tokens fail contrast as small text on cream. Places 1–3 show a decorative circular medal beside the numeral filled with `--v-first` / `--v-second` / `--v-third` (CMS theme). Tied ranks share the matching medal. Medals are accent-only (`aria-hidden`); the accessible name includes the place when a medal is present.
 
 Display points behind as **(-17)**. Suppress that field for leaders, including tied first-place entries. Do not infer rank/gap from row order after filtering.
 
 The two selected finalists have a heavy frame even before semifinals are decided. Pending frames are black; confirmed/correct or wrong/eliminated frames use semantic green/red. Regional cell fill and finalist frame describe separate outcomes. A champion cell must not appear correct merely because its team reached the final.
 
-Baseline shared CMS defaults: FF tile 32px, champ 42px, finalist frame 2px on desktop and mobile. CSS fallbacks and My Picks compact overrides differ; the effective value must be checked with published CMS and cascade. Reuse the result styling logic; do not create another color meaning on each page.
+**Result semantics (Warren / design F02, 2026-10-25):** Do not rely on green/red alone for assistive tech. Each Final Four / Champ tile and public bracket-preview row exposes an accessible name that includes correct / incorrect-or-eliminated / pending (or still possible), and (when applicable) “picked to reach the final” as a separate phrase from shade correctness. Visible ✓ / ✕ overlays were tried and removed as too cluttered on dense logo tiles; hover `title` / `aria-label` carry the meaning. Footer legend keeps the black-frame finalist note.
+
+**Result hover labels (CMS):** Standings admin → Result hover labels. One shared set of phrases for Standings and My Picks tile tips (empty cell, correct/incorrect/pending by column, finalist-frame meaning). Publish Standings to apply on both pages.
+
+Baseline shared CMS defaults (Standings admin → Logo sizing, used by Standings and My Picks): FF tile 32px, champ 42px on desktop and mobile; My Picks mobile card FF 26px, champ 39px; logo fill 100% of the tile (`--vs-logo-fill`); finalist frame 2px. CSS fallbacks match these defaults. Logo images always size from their tile — do not cap them with fixed pixel classes, or the champ tile reads smaller than FF. Reuse the result styling logic; do not create another color meaning on each page.
+
+Undecided play-in pairs render as one composed tile whose layout (default: corner + diagonal cut, 72%, thin white divider) is set per tournament year in the Tournament Builder; see `docs/TOURNAMENT_FIRST_FOUR.md`.
 
 Search/filter/header controls form a secondary sticky band below the masthead: current offsets are banner + 74px desktop and banner + 48px mobile. Ensure the measured header actually clears it at zoom and long labels.
+
+**Sticky column headers (Warren, 2026-10-25):** Desktop and mobile use the same quiet treatment — paper background, ink labels, double bottom rule — not a red filled bar. Desktop header type is larger than the compact mobile labels (`~0.85rem` vs `~0.65rem`).
+
+**Desktop table semantics (F05, 2026-10-25):** Use one `<table>` with `<thead>` / `<tbody>` and `scope="col"` headers. Do not split a header-only table from a data-only table. Column headers stick under the measured sticky search/filter band (`--vs-sticky-controls-height`). Mobile Option B may keep a visual column label row that is `aria-hidden` because rows are not a table.
+
+**All / My Entries filter:** Selected state is navy (`--v-ink`) on both breakpoints (same lane as My Picks “All”). Do not use newspaper red for this toggle; reserve red for primary CTAs.
 
 ## 5. Bracket workspace standard
 
@@ -298,7 +356,7 @@ Desktop should support the full bracket. Mobile should prioritize region-by-regi
 - Use crisp sans-serif team labels (12px baseline in the canvas); do not texture or squeeze them horizontally.
 - Support selected, unselected, empty future slot, unavailable/read-only, correct, incorrect/eliminated, and still-possible states.
 - Existing canvas selection/result treatments include blue for selected/still possible, green for correct, red for wrong/eliminated, and gold for specific champion emphasis. These are workspace semantics; do not reuse that blue as an alternate public navy.
-- A state that changes from selection to result review must communicate its meaning in text or an accessible label, not color alone.
+- A state that changes from selection to result review must communicate its meaning in text or an accessible label, not color alone. Read-only KEY preview rows include `aria-label` result phrases; see §4.7.
 - Team colors/logos keep their real colors. They are data, not brand-palette violations.
 - Long First Four pairs use the shared abbreviation/override logic. Display labels never become pick identifiers; the winner’s real name/logo replaces the pair while saved picks retain the same slot ID.
 
@@ -349,6 +407,8 @@ The common functional standard applies to both: consistent cross-navigation, lab
 7. Warn before meaningful destructive actions and publication; do not make routine field changes a sequence of confirmation dialogs.
 8. On mobile, stack fields and wrap controls; keep section navigation reachable and save actions visible without covering inputs.
 9. Keep branding controls global. Ordinary content edits should not require choosing a different font, red, border, or card size.
+10. Every CMS color field uses the shared `AdminColorField`: live swatch, hex text, native color wheel, and eyedropper when the browser supports EyeDropper. Standings Logo sizing shows a three-row live preview; Result shade / Result border sections include a reference sample image plus live tiles.
+11. **CMS export / import (Home admin):** Primary admin can download a JSON package of draft + published documents (Home + Guidebook + HoF + Standings + Picks sidecars) and import it on another environment. Import must show a field-level diff and require explicit confirm before writing. Media object URLs are not rewritten — re-upload on the target env when buckets differ.
 
 ### 6.3 Editable content versus design structure
 

@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import {
   DEFAULT_VINTAGE_CONTENT,
   normalizeVintageContent,
@@ -20,28 +19,25 @@ type SidecarPayload =
 
 export type SidecarSlot = "info" | "hof" | "picks" | "standings";
 
-export type CmsWriteAction = "save" | "publish" | "restore";
+export type CmsWriteAction = "save" | "publish";
 
 export interface SidecarWriteInput<T> {
   action: CmsWriteAction;
   version: number;
-  content?: T;
-  revisionId?: string;
+  content: T;
 }
 
 export interface SidecarWriteConfig<T extends SidecarPayload> {
   slot: SidecarSlot;
   input: SidecarWriteInput<T>;
-  author: string;
-  isRevisionContent: (raw: unknown) => boolean;
-  unwrapRevision: (raw: unknown) => unknown;
-  wrapRevision: (content: T) => unknown;
-  wrongRevisionMessage: string;
   normalizeSidecar: (content: T | undefined) => T;
   validateSidecar: (content: T) => void;
   readPublishedSidecar: (publishedRow: unknown) => T;
 }
 
+/**
+ * Merge homepage + other sidecars, replacing one sidecar slot.
+ */
 function mergeWithSidecar(
   homepage: ReturnType<typeof normalizeVintageContent>,
   sides: VintageSidecarBag,
@@ -62,6 +58,7 @@ function mergeWithSidecar(
 
 /**
  * Transactional write for handbook / HoF / Picks / Standings sidecars on `vintage_homepage`.
+ * Draft and published rows are updated in place; no revision history is retained.
  */
 export async function writeVintageSidecarContent<T extends SidecarPayload>(
   config: SidecarWriteConfig<T>,
@@ -69,11 +66,6 @@ export async function writeVintageSidecarContent<T extends SidecarPayload>(
   const {
     slot,
     input,
-    author,
-    isRevisionContent,
-    unwrapRevision,
-    wrapRevision,
-    wrongRevisionMessage,
     normalizeSidecar,
     validateSidecar,
     readPublishedSidecar,
@@ -92,20 +84,7 @@ export async function writeVintageSidecarContent<T extends SidecarPayload>(
     const current = result.rows[0];
     if (Number(current.version) !== input.version) throw new Error("CONFLICT");
 
-    let sidecarInput = input.content;
-    if (input.action === "restore") {
-      const revision = await client.query(
-        "SELECT content FROM vintage_homepage_revisions WHERE id = $1",
-        [input.revisionId],
-      );
-      if (!revision.rows[0]) throw new Error("Revision not found.");
-      if (!isRevisionContent(revision.rows[0].content)) {
-        throw new Error(wrongRevisionMessage);
-      }
-      sidecarInput = unwrapRevision(revision.rows[0].content) as T | undefined;
-    }
-
-    const normalized = normalizeSidecar(sidecarInput);
+    const normalized = normalizeSidecar(input.content);
     validateSidecar(normalized);
 
     const draftHome = normalizeVintageContent(
@@ -139,10 +118,6 @@ export async function writeVintageSidecarContent<T extends SidecarPayload>(
     await client.query(
       "UPDATE vintage_homepage SET version = version + 1, draft = $1, published = $2 WHERE id = 1",
       [JSON.stringify(draftOut), JSON.stringify(publishedOut)],
-    );
-    await client.query(
-      "INSERT INTO vintage_homepage_revisions (id, author, action, content) VALUES ($1, $2, $3, $4)",
-      [randomUUID(), author, input.action, JSON.stringify(wrapRevision(normalized))],
     );
     await client.query("COMMIT");
   } catch (error) {

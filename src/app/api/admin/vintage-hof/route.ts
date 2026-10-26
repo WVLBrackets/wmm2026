@@ -46,21 +46,13 @@ export async function POST(request: NextRequest) {
     input = JSON.parse(text);
     if (
       !input ||
-      !["save", "publish", "restore"].includes(input.action) ||
+      !["save", "publish"].includes(input.action) ||
       !Number.isSafeInteger(input.version) ||
       input.version < 0
     )
       throw new Error("Invalid action or version.");
-    if (input.action === "restore") {
-      if (
-        typeof input.revisionId !== "string" ||
-        !/^[a-f0-9-]{36}$/i.test(input.revisionId)
-      )
-        throw new Error("Invalid revision.");
-    } else {
-      input.content = normalizeVintageHofContent(input.content);
-      validateVintageHofContent(input.content);
-    }
+    input.content = normalizeVintageHofContent(input.content);
+    validateVintageHofContent(input.content);
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Invalid content." },

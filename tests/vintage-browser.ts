@@ -470,7 +470,7 @@ async function main() {
       await route.fulfill({
         json: {
           storageReady: true,
-          state: { version, draft: doc, published: doc, revisions: [] },
+          state: { version, draft: doc, published: doc },
         },
       });
     });

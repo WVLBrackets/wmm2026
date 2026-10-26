@@ -46,21 +46,13 @@ export async function POST(request: NextRequest) {
     input = JSON.parse(text);
     if (
       !input ||
-      !["save", "publish", "restore"].includes(input.action) ||
+      !["save", "publish"].includes(input.action) ||
       !Number.isSafeInteger(input.version) ||
       input.version < 0
     )
       throw new Error("Invalid action or version.");
-    if (input.action === "restore") {
-      if (
-        typeof input.revisionId !== "string" ||
-        !/^[a-f0-9-]{36}$/i.test(input.revisionId)
-      )
-        throw new Error("Invalid revision.");
-    } else {
-      input.content = normalizeVintageInfoContent(input.content);
-      validateVintageInfoContent(input.content);
-    }
+    input.content = normalizeVintageInfoContent(input.content);
+    validateVintageInfoContent(input.content);
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Invalid content." },
@@ -88,7 +80,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: conflict
-          ? "Someone saved a newer revision. Reload before saving again."
+          ? "Someone else saved first. Reload before saving again."
           : "Unable to save. Check the vintage database and schema.",
       },
       { status: conflict ? 409 : 503, headers },

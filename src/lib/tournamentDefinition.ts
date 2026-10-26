@@ -1,5 +1,6 @@
 import type { PlayInSchool, TournamentData, TournamentTeam } from '@/types/tournament';
 import { getPlayInDisplayName, PLAY_IN_LABEL_MAX_LENGTH } from './playInDisplayName';
+import { normalizePlayInLogoStyle, PLAY_IN_LOGO_LAYOUTS } from './playInLogoStyle';
 
 export const MATCHUP_SEEDS = [1, 16, 8, 9, 5, 12, 4, 13, 6, 11, 3, 14, 7, 10, 2, 15];
 export const REGION_POSITIONS = ['Top Left', 'Bottom Left', 'Top Right', 'Bottom Right'];
@@ -54,6 +55,7 @@ export function canonicalTournament(data: TournamentData): TournamentData {
     }),
     finalFour: { location: data.finalFour.location },
     metadata: { startDate: data.metadata.startDate, scoring: data.metadata.scoring.map(r => ({ round: r.round, points: r.points })) },
+    ...(data.display?.playInLogo ? { display: { playInLogo: normalizePlayInLogoStyle(data.display.playInLogo) } } : {}),
   };
 }
 
@@ -115,6 +117,13 @@ export function validateTournamentDefinition(value: unknown, complete = true): s
   }
   if (playIns > 4) errors.push('At most four play-in slots are allowed.');
   if (!d.finalFour || typeof d.finalFour.location !== 'string') errors.push('Final Four location is required.');
+  const logoStyle = d.display?.playInLogo as unknown;
+  if (logoStyle !== undefined) {
+    const s = logoStyle as Record<string, unknown> | null;
+    if (!s || typeof s !== 'object' || !PLAY_IN_LOGO_LAYOUTS.some(l => l.value === s.layout) || !Number.isFinite(Number(s.scalePercent)) || !Number.isFinite(Number(s.dividerWidth))) {
+      errors.push('Play-in logo style is invalid.');
+    }
+  }
   if (!d.metadata || typeof d.metadata.startDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(d.metadata.startDate) || !Array.isArray(d.metadata.scoring) || d.metadata.scoring.some(r => !r || typeof r.round !== 'string' || !Number.isFinite(r.points))) errors.push('Valid tournament metadata is required.');
   return errors;
 }
@@ -125,10 +134,29 @@ export function validateFirstFourResults(data: TournamentData, results: unknown)
   return Object.entries(results).every(([id, winner]) => slots.some(t => t.id === id && t.playIn!.teams.some(s => s.id === winner)));
 }
 
-/** Entries freeze the field. Only the unresolved pair's presentation label may change. */
+/**
+ * JSON with object keys sorted at every level. Postgres JSONB does not preserve
+ * key order, so stored and freshly built definitions must be compared this way.
+ */
+export function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort()
+      .filter(k => (value as Record<string, unknown>)[k] !== undefined)
+      .map(k => `${JSON.stringify(k)}:${stableJson((value as Record<string, unknown>)[k])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+/**
+ * Entries freeze the field (schools, seeds, regions, scoring). Informational and
+ * presentation fields may change: tournament name, start date, Final Four location,
+ * pair labels, and `display`.
+ */
 export function sameTournamentDefinition(a: TournamentData, b: TournamentData): boolean {
-  const field = (d: TournamentData) => ({ ...d, regions: d.regions.map(r => ({ ...r,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const field = ({ display, name, finalFour, metadata, ...d }: TournamentData) => ({ ...d, scoring: metadata.scoring, regions: d.regions.map(r => ({ ...r,
     teams: r.teams.map(t => t.playIn ? { ...t, name: '', playIn: { teams: t.playIn.teams } } : t),
   })) });
-  return JSON.stringify(field(a)) === JSON.stringify(field(b));
+  return stableJson(field(a)) === stableJson(field(b));
 }

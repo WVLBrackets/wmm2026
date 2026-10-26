@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { getDatabaseConfig, withPostgresSessionTimezoneUtc } from '@/lib/databaseConfig';
 import { getAppEnvironment } from '@/lib/appEnvironment';
 import { initializeTournamentWorkspace } from '@/lib/database/tournamentSchema';
-import { sameTournamentDefinition, validateFirstFourResults, type FirstFourResults } from '@/lib/tournamentDefinition';
+import { sameTournamentDefinition, stableJson, validateFirstFourResults, type FirstFourResults } from '@/lib/tournamentDefinition';
 import type { TournamentData } from '@/types/tournament';
 
 let pool: Pool;
@@ -75,7 +75,7 @@ export async function saveTournamentWorkspace(options: {
     if (options.action === 'publish') {
       const entries = await client.query('SELECT id FROM brackets WHERE environment=$1 AND year=$2 LIMIT 1', [getAppEnvironment(), options.year]);
       if (entries.rows.length && (!published || !sameTournamentDefinition(published, options.definition!))) {
-        throw new TournamentConflict('This year already has brackets or KEY results. Its field cannot be replaced. Combined display names and First Four results can still be updated.');
+        throw new TournamentConflict('This year already has brackets or KEY results. Its schools, seeds, regions, and scoring cannot be changed. Name, start date, Final Four location, combined display names, the play-in logo style, and First Four results can still be updated.');
       }
       published = options.definition!;
       draft = options.definition!;
@@ -83,7 +83,7 @@ export async function saveTournamentWorkspace(options: {
       results = Object.fromEntries(Object.entries(results).filter(([id, winner]) => {
         const before = current.published?.regions.flatMap(r => r.teams).find(t => t.id === id);
         const after = published!.regions.flatMap(r => r.teams).find(t => t.id === id);
-        return JSON.stringify(before?.playIn?.teams) === JSON.stringify(after?.playIn?.teams) && after?.playIn?.teams.some(t => t.id === winner);
+        return stableJson(before?.playIn?.teams) === stableJson(after?.playIn?.teams) && after?.playIn?.teams.some(t => t.id === winner);
       }));
     }
     if (options.action === 'results') {

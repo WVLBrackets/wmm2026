@@ -102,6 +102,18 @@ export interface VintagePaymentBadgeStyle {
   borderColor: string;
 }
 
+/** Copy for one My Picks action confirmation popup. */
+export interface VintagePicksConfirmCopy {
+  /** Dialog title. */
+  title: string;
+  /** Body. Tokens: `{entry}`. Use `||` for a line break. */
+  message: string;
+  /** Primary / confirm button label (e.g. "Yes"). */
+  confirmLabel: string;
+  /** Dismiss button label (e.g. "No"). */
+  cancelLabel: string;
+}
+
 export interface VintagePicksContent {
   /**
    * Season Message Box (year select + title + message) for four states.
@@ -183,6 +195,15 @@ export interface VintagePicksContent {
     paid: VintagePaymentBadgeStyle;
     pending: VintagePaymentBadgeStyle;
     unpaid: VintagePaymentBadgeStyle;
+  };
+  /**
+   * Popup confirmations for row actions (delete / permanent delete / return).
+   * Message supports `||` line breaks and `{entry}` for the entry name.
+   */
+  confirms: {
+    delete: VintagePicksConfirmCopy;
+    permanentDelete: VintagePicksConfirmCopy;
+    return: VintagePicksConfirmCopy;
   };
   /**
    * Row action button colors (active + disabled). Icons stay Lucide per action.
@@ -273,24 +294,45 @@ const DEFAULT_ACTION_DISABLED = {
   disabledColor: "#6b7280",
 };
 
+/** Design-system utility action: navy fill, paper icon (`docs/DESIGN_SYSTEM.md` §4.6). */
+const ACTION_UTILITY = {
+  background: "#152c3a",
+  color: "#f2ead8",
+  ...DEFAULT_ACTION_DISABLED,
+};
+
+/** Design-system primary Submit: newspaper red, paper icon. */
+const ACTION_SUBMIT = {
+  background: "#b52c26",
+  color: "#f2ead8",
+  ...DEFAULT_ACTION_DISABLED,
+};
+
 /**
- * Default filled action colors (aligned with the legacy Tailwind button hues).
+ * Design-system Delete / permanent delete: paper fill, red ink
+ * (border applied in CSS; do not use a solid red fill).
+ */
+const ACTION_DELETE = {
+  background: "#f2ead8",
+  color: "#b52c26",
+  ...DEFAULT_ACTION_DISABLED,
+};
+
+/**
+ * Default My Picks row-action colors — navy / red / paper per design system.
+ * Loud legacy blues/greens/ambers are not used.
  */
 function defaultActionButtons(): VintagePicksActionButtons {
   return {
-    view: { background: "#1e3a5f", color: "#ffffff", ...DEFAULT_ACTION_DISABLED },
-    edit: { background: "#2563eb", color: "#ffffff", ...DEFAULT_ACTION_DISABLED },
-    submit: { background: "#4f46e5", color: "#ffffff", ...DEFAULT_ACTION_DISABLED },
-    copy: { background: "#16a34a", color: "#ffffff", ...DEFAULT_ACTION_DISABLED },
-    delete: { background: "#dc2626", color: "#ffffff", ...DEFAULT_ACTION_DISABLED },
-    restore: { background: "#d97706", color: "#ffffff", ...DEFAULT_ACTION_DISABLED },
-    return: { background: "#d97706", color: "#ffffff", ...DEFAULT_ACTION_DISABLED },
-    email: { background: "#4f46e5", color: "#ffffff", ...DEFAULT_ACTION_DISABLED },
-    permanentDelete: {
-      background: "#7f1d1d",
-      color: "#ffffff",
-      ...DEFAULT_ACTION_DISABLED,
-    },
+    view: { ...ACTION_UTILITY },
+    edit: { ...ACTION_UTILITY },
+    submit: { ...ACTION_SUBMIT },
+    copy: { ...ACTION_UTILITY },
+    delete: { ...ACTION_DELETE },
+    restore: { ...ACTION_UTILITY },
+    return: { ...ACTION_UTILITY },
+    email: { ...ACTION_UTILITY },
+    permanentDelete: { ...ACTION_DELETE },
   };
 }
 
@@ -305,18 +347,17 @@ function defaultCostMessages(): Pick<
   return {
     costNoBrackets: "Click New Bracket to start your first entry",
     costNoInProgress:
-      "Your total cost so far is ${cost}.||You can create a new entry and save it for later without submitting it now.",
+      "Submitted entry total: ${cost}. In-progress entries count only after submission.",
     costNoSubmitted:
-      "You have not submitted any brackets yet.||Please complete and submit your bracket(s) to be included in the contest.",
+      "You have not submitted any brackets yet. In-progress entries count only after submission.",
     costBoth:
-      "Your total cost so far is ${cost}.||In Progress brackets are not included in the contest until submitted.",
+      "Submitted entry total: ${cost}. In-progress entries count only after submission.",
   };
 }
 
 function defaultCurrentFlavor(): VintagePicksFlavor {
   return {
-    headerNote:
-      "Create and submit your picks here once the bracket is available",
+    headerNote: "Create and manage your {year} brackets.",
     emptyTitle: "No brackets yet",
     emptyBody: "Use the \"New Bracket\" button to create your first bracket.",
     inPoolHeader: "In the pool",
@@ -333,7 +374,7 @@ function defaultCurrentFlavor(): VintagePicksFlavor {
  */
 function defaultHistoricFlavor(): VintagePicksFlavor {
   return {
-    headerNote: "Browsing {year} brackets (read-only).",
+    headerNote: "Review your {year} brackets. Editing is closed.",
     emptyTitle: "No entries for {year}",
     emptyBody:
       "You have no brackets for {year}. Switch to {activeYear} to create new picks.",
@@ -341,8 +382,13 @@ function defaultHistoricFlavor(): VintagePicksFlavor {
     inPoolDetail: "Submitted entries from {year}.",
     outPoolHeader: "Not in the pool",
     outPoolDetail: "In-progress and deleted entries from {year}.",
-    ...defaultCostMessages(),
     costNoBrackets: "No brackets on file for {year}.",
+    costNoInProgress:
+      "Submitted entry total: ${cost}. Historical entries are read-only.",
+    costNoSubmitted:
+      "No submitted entries for {year}. Historical entries are read-only.",
+    costBoth:
+      "Submitted entry total: ${cost}. Historical entries are read-only.",
   };
 }
 
@@ -387,10 +433,14 @@ export function defaultVintagePicksAuthCopy(): VintagePicksAuthCopy {
   };
 }
 
-/** Default Message Box colors: active year = blue/cream; prior = cream/blue/red. */
+/**
+ * Default Message Box colors (approved two-state season panel).
+ * Current year: solid navy. Prior year: paper fill, navy border / left accent.
+ * Return-to-current link is rendered in the UI (red), not as the whole panel.
+ */
 function defaultMessageBox(): VintageMessageBox {
   const activeColors = {
-    borderColor: "#f2ead8",
+    borderColor: "#152c3a",
     backgroundColor: "#152c3a",
     titleColor: "#f2ead8",
     messageColor: "#f2ead8",
@@ -398,17 +448,17 @@ function defaultMessageBox(): VintageMessageBox {
   const priorColors = {
     borderColor: "#152c3a",
     backgroundColor: "#f2ead8",
-    titleColor: "#b52c26",
-    messageColor: "#b52c26",
+    titleColor: "#152c3a",
+    messageColor: "#152c3a",
   };
   return {
     preBracket: {
-      title: "Countdown to {year} bracket",
+      title: "Tipoff countdown",
       message: "{countdown}",
       ...activeColors,
     },
     preTipoff: {
-      title: "Countdown to {year} tipoff",
+      title: "Tipoff countdown",
       message: "{countdown}",
       ...activeColors,
     },
@@ -418,8 +468,8 @@ function defaultMessageBox(): VintageMessageBox {
       ...activeColors,
     },
     priorYear: {
-      title: "Viewing {year}",
-      message: "Click here to switch back to {activeYear}",
+      title: "Past season",
+      message: "Viewing {year}",
       ...priorColors,
     },
   };
@@ -475,6 +525,29 @@ export const DEFAULT_VINTAGE_PICKS_CONTENT: VintagePicksContent = {
       background: "#e5e7eb",
       color: "#374151",
       borderColor: "#9ca3af",
+    },
+  },
+  confirms: {
+    delete: {
+      title: "Delete entry?",
+      message:
+        "This will move “{entry}” to Deleted. You can restore it later.||Are you sure?",
+      confirmLabel: "Yes",
+      cancelLabel: "No",
+    },
+    permanentDelete: {
+      title: "Permanently delete?",
+      message:
+        "Permanently delete “{entry}”? This cannot be undone.||Are you sure you want to continue?",
+      confirmLabel: "Yes",
+      cancelLabel: "No",
+    },
+    return: {
+      title: "Return to In Progress?",
+      message:
+        "This will move “{entry}” out of the contest pool until you submit again.||Are you sure?",
+      confirmLabel: "Yes",
+      cancelLabel: "No",
     },
   },
   actions: defaultActionButtons(),
@@ -681,6 +754,7 @@ export function normalizeVintagePicksContent(
         : defaults.bracketsMissingErrorMessage,
     rowLogoGapPx: normalizeRowLogoGapPx(input.rowLogoGapPx, defaults.rowLogoGapPx),
     payment: normalizePayment(input.payment, defaults.payment),
+    confirms: normalizeConfirms(input.confirms, defaults.confirms),
     actions: normalizeActionButtons(input.actions, defaults.actions),
     flavors: {
       current: normalizeFlavor(flavorSource.current, defaults.flavors.current),
@@ -993,7 +1067,47 @@ function normalizeMessageBoxState(
 }
 
 /**
+ * True when prior-year Message Box copy is the legacy full-panel switch CTA.
+ */
+function isLegacyPriorYearSwitchCopy(text: string): boolean {
+  return /click here|switch back/i.test(text);
+}
+
+/**
+ * True when a color is paper/cream (blends into the page behind a navy panel).
+ */
+function isPaperLikeColor(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  return (
+    normalized === "#f2ead8" ||
+    normalized === "#f2ead8ff" ||
+    normalized === "rgb(242, 234, 216)" ||
+    normalized === "var(--v-paper)" ||
+    normalized === "var(--vp-paper)"
+  );
+}
+
+/**
+ * Current-year panels use a navy border so the outer edge stays visible on paper.
+ * Legacy cream borders made the navy fill look smaller than the prior-year panel.
+ *
+ * @param state - Normalized Message Box state
+ * @param defaults - Active-year defaults (navy border / fill)
+ */
+function repairActiveSeasonBorder(
+  state: VintageMessageBoxState,
+  defaults: VintageMessageBoxState,
+): VintageMessageBoxState {
+  if (!isPaperLikeColor(state.borderColor)) return state;
+  return {
+    ...state,
+    borderColor: defaults.borderColor,
+  };
+}
+
+/**
  * Normalize Message Box; seed titles from deprecated countdown labels when absent.
+ * Prior-year “click here to switch…” paragraphs are replaced with compact “Viewing {year}”.
  */
 function normalizeMessageBox(
   value: unknown,
@@ -1014,24 +1128,98 @@ function normalizeMessageBox(
       title: legacy.countdownToTipoffLabel || defaults.preTipoff.title,
     },
     live: { ...defaults.live },
-    priorYear: {
-      ...defaults.priorYear,
-      message:
-        legacy.viewingPriorYearLabel
-          .replace(/^Viewing\s*\{year\}\.\s*/i, "")
-          .trim() || defaults.priorYear.message,
-    },
+    priorYear: { ...defaults.priorYear },
   };
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return seeded;
+    return {
+      preBracket: repairActiveSeasonBorder(seeded.preBracket, defaults.preBracket),
+      preTipoff: repairActiveSeasonBorder(seeded.preTipoff, defaults.preTipoff),
+      live: repairActiveSeasonBorder(seeded.live, defaults.live),
+      priorYear: seeded.priorYear,
+    };
   }
   const input = value as Partial<Record<VintageMessageBoxStateKey, unknown>>;
+  const priorYear = normalizeMessageBoxState(input.priorYear, seeded.priorYear);
+  if (
+    isLegacyPriorYearSwitchCopy(priorYear.title) ||
+    isLegacyPriorYearSwitchCopy(priorYear.message)
+  ) {
+    priorYear.title = defaults.priorYear.title;
+    priorYear.message = defaults.priorYear.message;
+    priorYear.titleColor = defaults.priorYear.titleColor;
+    priorYear.messageColor = defaults.priorYear.messageColor;
+    priorYear.borderColor = defaults.priorYear.borderColor;
+    priorYear.backgroundColor = defaults.priorYear.backgroundColor;
+  }
   return {
-    preBracket: normalizeMessageBoxState(input.preBracket, seeded.preBracket),
-    preTipoff: normalizeMessageBoxState(input.preTipoff, seeded.preTipoff),
-    live: normalizeMessageBoxState(input.live, seeded.live),
-    priorYear: normalizeMessageBoxState(input.priorYear, seeded.priorYear),
+    preBracket: repairActiveSeasonBorder(
+      normalizeMessageBoxState(input.preBracket, seeded.preBracket),
+      defaults.preBracket,
+    ),
+    preTipoff: repairActiveSeasonBorder(
+      normalizeMessageBoxState(input.preTipoff, seeded.preTipoff),
+      defaults.preTipoff,
+    ),
+    live: repairActiveSeasonBorder(
+      normalizeMessageBoxState(input.live, seeded.live),
+      defaults.live,
+    ),
+    priorYear,
   };
+}
+
+/**
+ * Normalize one confirmation popup copy bag.
+ */
+function normalizeConfirmCopy(
+  value: unknown,
+  defaults: VintagePicksConfirmCopy,
+): VintagePicksConfirmCopy {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { ...defaults };
+  }
+  const input = value as Partial<VintagePicksConfirmCopy>;
+  return {
+    title: normalizeAuthString(input.title, defaults.title),
+    message: normalizeAuthString(input.message, defaults.message),
+    confirmLabel: normalizeAuthString(input.confirmLabel, defaults.confirmLabel),
+    cancelLabel: normalizeAuthString(input.cancelLabel, defaults.cancelLabel),
+  };
+}
+
+/**
+ * Normalize delete / permanent-delete / return confirmation copy.
+ */
+function normalizeConfirms(
+  value: unknown,
+  defaults: VintagePicksContent["confirms"],
+): VintagePicksContent["confirms"] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return structuredClone(defaults);
+  }
+  const input = value as Partial<VintagePicksContent["confirms"]>;
+  return {
+    delete: normalizeConfirmCopy(input.delete, defaults.delete),
+    permanentDelete: normalizeConfirmCopy(
+      input.permanentDelete,
+      defaults.permanentDelete,
+    ),
+    return: normalizeConfirmCopy(input.return, defaults.return),
+  };
+}
+
+/**
+ * Fill `{entry}` in a confirmation title or message.
+ *
+ * @param template - CMS string
+ * @param entryName - Bracket entry name (falls back to "this entry")
+ */
+export function formatPicksConfirmText(
+  template: string,
+  entryName: string,
+): string {
+  const entry = entryName.trim() || "this entry";
+  return template.replace(/\{entry\}/g, entry);
 }
 
 /**
@@ -1053,9 +1241,12 @@ export function vintagePicksChromeCssVars(
     vars[`--vp-pay-${state}-icon-bg`] = badge.iconBackground;
     vars[`--vp-pay-${state}-icon-fg`] = badge.iconColor;
   }
-  const keys = Object.keys(content.actions) as (keyof VintagePicksActionButtons)[];
+  // Row-action chrome is design-locked (navy / red / paper). Always emit the
+  // approved treatments so older CMS drafts with loud blues/greens cannot regress.
+  const locked = defaultActionButtons();
+  const keys = Object.keys(locked) as (keyof VintagePicksActionButtons)[];
   for (const key of keys) {
-    const style = content.actions[key];
+    const style = locked[key];
     const cssKey = key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
     vars[`--vp-action-${cssKey}-bg`] = style.background;
     vars[`--vp-action-${cssKey}-fg`] = style.color;
@@ -1130,6 +1321,25 @@ export function validateVintagePicksContent(
   }
   if (!Number.isFinite(doc.rowLogoGapPx) || doc.rowLogoGapPx < 0) {
     throw new Error("Row logo gap must be a non-negative number.");
+  }
+  for (const [key, label] of [
+    ["delete", "Delete confirmation"],
+    ["permanentDelete", "Permanent-delete confirmation"],
+    ["return", "Return confirmation"],
+  ] as const) {
+    const bag = doc.confirms[key];
+    if (!bag.title.trim()) {
+      throw new Error(`${label} title cannot be blank.`);
+    }
+    if (!bag.message.trim()) {
+      throw new Error(`${label} message cannot be blank.`);
+    }
+    if (!bag.confirmLabel.trim()) {
+      throw new Error(`${label} confirm label cannot be blank.`);
+    }
+    if (!bag.cancelLabel.trim()) {
+      throw new Error(`${label} cancel label cannot be blank.`);
+    }
   }
   if (!doc.auth.signIn.tabLabel.trim() || !doc.auth.signIn.heading.trim()) {
     throw new Error("Sign In tab label and heading cannot be blank.");

@@ -35,6 +35,7 @@ import {
   type VintageToolbarItem,
   validateVintageContent,
 } from "@/lib/vintage/content";
+import AdminColorField from "./AdminColorField";
 
 /**
  * Convert an ISO timestamp to a datetime-local input value (device local).
@@ -55,6 +56,7 @@ import {
 } from "@/lib/vintage/toolbarIcons";
 import IconPickerModal from "./IconPickerModal";
 import VintageAdminNav from "./VintageAdminNav";
+import VintageCmsTransferPanel from "./VintageCmsTransferPanel";
 import "./editor.css";
 import {
   SectionPanel,
@@ -72,7 +74,6 @@ const tabs = [
   "Tournament & countdown",
   "Media library",
   "Footer",
-  "Revisions",
 ];
 
 /**
@@ -402,20 +403,14 @@ export default function VintageEditor() {
     const d = await response.json();
     return d.csrfToken;
   }
-  async function save(
-    action: "save" | "publish" | "restore",
-    revisionId?: string,
-  ) {
+  async function save(action: "save" | "publish") {
     if (!state) return;
     setError("");
     setMessage("");
     setBusy(true);
     try {
-      const payload =
-        action === "restore"
-          ? undefined
-          : normalizeVintageContent(content);
-      if (payload) validateVintageContent(payload);
+      const payload = normalizeVintageContent(content);
+      validateVintageContent(payload);
       const token = await csrfToken();
       const r = await fetch("/api/admin/vintage-homepage", {
         method: "POST",
@@ -424,7 +419,6 @@ export default function VintageEditor() {
           action,
           content: payload,
           version: state.version,
-          revisionId,
         }),
       });
       const d = await r.json();
@@ -437,11 +431,7 @@ export default function VintageEditor() {
         router.refresh();
         return;
       }
-      setMessage(
-        action === "restore"
-          ? "Revision restored as a draft. Preview it before publishing."
-          : "Draft saved. It is ready to preview.",
-      );
+      setMessage("Draft saved. It is ready to preview.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save changes.");
     } finally {
@@ -587,6 +577,11 @@ export default function VintageEditor() {
           keeps showing the last published edition.
         </p>
       )}
+      <VintageCmsTransferPanel
+        onApplied={() => {
+          window.location.reload();
+        }}
+      />
       <div className="ve-workspace">
         <SectionRail
           sections={SECTIONS}
@@ -937,32 +932,19 @@ export default function VintageEditor() {
                       content.theme.third,
                     ],
                   ] as const
-                ).map(([path, label, value]) => (
-                  <label className="ve-field" key={path} htmlFor={`vintage-${path.replace(/\./g, "-")}`}>
-                    <span>{label}</span>
-                    <div className="ve-color-row">
-                      <input
-                        type="color"
-                        aria-label={`${label} swatch`}
-                        value={value}
-                        onChange={(event) =>
-                          update(path, event.target.value)
-                        }
-                        data-testid={`vintage-${path.replace(/\./g, "-")}-swatch`}
-                      />
-                      <input
-                        id={`vintage-${path.replace(/\./g, "-")}`}
-                        data-testid={`vintage-${path.replace(/\./g, "-")}`}
-                        value={value}
-                        onChange={(event) =>
-                          update(path, event.target.value)
-                        }
-                        placeholder="#152c3a"
-                        spellCheck={false}
-                      />
-                    </div>
-                  </label>
-                ))}
+                ).map(([path, label, value]) => {
+                  const testId = `vintage-${path.replace(/\./g, "-")}`;
+                  return (
+                    <AdminColorField
+                      key={path}
+                      id={testId}
+                      testId={testId}
+                      label={label}
+                      value={value}
+                      onChange={(next) => update(path, next)}
+                    />
+                  );
+                })}
               </div>
               <h3>Theme fonts</h3>
               <p className="ve-help">
@@ -1985,46 +1967,6 @@ export default function VintageEditor() {
               {field("footer.contactEmail", "Contact email (optional — also in Key Data)", {
                 type: "email",
               })}
-            </>
-          </SectionPanel>
-          <SectionPanel id={sectionIdFor("Revisions")} title="Revisions" disabled={busy}>
-            <>
-              <p className="ve-help">
-                Restoring replaces your draft. It does not change the published
-                homepage until you publish again.
-              </p>
-              {dirty && (
-                <p className="ve-help">
-                  Save your current changes before restoring another revision.
-                </p>
-              )}
-              {state?.revisions.map((r) => (
-                <div className="ve-revision" key={r.id}>
-                  <div>
-                    <strong>
-                      {r.action === "publish"
-                        ? "Published edition"
-                        : r.action === "restore"
-                          ? "Restored draft"
-                          : "Saved draft"}
-                    </strong>
-                    <span>
-                      {new Date(r.createdAt).toLocaleString()} · {r.author}
-                    </span>
-                  </div>
-                  <button
-                    className="ve-button"
-                    disabled={busy || dirty}
-                    data-testid={`vintage-restore-${r.id}`}
-                    onClick={() => void save("restore", r.id)}
-                  >
-                    Restore as draft
-                  </button>
-                </div>
-              ))}
-              {!state?.revisions.length && (
-                <p className="ve-help">Your saved editions will appear here.</p>
-              )}
             </>
           </SectionPanel>
         </div>

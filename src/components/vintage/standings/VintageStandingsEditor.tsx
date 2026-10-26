@@ -14,11 +14,15 @@ import {
 } from "lucide-react";
 import {
   DEFAULT_VINTAGE_STANDINGS_CONTENT,
+  isPaper2020SectionHidden,
   normalizeVintageStandingsContent,
   validateVintageStandingsContent,
   type VintageStandingsContent,
+  type VintageStandingsPaper2020,
+  type VintageStandingsStringKey,
 } from "@/lib/vintage/standingsContent";
 import type { VintageStandingsState } from "@/lib/vintage/standingsStore";
+import AdminColorField from "../AdminColorField";
 import VintageAdminNav from "../VintageAdminNav";
 import "../editor.css";
 import {
@@ -27,8 +31,13 @@ import {
   sectionDomId,
   useSectionNav,
 } from "../sectionNav";
+import {
+  StandingsLogoSizingPreview,
+  StandingsResultBorderPreview,
+  StandingsResultShadePreview,
+} from "./StandingsAdminPreviews";
 
-/** Section labels in page order (Revisions is appended when revisions exist). */
+/** Section labels in page order. */
 const SECTION_LABELS = [
   "Snapshot status",
   "Page & year",
@@ -36,11 +45,27 @@ const SECTION_LABELS = [
   "Logo sizing",
   "Result shade colors",
   "Result border colors",
+  "Result hover labels",
   "Column headers (desktop)",
   "Column headers (mobile)",
   "Empty states & legend",
+  "2020 newspaper",
   "Regenerate snapshot",
 ] as const;
+
+/** paper2020 hide-flag keys with admin checkbox labels. */
+const PAPER_2020_HIDE_FLAGS: {
+  key: keyof VintageStandingsPaper2020;
+  label: string;
+}[] = [
+  { key: "hidePageSubhead", label: "Hide page subhead (under the year heading)" },
+  { key: "hideDateline", label: "Hide dateline (kicker / volume)" },
+  { key: "hideHeadline", label: "Hide headline & deck" },
+  { key: "hideLead", label: "Hide lead story" },
+  { key: "hideSidebar", label: "Hide sidebar & pull quote" },
+  { key: "hideWire", label: "Hide Warren’s desk" },
+  { key: "hideSources", label: "Hide sources line" },
+];
 
 /**
  * Stable DOM id of a stacked section from its label
@@ -65,7 +90,7 @@ type SnapshotStatus = {
  */
 function setField(
   source: VintageStandingsContent,
-  key: keyof VintageStandingsContent,
+  key: VintageStandingsStringKey,
   value: string,
 ): VintageStandingsContent {
   return { ...source, [key]: value };
@@ -89,10 +114,10 @@ export default function VintageStandingsEditor() {
   const [recomputeYear, setRecomputeYear] = useState("2026");
   const [snapshot, setSnapshot] = useState<SnapshotStatus | null>(null);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
-  const SECTIONS = [
-    ...SECTION_LABELS,
-    ...(state?.revisions.length ? (["Revisions"] as const) : []),
-  ].map((label) => ({ label, id: sectionIdFor(label) }));
+  const SECTIONS = SECTION_LABELS.map((label) => ({
+    label,
+    id: sectionIdFor(label),
+  }));
   const { activeId, jumpTo } = useSectionNav(
     SECTIONS.map((section) => section.id),
     Boolean(state),
@@ -152,7 +177,7 @@ export default function VintageStandingsEditor() {
   /**
    * Update one CMS field and mark the draft dirty.
    */
-  function update(key: keyof VintageStandingsContent, value: string) {
+  function update(key: VintageStandingsStringKey, value: string) {
     setContent((previous) => setField(previous, key, value));
     setDirty(true);
     if (key === "standingsYear" && /^\d{4}$/.test(value.trim())) {
@@ -161,10 +186,21 @@ export default function VintageStandingsEditor() {
   }
 
   /**
+   * Update one nested 2020 newspaper field.
+   */
+  function updatePaper(key: keyof VintageStandingsPaper2020, value: string) {
+    setContent((previous) => ({
+      ...previous,
+      paper2020: { ...previous.paper2020, [key]: value },
+    }));
+    setDirty(true);
+  }
+
+  /**
    * Render a labeled text field.
    */
   function field(
-    key: keyof VintageStandingsContent,
+    key: VintageStandingsStringKey,
     label: string,
     options: { multiline?: boolean; help?: string } = {},
   ) {
@@ -195,6 +231,63 @@ export default function VintageStandingsEditor() {
     );
   }
 
+  /**
+   * Render a labeled color field (swatch + wheel + hex + eyedropper).
+   */
+  function colorField(
+    key: VintageStandingsStringKey,
+    label: string,
+    options: { help?: string; placeholder?: string } = {},
+  ) {
+    return (
+      <AdminColorField
+        key={key}
+        id={`vintage-standings-${key}`}
+        testId={`vintage-standings-${key}`}
+        label={label}
+        value={content[key]}
+        onChange={(next) => update(key, next)}
+        help={options.help}
+        placeholder={options.placeholder}
+      />
+    );
+  }
+
+  /**
+   * Render a labeled 2020 newspaper text field.
+   */
+  function paperField(
+    key: keyof VintageStandingsPaper2020,
+    label: string,
+    options: { multiline?: boolean; help?: string; rows?: number } = {},
+  ) {
+    const id = `vintage-standings-paper2020-${key}`;
+    return (
+      <label className="ve-field" key={key} htmlFor={id}>
+        <span>{label}</span>
+        {options.help ? <span className="ve-help">{options.help}</span> : null}
+        {options.multiline ? (
+          <textarea
+            id={id}
+            data-testid={id}
+            value={content.paper2020[key]}
+            onChange={(e) => updatePaper(key, e.target.value)}
+            rows={options.rows ?? 3}
+            maxLength={8000}
+          />
+        ) : (
+          <input
+            id={id}
+            data-testid={id}
+            value={content.paper2020[key]}
+            onChange={(e) => updatePaper(key, e.target.value)}
+            maxLength={4000}
+          />
+        )}
+      </label>
+    );
+  }
+
   async function csrfToken(): Promise<string> {
     const response = await fetch("/api/csrf-token", { cache: "no-store" });
     if (!response.ok) throw new Error("Could not verify your session.");
@@ -202,20 +295,14 @@ export default function VintageStandingsEditor() {
     return data.csrfToken;
   }
 
-  async function save(
-    action: "save" | "publish" | "restore",
-    revisionId?: string,
-  ) {
+  async function save(action: "save" | "publish") {
     if (!state) return;
     setError("");
     setMessage("");
     setBusy(true);
     try {
-      const payload =
-        action === "restore"
-          ? undefined
-          : normalizeVintageStandingsContent(content);
-      if (payload) validateVintageStandingsContent(payload);
+      const payload = normalizeVintageStandingsContent(content);
+      validateVintageStandingsContent(payload);
       const token = await csrfToken();
       const response = await fetch("/api/admin/vintage-standings", {
         method: "POST",
@@ -227,7 +314,6 @@ export default function VintageStandingsEditor() {
           action,
           content: payload,
           version: state.version,
-          revisionId,
         }),
       });
       const data = await response.json();
@@ -241,11 +327,7 @@ export default function VintageStandingsEditor() {
         router.refresh();
         return;
       }
-      setMessage(
-        action === "restore"
-          ? "Revision restored as a draft."
-          : "Draft saved.",
-      );
+      setMessage("Draft saved.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save changes.");
     } finally {
@@ -442,6 +524,10 @@ export default function VintageStandingsEditor() {
               help: "Token: {year}",
             })}
           </div>
+          <p className="ve-help" style={{ marginTop: "0.75rem" }}>
+            Year 2020 shows a cancellation newspaper instead of a table — edit
+            it in the <strong>2020 newspaper</strong> section below.
+          </p>
           </SectionPanel>
           <SectionPanel id={sectionIdFor("Filters & badges")} title="Filters & badges">
           <div className="ve-grid">
@@ -461,22 +547,33 @@ export default function VintageStandingsEditor() {
           </SectionPanel>
           <SectionPanel id={sectionIdFor("Logo sizing")} title="Logo sizing">
           <p className="ve-help">
-            Independent square tile sizes for desktop and mobile (breakpoint
-            900px). Clamped to 12–64px for logos and 1–8px for the finalist border.
-            Publish to apply on the public Standings page.
+            Shared by Standings and My Picks. Independent square tile sizes for
+            desktop and mobile (breakpoint 900px). Clamped to 12–64px for logos,
+            50–100% for logo fill, and 1–8px for the finalist border. Preview
+            updates as you type; publish to apply on the live pages.
           </p>
+          <StandingsLogoSizingPreview content={content} />
           <div className="ve-grid">
             {field("finalFourLogoSizeDesktopPx", "Final Four square — desktop (px)", {
-              help: "Default 22.",
+              help: "Default 32.",
             })}
             {field("champLogoSizeDesktopPx", "Champ square — desktop (px)", {
-              help: "Default 28.",
+              help: "Default 42.",
             })}
             {field("finalFourLogoSizeMobilePx", "Final Four square — mobile (px)", {
-              help: "Default 22.",
+              help: "Default 32.",
             })}
             {field("champLogoSizeMobilePx", "Champ square — mobile (px)", {
-              help: "Default 28.",
+              help: "Default 42.",
+            })}
+            {field("finalFourLogoSizeCardPx", "Final Four square — My Picks mobile card (px)", {
+              help: "Default 26. The 2×2 grid on phone entry cards.",
+            })}
+            {field("champLogoSizeCardPx", "Champ square — My Picks mobile card (px)", {
+              help: "Default 39.",
+            })}
+            {field("logoFillPercent", "Logo fill (% of square)", {
+              help: "Default 100. Lower adds breathing room inside every Final Four / Champ square.",
             })}
             {field("finalistBorderWidthPx", "Finalist border width (px)", {
               help: "Default 2. Applies on both desktop and mobile.",
@@ -489,15 +586,19 @@ export default function VintageStandingsEditor() {
             match; incorrect = KEY mismatch or eliminated; pending = not decided
             yet and still alive.
           </p>
+          <StandingsResultShadePreview content={content} />
           <div className="ve-grid">
-            {field("shadeCorrect", "Shade — correct (green)", {
+            {colorField("shadeCorrect", "Shade — correct (green)", {
               help: "Default #dcfce7",
+              placeholder: "#dcfce7",
             })}
-            {field("shadeIncorrect", "Shade — incorrect (red)", {
+            {colorField("shadeIncorrect", "Shade — incorrect (red)", {
               help: "Default #fee2e2",
+              placeholder: "#fee2e2",
             })}
-            {field("shadePending", "Shade — pending (white)", {
+            {colorField("shadePending", "Shade — pending (white)", {
               help: "Default #ffffff",
+              placeholder: "#ffffff",
             })}
           </div>
           </SectionPanel>
@@ -506,15 +607,40 @@ export default function VintageStandingsEditor() {
             Finalist heavy frame (and Champ status border when decided). Pending
             finalists use the black/pending color at the width above.
           </p>
+          <StandingsResultBorderPreview content={content} />
           <div className="ve-grid">
-            {field("borderCorrect", "Border — correct (green)", {
+            {colorField("borderCorrect", "Border — correct (green)", {
               help: "Default #16a34a",
+              placeholder: "#16a34a",
             })}
-            {field("borderIncorrect", "Border — incorrect (red)", {
+            {colorField("borderIncorrect", "Border — incorrect (red)", {
               help: "Default #dc2626",
+              placeholder: "#dc2626",
             })}
-            {field("borderPendingFinalist", "Border — pending finalist (black)", {
+            {colorField("borderPendingFinalist", "Border — pending finalist (black)", {
               help: "Default #000000",
+              placeholder: "#000000",
+            })}
+          </div>
+          </SectionPanel>
+          <SectionPanel id={sectionIdFor("Result hover labels")} title="Result hover labels">
+          <p className="ve-help">
+            Mouseover / screen-reader phrases for Final Four and Champ tiles.
+            Shared by Standings and My Picks — edit once here. Shade and finalist
+            frame stay as separate phrases in the composed tip.
+          </p>
+          <div className="ve-grid">
+            {field("a11yEmptySelection", "Empty Final Four cell")}
+            {field("a11yNoChampionPick", "Empty champion cell")}
+            {field("a11yCorrectRegional", "Correct — regional")}
+            {field("a11yIncorrectRegional", "Incorrect — regional")}
+            {field("a11yCorrectChampion", "Correct — champion")}
+            {field("a11yIncorrectChampion", "Incorrect — champion")}
+            {field("a11yCorrectFinalist", "Correct — finalist frame")}
+            {field("a11yIncorrectFinalist", "Incorrect — finalist frame")}
+            {field("a11yPending", "Pending (any column)")}
+            {field("a11yFinalistFrame", "Finalist frame meaning", {
+              help: 'Added when the tile has a heavy frame. Example: "picked to reach the final".',
             })}
           </div>
           </SectionPanel>
@@ -566,6 +692,108 @@ export default function VintageStandingsEditor() {
             })}
           </div>
           </SectionPanel>
+          <SectionPanel
+            id={sectionIdFor("2020 newspaper")}
+            title="2020 newspaper"
+          >
+            <p className="ve-help">
+              Cancellation edition shown when Standings year is 2020. Hide
+              checkboxes omit sections on the live page without deleting copy.
+              Preview:{" "}
+              <Link href="/standings?year=2020" target="_blank">
+                /standings?year=2020
+              </Link>
+              .
+            </p>
+            <div
+              className="ve-grid"
+              style={{ marginBottom: 12 }}
+              data-testid="vintage-standings-paper2020-hide-flags"
+            >
+              {PAPER_2020_HIDE_FLAGS.map(({ key, label }) => {
+                const id = `vintage-standings-paper2020-${key}`;
+                const checked = isPaper2020SectionHidden(
+                  content.paper2020[key],
+                );
+                return (
+                  <label className="ve-checkbox-row" key={key} htmlFor={id}>
+                    <input
+                      id={id}
+                      data-testid={id}
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) =>
+                        updatePaper(key, e.target.checked ? "true" : "false")
+                      }
+                    />
+                    <span>{label}</span>
+                  </label>
+                );
+              })}
+            </div>
+            <h3>Page header</h3>
+            <div className="ve-grid">
+              {paperField("pageHeading", "Page heading", {
+                help: "Title in the Standings header bar (next to the year).",
+              })}
+              {paperField("pageSubhead", "Page subhead", {
+                help: "Line under the heading (replaces “Updated …” on 2020).",
+              })}
+            </div>
+            <h3>Dateline</h3>
+            <div className="ve-grid">
+              {paperField("kicker", "Kicker")}
+              {paperField("volume", "Volume line")}
+            </div>
+            <h3>Headline</h3>
+            <div className="ve-grid">
+              {paperField("headline", "Headline")}
+              {paperField("deck", "Deck", { multiline: true, rows: 2 })}
+            </div>
+            <h3>Lead story</h3>
+            <div className="ve-grid">
+              {paperField("leadSubhead", "Lead subhead")}
+              {paperField("leadBody1", "Lead paragraph 1", {
+                multiline: true,
+                rows: 4,
+              })}
+              {paperField("leadBody2", "Lead paragraph 2", {
+                multiline: true,
+                rows: 4,
+              })}
+            </div>
+            <h3>Sidebar</h3>
+            <div className="ve-grid">
+              {paperField("sidebarSubhead", "Sidebar subhead")}
+              {paperField("sidebarBody", "Sidebar body", {
+                multiline: true,
+                rows: 4,
+              })}
+              {paperField("pullQuote", "Pull quote", {
+                multiline: true,
+                rows: 3,
+              })}
+              {paperField("pullCite", "Pull quote citation")}
+            </div>
+            <h3>Warren’s desk</h3>
+            <div className="ve-grid">
+              {paperField("wireSubhead", "Desk subhead")}
+              {paperField("wireBody", "Desk body", {
+                multiline: true,
+                rows: 4,
+              })}
+            </div>
+            <h3>Sources</h3>
+            <div className="ve-grid">
+              {paperField("sourcesIntro", "Sources intro")}
+              {paperField("source1Label", "Source 1 label")}
+              {paperField("source1Href", "Source 1 URL")}
+              {paperField("sourcesBetween", "Text between sources")}
+              {paperField("source2Label", "Source 2 label")}
+              {paperField("source2Href", "Source 2 URL")}
+              {paperField("sourcesOutro", "Sources outro")}
+            </div>
+          </SectionPanel>
           <SectionPanel id={sectionIdFor("Regenerate snapshot")} title="Regenerate snapshot">
           <p className="ve-help">
             Rebuilds <code>live_standings_snapshots</code> for the year from the
@@ -603,28 +831,6 @@ export default function VintageStandingsEditor() {
             </button>
           </div>
           </SectionPanel>
-          {state.revisions.length ? (
-            <SectionPanel id={sectionIdFor("Revisions")} title="Revisions">
-          <ul className="ve-revisions">
-            {state.revisions.map((revision) => (
-              <li key={revision.id}>
-                <span>
-                  {revision.action} · {revision.author} ·{" "}
-                  {new Date(revision.createdAt).toLocaleString()}
-                </span>
-                <button
-                  type="button"
-                  className="ve-button"
-                  disabled={busy || dirty}
-                  onClick={() => void save("restore", revision.id)}
-                >
-                  Restore
-                </button>
-              </li>
-            ))}
-          </ul>
-            </SectionPanel>
-          ) : null}
         </div>
       </div>
     </main>

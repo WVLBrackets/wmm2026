@@ -41,6 +41,26 @@ export interface TournamentData {
       points: number;
     }>;
   };
+  /** Presentation-only settings; may change after entries exist. */
+  display?: {
+    playInLogo?: PlayInLogoStyle;
+  };
+}
+
+/** How an unresolved play-in pair's two logos share one square tile. */
+export type PlayInLogoLayout =
+  | 'side-by-side'
+  | 'corner-overlap'
+  | 'split-vertical'
+  | 'split-diagonal'
+  | 'corner-cut';
+
+export interface PlayInLogoStyle {
+  layout: PlayInLogoLayout;
+  /** Each logo's size as % of the tile (corner layouts only). */
+  scalePercent: number;
+  /** White divider / halo width in 64-unit canvas units; 0 = none. */
+  dividerWidth: number;
 }
 
 export interface TournamentGame {

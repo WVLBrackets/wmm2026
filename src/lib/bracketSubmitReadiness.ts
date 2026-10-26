@@ -1,25 +1,36 @@
 import type { TournamentData, TournamentBracket } from '@/types/tournament';
 import type { SiteConfigData } from '@/lib/siteConfig';
+import {
+  gamePickIsValid,
+  updateBracketWithValidPicks,
+} from '@/lib/bracketPickValidity';
 
 /**
  * Builds the same per-step completion check used by {@link StepByStepBracket} for progress dots / Next.
+ * Uses the live matchup tree so orphan picks (e.g. a champ no longer in the final) do not count.
  */
 function buildIsStepComplete(
   regions: TournamentData['regions'],
-  baseBracket: TournamentBracket,
+  liveBracket: TournamentBracket,
   picks: Record<string, string>
 ) {
   return (step: number): boolean => {
     if (step < regions.length) {
       const region = regions[step];
-      const regionGames = baseBracket.regions[region.position];
+      const regionGames = liveBracket.regions[region.position] || [];
       const totalGames = 15;
-      const completedGames = regionGames.filter((game) => picks[game.id]).length;
+      const completedGames = regionGames.filter((game) =>
+        gamePickIsValid(game, picks),
+      ).length;
       return completedGames === totalGames;
     }
-    const finalFourGames = baseBracket.finalFour;
-    const finalFourCompleted = finalFourGames.filter((game) => picks[game.id]).length;
-    const championshipCompleted = picks[baseBracket.championship.id] ? 1 : 0;
+    const finalFourGames = liveBracket.finalFour;
+    const finalFourCompleted = finalFourGames.filter((game) =>
+      gamePickIsValid(game, picks),
+    ).length;
+    const championshipCompleted = gamePickIsValid(liveBracket.championship, picks)
+      ? 1
+      : 0;
     const totalGames = finalFourGames.length + 1;
     return finalFourCompleted + championshipCompleted === totalGames;
   };
@@ -38,7 +49,12 @@ export function computeCanProceedToSubmit(
   siteConfig: SiteConfigData | null | undefined
 ): boolean {
   const regions = tournamentData.regions;
-  const isStepComplete = buildIsStepComplete(regions, baseBracket, picks);
+  const liveBracket = updateBracketWithValidPicks(
+    baseBracket,
+    picks,
+    tournamentData,
+  );
+  const isStepComplete = buildIsStepComplete(regions, liveBracket, picks);
   const allRegionsComplete = regions.every((region) => isStepComplete(regions.indexOf(region)));
   const finalFourComplete = isStepComplete(regions.length);
   const low = siteConfig?.tieBreakerLow ?? 50;
@@ -65,7 +81,12 @@ export function getBracketSubmitReadinessHint(
   siteConfig: SiteConfigData | null | undefined
 ): string {
   const regions = tournamentData.regions;
-  const isStepComplete = buildIsStepComplete(regions, baseBracket, picks);
+  const liveBracket = updateBracketWithValidPicks(
+    baseBracket,
+    picks,
+    tournamentData,
+  );
+  const isStepComplete = buildIsStepComplete(regions, liveBracket, picks);
   const allRegionsComplete = regions.every((region) => isStepComplete(regions.indexOf(region)));
   if (!allRegionsComplete) {
     return (

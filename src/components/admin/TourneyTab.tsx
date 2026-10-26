@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Pencil, Upload } from 'lucide-react';
 import TourneyR1BracketPreview from '@/components/admin/TourneyR1BracketPreview';
 import FirstFourResults from '@/components/admin/FirstFourResults';
@@ -20,6 +20,7 @@ interface TournamentFilesResponse {
  */
 export default function TourneyTab() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const importFileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
@@ -29,6 +30,24 @@ export default function TourneyTab() {
   const [selectedYear, setSelectedYear] = useState<string>('');
   const [configuredYear, setConfiguredYear] = useState<string>('');
   const [previewKey, setPreviewKey] = useState(0);
+
+  /**
+   * After Tournament Builder publish, show confirmation and refresh the R1 preview.
+   */
+  useEffect(() => {
+    if (!searchParams) return;
+    const published = searchParams.get('published')?.trim() ?? '';
+    if (!/^20\d{2}$/.test(published)) return;
+    const env = searchParams.get('env')?.trim() || 'this environment';
+    setStatusMessage(`Tournament ${published} published to ${env}.`);
+    setSelectedYear(published);
+    setPreviewKey((k) => k + 1);
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete('published');
+    next.delete('env');
+    const qs = next.toString();
+    router.replace(qs ? `/admin?${qs}` : '/admin?tab=tourney', { scroll: false });
+  }, [searchParams, router]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -58,7 +77,10 @@ export default function TourneyTab() {
           .filter((year) => year !== '');
 
         const uniqueYears = Array.from(new Set(yearsFromFiles)).sort((a, b) => Number(b) - Number(a));
-        if (configYear) {
+        const publishedYear = searchParams?.get('published')?.trim() ?? '';
+        if (/^20\d{2}$/.test(publishedYear)) {
+          setSelectedYear(publishedYear);
+        } else if (configYear) {
           setSelectedYear(configYear);
         } else if (uniqueYears.length > 0) {
           setSelectedYear(uniqueYears[0]);
@@ -72,6 +94,8 @@ export default function TourneyTab() {
     };
 
     loadData();
+    // Intentionally once on mount; published year is read from the URL at that moment.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const years = useMemo(() => {

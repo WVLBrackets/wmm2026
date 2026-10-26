@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { newDb, DataType } from 'pg-mem';
 import type { Pool } from 'pg';
-import { canonicalTournament, createPlayInTeam, resolveFirstFour, validateFirstFourResults, validateTournamentDefinition } from '../src/lib/tournamentDefinition';
+import { canonicalTournament, createPlayInTeam, resolveFirstFour, sameTournamentDefinition, validateFirstFourResults, validateTournamentDefinition } from '../src/lib/tournamentDefinition';
+import { buildPlayInLogoSvg, DEFAULT_PLAY_IN_LOGO_STYLE, normalizePlayInLogoStyle } from '../src/lib/playInLogoStyle';
 import { generate64TeamBracket, getAllBracketGames, updateBracketWithPicks } from '../src/lib/bracketGenerator';
 import { buildKeyResolvedGames, scorePicksAgainstKey } from '../src/lib/liveStandingsScoring';
 import { assembleLiveStandingsData } from '../src/lib/liveStandingsStandingsAssembly';
@@ -128,6 +129,41 @@ test('combined logos are self-contained and aliases appear once', async () => {
   assert.equal(uniqueTournamentSchools([s, { ...s, name: 'Alias' }]).length, 1);
 });
 
+test('play-in logo style is clamped, applied per layout, and display-only for field freeze', async () => {
+  assert.deepEqual(normalizePlayInLogoStyle(undefined), DEFAULT_PLAY_IN_LOGO_STYLE);
+  assert.deepEqual(normalizePlayInLogoStyle({ layout: 'bogus', scalePercent: 140, dividerWidth: -3 }), { layout: DEFAULT_PLAY_IN_LOGO_STYLE.layout, scalePercent: 90, dividerWidth: 0 });
+
+  const logos: [string, string] = ['/logos/teams/150.png', '/logos/teams/130.png'];
+  const side = buildPlayInLogoSvg(logos, { layout: 'side-by-side', scalePercent: 72, dividerWidth: 0 });
+  assert.match(side, /<image x="32" y="16" width="32" height="32"/);
+  assert.doesNotMatch(side, /<line|clipPath/);
+  const cut = buildPlayInLogoSvg(logos, { layout: 'corner-cut', scalePercent: 75, dividerWidth: 2 });
+  assert.match(cut, /<image x="16" y="16" width="48" height="48"/);
+  assert.equal((cut.match(/<clipPath/g) || []).length, 2);
+  assert.match(cut, /<line x1="64" y1="0" x2="0" y2="64" stroke="#fff" stroke-width="2"/);
+  const overlap = buildPlayInLogoSvg(logos, { layout: 'corner-overlap', scalePercent: 70, dividerWidth: 2 });
+  assert.match(overlap, /feMorphology/);
+  assert.ok(overlap.indexOf('/logos/teams/130.png') < overlap.indexOf('/logos/teams/150.png'), 'team A is drawn last (on top)');
+
+  const d = await field();
+  const styled = canonicalTournament({ ...d, display: { playInLogo: { layout: 'split-vertical', scalePercent: 60, dividerWidth: 3 } } });
+  assert.deepEqual(styled.display?.playInLogo, { layout: 'split-vertical', scalePercent: 60, dividerWidth: 3 });
+  assert.equal(sameTournamentDefinition(d, styled), true);
+  const info = structuredClone(d);
+  info.name = 'Renamed'; info.metadata.startDate = '2027-03-18'; info.finalFour.location = 'Detroit, MI';
+  assert.equal(sameTournamentDefinition(d, info), true, 'name, start date, and location are editable after entries');
+  const rescored = structuredClone(d); rescored.metadata.scoring[0].points = 99;
+  assert.equal(sameTournamentDefinition(d, rescored), false, 'scoring stays frozen');
+  // Postgres JSONB reorders object keys; a stored copy must still match.
+  const reorder = (v: unknown): unknown => Array.isArray(v) ? v.map(reorder)
+    : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).reverse().map(k => [k, reorder((v as Record<string, unknown>)[k])])) : v;
+  assert.equal(sameTournamentDefinition(reorder(d) as TournamentData, canonicalTournament(info)), true, 'key order is ignored');
+  assert.deepEqual(validateTournamentDefinition(styled), []);
+  assert.ok(validateTournamentDefinition({ ...styled, display: { playInLogo: { layout: 'nope' } } }).length > 0);
+  const svg = Buffer.from((await addCombinedPlayInLogos(styled)).regions[0].teams.find(t => t.playIn)!.logo.split(',')[1], 'base64').toString();
+  assert.match(svg, /<line x1="32" y1="0" x2="32" y2="64"/);
+});
+
 test('draft/publish/results have revisions, audit history, environment isolation and field freeze', async () => {
   process.env.APP_ENV = 'local';
   const memory = newDb({ noAstCoverageCheck: true });
@@ -152,7 +188,8 @@ test('draft/publish/results have revisions, audit history, environment isolation
     await saveTournamentWorkspace({ year: 2027, revision: 3, actor, action: 'draft', definition: next }, db);
     assert.equal((await db.query('SELECT published FROM tournament_workspaces')).rows[0].published.name, d.name);
     await db.query("INSERT INTO brackets VALUES ('entry','local',2027)");
-    await assert.rejects(saveTournamentWorkspace({ year: 2027, revision: 4, actor, action: 'publish', definition: next }, db), /already has brackets/);
+    const rescored = structuredClone(d); rescored.metadata.scoring[0].points = 99;
+    await assert.rejects(saveTournamentWorkspace({ year: 2027, revision: 4, actor, action: 'publish', definition: rescored }, db), /already has brackets/);
     const relabeled = structuredClone(d);
     const relabeledSlot = relabeled.regions[0].teams.find(t => t.playIn)!;
     relabeledSlot.playIn!.displayName = 'Short pair';

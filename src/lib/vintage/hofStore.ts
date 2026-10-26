@@ -4,28 +4,20 @@ import {
   type VintageHofContent,
   validateVintageHofContent,
 } from "./hofContent";
-import {
-  isHofRevisionContent,
-  splitHomepageDocument,
-  unwrapHofRevisionContent,
-  wrapHofRevisionContent,
-} from "./homepageDocument";
+import { splitHomepageDocument } from "./homepageDocument";
 import { getVintageDbPool, hasVintageDatabase } from "./dbPool";
 import { writeVintageSidecarContent } from "./sidecarWriter";
-import type { VintageRevision } from "./store";
 
 export interface VintageHofState {
   version: number;
   draft: VintageHofContent;
   published: VintageHofContent;
-  revisions: VintageRevision[];
 }
 
 const EMPTY = (): VintageHofState => ({
   version: 0,
   draft: structuredClone(DEFAULT_VINTAGE_HOF_CONTENT),
   published: structuredClone(DEFAULT_VINTAGE_HOF_CONTENT),
-  revisions: [],
 });
 
 export function hasVintageHofDatabase(): boolean {
@@ -40,9 +32,6 @@ export async function readVintageHofState(): Promise<VintageHofState> {
   const result = await getVintageDbPool().query(
     "SELECT version, draft, published FROM vintage_homepage WHERE id = 1",
   );
-  const revisions = await getVintageDbPool().query(
-    'SELECT id, created_at AS "createdAt", author, action, content FROM vintage_homepage_revisions ORDER BY created_at DESC LIMIT 40',
-  );
   const row = result.rows[0];
   if (!row) return EMPTY();
   const draftHof = normalizeVintageHofContent(
@@ -53,20 +42,10 @@ export async function readVintageHofState(): Promise<VintageHofState> {
   );
   validateVintageHofContent(draftHof);
   validateVintageHofContent(publishedHof);
-  const hofRevisions = revisions.rows
-    .filter((item) => isHofRevisionContent(item.content))
-    .slice(0, 20)
-    .map(({ id, createdAt, author, action }) => ({
-      id,
-      createdAt,
-      author,
-      action,
-    }));
   return {
     version: Number(row.version),
     draft: draftHof,
     published: publishedHof,
-    revisions: hofRevisions,
   };
 }
 
@@ -86,25 +65,19 @@ export async function getPublishedVintageHofContent(): Promise<VintageHofContent
 }
 
 /**
- * Save / publish / restore Hall of Fame copy on the shared homepage row.
+ * Save or publish Hall of Fame copy on the shared homepage row.
  */
 export async function writeVintageHofContent(
   input: {
-    action: "save" | "publish" | "restore";
+    action: "save" | "publish";
     version: number;
-    content?: VintageHofContent;
-    revisionId?: string;
+    content: VintageHofContent;
   },
-  author: string,
+  _author: string,
 ): Promise<VintageHofState> {
   await writeVintageSidecarContent<VintageHofContent>({
     slot: "hof",
     input,
-    author,
-    isRevisionContent: isHofRevisionContent,
-    unwrapRevision: unwrapHofRevisionContent,
-    wrapRevision: wrapHofRevisionContent,
-    wrongRevisionMessage: "That revision is not a Hall of Fame copy revision.",
     normalizeSidecar: normalizeVintageHofContent,
     validateSidecar: validateVintageHofContent,
     readPublishedSidecar: (publishedRow) =>

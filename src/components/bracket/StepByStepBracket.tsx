@@ -10,6 +10,10 @@ import {
   isBracketSubmissionClosed,
   isSubmitDuplicateEntryName,
 } from '@/lib/bracketSubmitReadiness';
+import {
+  gamePickIsValid,
+  updateBracketWithValidPicks,
+} from '@/lib/bracketPickValidity';
 import { SiteConfigData } from '@/lib/siteConfig';
 import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 import { computeUniformStepNavWidthCh } from '@/lib/bracketStepNavMetrics';
@@ -213,17 +217,22 @@ export default function StepByStepBracket({
     'Complete all four regions before you can work on the Final Four and championship.';
 
   const getStepProgress = (step: number) => {
+    const live = updateBracketWithValidPicks(bracket, picks, tournamentData);
     if (step < regions.length) {
       const region = regions[step];
-      const regionGames = bracket.regions[region.position];
+      const regionGames = live.regions[region.position] || [];
       const totalGames = 15; // 8 + 4 + 2 + 1 for each region
-      const completedGames = regionGames.filter(game => picks[game.id]).length;
+      const completedGames = regionGames.filter((game) =>
+        gamePickIsValid(game, picks),
+      ).length;
       return { completed: completedGames, total: totalGames };
     } else {
-      // Final Four & Championship combined
-      const finalFourGames = bracket.finalFour;
-      const finalFourCompleted = finalFourGames.filter(game => picks[game.id]).length;
-      const championshipCompleted = picks[bracket.championship.id] ? 1 : 0;
+      // Final Four & Championship combined — orphan picks do not count
+      const finalFourGames = live.finalFour;
+      const finalFourCompleted = finalFourGames.filter((game) =>
+        gamePickIsValid(game, picks),
+      ).length;
+      const championshipCompleted = gamePickIsValid(live.championship, picks) ? 1 : 0;
       const totalGames = finalFourGames.length + 1; // 2 Final Four + 1 Championship
       const completedGames = finalFourCompleted + championshipCompleted;
       return { completed: completedGames, total: totalGames };

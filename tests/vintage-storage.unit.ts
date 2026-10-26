@@ -5,7 +5,7 @@ import { newDb } from "pg-mem";
 import pg from "pg";
 import { DEFAULT_VINTAGE_CONTENT } from "../src/lib/vintage/content";
 import { initializeVintageHomepageDatabase } from "../src/lib/database/migrations";
-test("draft, publication and revision restoration persist independently in SQL", async () => {
+test("draft and publication persist independently in SQL without revision history", async () => {
   const memory = newDb();
   const adapter = memory.adapters.createPg();
   const originalPool = pg.Pool;
@@ -57,18 +57,15 @@ test("draft, publication and revision restoration persist independently in SQL",
       { action: "save", version: 2, content: next },
       "test@example.invalid",
     );
-    const restored = await writeVintageContent(
-      { action: "restore", version: 3, revisionId: saved.revisions[0].id },
-      "test@example.invalid",
-    );
-    assert.equal(restored.draft.masthead.second, "DRAFT EDITION");
-    assert.equal(restored.published.masthead.second, "DRAFT EDITION");
-    assert.equal(restored.revisions.length, 4);
-    const picksReady = structuredClone(restored.draft);
+    const afterSave = await readVintageState();
+    assert.equal(afterSave.draft.masthead.second, "NEXT DRAFT");
+    assert.equal(afterSave.published.masthead.second, "DRAFT EDITION");
+    assert.equal(afterSave.version, 3);
+    const picksReady = structuredClone(afterSave.draft);
     picksReady.homeCards[2].excelPicksHref =
       "https://example.invalid/picks.xlsx";
     const picksPublished = await writeVintageContent(
-      { action: "publish", version: 4, content: picksReady },
+      { action: "publish", version: 3, content: picksReady },
       "test@example.invalid",
     );
     assert.equal(
@@ -80,7 +77,7 @@ test("draft, publication and revision restoration persist independently in SQL",
     trackerReady.homeCards[2].excelTrackerHref =
       "https://example.invalid/tracker.xlsx";
     const bothPublished = await writeVintageContent(
-      { action: "publish", version: 5, content: trackerReady },
+      { action: "publish", version: 4, content: trackerReady },
       "test@example.invalid",
     );
     assert.equal(

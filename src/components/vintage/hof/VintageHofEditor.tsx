@@ -27,7 +27,7 @@ import {
   useSectionNav,
 } from "../sectionNav";
 
-/** Section labels in page order (Revisions is appended when revisions exist). */
+/** Section labels in page order. */
 const SECTION_LABELS = [
   "Page header",
   "Champions by year",
@@ -68,10 +68,10 @@ export default function VintageHofEditor() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const SECTIONS = [
-    ...SECTION_LABELS,
-    ...(state?.revisions.length ? (["Revisions"] as const) : []),
-  ].map((label) => ({ label, id: sectionIdFor(label) }));
+  const SECTIONS = SECTION_LABELS.map((label) => ({
+    label,
+    id: sectionIdFor(label),
+  }));
   const { activeId, jumpTo } = useSectionNav(
     SECTIONS.map((section) => section.id),
     Boolean(state),
@@ -150,18 +150,14 @@ export default function VintageHofEditor() {
     return data.csrfToken;
   }
 
-  async function save(
-    action: "save" | "publish" | "restore",
-    revisionId?: string,
-  ) {
+  async function save(action: "save" | "publish") {
     if (!state) return;
     setError("");
     setMessage("");
     setBusy(true);
     try {
-      const payload =
-        action === "restore" ? undefined : normalizeVintageHofContent(content);
-      if (payload) validateVintageHofContent(payload);
+      const payload = normalizeVintageHofContent(content);
+      validateVintageHofContent(payload);
       const token = await csrfToken();
       const response = await fetch("/api/admin/vintage-hof", {
         method: "POST",
@@ -173,7 +169,6 @@ export default function VintageHofEditor() {
           action,
           content: payload,
           version: state.version,
-          revisionId,
         }),
       });
       const data = await response.json();
@@ -186,11 +181,7 @@ export default function VintageHofEditor() {
         router.refresh();
         return;
       }
-      setMessage(
-        action === "restore"
-          ? "Revision restored as a draft. Preview it before publishing."
-          : "Draft saved. It is ready to preview.",
-      );
+      setMessage("Draft saved. It is ready to preview.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save changes.");
     } finally {
@@ -315,28 +306,6 @@ export default function VintageHofEditor() {
           <SectionPanel id={sectionIdFor("Closing")} title="Closing">
             <div className="ve-grid">{field("closing", "Closing line")}</div>
           </SectionPanel>
-          {state.revisions.length ? (
-            <SectionPanel id={sectionIdFor("Revisions")} title="Revisions">
-          <ul className="ve-revisions">
-            {state.revisions.map((revision) => (
-              <li key={revision.id}>
-                <span>
-                  {revision.action} · {revision.author} ·{" "}
-                  {new Date(revision.createdAt).toLocaleString()}
-                </span>
-                <button
-                  type="button"
-                  className="ve-button"
-                  disabled={busy || dirty}
-                  onClick={() => void save("restore", revision.id)}
-                >
-                  Restore
-                </button>
-              </li>
-            ))}
-          </ul>
-            </SectionPanel>
-          ) : null}
         </div>
       </div>
     </main>

@@ -3,23 +3,29 @@
   padding: 8px 0 40px;
   color: var(--v-ink, #152c3a);
   /* Active logo sizes: desktop by default; mobile media query swaps. */
-  --vs-ff-size: var(--vs-ff-size-desktop, 22px);
-  --vs-champ-size: var(--vs-champ-size-desktop, 28px);
+  --vs-ff-size: var(--vs-ff-size-desktop, 32px);
+  --vs-champ-size: var(--vs-champ-size-desktop, 42px);
 }
 
+/*
+ * Header: reserved side columns so the year control cannot overlay STANDINGS.
+ * Left column mirrors the right for optical centering of the title.
+ */
 .v-standings__header {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr) minmax(5.5rem, max-content);
+  grid-template-areas: ". title controls";
+  align-items: start;
+  column-gap: 12px;
+  row-gap: 6px;
   margin-bottom: 18px;
-  padding: 4px 88px 14px;
+  padding: 4px 0 14px;
   border-bottom: 3px double var(--v-ink, #152c3a);
   text-align: center;
 }
 
 .v-standings__title-block {
+  grid-area: title;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -38,16 +44,17 @@
   color: var(--v-ink, #152c3a);
   line-height: 1.02;
   text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .v-standings__header-right {
-  position: absolute;
-  top: 4px;
-  right: 0;
+  grid-area: controls;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
   flex-shrink: 0;
+  min-width: 0;
 }
 
 .v-standings__year {
@@ -84,14 +91,25 @@
 
 .v-standings__updated {
   margin: 0;
+  max-width: 100%;
   font-family: var(--v-font-specialty, Georgia, serif);
   font-size: 0.85rem;
   color: var(--v-ink, #152c3a);
   text-align: center;
+  overflow-wrap: anywhere;
 }
 
+/*
+ * Standings gear sits inline with the year select. Override the homepage
+ * `.v-edit-gear` absolute pin so it stays visible on table and 2020 newspaper.
+ */
+.v-standings__gear.v-edit-gear,
 .v-standings__gear {
+  position: static;
+  top: auto;
+  right: auto;
   flex-shrink: 0;
+  opacity: 1;
 }
 
 .v-standings__logo-fallback {
@@ -104,7 +122,11 @@
   position: sticky;
   top: calc(var(--staging-banner-height, 0px) + 74px);
   z-index: 30;
-  margin: 0 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  /* No bottom margin — desktop thead sits in the data table directly below. */
+  margin: 0;
   background: var(--v-paper, #f2ead8);
   box-shadow: 0 1px 0 var(--v-paper, #f2ead8);
 }
@@ -114,7 +136,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 0;
   padding-bottom: 2px;
   background: var(--v-paper, #f2ead8);
 }
@@ -177,9 +199,10 @@
   border-left: 1px solid var(--v-ink, #152c3a);
 }
 
+/* Selected filter = navy (same lane as My Picks “All” and mobile Standings). */
 .v-standings__filter button[aria-pressed="true"] {
-  background: var(--v-red, #b52c26);
-  color: #fff;
+  background: var(--v-ink, #152c3a);
+  color: var(--v-paper, #f2ead8);
 }
 
 .v-standings__filter button:focus-visible {
@@ -204,19 +227,17 @@
   border-bottom: 1px solid var(--v-ink, #152c3a);
 }
 
-.v-standings__sticky-bar .v-standings__table-wrap {
-  border-bottom: none;
-}
-
 .v-standings__table {
   width: 100%;
   table-layout: fixed;
-  border-collapse: collapse;
+  /* separate: sticky thead borders paint reliably (F05). */
+  border-collapse: separate;
+  border-spacing: 0;
   font-family: var(--v-font-specialty, Georgia, serif);
 }
 
 .v-standings__col-rank {
-  width: 4rem;
+  width: 4.5rem;
 }
 
 .v-standings__col-entry {
@@ -242,24 +263,33 @@
 .v-standings__col-ff {
   /* Room for 4 fixed-size squares + gaps without flex-shrinking tiles. */
   width: calc(
-    (var(--vs-ff-size, 22px) * 4) + 18px + 16px
+    (var(--vs-ff-size, 32px) * 4) + 18px + 16px
   );
 }
 
 .v-standings__col-champ {
-  width: calc(var(--vs-champ-size, 28px) + 16px);
+  width: calc(var(--vs-champ-size, 42px) + 16px);
 }
 
+/*
+ * Column headers: paper + double-rule (no red bar). Sticky under the measured
+ * search/filter band so one semantic table keeps associated headers (F05).
+ */
 .v-standings__table thead th {
-  position: relative;
-  z-index: 1;
+  position: sticky;
+  top: calc(
+    var(--staging-banner-height, 0px) + 74px +
+      var(--vs-sticky-controls-height, 54px)
+  );
+  z-index: 2;
   padding: 10px 8px;
-  background: var(--v-red, #b52c26);
-  color: #fff;
+  background: var(--v-paper, #f2ead8);
+  color: var(--v-ink, #152c3a);
+  border-bottom: 3px double var(--v-ink, #152c3a);
   font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
-  font-size: 0.72rem;
+  font-size: 0.85rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   text-align: left;
   white-space: nowrap;
@@ -269,10 +299,6 @@
 .v-standings__table thead th:nth-child(n + 3),
 .v-standings__table tbody td:nth-child(n + 3) {
   text-align: center;
-}
-
-.v-standings__table--head {
-  margin-bottom: 0;
 }
 
 .v-standings__table tbody td {
@@ -286,7 +312,7 @@
   overflow: hidden;
 }
 
-.v-standings__table--body .v-standings__entry-name {
+.v-standings__table .v-standings__entry-name {
   display: inline-block;
   max-width: calc(100% - 3.5rem);
   overflow: hidden;
@@ -300,11 +326,44 @@
 }
 
 .v-standings__rank {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
   font-weight: 600;
-  color: var(--v-first, #c9a227);
+  color: var(--v-ink, #152c3a);
   font-variant-numeric: tabular-nums;
-  width: 3rem;
+}
+
+.v-standings__rank-num {
+  min-width: 1.25rem;
+  text-align: right;
+}
+
+/**
+ * Decorative podium disc — gold / silver / bronze fills only (not text).
+ */
+.v-standings__medal {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--v-ink, #152c3a) 22%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--v-paper, #f2ead8) 55%, transparent);
+}
+
+.v-standings__medal--first {
+  background: var(--v-first, #c9a227);
+}
+
+.v-standings__medal--second {
+  background: var(--v-second, #a8a9ad);
+}
+
+.v-standings__medal--third {
+  background: var(--v-third, #cd7f32);
 }
 
 .v-standings__entry-name {
@@ -323,9 +382,21 @@
   text-align: left;
 }
 
+/* Legacy archives / no bracket id — plain name, not a link. */
+.v-standings__entry-name:disabled {
+  text-decoration: none;
+  cursor: default;
+  opacity: 1;
+  color: var(--v-ink, #152c3a);
+}
+
 .v-standings__entry-name:focus-visible {
   outline: 2px solid var(--v-red, #b52c26);
   outline-offset: 2px;
+}
+
+.v-standings__entry-name:disabled:focus-visible {
+  outline: none;
 }
 
 .v-standings__yours {
@@ -380,7 +451,7 @@
 
 .v-standings__ff--grid {
   display: grid;
-  grid-template-columns: repeat(2, var(--vs-ff-size, 22px));
+  grid-template-columns: repeat(2, var(--vs-ff-size, 32px));
   gap: 4px;
   width: fit-content;
   margin-inline: auto;
@@ -389,12 +460,12 @@
 .v-standings__logo {
   position: relative;
   flex: 0 0 auto;
-  width: var(--vs-ff-size, 22px);
-  height: var(--vs-ff-size, 22px);
-  min-width: var(--vs-ff-size, 22px);
-  min-height: var(--vs-ff-size, 22px);
-  max-width: var(--vs-ff-size, 22px);
-  max-height: var(--vs-ff-size, 22px);
+  width: var(--vs-ff-size, 32px);
+  height: var(--vs-ff-size, 32px);
+  min-width: var(--vs-ff-size, 32px);
+  min-height: var(--vs-ff-size, 32px);
+  max-width: var(--vs-ff-size, 32px);
+  max-height: var(--vs-ff-size, 32px);
   aspect-ratio: 1 / 1;
   display: flex;
   align-items: center;
@@ -406,8 +477,8 @@
 }
 
 .v-standings__logo img {
-  width: 100%;
-  height: 100%;
+  width: var(--vs-logo-fill, 100%);
+  height: var(--vs-logo-fill, 100%);
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
@@ -415,12 +486,12 @@
 }
 
 .v-standings__logo--champ {
-  width: var(--vs-champ-size, 28px);
-  height: var(--vs-champ-size, 28px);
-  min-width: var(--vs-champ-size, 28px);
-  min-height: var(--vs-champ-size, 28px);
-  max-width: var(--vs-champ-size, 28px);
-  max-height: var(--vs-champ-size, 28px);
+  width: var(--vs-champ-size, 42px);
+  height: var(--vs-champ-size, 42px);
+  min-width: var(--vs-champ-size, 42px);
+  min-height: var(--vs-champ-size, 42px);
+  max-width: var(--vs-champ-size, 42px);
+  max-height: var(--vs-champ-size, 42px);
 }
 
 /* Shade from regional (FF) or championship (Champ) KEY game. */
@@ -505,7 +576,7 @@
   display: grid;
   /* Rank | Entry | Paid | Final Four | Champ */
   grid-template-columns:
-    2rem minmax(0, 1.15fr) 2.5rem minmax(3.5rem, 0.85fr) minmax(2.25rem, 0.45fr);
+    2.85rem minmax(0, 1.15fr) 2.5rem minmax(3.5rem, 0.85fr) minmax(2.25rem, 0.45fr);
   gap: 8px 10px;
   align-items: end;
   padding: 8px 2px;
@@ -520,7 +591,7 @@
 
 .v-standings__m-head--no-paid {
   grid-template-columns:
-    2rem minmax(0, 1.15fr) minmax(3.5rem, 0.85fr) minmax(2.25rem, 0.45fr);
+    2.85rem minmax(0, 1.15fr) minmax(3.5rem, 0.85fr) minmax(2.25rem, 0.45fr);
 }
 
 .v-standings__m-head > span:nth-child(n + 3) {
@@ -530,7 +601,7 @@
 .v-standings__m-row {
   display: grid;
   grid-template-columns:
-    2rem minmax(0, 1.15fr) 2.5rem minmax(3.5rem, 0.85fr) minmax(2.25rem, 0.45fr);
+    2.85rem minmax(0, 1.15fr) 2.5rem minmax(3.5rem, 0.85fr) minmax(2.25rem, 0.45fr);
   gap: 8px 10px;
   align-items: center;
   min-height: 64px;
@@ -540,7 +611,7 @@
 
 .v-standings__m-row--no-paid {
   grid-template-columns:
-    2rem minmax(0, 1.15fr) minmax(3.5rem, 0.85fr) minmax(2.25rem, 0.45fr);
+    2.85rem minmax(0, 1.15fr) minmax(3.5rem, 0.85fr) minmax(2.25rem, 0.45fr);
 }
 
 .v-standings__m-row.is-yours {
@@ -611,8 +682,8 @@
 
 @media (max-width: 900px) {
   .v-standings {
-    --vs-ff-size: var(--vs-ff-size-mobile, 22px);
-    --vs-champ-size: var(--vs-champ-size-mobile, 28px);
+    --vs-ff-size: var(--vs-ff-size-mobile, 32px);
+    --vs-champ-size: var(--vs-champ-size-mobile, 42px);
   }
 
   .v-standings__sticky-bar {
@@ -632,13 +703,23 @@
     font-size: clamp(28px, 8vw, 40px);
   }
 
+  /*
+   * Phone: year selector on its own row so it cannot collide with STANDINGS
+   * or the updated timestamp (F01 — verify at 320 / 390 with scrollbar).
+   */
   .v-standings__header {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "title"
+      "controls";
+    justify-items: center;
     border-bottom: 1px solid var(--v-ink, #152c3a);
-    padding-left: 72px;
-    padding-right: 72px;
+    padding-left: 0;
+    padding-right: 0;
   }
 
-  .v-standings__filter button[aria-pressed="true"] {
-    background: var(--v-ink, #152c3a);
+  .v-standings__header-right {
+    justify-content: center;
+    width: 100%;
   }
 }

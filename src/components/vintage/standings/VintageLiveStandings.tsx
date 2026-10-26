@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
 } from "react";
@@ -20,24 +21,81 @@ import {
   type StandingsEntry,
 } from "@/lib/standingsData";
 import {
+  formatStandingsPickAccessibleName,
   resolvePickResultTone,
+  type PickResultA11yPhrases,
   type PickResultTone,
 } from "@/lib/pickResultChrome";
 import { getLogoUrlSync, getTeamInfo } from "@/lib/teamLogos";
 import { getTeamRefData, type TeamRefData } from "@/lib/teamRefData";
 import { buildYearScopedPath } from "@/lib/services/tournamentYearHelpers";
 import {
+  isLegacyStandingsYear,
+  isNewspaperStandingsYear,
+} from "@/lib/legacyStandings/years";
+import {
   formatVintageStandingsLabel,
+  isPaper2020SectionHidden,
   isStandingsFlagOn,
   resolveStandingsLogoSizing,
+  standingsPickResultA11yPhrases,
   standingsResultChromeStyle,
   type VintageStandingsContent,
 } from "@/lib/vintage/standingsContent";
 import type { VintageContent } from "@/lib/vintage/content";
 import VintageShell from "../VintageShell";
+import Standings2020Newspaper from "./Standings2020Newspaper";
 import "./standings.css";
+import "./paper-2020.css";
 
 type FilterMode = "all" | "mine";
+
+type PlaceMedal = "first" | "second" | "third";
+
+/**
+ * Map competition rank 1–3 to place-medal tokens (ties share the same place).
+ */
+function placeMedalForRank(rank: number): PlaceMedal | null {
+  if (rank === 1) return "first";
+  if (rank === 2) return "second";
+  if (rank === 3) return "third";
+  return null;
+}
+
+/**
+ * Accessible place label for a podium medal.
+ */
+function placeMedalLabel(place: PlaceMedal): string {
+  if (place === "first") return "first place";
+  if (place === "second") return "second place";
+  return "third place";
+}
+
+/**
+ * Navy rank numeral with a decorative gold/silver/bronze medal for places 1–3.
+ * Numerals use ink for contrast; medals are accent-only (not text color).
+ */
+function StandingsRankCell({ rank }: { rank: number }) {
+  const place = placeMedalForRank(rank);
+  return (
+    <span
+      className="v-standings__rank"
+      data-testid="standings-rank"
+      aria-label={
+        place ? `Rank ${rank}, ${placeMedalLabel(place)}` : undefined
+      }
+    >
+      <span className="v-standings__rank-num">{rank}</span>
+      {place ? (
+        <span
+          className={`v-standings__medal v-standings__medal--${place}`}
+          aria-hidden
+          data-testid={`standings-medal-${place}`}
+        />
+      ) : null}
+    </span>
+  );
+}
 
 /**
  * Build label → ESPN id map (abbr, official name, display name).
@@ -65,6 +123,7 @@ function StandingsLogo({
   title,
   tilePx,
   directLogo,
+  a11yPhrases,
 }: {
   teamName: string;
   teamIdLookup: Map<string, string>;
@@ -78,10 +137,23 @@ function StandingsLogo({
   /** Resolved tile size for next/image dimensions. */
   tilePx: number;
   directLogo?: string;
+  /** CMS hover / aria phrases (Standings admin). */
+  a11yPhrases: PickResultA11yPhrases;
 }) {
   const [src, setSrc] = useState<string | null>(null);
   const [imageError, setImageError] = useState(false);
-  const label = title || teamName || "Empty selection";
+  const label =
+    title ||
+    teamName ||
+    (champ ? a11yPhrases.noChampionPick : a11yPhrases.emptySelection);
+  const accessibleName = formatStandingsPickAccessibleName({
+    teamLabel: label,
+    shadeTone,
+    isFinalist,
+    borderTone: borderTone ?? (isFinalist ? shadeTone : undefined),
+    champ,
+    phrases: a11yPhrases,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -118,10 +190,9 @@ function StandingsLogo({
       data-status={shadeTone}
       data-border={borderTone ?? (isFinalist ? shadeTone : undefined)}
       data-finalist={isFinalist ? "true" : undefined}
-      title={label}
-      aria-label={
-        isFinalist ? `${label} (picked to reach the final)` : label
-      }
+      title={accessibleName}
+      role="img"
+      aria-label={accessibleName}
     >
       {src && !imageError ? (
         <Image
@@ -202,6 +273,9 @@ export default function VintageLiveStandings({
   const [teamIdLookup, setTeamIdLookup] = useState<Map<string, string>>(
     () => new Map(),
   );
+  const stickyBarRef = useRef<HTMLDivElement>(null);
+  /** Pixel height of the sticky controls band (feeds sticky thead `top`). */
+  const [stickyControlsHeight, setStickyControlsHeight] = useState(54);
 
   const yearOptions = useMemo(() => {
     const set = new Set<number>(
@@ -221,7 +295,15 @@ export default function VintageLiveStandings({
     () => resolveStandingsLogoSizing(copy),
     [copy],
   );
+  const a11yPhrases = useMemo(
+    () => standingsPickResultA11yPhrases(copy),
+    [copy],
+  );
   const showPaidColumn = isStandingsFlagOn(copy.showPaidIndicator);
+  /** Static finals (≤2025 archives): no My Entries / no bracket open. */
+  const legacyYear = isLegacyStandingsYear(viewingYear);
+  /** 2020 (and similar): newspaper edition instead of a table. */
+  const newspaperYear = isNewspaperStandingsYear(viewingYear);
 
   /**
    * Paid glyph cell — empty when unpaid or paid column disabled.
@@ -298,8 +380,43 @@ export default function VintageLiveStandings({
   );
 
   useEffect(() => {
+    if (isNewspaperStandingsYear(viewingYear)) {
+      setLoading(false);
+      setRefreshing(false);
+      setAvailable(true);
+      setStandingsData(null);
+      setComputedAt(null);
+      setError("");
+      return;
+    }
     void loadStandings(viewingYear, false);
   }, [viewingYear, loadStandings]);
+
+  useEffect(() => {
+    if ((legacyYear || newspaperYear) && filter !== "all") setFilter("all");
+  }, [legacyYear, newspaperYear, filter]);
+
+  /**
+   * Keep sticky column headers parked under the measured sticky controls band.
+   */
+  useEffect(() => {
+    const el = stickyBarRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const apply = () => {
+      setStickyControlsHeight(Math.ceil(el.getBoundingClientRect().height));
+    };
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [
+    newspaperYear,
+    loading,
+    standingsData,
+    isAuthenticated,
+    legacyYear,
+    showPaidColumn,
+  ]);
 
   /**
    * Soft-switch year via history (picks pattern) without full remount.
@@ -401,6 +518,7 @@ export default function VintageLiveStandings({
               shadeTone={shadeTone}
               borderTone={borderTone}
               tilePx={logoSizing.finalFourDesktopPx}
+              a11yPhrases={a11yPhrases}
             />
           );
         })}
@@ -425,7 +543,8 @@ export default function VintageLiveStandings({
         borderTone={
           entry.champion && shadeTone !== "pending" ? shadeTone : undefined
         }
-        title={entry.champion || "No champion pick"}
+        title={entry.champion || a11yPhrases.noChampionPick}
+        a11yPhrases={a11yPhrases}
       />
     );
   };
@@ -463,7 +582,7 @@ export default function VintageLiveStandings({
     : "";
 
   const emptyMessage = (() => {
-    if (loading) return null;
+    if (newspaperYear || loading) return null;
     if (!available || !standingsData) {
       return formatVintageStandingsLabel(copy.notAvailableMessage, {
         year: viewingYear,
@@ -483,12 +602,24 @@ export default function VintageLiveStandings({
       <div
         className="v-standings"
         data-testid="vintage-live-standings"
-        style={standingsResultChromeStyle(copy) as CSSProperties}
+        style={
+          {
+            ...(standingsResultChromeStyle(copy) as CSSProperties),
+            ["--vs-sticky-controls-height" as string]: `${stickyControlsHeight}px`,
+          } as CSSProperties
+        }
       >
         <header className="v-standings__header">
           <div className="v-standings__title-block">
-            <h1 className="v-standings__heading">{copy.heading}</h1>
-            {updatedText ? (
+            <h1 className="v-standings__heading">
+              {newspaperYear ? copy.paper2020.pageHeading : copy.heading}
+            </h1>
+            {newspaperYear &&
+            !isPaper2020SectionHidden(copy.paper2020.hidePageSubhead) ? (
+              <p className="v-standings__updated" data-testid="standings-updated">
+                {copy.paper2020.pageSubhead}
+              </p>
+            ) : !newspaperYear && updatedText ? (
               <p
                 className="v-standings__updated"
                 data-testid="standings-updated"
@@ -523,11 +654,27 @@ export default function VintageLiveStandings({
             </div>
             {admin ? (
               <Link
-                href="/vintage/admin/standings"
+                href={
+                  newspaperYear
+                    ? "/vintage/admin/standings#ve-section-2020-newspaper"
+                    : "/vintage/admin/standings"
+                }
                 className="v-edit-gear v-standings__gear"
-                data-testid="vintage-standings-gear"
-                aria-label="Edit Standings copy"
-                title="Edit Standings copy"
+                data-testid={
+                  newspaperYear
+                    ? "vintage-paper-2020-gear"
+                    : "vintage-standings-gear"
+                }
+                aria-label={
+                  newspaperYear
+                    ? "Edit 2020 newspaper"
+                    : "Edit Standings copy"
+                }
+                title={
+                  newspaperYear
+                    ? "Edit 2020 newspaper"
+                    : "Edit Standings copy"
+                }
               >
                 <Settings size={13} strokeWidth={2.25} aria-hidden />
               </Link>
@@ -535,7 +682,13 @@ export default function VintageLiveStandings({
           </div>
         </header>
 
+        {newspaperYear ? (
+          <Standings2020Newspaper copy={copy.paper2020} />
+        ) : null}
+
+        {!newspaperYear ? (
         <div
+          ref={stickyBarRef}
           className="v-standings__sticky-bar"
           data-testid="standings-sticky-bar"
         >
@@ -556,7 +709,7 @@ export default function VintageLiveStandings({
                 autoComplete="off"
               />
             </div>
-            {isAuthenticated ? (
+            {isAuthenticated && !legacyYear ? (
               <div
                 className="v-standings__filter"
                 role="group"
@@ -583,61 +736,28 @@ export default function VintageLiveStandings({
           </div>
 
           {!loading && !emptyMessage && standingsData ? (
-            <>
-              <div className="v-standings__desktop v-standings__table-wrap">
-                <table className="v-standings__table v-standings__table--head">
-                  <colgroup>
-                    <col className="v-standings__col-rank" />
-                    <col className="v-standings__col-entry" />
-                    {showPaidColumn ? (
-                      <col className="v-standings__col-paid" />
-                    ) : null}
-                    <col className="v-standings__col-points" />
-                    <col className="v-standings__col-gap" />
-                    <col className="v-standings__col-tb" />
-                    <col className="v-standings__col-ff" />
-                    <col className="v-standings__col-champ" />
-                  </colgroup>
-                  <thead>
-                    <tr>
-                      <th scope="col">{copy.colRankHeader}</th>
-                      <th scope="col">{copy.colEntryHeader}</th>
-                      {showPaidColumn ? (
-                        <th scope="col">{copy.colPaidHeader}</th>
-                      ) : null}
-                      <th scope="col">{copy.colPointsHeader}</th>
-                      <th scope="col" aria-label={copy.gapColumnAriaLabel}>
-                        {copy.colGapHeader}
-                      </th>
-                      <th scope="col">{copy.colTbHeader}</th>
-                      <th scope="col">{copy.colFinalFourHeader}</th>
-                      <th scope="col">{copy.colChampHeader}</th>
-                    </tr>
-                  </thead>
-                </table>
-              </div>
+            <div
+              className="v-standings__mobile"
+              data-testid="standings-mobile-head"
+            >
               <div
-                className="v-standings__mobile"
-                data-testid="standings-mobile-head"
+                className={`v-standings__m-head${
+                  showPaidColumn ? "" : " v-standings__m-head--no-paid"
+                }`}
+                aria-hidden
               >
-                <div
-                  className={`v-standings__m-head${
-                    showPaidColumn ? "" : " v-standings__m-head--no-paid"
-                  }`}
-                  aria-hidden
-                >
-                  <span>{copy.colRankHeaderMobile}</span>
-                  <span>{copy.colEntryHeaderMobile}</span>
-                  {showPaidColumn ? (
-                    <span>{copy.colPaidHeaderMobile}</span>
-                  ) : null}
-                  <span>{copy.colFinalFourHeaderMobile}</span>
-                  <span>{copy.colChampHeaderMobile}</span>
-                </div>
+                <span>{copy.colRankHeaderMobile}</span>
+                <span>{copy.colEntryHeaderMobile}</span>
+                {showPaidColumn ? (
+                  <span>{copy.colPaidHeaderMobile}</span>
+                ) : null}
+                <span>{copy.colFinalFourHeaderMobile}</span>
+                <span>{copy.colChampHeaderMobile}</span>
               </div>
-            </>
+            </div>
           ) : null}
         </div>
+        ) : null}
 
         {error && standingsData ? (
           <p className="v-standings__status v-standings__status--error" role="status">
@@ -659,9 +779,17 @@ export default function VintageLiveStandings({
           </p>
         ) : standingsData ? (
           <>
-            {/* Desktop table body (header lives in sticky bar) */}
+            {/* One semantic table: sticky thead + body (F05). */}
             <div className="v-standings__desktop v-standings__table-wrap">
-              <table className="v-standings__table v-standings__table--body">
+              <table
+                className="v-standings__table"
+                data-testid="standings-desktop-table"
+              >
+                <caption className="v-standings__sr-only">
+                  {formatVintageStandingsLabel(copy.heading, {
+                    year: viewingYear,
+                  })}
+                </caption>
                 <colgroup>
                   <col className="v-standings__col-rank" />
                   <col className="v-standings__col-entry" />
@@ -674,6 +802,22 @@ export default function VintageLiveStandings({
                   <col className="v-standings__col-ff" />
                   <col className="v-standings__col-champ" />
                 </colgroup>
+                <thead>
+                  <tr>
+                    <th scope="col">{copy.colRankHeader}</th>
+                    <th scope="col">{copy.colEntryHeader}</th>
+                    {showPaidColumn ? (
+                      <th scope="col">{copy.colPaidHeader}</th>
+                    ) : null}
+                    <th scope="col">{copy.colPointsHeader}</th>
+                    <th scope="col" aria-label={copy.gapColumnAriaLabel}>
+                      {copy.colGapHeader}
+                    </th>
+                    <th scope="col">{copy.colTbHeader}</th>
+                    <th scope="col">{copy.colFinalFourHeader}</th>
+                    <th scope="col">{copy.colChampHeader}</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {filteredEntries.map((entry) => {
                     const mine = isMine(entry);
@@ -686,7 +830,9 @@ export default function VintageLiveStandings({
                           mine ? "standings-row-yours" : "standings-row"
                         }
                       >
-                        <td className="v-standings__rank">{entry.rank}</td>
+                        <td>
+                          <StandingsRankCell rank={entry.rank} />
+                        </td>
                         <td>
                           <button
                             type="button"
@@ -749,7 +895,7 @@ export default function VintageLiveStandings({
                       mine ? "standings-m-row-yours" : "standings-m-row"
                     }
                   >
-                    <span className="v-standings__rank">{entry.rank}</span>
+                    <StandingsRankCell rank={entry.rank} />
                     <div className="v-standings__m-entry">
                       <div className="v-standings__m-name-row">
                         <button

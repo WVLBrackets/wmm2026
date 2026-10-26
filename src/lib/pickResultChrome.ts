@@ -18,10 +18,140 @@
 export type PickResultTone = "correct" | "incorrect" | "pending";
 
 /**
+ * CMS-backed hover / aria phrases for Final Four & Champ tiles
+ * (Standings + My Picks). Edited once under Vintage Standings admin.
+ */
+export interface PickResultA11yPhrases {
+  emptySelection: string;
+  noChampionPick: string;
+  correctRegional: string;
+  incorrectRegional: string;
+  correctChampion: string;
+  incorrectChampion: string;
+  correctFinalist: string;
+  incorrectFinalist: string;
+  /** Shared when a tone is still pending (any column). */
+  pending: string;
+  /** Separate from shade — heavy frame means picked to reach the final. */
+  finalistFrame: string;
+}
+
+/** Built-in defaults; Standings CMS overrides via `standingsPickResultA11yPhrases`. */
+export const DEFAULT_PICK_RESULT_A11Y_PHRASES: PickResultA11yPhrases = {
+  emptySelection: "Empty selection",
+  noChampionPick: "No champion pick",
+  correctRegional: "correct regional pick",
+  incorrectRegional: "incorrect or eliminated regional pick",
+  correctChampion: "correct champion pick",
+  incorrectChampion: "incorrect or eliminated champion pick",
+  correctFinalist: "correct finalist pick",
+  incorrectFinalist: "incorrect or eliminated finalist pick",
+  pending: "result pending",
+  finalistFrame: "picked to reach the final",
+};
+
+/**
  * Normalize team labels for KEY / pick comparison.
  */
 export function normalizeTeamLabel(value: string | null | undefined): string {
   return (value ?? "").trim();
+}
+
+/**
+ * Short phrase for a KEY result tone (fill / border), for accessible names.
+ *
+ * @param tone - Shared correct / incorrect / pending tone
+ * @param context - Optional “regional” vs “champion” / “finalist” wording
+ * @param phrases - CMS phrases (defaults when omitted)
+ */
+export function describePickResultTone(
+  tone: PickResultTone,
+  context?: "regional" | "champion" | "finalist" | "pick",
+  phrases: PickResultA11yPhrases = DEFAULT_PICK_RESULT_A11Y_PHRASES,
+): string {
+  if (tone === "pending") return phrases.pending;
+  if (context === "regional") {
+    return tone === "correct"
+      ? phrases.correctRegional
+      : phrases.incorrectRegional;
+  }
+  if (context === "champion") {
+    return tone === "correct"
+      ? phrases.correctChampion
+      : phrases.incorrectChampion;
+  }
+  if (context === "finalist") {
+    return tone === "correct"
+      ? phrases.correctFinalist
+      : phrases.incorrectFinalist;
+  }
+  // Generic “pick” (bracket preview / fallback)
+  if (tone === "correct") return "correct pick";
+  if (tone === "incorrect") return "incorrect or eliminated";
+  return phrases.pending;
+}
+
+/**
+ * Accessible name for a Standings / My Picks logo tile.
+ * Shade (regional or champ fill) and finalist frame stay separate phrases.
+ * Visual ✓/✕ overlays were rejected as too cluttered; meaning stays in aria-label / title.
+ *
+ * @param options.teamLabel - Team display name
+ * @param options.shadeTone - Cell fill vs KEY (regional FF or championship)
+ * @param options.isFinalist - Heavy frame = picked to reach the final
+ * @param options.borderTone - Frame color vs KEY semi (finalists only)
+ * @param options.champ - Champion column (no finalist frame semantics)
+ * @param options.phrases - CMS phrases from Standings content
+ */
+export function formatStandingsPickAccessibleName(options: {
+  teamLabel: string;
+  shadeTone: PickResultTone;
+  isFinalist?: boolean;
+  borderTone?: PickResultTone;
+  champ?: boolean;
+  phrases?: PickResultA11yPhrases;
+}): string {
+  const phrases = options.phrases ?? DEFAULT_PICK_RESULT_A11Y_PHRASES;
+  const fallback = options.champ
+    ? phrases.noChampionPick
+    : phrases.emptySelection;
+  const label = normalizeTeamLabel(options.teamLabel) || fallback;
+  const parts: string[] = [label];
+
+  if (options.champ) {
+    parts.push(describePickResultTone(options.shadeTone, "champion", phrases));
+  } else {
+    parts.push(describePickResultTone(options.shadeTone, "regional", phrases));
+    if (options.isFinalist) {
+      parts.push(phrases.finalistFrame);
+      if (options.borderTone) {
+        parts.push(
+          describePickResultTone(options.borderTone, "finalist", phrases),
+        );
+      }
+    }
+  }
+
+  return parts.join(", ");
+}
+
+/**
+ * Accessible name for a full-bracket preview team row with KEY coloring.
+ *
+ * @param seed - Tournament seed
+ * @param name - Team name
+ * @param tone - Canvas KEY tone (`green` / `red` / `blue`)
+ */
+export function formatBracketPreviewPickAccessibleName(
+  seed: number | string,
+  name: string,
+  tone: "green" | "red" | "blue" | undefined,
+): string {
+  const base = `#${seed} ${normalizeTeamLabel(name) || "TBD"}`;
+  if (tone === "green") return `${base}, correct pick`;
+  if (tone === "red") return `${base}, incorrect or eliminated`;
+  if (tone === "blue") return `${base}, still possible`;
+  return base;
 }
 
 /**

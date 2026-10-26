@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { PageLogger } from "@/components/PageLogger";
 import VintageLiveStandings from "@/components/vintage/standings/VintageLiveStandings";
 import { listLiveStandingsYears } from "@/lib/repositories/liveStandingsSnapshotRepository";
+import { listStandingsArchiveYears } from "@/lib/legacyStandings/years";
 import {
   mergeAvailableYears,
   parseViewingYear,
@@ -36,7 +37,10 @@ export default async function StandingsPage({
     ? standingsDefaultYear
     : new Date().getFullYear();
   const viewingYear = parseViewingYear(params.year, defaultYear);
-  const availableYears = mergeAvailableYears(snapshotYears, defaultYear);
+  const availableYears = mergeAvailableYears(
+    [...snapshotYears, ...listStandingsArchiveYears()],
+    defaultYear,
+  );
 
   return (
     <>

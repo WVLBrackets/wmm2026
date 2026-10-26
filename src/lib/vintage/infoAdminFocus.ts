@@ -21,7 +21,6 @@ export const VINTAGE_INFO_EDITOR_TAB = {
   prizes: "Prizes",
   tracker: "Tracker",
   questions: "Questions",
-  revisions: "Revisions",
 } as const;
 
 /**

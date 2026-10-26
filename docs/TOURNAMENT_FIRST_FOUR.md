@@ -73,7 +73,24 @@ It requires no runtime ESPN request or reference-database changes. The catalog c
 be refreshed from that feed when new schools join. Glyph widths are a conservative
 fit estimate; actual UI fonts can differ, and an admin override may be longer.
 
-Only the combined label may be republished after entries exist. School identities,
-seeds, and the rest of the published field remain frozen. First Four results stay
+## Combined play-in logos
+
+An unresolved pair's two logos are composed server-side into one 64×64 SVG tile
+(`src/lib/playInLogoStyle.ts`, used by `addCombinedPlayInLogos`), so brackets,
+Standings, and My Picks all show the same image. The Tournament Builder's
+**Play-in logo style** section stores the year's choice in
+`definition.display.playInLogo`:
+
+- `layout`: `side-by-side` (half size), `corner-overlap`, `corner-cut` (default),
+  `split-diagonal`, or `split-vertical`. Team A (first listed) is top/left and wins overlap.
+- `scalePercent`: 50–90 (default 72), corner layouts only.
+- `dividerWidth`: 0–6 canvas units (default 2). White line for cut/split layouts; white halo for corner overlap.
+
+`display` is presentation-only: `sameTournamentDefinition` ignores it, so it may be
+republished after entries exist. The builder previews current pairs at 32px, 42px, and zoom.
+
+After entries exist, the tournament name, Round of 64 start date, Final Four location,
+combined label, and logo style may still be republished. School identities, seeds,
+regions, and scoring remain frozen. First Four results stay
 separate; the winner's normal display name and logo replace either automatic or
 custom combined labels. Existing saved picks and scores retain their slot IDs.

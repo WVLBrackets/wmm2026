@@ -535,13 +535,6 @@ export async function initializeVintageHomepageDatabase(pool: import('pg').Pool)
       draft JSONB NOT NULL,
       published JSONB NOT NULL
     );
-    CREATE TABLE IF NOT EXISTS vintage_homepage_revisions (
-      id UUID PRIMARY KEY,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      author TEXT NOT NULL,
-      action TEXT NOT NULL CHECK (action IN ('save', 'publish', 'restore')),
-      content JSONB NOT NULL
-    );
     CREATE TABLE IF NOT EXISTS vintage_homepage_media (
       id UUID PRIMARY KEY,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -556,12 +549,10 @@ export async function initializeVintageHomepageDatabase(pool: import('pg').Pool)
       draft JSONB NOT NULL,
       published JSONB NOT NULL
     );
-    CREATE TABLE IF NOT EXISTS vintage_info_revisions (
-      id UUID PRIMARY KEY,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      author TEXT NOT NULL,
-      action TEXT NOT NULL CHECK (action IN ('save', 'publish', 'restore')),
-      content JSONB NOT NULL
-    );
+  `);
+  // CMS no longer retains save/publish history; drop legacy revision tables if present.
+  await pool.query(`
+    DROP TABLE IF EXISTS vintage_homepage_revisions;
+    DROP TABLE IF EXISTS vintage_info_revisions;
   `);
 }
