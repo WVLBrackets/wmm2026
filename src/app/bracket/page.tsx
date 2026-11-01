@@ -17,9 +17,11 @@ import {
 export const dynamic = "force-dynamic";
 
 /**
- * My Picks: server loads CMS, the active-year field, and the viewer's bracket list
+ * My Picks: server loads CMS, the viewing-year field, and the viewer's bracket list
  * in parallel so the first paint needs no client waterfall.
  * Season gates (published / cost / master lock) come from homepage Key Data.
+ * Field JSON must match `?year=` so Final Four logos resolve on cold deep links
+ * (email `/bracket?year=2026`), not only after a soft year switch.
  */
 export default async function BracketPage({
   searchParams,
@@ -43,7 +45,7 @@ export default async function BracketPage({
   const viewingYear = parseViewingYear(params.year, activeYear);
   const viewer = { name: user.name || session?.user?.name || "", email: user.email };
   const [field, list] = await Promise.all([
-    loadMyPicksField(activeYear),
+    loadMyPicksField(viewingYear),
     loadMyPicksList({ id: user.id, ...viewer }, viewingYear, activeYear),
   ]);
 
