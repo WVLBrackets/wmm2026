@@ -1,5 +1,6 @@
 import { DEFAULT_VINTAGE_CONTENT } from "./content";
 import {
+  applySelectedPublishedPatches,
   buildVintageCmsTransferBundle,
   diffCmsTransferBundle,
   mergeCmsDocumentBag,
@@ -10,6 +11,7 @@ import {
   type VintageCmsTransferBundle,
 } from "./cmsTransfer";
 import { getVintageDbPool, hasVintageDatabase } from "./dbPool";
+import { revalidateVintageCms } from "./sidecarWriter";
 
 /**
  * Read the raw draft/published homepage row (including sidecars) for transfer.
@@ -43,21 +45,20 @@ export async function readVintageCmsRawDocuments(): Promise<{
 }
 
 /**
- * Build an export package from the current vintage CMS database.
+ * Build an export package from the current published CMS document.
  */
 export async function exportVintageCmsTransferBundle(
   sourceLabel?: string,
 ): Promise<VintageCmsTransferBundle> {
   const raw = await readVintageCmsRawDocuments();
   return buildVintageCmsTransferBundle({
-    draft: raw.draft,
     published: raw.published,
     sourceLabel,
   });
 }
 
 /**
- * Diff an incoming package against the current environment (no writes).
+ * Diff an incoming package’s published document against current published (no writes).
  */
 export async function previewVintageCmsTransfer(rawBundle: unknown): Promise<{
   version: number;
@@ -68,7 +69,6 @@ export async function previewVintageCmsTransfer(rawBundle: unknown): Promise<{
   const bundle = parseVintageCmsTransferBundle(rawBundle);
   const current = await readVintageCmsRawDocuments();
   const changes = diffCmsTransferBundle({
-    currentDraft: current.draft,
     currentPublished: current.published,
     incoming: bundle,
   });
@@ -81,17 +81,22 @@ export async function previewVintageCmsTransfer(rawBundle: unknown): Promise<{
 }
 
 /**
- * Replace draft + published CMS documents with the import package (after confirm).
+ * Patch selected published leaf paths from the import package.
+ * Draft is left unchanged. Paths not listed keep the current published values.
  */
 export async function applyVintageCmsTransfer(input: {
   version: number;
   bundle: unknown;
   expectedChangeCount: number;
+  selectedPaths: string[];
 }): Promise<{ version: number; appliedChanges: number }> {
   if (!hasVintageDatabase()) {
     throw new Error(
       "Dedicated vintage storage is not configured. Import was not applied.",
     );
+  }
+  if (!Array.isArray(input.selectedPaths)) {
+    throw new Error("Apply requires selectedPaths (array of field paths).");
   }
   const bundle = parseVintageCmsTransferBundle(input.bundle);
   const client = await getVintageDbPool().connect();
@@ -109,7 +114,6 @@ export async function applyVintageCmsTransfer(input: {
       throw new Error("CONFLICT");
     }
     const changes = diffCmsTransferBundle({
-      currentDraft: current.draft,
       currentPublished: current.published,
       incoming: bundle,
     });
@@ -118,18 +122,29 @@ export async function applyVintageCmsTransfer(input: {
         "CMS content changed since the preview. Review the import again.",
       );
     }
-    const draftOut = mergeCmsDocumentBag(normalizeCmsDocumentBag(bundle.draft));
-    const publishedOut = mergeCmsDocumentBag(
-      normalizeCmsDocumentBag(bundle.published),
-    );
+    const allowed = new Set(changes.map((c) => c.path));
+    const selected = [...new Set(input.selectedPaths)];
+    for (const path of selected) {
+      if (!allowed.has(path)) {
+        throw new Error(
+          `Selected path is not in the current published diff: ${path}`,
+        );
+      }
+    }
+    const publishedOut = applySelectedPublishedPatches({
+      currentPublished: current.published,
+      incomingPublished: bundle.published,
+      selectedPaths: selected,
+    });
     await client.query(
-      "UPDATE vintage_homepage SET version = version + 1, draft = $1, published = $2 WHERE id = 1",
-      [JSON.stringify(draftOut), JSON.stringify(publishedOut)],
+      "UPDATE vintage_homepage SET version = version + 1, published = $1 WHERE id = 1",
+      [JSON.stringify(publishedOut)],
     );
     await client.query("COMMIT");
+    revalidateVintageCms();
     return {
       version: Number(current.version) + 1,
-      appliedChanges: changes.length,
+      appliedChanges: selected.length,
     };
   } catch (error) {
     await client.query("ROLLBACK");

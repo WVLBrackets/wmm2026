@@ -1,4 +1,5 @@
 import Image from "next/image";
+import CmsText from "@/components/cms/CmsText";
 import type { VintageContent } from "@/lib/vintage/content";
 import type { HofViewModel } from "@/lib/hallOfFameStats";
 import { formatHofDollars } from "@/lib/hallOfFameStats";
@@ -52,7 +53,11 @@ export default function VintageHallOfFamePage({
             />
           ) : null}
           <h1 data-testid="vintage-hof-heading">{copy.heading}</h1>
-          <p className="v-hof-supporting">{copy.supporting}</p>
+          <CmsText
+            as="p"
+            className="v-hof-supporting"
+            text={copy.supporting}
+          />
         </header>
 
         <section
@@ -132,7 +137,7 @@ export default function VintageHallOfFamePage({
           admin={admin}
         />
 
-        <p className="v-hof-closing">{copy.closing}</p>
+        <CmsText as="p" className="v-hof-closing" text={copy.closing} />
       </div>
     </VintageShell>
   );

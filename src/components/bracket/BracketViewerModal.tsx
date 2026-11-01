@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Loader2, Printer, X } from 'lucide-react';
+import { Printer, X } from 'lucide-react';
+import LoadingBasketball from '@/components/vintage/feedback/LoadingBasketball';
+import type { VintageBracketEditorContent } from '@/lib/vintage/bracketEditorContent';
 import { generate64TeamBracket, updateBracketWithPicks } from '@/lib/bracketGenerator';
 import { loadTournamentData } from '@/lib/tournamentLoader';
 import {
@@ -29,6 +31,8 @@ export interface BracketViewerModalProps {
    * `owner` — session read for the signed-in user’s bracket (any status, e.g. My Picks deleted).
    */
   bracketFetchMode?: 'pool' | 'owner';
+  /** Bracket Editor Messages CMS (viewer chrome + canvas labels). */
+  copy: VintageBracketEditorContent;
 }
 
 /**
@@ -41,6 +45,7 @@ export default function BracketViewerModal({
   year,
   title,
   bracketFetchMode = 'pool',
+  copy,
 }: BracketViewerModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +75,7 @@ export default function BracketViewerModal({
       const bracketJson = await bracketRes.json();
       const keyJson = await keyRes.json().catch(() => ({}));
       if (!bracketRes.ok || !bracketJson.success || !bracketJson.data) {
-        throw new Error(bracketJson.error || 'Failed to load bracket');
+        throw new Error(String(bracketJson.error || bracketRes.status));
       }
 
       const kp =
@@ -107,14 +112,15 @@ export default function BracketViewerModal({
       setEntryLabel(String(bracketJson.data.entryName || ''));
       setUpdatedBracket(resolved);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load bracket');
+      console.error('[BracketViewer] Load failed:', e);
+      setError(copy.viewerLoadFailed);
       setTournamentData(null);
       setUpdatedBracket(null);
       setKeyPicks({});
     } finally {
       setLoading(false);
     }
-  }, [bracketId, year, bracketFetchMode]);
+  }, [bracketId, year, bracketFetchMode, copy.viewerLoadFailed]);
 
   useEffect(() => {
     if (!isOpen || !bracketId) return;
@@ -176,7 +182,7 @@ export default function BracketViewerModal({
         >
           <div className="min-w-0 flex-1 pr-2">
             <h2 id="bracket-viewer-title" className="truncate text-lg font-semibold text-gray-900">
-              {entryLabel || title || 'Bracket'}
+              {entryLabel || title || copy.viewerFallbackTitle}
             </h2>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -185,18 +191,19 @@ export default function BracketViewerModal({
               onClick={handleOpenPrintLayoutTab}
               disabled={!canOpenPrintLayout}
               className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-              aria-label="Open print layout in a new tab"
-              title="Print View"
+              aria-label={copy.viewerPrintAriaLabel || undefined}
+              title={copy.viewerPrintLabel || undefined}
               data-testid="bracket-viewer-print-button"
             >
               <Printer className="h-4 w-4 shrink-0" aria-hidden />
-              Print View
+              {copy.viewerPrintLabel}
             </button>
             <button
               type="button"
               onClick={onClose}
               className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
-              aria-label="Close"
+              aria-label={copy.viewerCloseAriaLabel || undefined}
+              data-testid="bracket-viewer-close-button"
             >
               <X className="h-5 w-5" />
             </button>
@@ -207,10 +214,10 @@ export default function BracketViewerModal({
           className={`max-h-[calc(92vh-4rem)] max-md:max-h-[calc(100dvh-9.5rem-env(safe-area-inset-top,0px))] overflow-auto py-3 ${FULL_BRACKET_VIEWPORT_PADDING_X} ${fullBracketDebugOutline('canvasWrap')}`.trim()}
         >
           {loading && (
-            <div className="flex h-64 items-center justify-center text-gray-600">
-              <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-              Loading bracket…
-            </div>
+            <LoadingBasketball
+              message={copy.viewerLoadingMessage}
+              testId="bracket-viewer-loading"
+            />
           )}
           {!loading && error && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
@@ -225,6 +232,7 @@ export default function BracketViewerModal({
               bracketSize="64"
               readOnly
               pickResultContext={pickResultContext}
+              copy={copy}
             />
           )}
         </div>

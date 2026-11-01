@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useAdminConfirm } from "@/components/admin/useAdminConfirm";
 import {
   AlertCircle,
   CheckCircle2,
@@ -21,8 +22,6 @@ type PreviewState = {
   summary: {
     total: number;
     byDesk: Record<CmsTransferDesk, number>;
-    draftCount: number;
-    publishedCount: number;
   };
   bundle: VintageCmsTransferBundle;
 };
@@ -38,8 +37,8 @@ async function csrfToken(): Promise<string> {
 }
 
 /**
- * Export / import the full vintage CMS package from the Home admin desk.
- * Import always shows a field-level diff and requires explicit confirm.
+ * Export / import published vintage CMS fields from the Home admin desk.
+ * Import shows a field-level diff with per-row Include toggles (default ON).
  */
 export default function VintageCmsTransferPanel({
   onApplied,
@@ -47,15 +46,23 @@ export default function VintageCmsTransferPanel({
   /** Called after a successful import so the editor can reload. */
   onApplied?: () => void;
 }) {
+  const { confirm, dialog } = useAdminConfirm();
   const fileRef = useRef<HTMLInputElement>(null);
   const [sourceLabel, setSourceLabel] = useState("local");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [preview, setPreview] = useState<PreviewState | null>(null);
+  /** Paths included in the apply (default: all previewed changes). */
+  const [includedPaths, setIncludedPaths] = useState<Set<string>>(new Set());
+
+  const selectedCount = useMemo(() => {
+    if (!preview) return 0;
+    return preview.changes.filter((c) => includedPaths.has(c.path)).length;
+  }, [preview, includedPaths]);
 
   /**
-   * Download the current environment’s CMS package as JSON.
+   * Download the current environment’s published CMS package as JSON.
    */
   async function exportPackage() {
     setBusy(true);
@@ -80,7 +87,9 @@ export default function VintageCmsTransferPanel({
       anchor.download = `vintage-cms-${bundle.sourceLabel || "export"}-${stamp}.json`;
       anchor.click();
       URL.revokeObjectURL(url);
-      setMessage("CMS package downloaded. Import it on Staging or Prod admin.");
+      setMessage(
+        "Published CMS package downloaded. Import it on Staging or Prod admin.",
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Export failed.");
     } finally {
@@ -89,13 +98,14 @@ export default function VintageCmsTransferPanel({
   }
 
   /**
-   * Parse a chosen file and request a server-side diff against this environment.
+   * Parse a chosen file and request a server-side published-field diff.
    */
   async function previewFile(file: File) {
     setBusy(true);
     setError("");
     setMessage("");
     setPreview(null);
+    setIncludedPaths(new Set());
     try {
       const text = await file.text();
       let parsed: unknown;
@@ -115,14 +125,18 @@ export default function VintageCmsTransferPanel({
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Preview failed.");
+      const changes = data.changes as CmsFieldChange[];
       setPreview({
         version: data.version,
-        changes: data.changes,
+        changes,
         summary: data.summary,
         bundle: data.bundle,
       });
+      setIncludedPaths(new Set(changes.map((c) => c.path)));
       if (data.summary.total === 0) {
-        setMessage("No differences — this environment already matches the package.");
+        setMessage(
+          "No differences — this environment’s published CMS already matches the package.",
+        );
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Preview failed.");
@@ -133,15 +147,35 @@ export default function VintageCmsTransferPanel({
   }
 
   /**
-   * Apply the previewed package after the admin confirms the listed changes.
+   * Toggle whether a diff row’s incoming value will be applied.
+   */
+  function setRowIncluded(path: string, include: boolean) {
+    setIncludedPaths((prev) => {
+      const next = new Set(prev);
+      if (include) next.add(path);
+      else next.delete(path);
+      return next;
+    });
+  }
+
+  /**
+   * Apply selected published fields after the admin confirms.
    */
   async function applyImport() {
     if (!preview) return;
-    const confirmed = window.confirm(
-      preview.summary.total === 0
-        ? "No field changes. Apply anyway (rewrite draft + published from the package)?"
-        : `Apply ${preview.summary.total} field change(s) to this environment’s draft and published CMS? This cannot be undone from Admin.`,
-    );
+    if (selectedCount === 0) {
+      setError(
+        "Turn Include ON for at least one field, or cancel if you do not want to import.",
+      );
+      return;
+    }
+    const confirmed = await confirm({
+      title: "Apply CMS import",
+      message: `Apply ${selectedCount} of ${preview.summary.total} published field change(s) to this environment? Draft is left unchanged. This cannot be undone from Admin.`,
+      confirmLabel: "Apply",
+      testId: "cms-transfer-apply-confirm",
+      tone: "danger",
+    });
     if (!confirmed) return;
 
     setBusy(true);
@@ -149,6 +183,9 @@ export default function VintageCmsTransferPanel({
     setMessage("");
     try {
       const token = await csrfToken();
+      const selectedPaths = preview.changes
+        .filter((c) => includedPaths.has(c.path))
+        .map((c) => c.path);
       const response = await fetch("/api/admin/vintage-cms-transfer", {
         method: "POST",
         headers: {
@@ -160,14 +197,16 @@ export default function VintageCmsTransferPanel({
           bundle: preview.bundle,
           version: preview.version,
           expectedChangeCount: preview.summary.total,
+          selectedPaths,
         }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Import failed.");
       setMessage(
-        `Import applied (${data.appliedChanges} field change(s)). Reload the editor desks to see the new values.`,
+        `Import applied (${data.appliedChanges} published field change(s)). Reload the editor desks to see the new values.`,
       );
       setPreview(null);
+      setIncludedPaths(new Set());
       onApplied?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Import failed.");
@@ -189,12 +228,13 @@ export default function VintageCmsTransferPanel({
       <div className="ve-cms-transfer__intro">
         <h2 id="vintage-cms-transfer-title">CMS export / import</h2>
         <p className="ve-help">
-          Move Home, Guidebook, Hall of Fame, Standings, and Picks copy between
-          environments. Export downloads a JSON package from{" "}
-          <strong>this</strong> database. Import compares every field to what is
-          here now and asks you to confirm before writing draft and published.
-          Image URLs stay as stored — re-upload media on the target env if links
-          point at another bucket.
+          Move <strong>published</strong> Home, Guidebook, Hall of Fame,
+          Standings, and Picks copy between environments. Export downloads a
+          JSON package from <strong>this</strong> database. Import compares
+          published fields to what is here now; turn Include OFF on any row to
+          keep the current value. Draft is not exported or overwritten. Image
+          URLs stay as stored — re-upload media on the target env if links point
+          at another bucket.
         </p>
       </div>
 
@@ -270,12 +310,17 @@ export default function VintageCmsTransferPanel({
                 : null}
             </p>
             <p>
-              <strong>{preview.summary.total}</strong> field change
+              <strong>{preview.summary.total}</strong> published field change
               {preview.summary.total === 1 ? "" : "s"}
-              {" · "}
-              {preview.summary.publishedCount} published
-              {" · "}
-              {preview.summary.draftCount} draft
+              {preview.summary.total > 0 ? (
+                <>
+                  {" · "}
+                  <strong data-testid="vintage-cms-transfer-selected-count">
+                    {selectedCount}
+                  </strong>{" "}
+                  selected to import
+                </>
+              ) : null}
             </p>
             {desks.length > 0 ? (
               <ul className="ve-cms-transfer__desk-counts">
@@ -293,54 +338,83 @@ export default function VintageCmsTransferPanel({
               <table className="ve-cms-transfer__table">
                 <thead>
                   <tr>
+                    <th scope="col">Include</th>
                     <th scope="col">Desk</th>
-                    <th scope="col">Edition</th>
                     <th scope="col">Field</th>
                     <th scope="col">Current</th>
                     <th scope="col">Incoming</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {preview.changes.map((change) => (
-                    <tr
-                      key={`${change.edition}:${change.path}`}
-                      data-testid="vintage-cms-transfer-change-row"
-                    >
-                      <td>{cmsTransferDeskLabel(change.desk)}</td>
-                      <td>{change.edition}</td>
-                      <td>
-                        <code>{change.path}</code>
-                      </td>
-                      <td>
-                        <pre>{change.before}</pre>
-                      </td>
-                      <td>
-                        <pre>{change.after}</pre>
-                      </td>
-                    </tr>
-                  ))}
+                  {preview.changes.map((change) => {
+                    const included = includedPaths.has(change.path);
+                    return (
+                      <tr
+                        key={change.path}
+                        data-testid="vintage-cms-transfer-change-row"
+                        data-included={included ? "true" : "false"}
+                        className={
+                          included
+                            ? undefined
+                            : "ve-cms-transfer__row--excluded"
+                        }
+                      >
+                        <td>
+                          <label className="ve-cms-transfer__include">
+                            <input
+                              type="checkbox"
+                              checked={included}
+                              disabled={busy}
+                              onChange={(e) =>
+                                setRowIncluded(change.path, e.target.checked)
+                              }
+                              data-testid="vintage-cms-transfer-include"
+                              aria-label={`Include ${change.path} from import`}
+                            />
+                            <span>{included ? "ON" : "OFF"}</span>
+                          </label>
+                        </td>
+                        <td>{cmsTransferDeskLabel(change.desk)}</td>
+                        <td>
+                          <code>{change.path}</code>
+                        </td>
+                        <td>
+                          <pre>{change.before}</pre>
+                        </td>
+                        <td>
+                          <pre>{change.after}</pre>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           ) : (
-            <p className="ve-help">Every field already matches this environment.</p>
+            <p className="ve-help">
+              Every published field already matches this environment.
+            </p>
           )}
 
           <div className="ve-cms-transfer__confirm">
             <button
               type="button"
               className="ve-button ve-primary"
-              disabled={busy}
+              disabled={busy || selectedCount === 0}
               onClick={() => void applyImport()}
               data-testid="vintage-cms-transfer-apply"
             >
               Confirm and apply import
+              {preview.summary.total > 0 ? ` (${selectedCount})` : ""}
             </button>
             <button
               type="button"
               className="ve-button"
               disabled={busy}
-              onClick={() => setPreview(null)}
+              onClick={() => {
+                setPreview(null);
+                setIncludedPaths(new Set());
+              }}
               data-testid="vintage-cms-transfer-cancel"
             >
               Cancel
@@ -348,6 +422,7 @@ export default function VintageCmsTransferPanel({
           </div>
         </div>
       ) : null}
+      {dialog}
     </section>
   );
 }

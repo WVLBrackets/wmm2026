@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authorizeVintageRequest } from "@/lib/vintage/admin";
-import { getKeyBracketByYear } from "@/lib/repositories/bracketRepository";
+import {
+  getKeyBracketByYear,
+  getOrCreateKeyBracket,
+} from "@/lib/repositories/bracketRepository";
+import { getUserByEmail } from "@/lib/repositories/userRepository";
 import { getLiveStandingsSnapshot } from "@/lib/repositories/liveStandingsSnapshotRepository";
 import { recomputeLiveStandingsAfterKeySave } from "@/lib/liveStandingsService";
 import { getPublishedVintageStandingsContent } from "@/lib/vintage/standingsStore";
@@ -11,6 +15,8 @@ const headers = { "Cache-Control": "private, no-store" };
 /**
  * POST /api/admin/vintage-standings/recompute
  * Rebuild the live standings snapshot for a year from KEY + submitted brackets.
+ * If no KEY exists yet, creates a blank KEY (empty picks) so tipoff-day standings
+ * can show everyone's picks at 0 points before any games are filled in.
  * Body: `{ year?: number }` — defaults to CMS Standings Year.
  */
 export async function POST(request: NextRequest) {
@@ -45,14 +51,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const keyBracket = await getKeyBracketByYear(yearNum);
+    const existingKey = await getKeyBracketByYear(yearNum);
+    let keyBracket = existingKey;
+    let keyCreated = false;
+
     if (!keyBracket) {
-      return NextResponse.json(
-        {
-          error: `No KEY bracket for ${yearNum}. Create/save KEY results before regenerating standings.`,
-        },
-        { status: 404, headers },
-      );
+      const adminUser = await getUserByEmail(auth.email);
+      if (!adminUser) {
+        return NextResponse.json(
+          {
+            error:
+              "Admin user record not found — cannot create a blank KEY for standings.",
+          },
+          { status: 404, headers },
+        );
+      }
+      keyBracket = await getOrCreateKeyBracket(yearNum, adminUser.id);
+      keyCreated = true;
     }
 
     const result = await recomputeLiveStandingsAfterKeySave(
@@ -74,6 +89,7 @@ export async function POST(request: NextRequest) {
         entryCount: snapshot?.standingsData.entries.length ?? 0,
         computedAt: snapshot?.computedAt.toISOString() ?? null,
         keyBracketId: keyBracket.id,
+        keyCreated,
       },
       { headers },
     );

@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/lib/adminAuth';
-import { sql } from '@/lib/databaseAdapter';
 import { csrfProtection } from '@/lib/csrf';
+import {
+  confirmPayment,
+  getPaymentById,
+  rejectPayment,
+} from '@/lib/repositories/paymentRepository';
 
 /**
  * PUT /api/admin/payments/[id] — Confirm or reject a payment (admin only).
@@ -37,12 +41,10 @@ export async function PUT(
       );
     }
 
-    const existing = await sql`SELECT * FROM payments WHERE id = ${paymentId}`;
-    if (existing.rows.length === 0) {
+    const payment = await getPaymentById(paymentId);
+    if (!payment) {
       return NextResponse.json({ success: false, error: 'Payment not found.' }, { status: 404 });
     }
-
-    const payment = existing.rows[0] as { status: string; bracket_ids: string[] };
     if (payment.status !== 'pending') {
       return NextResponse.json(
         { success: false, error: `Payment is already ${payment.status}.` },
@@ -58,42 +60,24 @@ export async function PUT(
         );
       }
 
-      await sql`
-        UPDATE payments
-        SET status = 'confirmed',
-            confirmed_at = now(),
-            confirmed_by = ${session.user.email},
-            admin_transaction_id = ${transactionId.trim()},
-            admin_notes = ${adminNotes?.trim() || null}
-        WHERE id = ${paymentId}
-      `;
-
-      for (const bracketId of payment.bracket_ids) {
-        await sql`
-          UPDATE brackets SET payment_status = 'paid'
-          WHERE id = ${bracketId} AND payment_id = ${paymentId}
-        `;
-      }
+      await confirmPayment(
+        paymentId,
+        session.user.email,
+        transactionId.trim(),
+        adminNotes?.trim() || null,
+        payment.bracket_ids,
+      );
 
       return NextResponse.json({ success: true, message: 'Payment confirmed.' });
     }
 
     // reject
-    await sql`
-      UPDATE payments
-      SET status = 'rejected',
-          confirmed_at = now(),
-          confirmed_by = ${session.user.email},
-          admin_notes = ${adminNotes?.trim() || null}
-      WHERE id = ${paymentId}
-    `;
-
-    for (const bracketId of payment.bracket_ids) {
-      await sql`
-        UPDATE brackets SET payment_status = NULL, payment_id = NULL
-        WHERE id = ${bracketId} AND payment_id = ${paymentId}
-      `;
-    }
+    await rejectPayment(
+      paymentId,
+      session.user.email,
+      adminNotes?.trim() || null,
+      payment.bracket_ids,
+    );
 
     return NextResponse.json({ success: true, message: 'Payment rejected.' });
   } catch (error) {

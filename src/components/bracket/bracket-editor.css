@@ -1,0 +1,442 @@
+/**
+ * Bracket editor chrome (vintage) — scoped under .be-editor (the only editor theme).
+ * Does not alter slot geometry, connectors, or pick hit areas.
+ */
+
+@font-face {
+  font-family: "Alfa Slab One";
+  src: url("/fonts/vintage/AlfaSlabOne.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: Oswald;
+  src: url("/fonts/vintage/Oswald.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 200 700;
+  font-display: swap;
+}
+
+.be-editor {
+  --be-ink: #152c3a;
+  --be-red: #b52c26;
+  --be-paper: #f2ead8;
+  --be-rule: #b7b09f;
+  --be-white: #ffffff;
+  --be-disabled-bg: #d1d5db;
+  --be-disabled-fg: #6b7280;
+  --be-font-ui: Oswald, Impact, sans-serif;
+  --be-font-body: Arial, Helvetica, sans-serif;
+  --be-font-display: "Alfa Slab One", Georgia, serif;
+  color: var(--be-ink);
+  font-family: var(--be-font-body);
+}
+
+/* Page / shell surfaces */
+.be-editor.be-workspace,
+.be-editor .be-workspace-page {
+  background: var(--be-paper) !important;
+  background-image: none !important;
+}
+
+.be-editor .be-workspace-card {
+  background: var(--be-white) !important;
+  border-color: var(--be-ink) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.be-editor .be-layout-bar {
+  /* Stay above Full Bracket finals overlay while scrolling */
+  z-index: 40 !important;
+  background: var(--be-paper) !important;
+  border-bottom: 1px solid var(--be-ink) !important;
+  box-shadow: none !important;
+}
+
+/* Finals strip must scroll under sticky chrome, not over it */
+.be-editor [data-testid="full-bracket-finals-overlay"] {
+  z-index: 1 !important;
+}
+
+.be-editor .be-layout-bar__label {
+  font-family: var(--be-font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--be-ink);
+}
+
+.be-editor .be-layout-toggle {
+  border: 1px solid var(--be-ink) !important;
+  border-radius: 0 !important;
+  background: var(--be-paper) !important;
+  padding: 2px !important;
+}
+
+.be-editor .be-layout-toggle__btn {
+  border-radius: 0 !important;
+  font-family: var(--be-font-ui) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 8px 12px !important;
+}
+
+.be-editor .be-layout-toggle__btn--on {
+  background: var(--be-ink) !important;
+  color: var(--be-paper) !important;
+}
+
+.be-editor .be-layout-toggle__btn--off {
+  background: transparent !important;
+  color: var(--be-ink) !important;
+}
+
+.be-editor .be-layout-toggle__btn--off:hover {
+  background: color-mix(in srgb, var(--be-ink) 8%, transparent) !important;
+}
+
+/*
+ * Desktop workspace chrome: brand (left) · stacked progress (center) · layout (right).
+ */
+.be-editor .be-brand-strip--chrome {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 14px;
+  row-gap: 8px;
+  padding: 8px 12px;
+  background: var(--be-paper);
+  border-bottom: 1px solid var(--be-ink);
+  box-shadow: none;
+}
+
+.be-editor .be-brand-strip__identity {
+  justify-self: start;
+  min-width: 0;
+}
+
+.be-editor .be-brand-strip__title {
+  margin: 0;
+  font-family: var(--be-font-display);
+  font-size: clamp(16px, 1.8vw, 22px);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  color: var(--be-red);
+  line-height: 1.05;
+  white-space: nowrap;
+}
+
+.be-editor .be-brand-strip__meta {
+  margin: 1px 0 0;
+  font-family: var(--be-font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--be-ink);
+  white-space: nowrap;
+}
+
+.be-editor .be-brand-strip__layout {
+  display: flex;
+  justify-self: end;
+  align-items: center;
+  gap: 8px;
+}
+
+.be-editor .be-brand-strip__progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  justify-self: center;
+}
+
+.be-editor .be-brand-strip--chrome .be-progress__label {
+  margin: 0;
+  font-family: var(--be-font-body);
+  font-size: 12px;
+  color: var(--be-ink);
+  white-space: nowrap;
+  text-align: center;
+}
+
+.be-editor .be-brand-strip--chrome .be-progress__track {
+  width: 180px;
+  max-width: 100%;
+  height: 6px;
+  border: 1px solid var(--be-ink);
+  background: var(--be-white);
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.be-editor .be-brand-strip--chrome .be-progress__fill {
+  height: 100%;
+  background: var(--be-ink);
+}
+
+/* Equal-width Regions / Full buttons in the brand strip */
+.be-editor .be-brand-strip--chrome .be-layout-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.be-editor .be-brand-strip--chrome .be-layout-toggle__btn {
+  min-width: 5.5rem;
+  padding: 6px 10px !important;
+  font-size: 11px !important;
+  text-align: center;
+}
+
+/* Narrow viewports: stack progress under brand + layout */
+@media (max-width: 900px) {
+  .be-editor .be-brand-strip--chrome {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .be-editor .be-brand-strip__progress {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+  }
+
+  .be-editor .be-brand-strip--chrome .be-progress__track {
+    width: 100%;
+    max-width: 280px;
+  }
+}
+
+/* Title / entry bar */
+.be-editor .be-title-bar {
+  border-bottom-color: var(--be-rule) !important;
+  background: var(--be-white) !important;
+  border-radius: 0 !important;
+}
+
+.be-editor .be-title-bar--ready {
+  border-bottom-color: color-mix(in srgb, #3f6b4a 45%, var(--be-rule)) !important;
+  background: color-mix(in srgb, #d9e6dc 55%, white) !important;
+}
+
+.be-editor .be-entry-label {
+  font-family: var(--be-font-ui) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--be-ink) !important;
+}
+
+.be-editor .be-entry-input {
+  border-radius: 0 !important;
+  border-color: var(--be-ink) !important;
+  font-family: var(--be-font-body) !important;
+  box-shadow: none !important;
+}
+
+.be-editor .be-entry-input:focus {
+  border-color: var(--be-red) !important;
+  outline: 3px solid var(--be-red);
+  outline-offset: 2px;
+  box-shadow: none !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+}
+
+/* Soften ordinary incomplete yellow; keep real validation green */
+.be-editor .be-msg--soft {
+  border-color: var(--be-rule) !important;
+  background: color-mix(in srgb, var(--be-paper) 70%, white) !important;
+  color: var(--be-ink) !important;
+  border-radius: 0 !important;
+}
+
+.be-editor .be-msg--ready {
+  border-color: #3f6b4a !important;
+  background: #d9e6dc !important;
+  color: #243f2c !important;
+  border-radius: 0 !important;
+}
+
+.be-editor .be-msg--warn {
+  border-color: var(--be-red) !important;
+  background: color-mix(in srgb, var(--be-red) 10%, white) !important;
+  color: var(--be-ink) !important;
+  border-radius: 0 !important;
+}
+
+/* Region / step nav */
+.be-editor .be-step-nav {
+  gap: 6px !important;
+}
+
+.be-editor .be-step-nav__btn {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  font-family: var(--be-font-ui) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 1px solid var(--be-ink) !important;
+  min-height: 40px !important;
+}
+
+.be-editor .be-step-nav__btn--current {
+  background: var(--be-ink) !important;
+  color: var(--be-paper) !important;
+}
+
+.be-editor .be-step-nav__btn--available {
+  background: var(--be-paper) !important;
+  color: var(--be-ink) !important;
+}
+
+.be-editor .be-step-nav__btn--complete:not(.be-step-nav__btn--current) {
+  background: color-mix(in srgb, var(--be-ink) 12%, var(--be-paper)) !important;
+  color: var(--be-ink) !important;
+  border-style: solid !important;
+}
+
+.be-editor .be-step-nav__btn--disabled {
+  background: var(--be-disabled-bg) !important;
+  color: var(--be-disabled-fg) !important;
+  border-color: #9ca3af !important;
+}
+
+/* Action bar */
+.be-editor .be-action-bar {
+  border: 1px solid var(--be-ink) !important;
+  border-radius: 0 !important;
+  background: var(--be-paper) !important;
+  box-shadow: none !important;
+  gap: 8px !important;
+}
+
+.be-editor .be-btn {
+  border-radius: 0 !important;
+  font-family: var(--be-font-ui) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: none !important;
+  min-height: 40px;
+}
+
+.be-editor .be-btn--save:not(:disabled) {
+  background: var(--be-ink) !important;
+  color: var(--be-paper) !important;
+  border: 1px solid var(--be-ink) !important;
+}
+
+.be-editor .be-btn--submit:not(:disabled) {
+  background: var(--be-red) !important;
+  color: var(--be-paper) !important;
+  border: 1px solid var(--be-red) !important;
+}
+
+.be-editor .be-btn--cancel {
+  background: var(--be-paper) !important;
+  color: var(--be-ink) !important;
+  border: 1px solid var(--be-ink) !important;
+}
+
+.be-editor .be-btn--close {
+  background: var(--be-paper) !important;
+  color: var(--be-ink) !important;
+  border: 1px solid var(--be-ink) !important;
+}
+
+.be-editor .be-btn:disabled,
+.be-editor .be-btn--disabled {
+  background: var(--be-disabled-bg) !important;
+  color: var(--be-disabled-fg) !important;
+  border: 1px solid #9ca3af !important;
+  cursor: not-allowed !important;
+}
+
+.be-editor .be-btn:focus-visible {
+  outline: 3px solid var(--be-red);
+  outline-offset: 3px;
+}
+
+/* Next region control — paper glyph on ink fill when enabled (do not force ink color) */
+.be-editor .be-next-region {
+  font-family: var(--be-font-ui) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 0 !important;
+}
+
+.be-editor .be-next-region:not(:disabled) {
+  background: var(--be-ink) !important;
+  border-color: var(--be-ink) !important;
+  color: var(--be-paper) !important;
+}
+
+.be-editor .be-next-region:not(:disabled) svg {
+  color: var(--be-paper) !important;
+  stroke: var(--be-paper) !important;
+}
+
+.be-editor .be-next-region:disabled {
+  background: var(--be-disabled-bg) !important;
+  border-color: #9ca3af !important;
+  color: var(--be-disabled-fg) !important;
+}
+
+.be-editor .be-next-region:disabled svg {
+  color: var(--be-disabled-fg) !important;
+  stroke: var(--be-disabled-fg) !important;
+}
+
+/* Flatten FF / card chrome shadows under vintage (geometry unchanged) */
+.be-editor .shadow-lg,
+.be-editor .shadow-sm,
+.be-editor .shadow {
+  box-shadow: none !important;
+}
+
+.be-editor .rounded-lg,
+.be-editor .rounded-md,
+.be-editor .rounded-xl {
+  border-radius: 0 !important;
+}
+
+/* Final Four redesign panel (internal composition; outer frame size unchanged) */
+.be-editor .be-ff-matchup {
+  border-color: var(--be-ink) !important;
+  border-radius: 0 !important;
+  background: var(--be-white) !important;
+  box-shadow: none !important;
+}
+
+.be-editor .be-ff-matchup__title {
+  color: var(--be-ink) !important;
+}
+
+.be-editor .be-ff-champion {
+  border-radius: 0 !important;
+}
+
+.be-editor .be-ff-tiebreaker__input {
+  border-radius: 0 !important;
+  font-family: var(--be-font-body) !important;
+}
+
+.be-editor .be-ff-connectors {
+  color: var(--be-ink) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .be-editor * {
+    transition: none !important;
+  }
+}

@@ -4,9 +4,11 @@
  */
 
 import { TournamentData } from '@/types/tournament';
-import { SiteConfigData } from './siteConfig';
-import { FALLBACK_CONFIG } from './fallbackConfig';
 import { generate64TeamBracket, getAllBracketGames } from './bracketGenerator';
+import {
+  formatTieBreakerInvalid,
+  type VintageBracketEditorContent,
+} from './vintage/bracketEditorContent';
 
 export interface BracketValidationResult {
   isValid: boolean;
@@ -21,26 +23,23 @@ export async function validateBracketSubmission(
   picks: Record<string, string>,
   tieBreaker: number | undefined,
   tournamentData: TournamentData,
-  siteConfig: SiteConfigData | null
+  editorCopy: Pick<
+    VintageBracketEditorContent,
+    'tieBreakerLow' | 'tieBreakerHigh' | 'tieBreakerInvalidMessage' | 'tieBreakerMissingMessage'
+  >
 ): Promise<BracketValidationResult> {
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  // 1. Check if submission is disabled (deadline or toggle)
-  const isSubmissionDisabled = checkSubmissionDisabled(siteConfig);
-  if (isSubmissionDisabled.disabled) {
-    errors.push(isSubmissionDisabled.reason);
-  }
-
-  // 2. Validate tie breaker
+  // 1. Validate tie breaker against the published Bracket Editor range
   if (tieBreaker === undefined || tieBreaker === null) {
-    errors.push('Tie breaker is required');
-  } else {
-    const low = siteConfig?.tieBreakerLow ?? FALLBACK_CONFIG.tieBreakerLow ?? 50;
-    const high = siteConfig?.tieBreakerHigh ?? FALLBACK_CONFIG.tieBreakerHigh ?? 500;
-    if (isNaN(tieBreaker) || tieBreaker < low || tieBreaker > high) {
-      errors.push(`Tie breaker must be between ${low} and ${high}`);
-    }
+    errors.push(editorCopy.tieBreakerMissingMessage);
+  } else if (
+    isNaN(tieBreaker) ||
+    tieBreaker < editorCopy.tieBreakerLow ||
+    tieBreaker > editorCopy.tieBreakerHigh
+  ) {
+    errors.push(formatTieBreakerInvalid(editorCopy));
   }
 
   // 3. Generate expected bracket structure
@@ -100,50 +99,6 @@ export async function validateBracketSubmission(
     warnings
   };
 }
-
-/**
- * Check if submission is disabled due to deadline or toggle
- * Exported for use in both PUT (creation) and POST (submission) routes
- */
-export function checkSubmissionAllowed(siteConfig: SiteConfigData | null): { allowed: boolean; reason?: string } {
-  const result = checkSubmissionDisabled(siteConfig);
-  return {
-    allowed: !result.disabled,
-    reason: result.disabled ? result.reason : undefined
-  };
-}
-
-/**
- * Check if submission is disabled due to deadline or toggle
- */
-function checkSubmissionDisabled(siteConfig: SiteConfigData | null): { disabled: boolean; reason: string } {
-  // Check stop_submit_toggle first
-  if (siteConfig?.stopSubmitToggle === 'Yes') {
-    return {
-      disabled: true,
-      reason: siteConfig?.finalMessageSubmitOff || FALLBACK_CONFIG.finalMessageSubmitOff || 'Bracket submissions are currently disabled.'
-    };
-  }
-
-  // Check stop_submit_date_time
-  if (siteConfig?.stopSubmitDateTime) {
-    try {
-      const deadline = new Date(siteConfig.stopSubmitDateTime);
-      const now = new Date();
-      if (now >= deadline) {
-        return {
-          disabled: true,
-          reason: siteConfig?.finalMessageTooLate || FALLBACK_CONFIG.finalMessageTooLate || 'Bracket submissions are closed. The deadline has passed.'
-        };
-      }
-    } catch {
-      // Invalid date format - ignore
-    }
-  }
-
-  return { disabled: false, reason: '' };
-}
-
 
 /**
  * Validate bracket structure logic - ensure winners advance correctly

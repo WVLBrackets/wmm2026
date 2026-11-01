@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { KeyRound, Pencil } from 'lucide-react';
 import KeyBracketPreviewModal from '@/components/admin/KeyBracketPreviewModal';
@@ -104,7 +105,12 @@ export default function LiveResultsTab({ brackets }: LiveResultsTabProps) {
 
       <p className="text-sm text-gray-600 mb-6">
         Edit the KEY bracket in the full-canvas modal. Changes auto-save. The preview below updates when you close the
-        modal.
+        modal. Pool-facing scores live on the public{' '}
+        <Link href="/scoreboard" className="text-blue-700 underline">
+          Scoreboard
+        </Link>{' '}
+        (admin gear on that page for manual edits). Marking a Scoreboard game Final updates KEY picks
+        (play-in → tourney results; championship → tie-breaker) and regenerates Live Standings.
       </p>
 
       <div className="flex flex-col sm:flex-row sm:items-end gap-4">

@@ -93,15 +93,21 @@ export async function upsertLiveStandingsSnapshot(
  * Latest snapshot for the year, or null if never computed or legacy row format.
  */
 export async function getLiveStandingsSnapshot(year: number): Promise<LiveStandingsSnapshot | null> {
-  await ensureTable();
   const environment = year >= FIRST_MANAGED_YEAR ? tournamentScope() : getCurrentEnvironment();
 
-  const result = await sql`
+  let result;
+  try {
+    result = await sql`
     SELECT year, key_bracket_id, key_updated_at, computed_at, entries
     FROM live_standings_snapshots
     WHERE environment = ${environment} AND year = ${year}
     LIMIT 1
   `;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (/does not exist|live_standings_snapshots/i.test(message)) return null;
+    throw error;
+  }
 
   if (result.rows.length === 0) {
     return null;
@@ -134,14 +140,20 @@ export async function getLiveStandingsSnapshot(year: number): Promise<LiveStandi
  * Years that have a live standings snapshot for the current environment (newest first).
  */
 export async function listLiveStandingsYears(): Promise<number[]> {
-  await ensureTable();
   const environment = getCurrentEnvironment();
-  const result = await sql`
+  let result;
+  try {
+    result = await sql`
     SELECT year
     FROM live_standings_snapshots
     WHERE (environment = ${environment} AND year < ${FIRST_MANAGED_YEAR}) OR environment = ${tournamentScope()}
     ORDER BY year DESC
   `;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (/does not exist|live_standings_snapshots/i.test(message)) return [];
+    throw error;
+  }
   return result.rows
     .map((row) => Number((row as { year: number }).year))
     .filter((y) => Number.isFinite(y));

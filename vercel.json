@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/scoreboard-sync",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}

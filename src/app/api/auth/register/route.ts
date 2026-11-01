@@ -8,10 +8,12 @@
 import { NextRequest } from 'next/server';
 import { createUser } from '@/lib/repositories/userRepository';
 import { sendConfirmationEmail, emailService } from '@/lib/emailService';
-import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
+import { SiteConfigError } from '@/lib/siteConfig';
+import { getAccountEmailContext } from '@/lib/siteConfigServer';
 import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rateLimit';
 import { successResponse, ApiErrors } from '@/lib/api/responses';
 import { validateRegistration } from '@/lib/validation/validators';
+import { requireAppOrigin } from '@/lib/env';
 
 export async function POST(request: NextRequest) {
   // Rate limiting to prevent registration abuse
@@ -62,19 +64,23 @@ export async function POST(request: NextRequest) {
       return ApiErrors.internalError('Email service is not configured. Please contact the administrator.');
     }
     
-    // Get site config for email template
-    let siteConfig = null;
+    let emailContext;
     try {
-      siteConfig = await getSiteConfigFromGoogleSheets();
+      emailContext = await getAccountEmailContext();
     } catch (configError) {
-      console.error('[Register] Error fetching site config, using fallbacks:', configError);
+      console.error('[Register] Error fetching site config:', configError);
+      const message =
+        configError instanceof SiteConfigError
+          ? configError.message
+          : 'Site configuration is unavailable. Please try again later.';
+      return ApiErrors.internalError(message);
     }
     
     // Handle test email suppression (non-production only)
     handleTestEmailSuppression(request);
     
     // Send confirmation email
-    const emailSent = await sendConfirmationEmail(email, user.name, confirmationLink, token, siteConfig);
+    const emailSent = await sendConfirmationEmail(email, user.name, confirmationLink, token, emailContext);
     if (!emailSent) {
       return ApiErrors.internalError('Failed to send confirmation email. Please try again or contact support.');
     }
@@ -96,23 +102,17 @@ export async function POST(request: NextRequest) {
  */
 function getBaseUrl(request: NextRequest): string {
   const vercelEnv = process.env.VERCEL_ENV;
-  
-  if (vercelEnv === 'production') {
-    return process.env.NEXTAUTH_URL || 'https://wmm2026.vercel.app';
-  }
-  
+
   if (vercelEnv === 'preview') {
     const host = request.headers.get('host');
     if (host) {
       const protocol = request.headers.get('x-forwarded-proto') || 'https';
       return `${protocol}://${host}`;
     }
-    return process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : process.env.NEXTAUTH_URL || 'https://wmm2026.vercel.app';
+    if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
   }
-  
-  return process.env.NEXTAUTH_URL || 'https://wmm2026.vercel.app';
+
+  return requireAppOrigin();
 }
 
 /**

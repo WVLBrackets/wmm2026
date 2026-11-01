@@ -6,6 +6,7 @@
 import { generate64TeamBracket, updateBracketWithPicks } from '@/lib/bracketGenerator';
 import {
   buildKeyResolvedGames,
+  countKeyGamesComplete,
   scorePicksAgainstKey,
 } from '@/lib/liveStandingsScoring';
 import type { BracketWithUser } from '@/lib/types/database';
@@ -93,6 +94,7 @@ export function assembleLiveStandingsData(
   const base = generate64TeamBracket(tournamentData);
   const updatedKey = updateBracketWithPicks(base, keyPicks, tournamentData);
   const keyGames = buildKeyResolvedGames(tournamentData, keyPicks);
+  const keyProgress = countKeyGamesComplete(tournamentData, keyPicks);
 
   const regionalChampionKey = buildRegionalChampionKeyRow(updatedKey, keyPicks, tournamentData);
   const semifinalKey = buildSemifinalKeyNames(updatedKey, keyPicks, tournamentData);
@@ -144,7 +146,8 @@ export function assembleLiveStandingsData(
       finals,
       champion,
       tb: userTb,
-      // `brackets.payment_status === 'paid'` — same `StandingsEntry.paid` as daily sheet column Y.
+      // `brackets.payment_status` — boolean `paid` kept for legacy consumers / older UI.
+      paymentStatus: b.paymentStatus ?? null,
       paid: (b.paymentStatus ?? '') === 'paid',
       bracketId: b.id,
       userId: b.userId,
@@ -166,5 +169,7 @@ export function assembleLiveStandingsData(
     finalWinner,
     eliminatedTeams,
     keyTieBreakerPopulated,
+    keyGamesComplete: keyProgress.complete,
+    keyGamesTotal: keyProgress.total,
   };
 }

@@ -78,6 +78,25 @@ test.describe('Public API Endpoints', () => {
         expect(data).toHaveProperty('available');
       }
     });
+
+    test('GET roster mode must not leak picks or payment fields', async ({ request }) => {
+      const baseURL = getBaseURL();
+      const response = await request.get(`${baseURL}/api/live-standings`);
+      if (!response.ok()) return;
+      const data = await response.json();
+      if (data.mode !== 'roster') return;
+      expect(data).toHaveProperty('totalEntryCount');
+      expect(Array.isArray(data.entries)).toBeTruthy();
+      expect(data.standingsData).toBeUndefined();
+      for (const row of data.entries as Record<string, unknown>[]) {
+        expect(row).toHaveProperty('entryName');
+        expect(row.userId).toBeUndefined();
+        expect(row.bracketId).toBeUndefined();
+        expect(row.picks).toBeUndefined();
+        expect(row.paid).toBeUndefined();
+        expect(row.points).toBeUndefined();
+      }
+    });
   });
 
   // =============================================================================

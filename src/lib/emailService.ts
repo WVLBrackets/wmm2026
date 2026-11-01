@@ -1,6 +1,10 @@
 import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
-import type { SiteConfigData } from '@/lib/siteConfig';
+import {
+  formatEmailCopy,
+  type VintageAccountEmailCopy,
+  type VintageEmailsContent,
+} from '@/lib/vintage/emailsContent';
 import { isTestUserEmail, getTestUserReason } from '@/lib/testUserDetection';
 import { getAppEnvironment, isProductionEnvironment } from '@/lib/appEnvironment';
 
@@ -34,7 +38,6 @@ export interface EmailOptions {
   html: string;
   text?: string;
   attachments?: EmailAttachment[];
-  siteConfig?: SiteConfigData | null; // Optional site config for test user detection
   suppressTestEmails?: boolean; // Optional flag to suppress emails for test users
 }
 
@@ -184,21 +187,10 @@ class EmailService {
     const recipientEmail = options.to;
     
     if (suppressEmails) {
-      // Fetch site config if not provided (needed for test user detection)
-      let siteConfig = options.siteConfig;
-      if (!siteConfig) {
-        try {
-          const { getSiteConfigFromGoogleSheets } = await import('@/lib/siteConfig');
-          siteConfig = await getSiteConfigFromGoogleSheets();
-        } catch (error) {
-          console.warn('[EmailService] Could not fetch site config for test user detection:', error);
-        }
-      }
-      
-      const isTestUser = isTestUserEmail(recipientEmail, siteConfig || null);
+      const isTestUser = isTestUserEmail(recipientEmail);
       
       if (isTestUser) {
-        const reason = getTestUserReason(recipientEmail, siteConfig || null);
+        const reason = getTestUserReason(recipientEmail);
         console.log(`[EmailService] 🚫 EMAIL SUPPRESSED - Test user detected`);
         console.log(`[EmailService]    Recipient: ${recipientEmail}`);
         console.log(`[EmailService]    Subject: ${options.subject}`);
@@ -417,10 +409,19 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
   return emailService.sendEmail(options);
 }
 
+/** Published CMS inputs for account emails. */
+export interface AccountEmailContext {
+  emails: VintageEmailsContent;
+  tournamentYear: string;
+  contactEmail: string;
+}
+
 /**
- * Escape HTML entities to prevent XSS
+ * Escape HTML entities to prevent XSS.
+ *
+ * @param text - Untrusted text
  */
-function escapeHtml(text: string): string {
+export function escapeHtml(text: string): string {
   const map: Record<string, string> = {
     '&': '&amp;',
     '<': '&lt;',
@@ -432,315 +433,209 @@ function escapeHtml(text: string): string {
 }
 
 /**
- * Generate "Do Not Reply" notice HTML and text
- * Replaces {contactEmail} with the actual contact address from config
+ * "Do Not Reply" notice from CMS (`{contactEmail}` filled). Blank → omitted.
+ *
+ * @param notice - CMS `doNotReplyNotice`
+ * @param contactEmail - Homepage footer contact address
  */
-function generateDoNotReplyNotice(
-  siteConfig?: Pick<SiteConfigData, 'emailDoNotReplyNotice' | 'emailContactAddress'> | null
+export function renderDoNotReplyNotice(
+  notice: string,
+  contactEmail: string,
 ): { html: string; text: string } {
-  const noticeText = siteConfig?.emailDoNotReplyNotice || 
-    'Please do not reply to this email. This is an automated message from an unmonitored mailbox. If you need assistance, please contact us at {contactEmail}.';
-  const contactEmail = siteConfig?.emailContactAddress || 'support@warrensmm.com';
-  
-  // Replace {contactEmail} variable
-  const noticeWithEmail = noticeText.replace(/\{contactEmail\}/g, contactEmail);
-  
-  // Generate HTML version (escape HTML for safety)
-  const html = `
+  const filled = formatEmailCopy(notice, { contactEmail }).trim();
+  if (!filled) return { html: '', text: '' };
+  return {
+    html: `
     <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
       <p style="font-size: 12px; color: #666; font-style: italic; margin: 0;">
-        ${escapeHtml(noticeWithEmail)}
+        ${escapeHtml(filled)}
       </p>
     </div>
-  `;
-  
-  // Generate text version
-  const text = `\n\n${noticeWithEmail}\n`;
-  
-  return { html, text };
+  `,
+    text: `\n\n${filled}\n`,
+  };
 }
 
 /**
- * Replace template variables in registration email text
- * Supports {Name} and {Year} syntax
- * Note: Values are escaped for HTML safety
+ * Case-insensitive `{token}` fill for account emails (accepts legacy `{Name}`/`{Year}`).
+ *
+ * @param template - CMS copy
+ * @param vars - Lower-case token values
  */
-function replaceRegEmailVariables(text: string, name: string, tournamentYear: string, escapeForHtml: boolean = false): string {
-  let result = text;
-  const nameValue = name || 'there';
-  const yearValue = tournamentYear || '2026';
-  
-  // Replace variables (case-insensitive)
-  result = result.replace(/\{Name\}/gi, escapeForHtml ? escapeHtml(nameValue) : nameValue);
-  result = result.replace(/\{Year\}/gi, escapeForHtml ? escapeHtml(yearValue) : yearValue);
-  
-  return result;
+function fillAccountTokens(template: string, vars: Record<string, string>): string {
+  return template.replace(/\{(\w+)\}/g, (match, key: string) => {
+    const value = vars[key.toLowerCase()];
+    return value === undefined ? match : value;
+  });
 }
 
-export async function sendConfirmationEmail(
-  to: string, 
-  name: string, 
-  confirmationLink: string, 
-  confirmationCode: string,
-  siteConfig?: SiteConfigData | null
-): Promise<boolean> {
-  // Only show badge for non-production environments
-  const isProduction = isProductionEnvironment();
-  const showBadge = !isProduction;
-  
-  // Get config values with fallbacks
-  const { FALLBACK_CONFIG } = await import('@/lib/fallbackConfig');
-  const tournamentYear = siteConfig?.tournamentYear || process.env.NEXT_PUBLIC_TOURNAMENT_YEAR || '2026';
-  
-  const subject = replaceRegEmailVariables(
-    siteConfig?.regEmailSubject || FALLBACK_CONFIG.regEmailSubject || "Confirm Your Warren's March Madness Account",
-    name,
-    tournamentYear,
-    false // Subject doesn't need HTML escaping
-  );
-  
-  const header = replaceRegEmailVariables(
-    siteConfig?.regEmailHeader || FALLBACK_CONFIG.regEmailHeader || "Welcome to Warren's March Madness!",
-    name,
-    tournamentYear,
-    true // HTML content needs escaping
-  );
-  
-  const greeting = replaceRegEmailVariables(
-    siteConfig?.regEmailGreeting || FALLBACK_CONFIG.regEmailGreeting || 'Hi {Name},',
-    name,
-    tournamentYear,
-    true // HTML content needs escaping
-  );
-  
-  const message1 = replaceRegEmailVariables(
-    siteConfig?.regEmailMessage1 || FALLBACK_CONFIG.regEmailMessage1 || 'Thank you for signing up for Warren\'s March Madness {Year}!',
-    name,
-    tournamentYear,
-    true // HTML content needs escaping
-  );
-  
-  const message2 = replaceRegEmailVariables(
-    siteConfig?.regEmailMessage2 || FALLBACK_CONFIG.regEmailMessage2 || 'To complete your account setup, please confirm your email address by clicking the button below:',
-    name,
-    tournamentYear,
-    true // HTML content needs escaping
-  );
-  
-  const footer = replaceRegEmailVariables(
-    siteConfig?.regEmailFooter || FALLBACK_CONFIG.regEmailFooter || 'If you didn\'t create an account with Warren\'s March Madness, please ignore this email.',
-    name,
-    tournamentYear,
-    true // HTML content needs escaping
-  );
-  
-  // Environment badge (only for Preview/Development)
-  const badgeHtml = showBadge ? `
+/**
+ * Render a link-based account email (registration confirm / password reset).
+ * Blank CMS fields are omitted; a blank subject is a configuration error.
+ *
+ * @param copy - CMS copy for this email
+ * @param vars - `{name}`, `{year}` values
+ * @param link - Action URL
+ * @param code - Confirmation / reset code
+ * @param ctx - Published CMS context
+ * @param label - Section label for errors
+ */
+function renderAccountEmail(
+  copy: VintageAccountEmailCopy,
+  vars: { name: string; year: string },
+  link: string,
+  code: string,
+  ctx: AccountEmailContext,
+  label: string,
+): { subject: string; html: string; text: string } {
+  const tokens = { name: vars.name, year: vars.year, code };
+  const plain = (s: string) => fillAccountTokens(s, tokens).trim();
+  const html = (s: string) => escapeHtml(plain(s));
+  const subject = plain(copy.subject);
+  if (!subject) {
+    throw new Error(`Emails & Account CMS: ${label} subject is blank.`);
+  }
+  const para = (s: string, style = '') =>
+    plain(s) ? `<p${style ? ` style="${style}"` : ''}>${html(s)}</p>` : '';
+  const notice = renderDoNotReplyNotice(ctx.emails.doNotReplyNotice, ctx.contactEmail);
+  const badgeHtml = isProductionEnvironment()
+    ? ''
+    : `
     <div style="text-align: center; margin-bottom: 20px;">
       <span style="background-color: #ffc107; color: #000; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: bold;">🟡 PREVIEW/TEST ENVIRONMENT</span>
     </div>
-  ` : '';
-  
-  const html = `
+  `;
+  const safeLink = escapeHtml(link);
+  const button = plain(copy.buttonLabel)
+    ? `<div style="text-align: center; margin: 30px 0;">
+          <a href="${safeLink}" style="background-color: #152c3a; color: #f2ead8; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">${html(copy.buttonLabel)}</a>
+        </div>`
+    : '';
+  const htmlBody = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8">
-      <title>${subject}</title>
+      <title>${escapeHtml(subject)}</title>
     </head>
     <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px;">
         ${badgeHtml}
-        <h2 style="color: #2c3e50; text-align: center;">${header}</h2>
-        <p>${greeting}</p>
-        <p>${message1}</p>
-        <p>${message2}</p>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${confirmationLink}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">Confirm My Account</a>
-        </div>
-        <p>Or copy and paste this link into your browser:</p>
-        <p style="word-break: break-all; color: #666;">${confirmationLink}</p>
-        <p>Your confirmation code is: <strong>${confirmationCode}</strong></p>
-        <p>This link will expire in 24 hours.</p>
-        ${generateDoNotReplyNotice(siteConfig).html}
+        ${plain(copy.heading) ? `<h2 style="color: #2c3e50; text-align: center;">${html(copy.heading)}</h2>` : ''}
+        ${para(copy.greeting)}
+        ${para(copy.message1)}
+        ${para(copy.message2)}
+        ${button}
+        ${para(copy.linkFallbackLabel)}
+        <p style="word-break: break-all; color: #666;">${safeLink}</p>
+        ${para(copy.codeLabel)}
+        ${para(copy.expiryNote)}
+        ${notice.html}
         <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-        <p style="font-size: 12px; color: #666; text-align: center;">
-          ${footer}
-        </p>
+        ${para(copy.footer, 'font-size: 12px; color: #666; text-align: center;')}
       </div>
     </body>
     </html>
   `;
-
-  // For text version, use non-escaped values
-  const textHeader = replaceRegEmailVariables(
-    siteConfig?.regEmailHeader || FALLBACK_CONFIG.regEmailHeader || "Welcome to Warren's March Madness!",
-    name,
-    tournamentYear,
-    false // Text version doesn't need HTML escaping
-  );
-  
-  const textGreeting = replaceRegEmailVariables(
-    siteConfig?.regEmailGreeting || FALLBACK_CONFIG.regEmailGreeting || 'Hi {Name},',
-    name,
-    tournamentYear,
-    false // Text version doesn't need HTML escaping
-  );
-  
-  const textMessage1 = replaceRegEmailVariables(
-    siteConfig?.regEmailMessage1 || FALLBACK_CONFIG.regEmailMessage1 || 'Thank you for signing up for Warren\'s March Madness {Year}!',
-    name,
-    tournamentYear,
-    false // Text version doesn't need HTML escaping
-  );
-  
-  const textMessage2 = replaceRegEmailVariables(
-    siteConfig?.regEmailMessage2 || FALLBACK_CONFIG.regEmailMessage2 || 'To complete your account setup, please confirm your email address by clicking the button below:',
-    name,
-    tournamentYear,
-    false // Text version doesn't need HTML escaping
-  );
-  
-  const textFooter = replaceRegEmailVariables(
-    siteConfig?.regEmailFooter || FALLBACK_CONFIG.regEmailFooter || 'If you didn\'t create an account with Warren\'s March Madness, please ignore this email.',
-    name,
-    tournamentYear,
-    false // Text version doesn't need HTML escaping
-  );
-
-  const text = `
-${textHeader}
-
-${textGreeting}
-
-${textMessage1}
-
-${textMessage2}
-
-To complete your account setup, please confirm your email address by visiting this link:
-${confirmationLink}
-
-Your confirmation code is: ${confirmationCode}
-
-This link will expire in 24 hours.
-
-${generateDoNotReplyNotice(siteConfig).text}${textFooter}
-  `;
-
-  const emailSent = await emailService.sendEmail({
-    to,
+  const textBody = [
+    plain(copy.heading),
+    plain(copy.greeting),
+    plain(copy.message1),
+    plain(copy.message2),
+    [plain(copy.linkFallbackLabel), link].filter(Boolean).join('\n'),
+    plain(copy.codeLabel),
+    plain(copy.expiryNote),
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+  return {
     subject,
-    html,
-    text,
-    siteConfig, // Pass siteConfig for test user detection
-  });
+    html: htmlBody,
+    text: `${textBody}${notice.text}${plain(copy.footer) ? `\n${plain(copy.footer)}` : ''}`,
+  };
+}
 
-  // Log email event (Account Creation - no attachment expected)
+/**
+ * Log an account email event without failing the send.
+ *
+ * @param eventType - Email log category
+ * @param to - Recipient
+ * @param emailSent - Send result
+ */
+async function logAccountEmail(
+  eventType: 'Account Creation' | 'Password Reset',
+  to: string,
+  emailSent: boolean,
+): Promise<void> {
   try {
     const { logEmailEvent } = await import('@/lib/emailLogger');
     await logEmailEvent({
-      eventType: 'Account Creation',
+      eventType,
       destinationEmail: to,
       attachmentExpected: false,
       attachmentSuccess: null,
       emailSuccess: emailSent,
     });
   } catch (logError) {
-    // Don't fail email sending if logging fails
-    console.error('[Email Service] Failed to log Account Creation email:', logError);
+    console.error(`[Email Service] Failed to log ${eventType} email:`, logError);
   }
-
-  return emailSent;
 }
 
-export async function sendPasswordResetEmail(
-  to: string, 
-  name: string, 
-  resetLink: string, 
-  resetCode: string,
-  siteConfig?: SiteConfigData | null
+/**
+ * Send the registration confirmation email (copy from Emails & Account CMS).
+ *
+ * @param to - Recipient
+ * @param name - Account display name
+ * @param confirmationLink - Confirm URL
+ * @param confirmationCode - Confirmation code
+ * @param ctx - Published CMS context
+ */
+export async function sendConfirmationEmail(
+  to: string,
+  name: string,
+  confirmationLink: string,
+  confirmationCode: string,
+  ctx: AccountEmailContext,
 ): Promise<boolean> {
-  // Only show badge for non-production environments
-  const isProduction = isProductionEnvironment();
-  const showBadge = !isProduction;
-  
-  // Environment badge (only for Preview/Development)
-  const badgeHtml = showBadge ? `
-    <div style="text-align: center; margin-bottom: 20px;">
-      <span style="background-color: #ffc107; color: #000; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: bold;">🟡 PREVIEW/TEST ENVIRONMENT</span>
-    </div>
-  ` : '';
-  
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <title>Password Reset - Warren's March Madness</title>
-    </head>
-    <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px;">
-        ${badgeHtml}
-        <h2 style="color: #2c3e50; text-align: center;">Password Reset Request</h2>
-        <p>Hi ${name},</p>
-        <p>We received a request to reset your password for your Warren's March Madness account.</p>
-        <p>To reset your password, please click the button below:</p>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${resetLink}" style="background-color: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">Reset My Password</a>
-        </div>
-        <p>Or copy and paste this link into your browser:</p>
-        <p style="word-break: break-all; color: #666;">${resetLink}</p>
-        <p>Your reset code is: <strong>${resetCode}</strong></p>
-        <p>This link will expire in 1 hour.</p>
-        ${generateDoNotReplyNotice(siteConfig).html}
-        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-        <p style="font-size: 12px; color: #666; text-align: center;">
-          If you didn't request a password reset, please ignore this email. Your password will remain unchanged.
-        </p>
-      </div>
-    </body>
-    </html>
-  `;
-
-  const text = `
-    Password Reset Request
-    
-    Hi ${name},
-    
-    We received a request to reset your password for your Warren's March Madness account.
-    
-    To reset your password, please visit this link:
-    ${resetLink}
-    
-    Your reset code is: ${resetCode}
-    
-    This link will expire in 1 hour.
-    
-    ${generateDoNotReplyNotice(siteConfig).text}If you didn't request a password reset, please ignore this email. Your password will remain unchanged.
-  `;
-
-  const emailSent = await emailService.sendEmail({
-    to,
-    subject: "Password Reset - Warren's March Madness",
-    html,
-    text,
-    siteConfig, // Pass siteConfig for test user detection
-  });
-
-  // Log email event (Password Reset - no attachment expected)
-  try {
-    const { logEmailEvent } = await import('@/lib/emailLogger');
-    await logEmailEvent({
-      eventType: 'Password Reset',
-      destinationEmail: to,
-      attachmentExpected: false,
-      attachmentSuccess: null,
-      emailSuccess: emailSent,
-    });
-  } catch (logError) {
-    // Don't fail email sending if logging fails
-    console.error('[Email Service] Failed to log Password Reset email:', logError);
-  }
-
+  const rendered = renderAccountEmail(
+    ctx.emails.registration,
+    { name, year: ctx.tournamentYear },
+    confirmationLink,
+    confirmationCode,
+    ctx,
+    'registration',
+  );
+  const emailSent = await emailService.sendEmail({ to, ...rendered });
+  await logAccountEmail('Account Creation', to, emailSent);
   return emailSent;
 }
+
+/**
+ * Send the password reset email (copy from Emails & Account CMS).
+ *
+ * @param to - Recipient
+ * @param name - Account display name
+ * @param resetLink - Reset URL
+ * @param resetCode - Reset code
+ * @param ctx - Published CMS context
+ */
+export async function sendPasswordResetEmail(
+  to: string,
+  name: string,
+  resetLink: string,
+  resetCode: string,
+  ctx: AccountEmailContext,
+): Promise<boolean> {
+  const rendered = renderAccountEmail(
+    ctx.emails.passwordReset,
+    { name, year: ctx.tournamentYear },
+    resetLink,
+    resetCode,
+    ctx,
+    'password reset',
+  );
+  const emailSent = await emailService.sendEmail({ to, ...rendered });
+  await logAccountEmail('Password Reset', to, emailSent);
+  return emailSent;
+}
+

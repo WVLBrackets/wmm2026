@@ -12,7 +12,6 @@ import { test, expect } from '@playwright/test';
  * - /info - Tournament information (entry, payment, scoring, prizes)
  * - /hall-of-fame - Hall of Fame/Past winners
  * - /standings - Current standings
- * - /standings/previous-years - Historical standings
  * - /print-bracket - Print bracket view
  * - /auth/forgot-password - Password reset request
  * - /auth/reset-password - Password reset form
@@ -181,34 +180,6 @@ test.describe('Public Pages', () => {
       const bodyText = await page.locator('body').textContent();
       expect(bodyText).toBeTruthy();
       expect(bodyText!.length).toBeGreaterThan(100);
-    });
-  });
-
-  // ==========================================
-  // PREVIOUS YEARS STANDINGS PAGE TESTS
-  // ==========================================
-  test.describe('Previous Years Standings Page', () => {
-    test('should load the previous years standings page', async ({ page, browserName }) => {
-      const timeout = browserName === 'firefox' ? 60000 : 30000;
-      await page.goto('/standings/previous-years', { waitUntil: 'domcontentloaded', timeout });
-      
-      const currentUrl = page.url();
-      expect(currentUrl).not.toContain('vercel.com/login');
-      expect(currentUrl).toContain('/standings/previous-years');
-      
-      console.log('✅ Previous Years Standings page loaded successfully');
-    });
-
-    test('should display content or year selector', async ({ page }) => {
-      await page.goto('/standings/previous-years', { waitUntil: 'domcontentloaded' });
-      
-      // Wait for page content to load
-      await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
-      
-      // The page should have meaningful content
-      const bodyText = await page.locator('body').textContent();
-      expect(bodyText).toBeTruthy();
-      expect(bodyText!.length).toBeGreaterThan(50);
     });
   });
 

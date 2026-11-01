@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { getCSRFHeaders } from '@/hooks/useCSRF';
+import { useAdminConfirm } from '@/components/admin/useAdminConfirm';
 import type { FirstFourResults as Results } from '@/lib/tournamentDefinition';
 import type { TournamentData } from '@/types/tournament';
 
 export default function FirstFourResults({ year, onSaved }: { year: string; onSaved?: () => void }) {
+  const { confirm, dialog } = useAdminConfirm();
   const [data, setData] = useState<TournamentData | null>(null);
   const [results, setResults] = useState<Results>({});
   const [saved, setSaved] = useState<Results>({});
@@ -31,7 +33,16 @@ export default function FirstFourResults({ year, onSaved }: { year: string; onSa
   if (!error && !slots.length) return null;
   const dirty = JSON.stringify(results) !== JSON.stringify(saved);
   const save = async () => {
-    if (Object.keys(saved).some(id => saved[id] !== results[id]) && !window.confirm('Correct previously saved First Four results? Picks stay intact; the displayed survivor will change.')) return;
+    if (Object.keys(saved).some(id => saved[id] !== results[id])) {
+      const ok = await confirm({
+        title: 'Correct First Four results',
+        message: 'Correct previously saved First Four results? Picks stay intact; the displayed survivor will change.',
+        confirmLabel: 'Save',
+        testId: 'first-four-correct-confirm',
+        tone: 'warn',
+      });
+      if (!ok) return;
+    }
     setBusy(true); setError(''); setMessage('');
     try {
       const r = await fetch('/api/admin/first-four', { method: 'PUT', headers: { 'Content-Type': 'application/json', ...await getCSRFHeaders() }, body: JSON.stringify({ year: Number(year), revision, results }) });
@@ -57,6 +68,7 @@ export default function FirstFourResults({ year, onSaved }: { year: string; onSa
     {error && <p role="alert" className="mt-3 text-sm text-red-700">{error} <button type="button" disabled={busy} onClick={() => setReload(x => x + 1)} className="underline">Reload</button></p>}
     {message && <p role="status" className="mt-3 text-sm text-green-800">{message}</p>}
     {dirty && <p className="mt-3 text-sm text-amber-800">Unsaved First Four results</p>}
-    {readOnly ? <p className="mt-3 text-sm text-slate-600">Historical results are read-only.</p> : <button type="button" onClick={save} disabled={busy || !dirty} className="mt-4 rounded bg-blue-700 px-4 py-2 text-sm text-white disabled:opacity-50">{busy ? 'Saving…' : 'Save First Four Results'}</button>}
+    {readOnly ? <p className="mt-3 text-sm text-slate-600">Historical results are read-only.</p> : <button type="button" onClick={() => void save()} disabled={busy || !dirty} className="mt-4 rounded bg-blue-700 px-4 py-2 text-sm text-white disabled:opacity-50">{busy ? 'Saving…' : 'Save First Four Results'}</button>}
+    {dialog}
   </section>;
 }

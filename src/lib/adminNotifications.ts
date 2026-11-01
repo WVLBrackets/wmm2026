@@ -1,58 +1,54 @@
 /**
- * Admin notification utility
- * Sends email notifications to admins for critical errors
- * Includes rate limiting to prevent spam
+ * Admin notification utility: emails `ADMIN_EMAIL` about critical errors.
+ * Throttled to one email per error key per hour across all instances
+ * (`admin_notifications` table), with an in-memory fallback.
  */
 
-import { emailService } from '@/lib/emailService';
+import { emailService, escapeHtml } from '@/lib/emailService';
+import { getAdminEmails } from '@/lib/adminEmails';
+import { claimAdminNotificationSlot } from '@/lib/repositories/adminNotificationRepository';
 
-// In-memory rate limiting: track last notification time per error type
-// In production, consider using Redis or a database for distributed rate limiting
-const notificationCache = new Map<string, number>();
+const RATE_LIMIT_SECONDS = 60 * 60;
 
-// Rate limit: max 1 email per error type per hour
-const RATE_LIMIT_MS = 60 * 60 * 1000; // 1 hour
+const memoryThrottle = new Map<string, number>();
 
 /**
- * Get admin email from environment variable
+ * In-memory throttle used when the DB throttle is unavailable.
+ *
+ * @param key - Dedup key
  */
-function getAdminEmail(): string | null {
-  return process.env.ADMIN_EMAIL || null;
-}
-
-/**
- * Check if we should send a notification (rate limiting)
- */
-function shouldSendNotification(errorType: string): boolean {
+function claimMemorySlot(key: string): boolean {
   const now = Date.now();
-  const lastSent = notificationCache.get(errorType);
-  
-  if (!lastSent) {
-    return true;
-  }
-  
-  const timeSinceLastSent = now - lastSent;
-  return timeSinceLastSent >= RATE_LIMIT_MS;
+  const last = memoryThrottle.get(key);
+  if (last && now - last < RATE_LIMIT_SECONDS * 1000) return false;
+  memoryThrottle.set(key, now);
+  return true;
 }
 
 /**
- * Mark that a notification was sent
+ * True when this instance should send for `key` (DB first, memory fallback).
+ *
+ * @param key - Dedup key
  */
-function markNotificationSent(errorType: string): void {
-  notificationCache.set(errorType, Date.now());
-  
-  // Clean up old entries (older than 24 hours) to prevent memory leak
-  const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
-  for (const [key, timestamp] of notificationCache.entries()) {
-    if (timestamp < oneDayAgo) {
-      notificationCache.delete(key);
-    }
+async function claimSlot(key: string): Promise<boolean> {
+  try {
+    return await claimAdminNotificationSlot(key, RATE_LIMIT_SECONDS);
+  } catch (error) {
+    console.warn(
+      '[Admin Notifications] DB throttle unavailable, using memory:',
+      error instanceof Error ? error.message : error,
+    );
+    return claimMemorySlot(key);
   }
 }
 
 /**
- * Send email notification to admin about a critical error
- * Automatically rate-limited to prevent spam
+ * Send email notification to admin about a critical error.
+ * Never throws — notification failures must not break the request.
+ *
+ * @param error - Error or message
+ * @param location - Where it happened (also part of the dedup key)
+ * @param context - Optional identifiers / details
  */
 export async function notifyAdminOfError(
   error: Error | string,
@@ -62,80 +58,64 @@ export async function notifyAdminOfError(
     userId?: string;
     userEmail?: string;
     additionalDetails?: Record<string, unknown>;
-  }
+  },
 ): Promise<void> {
   try {
-    const adminEmail = getAdminEmail();
-    if (!adminEmail) {
+    const recipients = getAdminEmails();
+    if (recipients.length === 0) {
       console.warn('[Admin Notifications] No ADMIN_EMAIL configured, skipping notification');
       return;
     }
-    
+
     const errorMessage = error instanceof Error ? error.message : error;
-    const errorType = error instanceof Error ? error.constructor.name : 'Unknown';
-    
-    // Create a unique key for rate limiting based on error type and location
-    const rateLimitKey = `${errorType}:${location}`;
-    
-    // Check rate limit
-    if (!shouldSendNotification(rateLimitKey)) {
-      console.log(`[Admin Notifications] Rate limited: ${rateLimitKey} (already notified within last hour)`);
+    const errorType = error instanceof Error ? error.name || error.constructor.name : 'Unknown';
+    const key = `${errorType}:${location}`;
+
+    if (!(await claimSlot(key))) {
+      console.log(`[Admin Notifications] Throttled: ${key} (already notified within the hour)`);
       return;
     }
-    
-    // Build email subject
-    const subject = `[WMM2026] Critical Error: ${errorType} in ${location}`;
-    
-    // Build email body
+
+    const env = process.env.VERCEL_ENV || process.env.NODE_ENV || 'unknown';
+    const subject = `[WMM ${env}] Critical Error: ${errorType} in ${location}`;
+    const e = (v: unknown) => escapeHtml(String(v));
+
     let body = `<h2>Critical Error Detected</h2>`;
-    body += `<p><strong>Error Type:</strong> ${errorType}</p>`;
-    body += `<p><strong>Location:</strong> ${location}</p>`;
-    body += `<p><strong>Error Message:</strong> ${errorMessage}</p>`;
-    
+    body += `<p><strong>Environment:</strong> ${e(env)}</p>`;
+    body += `<p><strong>Error Type:</strong> ${e(errorType)}</p>`;
+    body += `<p><strong>Location:</strong> ${e(location)}</p>`;
+    body += `<p><strong>Error Message:</strong> ${e(errorMessage)}</p>`;
     if (error instanceof Error && error.stack) {
       body += `<h3>Stack Trace:</h3>`;
-      body += `<pre style="background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto;">${error.stack}</pre>`;
+      body += `<pre style="background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto;">${e(error.stack)}</pre>`;
     }
-    
     if (context) {
-      body += `<h3>Context:</h3>`;
-      body += `<ul>`;
-      if (context.bracketId) {
-        body += `<li><strong>Bracket ID:</strong> ${context.bracketId}</li>`;
-      }
-      if (context.userId) {
-        body += `<li><strong>User ID:</strong> ${context.userId}</li>`;
-      }
-      if (context.userEmail) {
-        body += `<li><strong>User Email:</strong> ${context.userEmail}</li>`;
-      }
-      if (context.additionalDetails) {
-        for (const [key, value] of Object.entries(context.additionalDetails)) {
-          body += `<li><strong>${key}:</strong> ${String(value)}</li>`;
-        }
+      body += `<h3>Context:</h3><ul>`;
+      if (context.bracketId) body += `<li><strong>Bracket ID:</strong> ${e(context.bracketId)}</li>`;
+      if (context.userId) body += `<li><strong>User ID:</strong> ${e(context.userId)}</li>`;
+      if (context.userEmail) body += `<li><strong>User Email:</strong> ${e(context.userEmail)}</li>`;
+      for (const [k, v] of Object.entries(context.additionalDetails ?? {})) {
+        body += `<li><strong>${e(k)}:</strong> ${e(v)}</li>`;
       }
       body += `</ul>`;
     }
-    
-    body += `<p><em>This is an automated notification. You will not receive another email for this error type for at least 1 hour.</em></p>`;
-    
-    // Send email
-    const emailSent = await emailService.sendEmail({
-      to: adminEmail,
+    body += `<p><em>This is an automated notification. You will not receive another email for this error for at least 1 hour.</em></p>`;
+
+    const text = [
+      `Critical Error Detected (${env})`,
+      `Error Type: ${errorType}`,
+      `Location: ${location}`,
+      `Error Message: ${errorMessage}`,
+    ].join('\n');
+
+    const sent = await emailService.sendEmail({
+      to: recipients.join(','),
       subject,
       html: body,
-      text: body.replace(/<[^>]*>/g, ''), // Strip HTML for text version
+      text,
     });
-    
-    if (emailSent) {
-      markNotificationSent(rateLimitKey);
-      console.log(`[Admin Notifications] Error notification sent to ${adminEmail} for ${rateLimitKey}`);
-    } else {
-      console.error('[Admin Notifications] Failed to send error notification email');
-    }
-  } catch (error) {
-    // Don't throw - notification failures shouldn't break the app
-    console.error('[Admin Notifications] Error sending notification:', error);
+    if (!sent) console.error('[Admin Notifications] Failed to send error notification email');
+  } catch (err) {
+    console.error('[Admin Notifications] Error sending notification:', err);
   }
 }
-

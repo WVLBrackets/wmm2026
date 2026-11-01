@@ -53,7 +53,7 @@ export async function getTeamRefData(): Promise<TeamRefData[]> {
       // Try database (server-side only)
       if (typeof window === 'undefined') {
         try {
-          const { getAllTeamReferenceData } = await import('@/lib/secureDatabase');
+          const { getAllTeamReferenceData } = await import('@/lib/repositories/teamDataRepository');
           const { getTeamReferenceDisplayName } = await import('@/lib/teamDisplayName');
           // Only get active teams for public-facing calls
           const dbTeams = await getAllTeamReferenceData(true);

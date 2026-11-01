@@ -6,6 +6,7 @@ import { Pencil, Upload } from 'lucide-react';
 import TourneyR1BracketPreview from '@/components/admin/TourneyR1BracketPreview';
 import FirstFourResults from '@/components/admin/FirstFourResults';
 import { getCSRFHeaders } from '@/hooks/useCSRF';
+import { useAdminConfirm } from '@/components/admin/useAdminConfirm';
 import { canonicalTournament, validateTournamentDefinition } from '@/lib/tournamentDefinition';
 import type { TournamentData } from '@/types/tournament';
 
@@ -19,6 +20,7 @@ interface TournamentFilesResponse {
  * Admin tab for selecting, importing, and editing tournament bracket JSON by year.
  */
 export default function TourneyTab() {
+  const { confirm, dialog } = useAdminConfirm();
   const router = useRouter();
   const searchParams = useSearchParams();
   const importFileInputRef = useRef<HTMLInputElement>(null);
@@ -143,9 +145,13 @@ export default function TourneyTab() {
 
       const raw = parsed as TournamentData;
       if (raw.year && String(raw.year) !== selectedYear) {
-        const proceed = window.confirm(
-          `File year is ${raw.year}. Import into the selected year ${selectedYear}?`
-        );
+        const proceed = await confirm({
+          title: 'Year mismatch',
+          message: `File year is ${raw.year}. Import into the selected year ${selectedYear}?`,
+          confirmLabel: 'Import',
+          testId: 'tourney-import-year-confirm',
+          tone: 'warn',
+        });
         if (!proceed) return;
       }
 
@@ -158,14 +164,23 @@ export default function TourneyTab() {
       const publishIssues = validateTournamentDefinition(definition, true);
       let action: 'draft' | 'publish' = 'draft';
       if (publishIssues.length === 0) {
-        const publish = window.confirm(
-          `Import and publish tournament ${selectedYear} to this environment?\n\nOK = publish\nCancel = save as draft only`
-        );
+        const publish = await confirm({
+          title: 'Import tournament',
+          message: `Import and publish tournament ${selectedYear} to this environment? Cancel saves as draft only.`,
+          confirmLabel: 'Publish',
+          cancelLabel: 'Save draft',
+          testId: 'tourney-import-publish-confirm',
+          tone: 'warn',
+        });
         action = publish ? 'publish' : 'draft';
       } else {
-        const saveDraft = window.confirm(
-          `JSON is incomplete for publishing (${publishIssues[0]}).\n\nSave as draft for ${selectedYear}?`
-        );
+        const saveDraft = await confirm({
+          title: 'Save as draft',
+          message: `JSON is incomplete for publishing (${publishIssues[0]}). Save as draft for ${selectedYear}?`,
+          confirmLabel: 'Save draft',
+          testId: 'tourney-import-draft-confirm',
+          tone: 'warn',
+        });
         if (!saveDraft) return;
       }
 
@@ -309,6 +324,7 @@ export default function TourneyTab() {
 
       {selectedYear && <TourneyR1BracketPreview key={`${selectedYear}-${previewKey}`} year={selectedYear} />}
       {selectedYear && <FirstFourResults key={`ff-${selectedYear}-${previewKey}`} year={selectedYear} />}
+      {dialog}
     </div>
   );
 }

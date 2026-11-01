@@ -1,14 +1,15 @@
 import AuthForms from "@/components/auth/AuthForms";
-import { getPublishedVintagePicksContent } from "@/lib/vintage/picksStore";
+import { getPublishedCmsBundle } from "@/lib/vintage/cmsBundle";
 
-// Session / config-dependent; avoid sharing HTML across visitors.
 export const dynamic = "force-dynamic";
 
 /**
- * Dedicated Sign In / Create Account page (chrome from `auth/layout.tsx`).
- * Labels come from published My Picks CMS (`auth` section).
+ * Sign In / Create Account. Labels from My Picks CMS (`auth`) and
+ * Emails & Account CMS (`account` pages).
  */
 export default async function SignInPage() {
-  const picks = await getPublishedVintagePicksContent();
-  return <AuthForms authCopy={picks.auth} />;
+  const bundle = await getPublishedCmsBundle();
+  return (
+    <AuthForms authCopy={bundle.picks.auth} accountCopy={bundle.emails.account} />
+  );
 }

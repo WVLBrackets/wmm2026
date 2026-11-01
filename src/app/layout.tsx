@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { siteConfig } from "@/config/site";
-import SiteChrome from "@/components/SiteChrome";
-import { getBuildStamp } from "@/lib/buildStamp";
+import { getSiteConfigCached } from "@/lib/siteConfigServer";
 import SessionProvider from "@/components/SessionProvider";
-import { BracketModeProvider } from "@/contexts/BracketModeContext";
+import { VintageToolbarSessionProvider } from "@/contexts/VintageToolbarSessionContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import {
   getAppEnvironment,
@@ -14,13 +12,18 @@ import {
 import type { CSSProperties } from "react";
 
 /**
- * Document title includes `[L]` / `[S]` on non-prod so browser tabs are distinguishable.
+ * Document title / description from homepage Key Data (site name + description).
+ * Title includes `[L]` / `[S]` on non-prod so browser tabs are distinguishable.
+ * When CMS is unavailable the page itself renders the site error panel, so metadata
+ * degrades to the environment prefix only (no substitute copy).
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const title = `${getEnvironmentTitlePrefix()}${siteConfig.siteName}`;
+  const config = await getSiteConfigCached().catch(() => null);
+  const title = `${getEnvironmentTitlePrefix()}${config?.siteName ?? ""}`.trim();
+  const description = config?.siteDescription || undefined;
   return {
     title,
-    description: siteConfig.siteDescription,
+    description,
     keywords: ["March Madness", "Basketball", "Tournament", "Bracket", "NCAA"],
     authors: [{ name: "Warren" }],
     // Prefer PNG first so tabs use the basketball even when /favicon.ico is a legacy/default asset.
@@ -31,7 +34,7 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     openGraph: {
       title,
-      description: siteConfig.siteDescription,
+      description,
       type: "website",
     },
   };
@@ -72,8 +75,6 @@ export default function RootLayout({
   const banner = getEnvironmentBanner(appEnv);
   const stagingBannerHeight = banner.show ? '28px' : '0px';
   const bodyStyle = { '--staging-banner-height': stagingBannerHeight } as CSSProperties;
-  const buildStamp = getBuildStamp();
-
   return (
     <html lang="en">
       <head>
@@ -98,9 +99,7 @@ export default function RootLayout({
         {banner.show && <div className="h-7" aria-hidden="true" />}
         <ErrorBoundary>
           <SessionProvider>
-            <BracketModeProvider>
-              <SiteChrome buildStamp={buildStamp}>{children}</SiteChrome>
-            </BracketModeProvider>
+            <VintageToolbarSessionProvider>{children}</VintageToolbarSessionProvider>
           </SessionProvider>
         </ErrorBoundary>
       </body>

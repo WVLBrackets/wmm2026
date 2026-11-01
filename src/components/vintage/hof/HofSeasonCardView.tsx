@@ -1,4 +1,4 @@
-import { Calendar, Pause } from "lucide-react";
+import { Pause } from "lucide-react";
 import TeamLogo from "@/app/hall-of-fame/TeamLogo";
 import type { HofSeasonCard } from "@/lib/hallOfFameStats";
 
@@ -59,7 +59,7 @@ export default function HofSeasonCardView({
         </div>
         <div className="v-hof-season-special-body">
           <span className="v-hof-special-icon" aria-hidden="true">
-            <Calendar size={28} strokeWidth={1.8} />
+            <Pause size={28} strokeWidth={2.2} />
           </span>
           <h3>{season.kind === "hiatus2016" ? "WMM Hiatus" : "Tournament Not Held"}</h3>
           <p className="v-hof-special-note">

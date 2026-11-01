@@ -106,9 +106,9 @@ export async function POST(request: NextRequest) {
       { status: 400, headers },
     );
   let uploaded: Awaited<ReturnType<typeof uploadVintageImage>> | undefined;
-  let pool;
   try {
-    pool = await mediaDatabase();
+    // Shared vintage pool — never pool.end(); that kills CMS reads for the process.
+    const pool = await mediaDatabase();
     const id = randomUUID();
     const extension = isJpeg
       ? "jpg"
@@ -139,7 +139,5 @@ export async function POST(request: NextRequest) {
       { error: "Image upload failed. Check dedicated vintage storage." },
       { status: 503, headers },
     );
-  } finally {
-    if (pool) await pool.end();
   }
 }

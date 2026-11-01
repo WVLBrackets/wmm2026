@@ -147,7 +147,7 @@ export async function DELETE(
       );
     }
 
-    const { deleteUser } = await import('@/lib/secureDatabase');
+    const { deleteUser } = await import('@/lib/repositories/userRepository');
     const deleted = await deleteUser(id);
 
     if (!deleted) {

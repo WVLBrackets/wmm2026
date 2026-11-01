@@ -21,10 +21,14 @@ interface PaymentRecord {
   userEmail: string;
   bracketIds: string[];
   bracketCount: number;
+  /** Additional payment in whole dollars (column `additional_count`). */
   additionalCount: number;
   additionalNote: string | null;
   amountCents: number;
   venmoNote: string | null;
+  /** Provider used for the request; legacy rows treat as Venmo. */
+  paymentMethod?: 'venmo' | 'zelle' | null;
+  recipientSnapshot?: string | null;
   status: string;
   requestedAt: string;
   confirmedAt: string | null;
@@ -79,7 +83,7 @@ function bracketMatchesTextQuery(b: BracketPaymentRow, rawQuery: string): boolea
 }
 
 /**
- * Admin tab for reviewing bracket payment status and confirming/rejecting Venmo payments.
+ * Admin tab for reviewing bracket payment status and confirming/rejecting Venmo/Zelle payments.
  */
 export default function PaymentsTab() {
   const [brackets, setBrackets] = useState<BracketPaymentRow[]>([]);
@@ -510,7 +514,19 @@ export default function PaymentsTab() {
                       </select>
                       {paymentRecord && (
                         <div className="mt-1 text-[10px] text-gray-400">
-                          ${(paymentRecord.amountCents / 100).toFixed(0)} &middot; {fmtDate(paymentRecord.requestedAt)}
+                          ${(paymentRecord.amountCents / 100).toFixed(0)} &middot;{' '}
+                          {fmtDate(paymentRecord.requestedAt)}
+                        </div>
+                      )}
+                      {paymentRecord && (
+                        <div
+                          className="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-500"
+                          data-testid={`payment-method-${b.id}`}
+                        >
+                          {(paymentRecord.paymentMethod === 'zelle' ? 'Zelle' : 'Venmo')}
+                          {paymentRecord.recipientSnapshot
+                            ? ` · ${paymentRecord.recipientSnapshot}`
+                            : ''}
                         </div>
                       )}
                       {paymentRecord?.adminTransactionId && (

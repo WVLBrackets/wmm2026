@@ -1,5 +1,5 @@
-/*
- * My Picks — vintage editorial layout (cream paper, navy rules, square corners).
+﻿/*
+ * My Picks â€” vintage editorial layout (cream paper, navy rules, square corners).
  * Rendered under the shared VintageShell; tokens come from `.vintage-page`
  * (--v-ink, --v-red, --v-paper, --v-rule, --v-first, --v-font-*).
  *
@@ -23,8 +23,8 @@
   --vs-ff-size: var(--vs-ff-size-desktop, 32px);
   --vs-champ-size: var(--vs-champ-size-desktop, 42px);
   /*
-   * Status-chip geometry (Warren 2026-10-24 short ovals) — shared height/type.
-   * Width is content-sized (not fixed); see DESIGN_SYSTEM.md §4.6 for shape tokens.
+   * Status-chip geometry (Warren 2026-10-24 short ovals) â€” shared height/type.
+   * Width is content-sized (not fixed); see DESIGN_SYSTEM.md Â§4.6 for shape tokens.
    */
   --vp-chip-height: 22px;
   --vp-chip-pad-x: 8px;
@@ -142,7 +142,7 @@
   align-items: start;
   margin: 0 0 20px;
   padding: 4px 0 16px;
-  /* Header already has the edition double rule — do not stack a second one. */
+  /* Header already has the edition double rule â€” do not stack a second one. */
   border-bottom: 1px solid var(--vp-ink);
 }
 
@@ -187,7 +187,7 @@
 
 .v-picks__note,
 .v-picks__notice {
-  /* Reserve one intro line so current ↔ prior year switches do not shift pills. */
+  /* Reserve one intro line so current â†” prior year switches do not shift pills. */
   margin: 10px 0 0;
   min-height: 1.45em;
   font-family: var(--v-font-specialty, Georgia, "Times New Roman", serif);
@@ -479,7 +479,7 @@
   border-color: var(--vp-ink);
 }
 
-/* Pay — solid navy with paper text/icon (design system §4.6) */
+/* Pay â€” solid navy with paper text/icon (design system Â§4.6) */
 .v-picks__btn--secondary {
   background: var(--vp-ink, #152c3a);
   border-color: var(--vp-ink, #152c3a);
@@ -648,7 +648,7 @@
 }
 
 /*
- * Always reserve a return-link row so prior ↔ current year keeps identical panel height.
+ * Always reserve a return-link row so prior â†” current year keeps identical panel height.
  * Only the link is interactive (not the panel).
  */
 .v-picks__board-return-slot {
@@ -745,7 +745,7 @@
   cursor: pointer;
 }
 
-/* All filter chip — same content-sized width as status filters. */
+/* All filter chip â€” same content-sized width as status filters. */
 .v-picks__chip--all {
   width: auto;
   min-width: 0;
@@ -763,7 +763,7 @@
   opacity: 0.72;
 }
 
-/* All selected — navy (not bright blue). Unselected filters stay distinguishable. */
+/* All selected â€” navy (not bright blue). Unselected filters stay distinguishable. */
 .v-picks__chip--all.is-on {
   border-color: var(--vp-ink, #152c3a);
   background: var(--vp-ink, #152c3a);
@@ -771,8 +771,8 @@
 }
 
 /*
- * Status filter UX: All mode → All is-on, individuals look off (unshaded).
- * Filter mode → All off, selected statuses is-on. First click on a status from
+ * Status filter UX: All mode â†’ All is-on, individuals look off (unshaded).
+ * Filter mode â†’ All off, selected statuses is-on. First click on a status from
  * All enters filter mode with only that status (see toggleStatusFilter).
  */
 .v-picks__chip--submitted:not(.is-on),
@@ -867,7 +867,7 @@
   vertical-align: middle;
 }
 
-/* Keep these as table-cells (do not set display:flex — it collapses columns). */
+/* Keep these as table-cells (do not set display:flex â€” it collapses columns). */
 .v-picks__row > td.v-picks__cell--ff,
 .v-picks__row > td.v-picks__cell--champ {
   padding-top: var(--vp-row-logo-gap, 8px);
@@ -1208,7 +1208,8 @@
   box-sizing: border-box;
   border: 1px solid transparent;
   border-radius: 0;
-  background-color: var(--vs-shade-pending, #fff);
+  /* Neutral tiles sit on paper like Champion — no white plate behind PNGs. */
+  background-color: transparent;
 }
 
 .v-picks__ff-cell img,
@@ -1230,7 +1231,7 @@
 }
 
 .v-picks__ff-cell[data-status="pending"] {
-  background-color: var(--vs-shade-pending, #fff);
+  background-color: transparent;
 }
 
 .v-picks__ff-cell.is-finalist {
@@ -1255,7 +1256,7 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  /* Same baseline fix as Final Four — centers the tile in the row. */
+  /* Same baseline fix as Final Four â€” centers the tile in the row. */
   vertical-align: middle;
 }
 
@@ -1274,8 +1275,8 @@
   box-sizing: border-box;
   border: 1px solid transparent;
   border-radius: 0;
-  /* Trial: cream (paper) instead of white for undecided champ tiles. */
-  background-color: var(--vp-paper);
+  /* Same continuous paper as neutral Final Four (no white plate). */
+  background-color: transparent;
 }
 
 .v-picks__champ-cell[data-status="correct"] {
@@ -1287,7 +1288,7 @@
 }
 
 .v-picks__champ-cell[data-status="pending"] {
-  background-color: var(--vp-paper);
+  background-color: transparent;
 }
 
 .v-picks__champ-cell[data-border="correct"] {
@@ -1312,7 +1313,7 @@
   overflow-wrap: anywhere;
 }
 
-/* ---------- Row actions (design-locked navy / red / paper; §4.6) ---------- */
+/* ---------- Row actions (design-locked navy / red / paper; Â§4.6) ---------- */
 
 .v-picks__actions {
   display: flex;
@@ -1359,7 +1360,7 @@
 
 /*
  * Action hit targets match Final Four tile size (CMS --vs-ff-size), not the
- * general 44px public-control guideline — intentional density override.
+ * general 44px public-control guideline â€” intentional density override.
  */
 .v-picks__actions button[data-vp-action] {
   display: inline-flex;
@@ -1705,7 +1706,7 @@
   }
 
   .v-picks__board {
-    /* Full row under the button strip — keep the width:0 / min-width:100% trick. */
+    /* Full row under the button strip â€” keep the width:0 / min-width:100% trick. */
     flex: 1 1 100%;
     width: 0;
     min-width: 100%;
@@ -1757,7 +1758,7 @@
 
 
   .v-picks__board {
-    /* Do NOT set min-width: 0 — that collapses width:0 into a one-character column. */
+    /* Do NOT set min-width: 0 â€” that collapses width:0 into a one-character column. */
     flex: 0 0 auto;
     width: 100%;
     min-width: 100%;
@@ -1777,19 +1778,19 @@
     font-size: 20px;
   }
 
-  /* Compact entry cards — tight stack, column headers, 2×2 FF + actions */
+  /* Compact entry cards â€” tight stack, column headers, 2Ã—2 FF + actions */
   .v-picks__cards {
     gap: 0;
   }
 
   /*
-   * Even columns: Entry flexes; Status / FF / Champ / Actions share remaining
-   * width so content isn’t packed to the right edge. Payment badge sits under
-   * the entry name (not its own column).
+   * Four columns: Entry takes all leftover width; FF / Champ / Actions are
+   * equal fixed squares matching the 2Ã—2 tile footprint (2Ã—tile + gap).
+   * Status column removed â€” payment or In Progress/Deleted chip under name.
    */
   .v-picks__cards {
-    --vp-card-cols: minmax(4.5rem, 1.15fr) minmax(2.5rem, 0.7fr) minmax(3.25rem, 0.95fr)
-      minmax(2.75rem, 0.8fr) minmax(3.5rem, 0.95fr);
+    --vp-card-side: calc(2 * var(--vs-ff-size-card, 26px) + 3px);
+    --vp-card-cols: minmax(0, 1fr) var(--vp-card-side) var(--vp-card-side) var(--vp-card-side);
     gap: 0;
   }
 
@@ -1878,8 +1879,22 @@
     min-height: 20px;
   }
 
+  /* Under-name In Progress / Deleted chips â€” same density as payment badges. */
+  .v-picks__card-row .v-picks__entry > .v-picks__status:not(.v-picks__status--square) {
+    font-size: 11px;
+    min-height: 20px;
+    height: auto;
+    padding: 2px 8px;
+    letter-spacing: 0.06em;
+  }
+
+  .v-picks__card-row .v-picks__entry > .v-picks__status:not(.v-picks__status--square) .v-picks__icon {
+    width: 12px;
+    height: 12px;
+  }
+
   /*
-   * Final Four: 2×2 (slot order TL, BL, TR, BR → place columns explicitly).
+   * Final Four: 2Ã—2 (slot order TL, BL, TR, BR â†’ place columns explicitly).
    * Tracks and cells must share --vs-ff-size. Hardcoded 26px tracks left
    * min-width/min-height at the CMS tile size (~32px), so cells overlapped
    * and painted over adjacent finalist borders.
@@ -1891,6 +1906,7 @@
     grid-template-rows: repeat(2, var(--vs-ff-size-card, 26px));
     gap: 3px;
     justify-self: center;
+    width: var(--vp-card-side);
   }
 
   .v-picks__card-row .v-picks__ff-cell:nth-child(1) {
@@ -1915,24 +1931,27 @@
     max-height: var(--vs-ff-size-card, 26px);
   }
 
+  /*
+   * Champ column matches FF / Actions side width; tile is a single square of
+   * that full footprint (not the larger CMS card champ size).
+   */
   .v-picks__card-row .v-picks__champ--mobile {
     justify-self: center;
+    width: var(--vp-card-side);
   }
 
   .v-picks__card-row .v-picks__champ--mobile .v-picks__champ-cell {
-    width: var(--vs-champ-size-card, 39px);
-    height: var(--vs-champ-size-card, 39px);
-    min-width: var(--vs-champ-size-card, 39px);
-    min-height: var(--vs-champ-size-card, 39px);
-  }
-
-  .v-picks__card-row .v-picks__status--square {
-    justify-self: center;
+    width: var(--vp-card-side);
+    height: var(--vp-card-side);
+    min-width: var(--vp-card-side);
+    min-height: var(--vp-card-side);
+    max-width: var(--vp-card-side);
+    max-height: var(--vp-card-side);
   }
 
   /*
-   * Actions: 2×2 at every mobile width. Tile size matches Final Four card
-   * tiles (--vs-ff-size-card, default 26px) — same density override as desktop.
+   * Actions: 2Ã—2 at every mobile width. Tile size matches Final Four card
+   * tiles (--vs-ff-size-card, default 26px) â€” same density override as desktop.
    */
   .v-picks__card-row .v-picks__actions--grid {
     display: grid;
@@ -1943,6 +1962,7 @@
     padding: 0;
     border: none;
     justify-self: center;
+    width: var(--vp-card-side);
   }
 
   .v-picks__card-row .v-picks__actions--grid button[data-vp-action] {
@@ -1957,109 +1977,4 @@
     height: calc(var(--vs-ff-size-card, 26px) * 0.55);
   }
 
-}
-
-/* ---------------------------------------------------------------------------
- * Action confirmation popup (delete / permanent delete / return)
- * --------------------------------------------------------------------------- */
-
-.v-picks__confirm-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 80;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-  background: rgba(15, 23, 42, 0.45);
-}
-
-.v-picks__confirm-dialog {
-  width: min(100%, 22rem);
-  padding: 1.25rem 1.35rem 1.1rem;
-  border-radius: 10px;
-  border: 1px solid #fecaca;
-  background: #fff7f7;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.28);
-}
-
-.v-picks__confirm-dialog--warn {
-  border-color: #fcd34d;
-  background: #fffbeb;
-}
-
-.v-picks__confirm-title {
-  margin: 0 0 0.65rem;
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #7f1d1d;
-  line-height: 1.3;
-}
-
-.v-picks__confirm-dialog--warn .v-picks__confirm-title {
-  color: #92400e;
-}
-
-.v-picks__confirm-message {
-  margin: 0 0 1.1rem;
-  font-size: 0.9rem;
-  line-height: 1.45;
-  color: #374151;
-}
-
-.v-picks__confirm-message p {
-  margin: 0 0 0.55rem;
-}
-
-.v-picks__confirm-message p:last-child {
-  margin-bottom: 0;
-}
-
-.v-picks__confirm-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  justify-content: flex-end;
-}
-
-.v-picks__confirm-btn {
-  min-width: 4.5rem;
-  padding: 0.45rem 0.9rem;
-  border-radius: 6px;
-  border: 1px solid transparent;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.v-picks__confirm-btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.v-picks__confirm-btn--yes {
-  background: #dc2626;
-  color: #fff;
-}
-
-.v-picks__confirm-btn--yes:hover:not(:disabled) {
-  background: #b91c1c;
-}
-
-.v-picks__confirm-dialog--warn .v-picks__confirm-btn--yes {
-  background: #b45309;
-}
-
-.v-picks__confirm-dialog--warn .v-picks__confirm-btn--yes:hover:not(:disabled) {
-  background: #92400e;
-}
-
-.v-picks__confirm-btn--no {
-  background: #f3f4f6;
-  border-color: #d1d5db;
-  color: #374151;
-}
-
-.v-picks__confirm-btn--no:hover:not(:disabled) {
-  background: #e5e7eb;
 }

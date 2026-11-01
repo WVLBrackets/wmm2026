@@ -1,23 +1,18 @@
 /**
- * Warren's March Madness 2026 - Site Configuration
- * Unified configuration system with Google Sheets integration and fallbacks
- *
- * Browser callers use `/api/site-config`, which overlays homepage Key Data
- * (Tourney Year, entry cost, site name, champ, contact). This module must stay
- * free of Neon/`pg` imports so Client Components can import it safely.
+ * Warren's March Madness — site configuration access.
+ * Browser (and isomorphic callers): `/api/site-config` (CMS payload).
+ * Server route handlers / services: import `@/lib/siteConfigServer` directly.
+ * Missing required CMS fields surface as errors — no silent season fallbacks.
  */
 
-import { getSiteConfigFromGoogleSheets, SiteConfigData } from '@/lib/siteConfig';
-import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
+import { SiteConfigData, SiteConfigError } from '@/lib/siteConfig';
 
-// Cache for site config to avoid repeated API calls
 let cachedConfig: SiteConfigData | null = null;
 let lastFetchTime = 0;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 5 * 60 * 1000;
 
 /**
  * Drop the in-memory module cache so the next {@link getSiteConfig} call refetches.
- * Next.js `revalidateTag('site-config')` invalidates `unstable_cache` only; this covers getSiteConfig's own TTL layer.
  */
 export function invalidateSiteConfigModuleCache(): void {
   cachedConfig = null;
@@ -25,62 +20,28 @@ export function invalidateSiteConfigModuleCache(): void {
 }
 
 /**
- * Get site configuration with caching and fallback
- * Tries Google Sheets first, falls back to environment variables
- * Works in both server and client contexts
+ * Get site configuration with a short module-level TTL via `/api/site-config`.
+ * Throws {@link SiteConfigError} when config cannot load.
+ *
+ * Kept free of Neon/`pg` so Client Components (Footer, nav, auth) can import it.
  */
 export const getSiteConfig = async (): Promise<SiteConfigData> => {
   const now = Date.now();
 
-  // Return cached config if it's still fresh
-  if (cachedConfig && (now - lastFetchTime) < CACHE_DURATION) {
+  if (cachedConfig && now - lastFetchTime < CACHE_DURATION) {
     return cachedConfig;
   }
 
-  try {
-    // Check if we're in a server environment (Node.js) or browser
-    const isServer = typeof window === 'undefined';
-
-    let googleConfig: SiteConfigData | null = null;
-
-    if (isServer) {
-      // Server-side: Call getSiteConfigFromGoogleSheets directly
-      googleConfig = await getSiteConfigFromGoogleSheets();
-    } else {
-      // Client-side: Use API route (includes Key Data overlays)
-      const response = await fetch('/api/site-config');
-      const result = await response.json();
-      if (result.success) {
-        googleConfig = result.data;
-      }
-    }
-
-    if (googleConfig) {
-      cachedConfig = googleConfig;
-      lastFetchTime = now;
-      return googleConfig;
-    }
-  } catch (error) {
-    console.warn('Failed to fetch config from Google Sheets, using fallback:', error);
+  const response = await fetch('/api/site-config');
+  const result = await response.json();
+  if (!response.ok || !result.success || !result.data) {
+    throw new SiteConfigError(
+      typeof result.error === 'string'
+        ? result.error
+        : `Failed to load site configuration (${response.status})`,
+    );
   }
-
-  // Fallback to environment variables
-  const fallbackConfig = getFallbackSiteConfig();
-  cachedConfig = fallbackConfig;
+  cachedConfig = result.data as SiteConfigData;
   lastFetchTime = now;
-  return fallbackConfig;
+  return cachedConfig;
 };
-
-/**
- * Fallback configuration using centralized config
- * Used when Google Sheets is unavailable
- */
-function getFallbackSiteConfig(): SiteConfigData {
-  // Use centralized fallback config
-  return FALLBACK_CONFIG;
-}
-
-// For backward compatibility, export a synchronous version that uses fallbacks
-export const siteConfig = FALLBACK_CONFIG;
-
-export default siteConfig;

@@ -1,6 +1,8 @@
+import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from './auth';
 import { getDevAuthBypassEmailServer, isDevAuthBypassServerEnabled } from './devAuth';
+import { isAdminEmail } from './adminEmails';
 
 /**
  * Check if an email address matches the admin email from environment variable
@@ -9,8 +11,7 @@ export async function isAdmin(email: string): Promise<boolean> {
   if (isDevAuthBypassServerEnabled() && email.toLowerCase() === getDevAuthBypassEmailServer()) {
     return true;
   }
-  const adminEmail = process.env.ADMIN_EMAIL || '';
-  return email.toLowerCase() === adminEmail.toLowerCase();
+  return isAdminEmail(email);
 }
 
 /**
@@ -37,5 +38,17 @@ export async function requireAdmin() {
   }
   
   return true;
+}
+
+/**
+ * Session admin gate for API routes. Returns `{ email }` or a 403 JSON response.
+ */
+export async function requireAdminRequest(): Promise<{ email: string } | NextResponse> {
+  const session = await getServerSession(authOptions);
+  const email = session?.user?.email;
+  if (!email || !(await isAdmin(email))) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
+  }
+  return { email };
 }
 

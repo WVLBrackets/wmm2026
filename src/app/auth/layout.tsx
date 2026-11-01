@@ -1,28 +1,20 @@
-import { notFound } from "next/navigation";
 import VintageShell from "@/components/vintage/VintageShell";
-import { isVintageEnabled } from "@/lib/vintage/access";
-import { DEFAULT_VINTAGE_CONTENT } from "@/lib/vintage/content";
-import { getPublishedVintageContent } from "@/lib/vintage/store";
+import { getPublishedCmsBundle } from "@/lib/vintage/cmsBundle";
+
+export const dynamic = "force-dynamic";
 
 /**
- * Shared chrome for all `/auth/*` routes — VintageShell when vintage is enabled.
+ * Shared vintage chrome for all `/auth/*` routes.
+ * CMS load failure surfaces the site error panel (no default-document fallback).
  */
 export default async function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  if (!isVintageEnabled()) notFound();
-
-  let content = DEFAULT_VINTAGE_CONTENT;
-  try {
-    content = await getPublishedVintageContent();
-  } catch {
-    content = structuredClone(DEFAULT_VINTAGE_CONTENT);
-  }
-
+  const bundle = await getPublishedCmsBundle();
   return (
-    <VintageShell content={content} testId="vintage-auth-page">
+    <VintageShell content={bundle.home} testId="vintage-auth-page">
       {children}
     </VintageShell>
   );

@@ -1,8 +1,4 @@
 import type { VintageContent } from "./content";
-import type { VintageInfoContent } from "./infoContent";
-import type { VintageHofContent } from "./hofContent";
-import type { VintagePicksContent } from "./picksContent";
-import type { VintageStandingsContent } from "./standingsContent";
 
 /** Sidecar key for handbook CMS on the shared vintage_homepage JSON row. */
 export const INFO_HANDBOOK_KEY = "__infoHandbook";
@@ -16,51 +12,82 @@ export const PICKS_CONTENT_KEY = "__picksContent";
 /** Sidecar key for Live Standings display copy on the shared homepage JSON row. */
 export const STANDINGS_CONTENT_KEY = "__standingsContent";
 
+/** Sidecar key for Emails & Account copy. */
+export const EMAILS_CONTENT_KEY = "__emailsContent";
+
+/** Sidecar key for Bracket Editor Messages. */
+export const BRACKET_EDITOR_CONTENT_KEY = "__bracketEditorContent";
+
+/** Sidecar key for Scoreboard page copy. */
+export const SCOREBOARD_CONTENT_KEY = "__scoreboardContent";
+
 /**
- * Split homepage JSON from optional handbook + HoF + My Picks + Standings sidecars
- * (app role cannot CREATE tables).
+ * Document schema marker. Rows stamped with {@link CMS_SCHEMA_VERSION} store
+ * every section in full, so public reads never fill copy from code.
  */
-export function splitHomepageDocument(raw: unknown): {
+export const CMS_SCHEMA_KEY = "__cmsSchema";
+export const CMS_SCHEMA_VERSION = 2;
+
+/** Slot → JSON key for every CMS sidecar on the homepage row. */
+export const SIDECAR_KEYS = {
+  info: INFO_HANDBOOK_KEY,
+  hof: HOF_CONTENT_KEY,
+  picks: PICKS_CONTENT_KEY,
+  standings: STANDINGS_CONTENT_KEY,
+  emails: EMAILS_CONTENT_KEY,
+  bracketEditor: BRACKET_EDITOR_CONTENT_KEY,
+  scoreboard: SCOREBOARD_CONTENT_KEY,
+} as const;
+
+export type SidecarSlot = keyof typeof SIDECAR_KEYS;
+
+export const SIDECAR_SLOTS = Object.keys(SIDECAR_KEYS) as SidecarSlot[];
+
+export type SplitHomepageDocument = {
   homepage: unknown;
-  info: unknown;
-  hof: unknown;
-  picks: unknown;
-  standings: unknown;
-} {
+  schema: number;
+} & Record<SidecarSlot, unknown>;
+
+/**
+ * Split homepage JSON from its CMS sidecars (app role cannot CREATE tables,
+ * so every section lives on one row).
+ *
+ * @param raw - Stored `draft` or `published` JSON
+ */
+export function splitHomepageDocument(raw: unknown): SplitHomepageDocument {
+  const empty = Object.fromEntries(
+    SIDECAR_SLOTS.map((slot) => [slot, undefined]),
+  ) as Record<SidecarSlot, unknown>;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    return {
-      homepage: raw,
-      info: undefined,
-      hof: undefined,
-      picks: undefined,
-      standings: undefined,
-    };
+    return { homepage: raw, schema: 0, ...empty };
   }
-  const record = raw as Record<string, unknown>;
-  const {
-    [INFO_HANDBOOK_KEY]: info,
-    [HOF_CONTENT_KEY]: hof,
-    [PICKS_CONTENT_KEY]: picks,
-    [STANDINGS_CONTENT_KEY]: standings,
-    ...homepage
-  } = record;
-  return { homepage, info, hof, picks, standings };
+  const homepage: Record<string, unknown> = { ...(raw as Record<string, unknown>) };
+  const sides = { ...empty };
+  for (const slot of SIDECAR_SLOTS) {
+    const key = SIDECAR_KEYS[slot];
+    sides[slot] = homepage[key];
+    delete homepage[key];
+  }
+  const schema = Number(homepage[CMS_SCHEMA_KEY]) || 0;
+  delete homepage[CMS_SCHEMA_KEY];
+  return { homepage, schema, ...sides };
 }
 
 /**
- * Reattach handbook / HoF / My Picks / Standings sidecars onto a homepage document.
+ * Reattach sidecars onto a homepage document and stamp the schema version.
+ *
+ * @param homepage - Normalized homepage content
+ * @param sidecars - Sidecar values by slot (missing slots are omitted)
  */
 export function mergeHomepageDocument(
   homepage: VintageContent,
-  info?: VintageInfoContent | null,
-  hof?: VintageHofContent | null,
-  picks?: VintagePicksContent | null,
-  standings?: VintageStandingsContent | null,
+  sidecars: Partial<Record<SidecarSlot, unknown>>,
 ): Record<string, unknown> {
   const out: Record<string, unknown> = { ...homepage };
-  if (info) out[INFO_HANDBOOK_KEY] = info;
-  if (hof) out[HOF_CONTENT_KEY] = hof;
-  if (picks) out[PICKS_CONTENT_KEY] = picks;
-  if (standings) out[STANDINGS_CONTENT_KEY] = standings;
+  for (const slot of SIDECAR_SLOTS) {
+    const value = sidecars[slot];
+    if (value != null) out[SIDECAR_KEYS[slot]] = value;
+  }
+  out[CMS_SCHEMA_KEY] = CMS_SCHEMA_VERSION;
   return out;
 }

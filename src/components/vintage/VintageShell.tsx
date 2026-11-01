@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Mail } from "lucide-react";
 import type { ReactNode } from "react";
+import CmsText from "@/components/cms/CmsText";
 import type { VintageContent } from "@/lib/vintage/content";
 import { resolveVintageFontStack } from "@/lib/vintage/fonts";
 import VintageMasthead from "./VintageMasthead";
@@ -17,6 +18,7 @@ export default function VintageShell({
   draft = false,
   draftReturnHref = "/vintage/admin",
   testId = "vintage-page",
+  persistToolbarSession = true,
 }: {
   content: VintageContent;
   children: ReactNode;
@@ -24,6 +26,11 @@ export default function VintageShell({
   /** Editor return link shown on unpublished draft banners. */
   draftReturnHref?: string;
   testId?: string;
+  /**
+   * Lock CMS toolbar slots into the session cache (default true).
+   * Route `loading.tsx` shells set false so DEFAULT chrome cannot jitter the menu.
+   */
+  persistToolbarSession?: boolean;
 }) {
   const fonts = c.theme.fonts;
   const themeStyle = {
@@ -57,7 +64,10 @@ export default function VintageShell({
       )}
       <div className="v-paper">
         <header className="v-edition-header" data-testid="vintage-header">
-          <VintageToolbar items={c.toolbar} />
+          <VintageToolbar
+            items={c.toolbar}
+            persistSession={persistToolbarSession}
+          />
           <VintageMasthead
             first={c.masthead.first}
             second={c.masthead.second}
@@ -65,7 +75,7 @@ export default function VintageShell({
         </header>
         <main className="v-main">{children}</main>
         <footer className="v-footer">
-          <span>{c.footer.text}</span>
+          <CmsText as="span" text={c.footer.text} />
           {c.footer.contactEmail && (
             <a
               data-testid="vintage-contact"

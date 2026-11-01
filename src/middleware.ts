@@ -20,8 +20,12 @@ export function middleware(request: NextRequest) {
     pathname === '/basketball-favicon.png' ||
     pathname.startsWith('/images/') ||
     pathname.startsWith('/logos/') ||
-    pathname.startsWith('/data/') ||
-    /\.(ico|png|jpg|jpeg|svg|gif|webp|woff|woff2|ttf|eot|css|js|json)$/i.test(pathname);
+    /\.(ico|png|jpg|jpeg|svg|gif|webp|woff|woff2|ttf|eot|css|js)$/i.test(pathname);
+
+  // Tournament JSON lives on disk for the server loader; do not expose it over HTTP.
+  if (pathname.startsWith('/data/')) {
+    return new NextResponse('Not found', { status: 404 });
+  }
 
   if (isStaticAsset) {
     // Allow static assets to pass through without any authentication
@@ -46,7 +50,8 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico and other static assets
      */
-    '/((?!_next/static|_next/image|favicon.ico|basketball-favicon.png|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf|eot|css|js|json)).*)',
+    '/((?!_next/static|_next/image|favicon.ico|basketball-favicon.png|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf|eot|css|js)).*)',
+    '/data/:path*',
   ],
 };
 

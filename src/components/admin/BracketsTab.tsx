@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Trash2,
@@ -16,11 +16,17 @@ import {
 import { useBracketFilters } from '@/hooks/useBracketFilters';
 import BracketTableRow from '@/components/admin/BracketTableRow';
 import UserFilterCombobox from '@/components/admin/UserFilterCombobox';
+import CmsText from '@/components/cms/CmsText';
 import {
   BracketImportProvider,
   BracketImportSummary,
   BracketImportToolbarButton,
 } from '@/components/admin/BracketImportPanel';
+import {
+  DEFAULT_ADMIN_BRACKETS_FILTERS,
+  readAdminBracketsFilters,
+  writeAdminBracketsFilters,
+} from '@/lib/admin/bracketsListFilters';
 
 interface User {
   id: string;
@@ -68,19 +74,41 @@ interface EditFeedback {
 
 export default function BracketsTab({ users, brackets, onReload }: BracketsTabProps) {
   const router = useRouter();
-  const [filterUser, setFilterUser] = useState<string>('all');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [filterYear, setFilterYear] = useState<string>('all');
-  const [filterCreatedDate, setFilterCreatedDate] = useState<string>('');
-  const [filterUpdatedDate, setFilterUpdatedDate] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  /** Restored once on mount so Edit Picks Save/Cancel returns to the same filtered list. */
+  const restoredFiltersRef = useRef(readAdminBracketsFilters());
+  const [filterUser, setFilterUser] = useState<string>(
+    () => restoredFiltersRef.current?.filterUser ?? DEFAULT_ADMIN_BRACKETS_FILTERS.filterUser,
+  );
+  const [filterStatus, setFilterStatus] = useState<string>(
+    () => restoredFiltersRef.current?.filterStatus ?? DEFAULT_ADMIN_BRACKETS_FILTERS.filterStatus,
+  );
+  const [filterYear, setFilterYear] = useState<string>(
+    () => restoredFiltersRef.current?.filterYear ?? DEFAULT_ADMIN_BRACKETS_FILTERS.filterYear,
+  );
+  const [filterCreatedDate, setFilterCreatedDate] = useState<string>(
+    () =>
+      restoredFiltersRef.current?.filterCreatedDate ??
+      DEFAULT_ADMIN_BRACKETS_FILTERS.filterCreatedDate,
+  );
+  const [filterUpdatedDate, setFilterUpdatedDate] = useState<string>(
+    () =>
+      restoredFiltersRef.current?.filterUpdatedDate ??
+      DEFAULT_ADMIN_BRACKETS_FILTERS.filterUpdatedDate,
+  );
+  const [searchQuery, setSearchQuery] = useState<string>(
+    () => restoredFiltersRef.current?.searchQuery ?? DEFAULT_ADMIN_BRACKETS_FILTERS.searchQuery,
+  );
   const [editingBracket, setEditingBracket] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditForm>({});
   const [editFeedback, setEditFeedback] = useState<EditFeedback | null>(null);
   const [optimisticBracketUpdates, setOptimisticBracketUpdates] = useState<Record<string, Partial<Bracket>>>({});
   const [syncingBracketIds, setSyncingBracketIds] = useState<Record<string, boolean>>({});
   const [isExporting, setIsExporting] = useState(false);
-  const [protectSubmitted, setProtectSubmitted] = useState<boolean>(true);
+  const [protectSubmitted, setProtectSubmitted] = useState<boolean>(
+    () =>
+      restoredFiltersRef.current?.protectSubmitted ??
+      DEFAULT_ADMIN_BRACKETS_FILTERS.protectSubmitted,
+  );
   const [pendingDeleteBracketId, setPendingDeleteBracketId] = useState<string | null>(null);
   const [deletingBracketId, setDeletingBracketId] = useState<string | null>(null);
   const [tournamentYear, setTournamentYear] = useState<string>('');
@@ -114,7 +142,7 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
     new Set(brackets.map(b => b.year).filter(y => y !== undefined && y !== null))
   ).sort((a, b) => (b || 0) - (a || 0));
 
-  // Load tournament year from config on mount
+  // Load tournament year from config on mount (do not clobber a restored year filter).
   useEffect(() => {
     const loadTournamentYear = async () => {
       try {
@@ -124,8 +152,11 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
           const year = data.data.tournamentYear;
           if (year) {
             setTournamentYear(year);
-            const yearNum = parseInt(year);
-            if (availableYears.includes(yearNum)) {
+            const yearNum = parseInt(year, 10);
+            const hasRestoredYear =
+              restoredFiltersRef.current != null &&
+              typeof restoredFiltersRef.current.filterYear === 'string';
+            if (!hasRestoredYear && availableYears.includes(yearNum)) {
               setFilterYear(year);
             }
           }
@@ -140,6 +171,27 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
     loadTournamentYear();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /** Keep filters available when returning from Edit Picks (Save or Cancel). */
+  useEffect(() => {
+    writeAdminBracketsFilters({
+      filterYear,
+      filterStatus,
+      filterUser,
+      filterCreatedDate,
+      filterUpdatedDate,
+      searchQuery,
+      protectSubmitted,
+    });
+  }, [
+    filterYear,
+    filterStatus,
+    filterUser,
+    filterCreatedDate,
+    filterUpdatedDate,
+    searchQuery,
+    protectSubmitted,
+  ]);
 
   const filteredBrackets = useBracketFilters({
     brackets,
@@ -800,12 +852,7 @@ export default function BracketsTab({ users, brackets, onReload }: BracketsTabPr
           data-testid="admin-bulk-delete-confirm"
         >
           <div className="mb-3 text-gray-800">
-            {permDeleteMessage.split('||').map((part, index, parts) => (
-              <Fragment key={index}>
-                {part.trim()}
-                {index < parts.length - 1 ? <br /> : null}
-              </Fragment>
-            ))}
+            <CmsText text={permDeleteMessage} />
           </div>
           <p className="mb-3 font-semibold text-red-950">
             {bulkDeleteConfirm.bracketIds.length === 1

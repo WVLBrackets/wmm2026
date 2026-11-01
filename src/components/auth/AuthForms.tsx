@@ -5,15 +5,13 @@ import { signIn, getSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
-import { getSiteConfig } from "@/config/site";
-import { SiteConfigData } from "@/lib/siteConfig";
-import { FALLBACK_CONFIG } from "@/lib/fallbackConfig";
 import { LoggedButton } from "@/components/LoggedButton";
 import { usageLogger } from "@/lib/usageLogger";
-import {
-  defaultVintagePicksAuthCopy,
-  type VintagePicksAuthCopy,
-} from "@/lib/vintage/picksContent";
+import CmsText from "@/components/cms/CmsText";
+import LoadingBasketball from "@/components/vintage/feedback/LoadingBasketball";
+import type { VintagePicksAuthCopy } from "@/lib/vintage/picksContent";
+import type { VintageAccountPagesCopy } from "@/lib/vintage/emailsContent";
+import { formatEmailCopy } from "@/lib/vintage/emailsContent";
 import "./auth.css";
 
 type AuthTab = "signin" | "signup";
@@ -23,14 +21,7 @@ type AuthTab = "signin" | "signup";
  */
 function formatBreakMessage(msg: string, email?: string): React.ReactNode {
   const resolved = email ? msg.replace(/{email}/g, email) : msg;
-  const parts = resolved.split("||");
-  if (parts.length === 1) return resolved;
-  return parts.map((part, index) => (
-    <React.Fragment key={index}>
-      {part}
-      {index < parts.length - 1 && <br />}
-    </React.Fragment>
-  ));
+  return <CmsText text={resolved} />;
 }
 
 /**
@@ -39,18 +30,25 @@ function formatBreakMessage(msg: string, email?: string): React.ReactNode {
  */
 export default function AuthFormsWrapper({
   authCopy,
+  accountCopy,
 }: {
-  authCopy?: VintagePicksAuthCopy;
+  authCopy: VintagePicksAuthCopy;
+  accountCopy: VintageAccountPagesCopy;
 }) {
-  const copy = authCopy ?? defaultVintagePicksAuthCopy();
   return (
-    <Suspense fallback={null}>
-      <AuthForms authCopy={copy} />
+    <Suspense fallback={<LoadingBasketball message={accountCopy.confirmPendingMessage} />}>
+      <AuthForms authCopy={authCopy} accountCopy={accountCopy} />
     </Suspense>
   );
 }
 
-function AuthForms({ authCopy }: { authCopy: VintagePicksAuthCopy }) {
+function AuthForms({
+  authCopy,
+  accountCopy,
+}: {
+  authCopy: VintagePicksAuthCopy;
+  accountCopy: VintageAccountPagesCopy;
+}) {
   const signInCopy = authCopy.signIn;
   const createCopy = authCopy.createAccount;
   const searchParams = useSearchParams();
@@ -59,8 +57,6 @@ function AuthForms({ authCopy }: { authCopy: VintagePicksAuthCopy }) {
     searchParams?.get("mode") === "signup" ? "signup" : "signin";
 
   const [activeTab, setActiveTab] = useState<AuthTab>(initialMode);
-  const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
-
   const [signInEmail, setSignInEmail] = useState("");
   const [signInPassword, setSignInPassword] = useState("");
   const [showSignInPassword, setShowSignInPassword] = useState(false);
@@ -77,19 +73,6 @@ function AuthForms({ authCopy }: { authCopy: VintagePicksAuthCopy }) {
   const [signUpLoading, setSignUpLoading] = useState(false);
   const [signUpError, setSignUpError] = useState("");
   const [signUpSuccess, setSignUpSuccess] = useState(false);
-
-  useEffect(() => {
-    const loadConfig = async () => {
-      try {
-        const config = await getSiteConfig();
-        setSiteConfig(config);
-      } catch (error) {
-        console.error("Failed to load site config:", error);
-        setSiteConfig(FALLBACK_CONFIG);
-      }
-    };
-    loadConfig();
-  }, []);
 
   useEffect(() => {
     const mode =
@@ -130,24 +113,12 @@ function AuthForms({ authCopy }: { authCopy: VintagePicksAuthCopy }) {
           });
           const checkData = await checkResponse.json();
           if (checkData.exists && !checkData.confirmed) {
-            setSignInError(
-              siteConfig?.emailFailNotConfirmed ||
-                FALLBACK_CONFIG.emailFailNotConfirmed ||
-                "Please confirm your email address before signing in.",
-            );
+            setSignInError(accountCopy.signInNotConfirmed);
           } else {
-            setSignInError(
-              siteConfig?.emailFailInvalid ||
-                FALLBACK_CONFIG.emailFailInvalid ||
-                "Invalid email or password",
-            );
+            setSignInError(accountCopy.signInInvalid);
           }
         } catch {
-          setSignInError(
-            siteConfig?.emailFailInvalid ||
-              FALLBACK_CONFIG.emailFailInvalid ||
-              "Invalid email or password",
-          );
+          setSignInError(accountCopy.signInInvalid);
         }
       } else {
         const session = await getSession();
@@ -158,18 +129,14 @@ function AuthForms({ authCopy }: { authCopy: VintagePicksAuthCopy }) {
     } catch (error) {
       if (error instanceof Error) {
         if (error.message === "EMAIL_NOT_CONFIRMED") {
-          setSignInError(
-            siteConfig?.emailFailNotConfirmed ||
-              FALLBACK_CONFIG.emailFailNotConfirmed ||
-              "Please confirm your email address before signing in.",
-          );
+          setSignInError(accountCopy.signInNotConfirmed);
         } else if (error.message.startsWith("Too many login attempts")) {
           setSignInError(error.message);
         } else {
-          setSignInError("An error occurred. Please try again.");
+          setSignInError(accountCopy.genericError);
         }
       } else {
-        setSignInError("An error occurred. Please try again.");
+        setSignInError(accountCopy.genericError);
       }
     } finally {
       setSignInLoading(false);
@@ -211,31 +178,16 @@ function AuthForms({ authCopy }: { authCopy: VintagePicksAuthCopy }) {
       if (response.ok) {
         setSignUpSuccess(true);
       } else {
-        setSignUpError(data.error || "Failed to create account");
+        setSignUpError(data.error || accountCopy.createAccountFailed);
       }
     } catch {
-      setSignUpError("An error occurred. Please try again.");
+      setSignUpError(accountCopy.genericError);
     } finally {
       setSignUpLoading(false);
     }
   };
 
   if (signUpSuccess) {
-    const spamReminder =
-      siteConfig?.regEmailSpamReminder ||
-      FALLBACK_CONFIG.regEmailSpamReminder ||
-      "";
-    let reminderText = spamReminder
-      .replace(/^💡\s*/, "")
-      .replace(/<strong>.*?<\/strong>\s*/i, "")
-      .replace(/Can&apos;t find (the|this) email\?\s*/i, "")
-      .replace(/Can't find (the|this) email\?\s*/i, "")
-      .trim();
-    if (!reminderText) {
-      reminderText =
-        "Please check your spam or junk mail folder. If you still don't see it, the email may take a few minutes to arrive.";
-    }
-
     return (
       <div className="v-auth" data-testid="auth-signup-success">
         <div className="v-auth__panel">
@@ -255,39 +207,44 @@ function AuthForms({ authCopy }: { authCopy: VintagePicksAuthCopy }) {
                 />
               </svg>
             </div>
-            <h1
-              className="v-auth__heading"
-              data-testid="signup-success-header"
-            >
-              {siteConfig?.acctCreateSuccessHeader ||
-                FALLBACK_CONFIG.acctCreateSuccessHeader}
-            </h1>
-            <p>
-              {formatBreakMessage(
-                siteConfig?.acctCreateSuccessMessage1 ||
-                  FALLBACK_CONFIG.acctCreateSuccessMessage1 ||
-                  "",
-                signUpEmail,
-              )}
-            </p>
-            <p>
-              {formatBreakMessage(
-                siteConfig?.acctCreateSuccessMessage2 ||
-                  FALLBACK_CONFIG.acctCreateSuccessMessage2 ||
-                  "",
-              )}
-            </p>
-            <div className="v-auth__note">
-              <strong>Can&apos;t find the email?</strong> {reminderText}
-            </div>
-            <Link
-              href="/auth/signin"
-              className="v-auth__link-btn"
-              data-testid="signup-success-signin-link"
-            >
-              {siteConfig?.acctCreateSuccessButton ||
-                FALLBACK_CONFIG.acctCreateSuccessButton}
-            </Link>
+            {accountCopy.createSuccessHeading ? (
+              <h1
+                className="v-auth__heading"
+                data-testid="signup-success-header"
+              >
+                {accountCopy.createSuccessHeading}
+              </h1>
+            ) : null}
+            {accountCopy.createSuccessMessage1 ? (
+              <p>
+                {formatBreakMessage(
+                  formatEmailCopy(accountCopy.createSuccessMessage1, {
+                    email: signUpEmail,
+                  }),
+                )}
+              </p>
+            ) : null}
+            {accountCopy.createSuccessMessage2 ? (
+              <p>{formatBreakMessage(accountCopy.createSuccessMessage2)}</p>
+            ) : null}
+            {accountCopy.createSuccessSpamHeading ||
+            accountCopy.createSuccessSpamMessage ? (
+              <div className="v-auth__note">
+                {accountCopy.createSuccessSpamHeading ? (
+                  <strong>{accountCopy.createSuccessSpamHeading} </strong>
+                ) : null}
+                {accountCopy.createSuccessSpamMessage}
+              </div>
+            ) : null}
+            {accountCopy.createSuccessButton ? (
+              <Link
+                href="/auth/signin"
+                className="v-auth__link-btn"
+                data-testid="signup-success-signin-link"
+              >
+                {accountCopy.createSuccessButton}
+              </Link>
+            ) : null}
           </div>
         </div>
       </div>
@@ -411,8 +368,10 @@ function AuthForms({ authCopy }: { authCopy: VintagePicksAuthCopy }) {
                 >
                   {signInLoading ? (
                     <>
-                      <span className="v-auth__spinner" aria-hidden="true" />
-                      {signInCopy.submitPendingLabel}
+                      <LoadingBasketball
+                        variant="plain"
+                        message={signInCopy.submitPendingLabel}
+                      />
                     </>
                   ) : (
                     signInCopy.submitLabel
@@ -598,10 +557,10 @@ function AuthForms({ authCopy }: { authCopy: VintagePicksAuthCopy }) {
                   className="v-auth__submit"
                 >
                   {signUpLoading ? (
-                    <>
-                      <span className="v-auth__spinner" aria-hidden="true" />
-                      {createCopy.submitPendingLabel}
-                    </>
+                    <LoadingBasketball
+                      variant="plain"
+                      message={createCopy.submitPendingLabel}
+                    />
                   ) : (
                     createCopy.submitLabel
                   )}

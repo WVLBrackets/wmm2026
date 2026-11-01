@@ -1,5 +1,4 @@
 import { Pool } from "pg";
-import { isVintageEnabled } from "./access";
 import { assertDedicatedVintageDatabase } from "./databaseSafety";
 
 let pool: Pool | undefined;
@@ -35,7 +34,6 @@ async function purgeLegacyRevisionHistory(activePool: Pool): Promise<void> {
  * Shared pg pool for all vintage CMS stores. Never falls back to the bracket database.
  */
 export function getVintageDbPool(): Pool {
-  if (!isVintageEnabled()) throw new Error("Vintage is disabled.");
   const connectionString = process.env.VINTAGE_DATABASE_URL;
   if (!connectionString) {
     throw new Error(
@@ -43,6 +41,11 @@ export function getVintageDbPool(): Pool {
     );
   }
   assertDedicatedVintageDatabase(connectionString);
+  // Recover if a caller incorrectly ended the shared pool (kills all CMS reads).
+  if (pool && (pool as { ended?: boolean }).ended) {
+    pool = undefined;
+    revisionHistoryCleanup = undefined;
+  }
   if (!pool) {
     pool = new Pool({
       connectionString,
@@ -50,7 +53,7 @@ export function getVintageDbPool(): Pool {
       connectionTimeoutMillis: 10000,
       query_timeout: 15000,
     });
-    revisionHistoryCleanup ??= purgeLegacyRevisionHistory(pool);
+    revisionHistoryCleanup = purgeLegacyRevisionHistory(pool);
   }
   return pool;
 }

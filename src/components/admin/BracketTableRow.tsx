@@ -1,7 +1,7 @@
 'use client';
 
-import { Fragment } from 'react';
 import { Trash2, Edit, Save, X, Vote, CheckCircle, Clock, Calculator } from 'lucide-react';
+import CmsText from '@/components/cms/CmsText';
 
 interface User {
   id: string;
@@ -63,20 +63,7 @@ const DEFAULT_PERM_DELETE_MESSAGE =
  * Renders site-config style messages that use `||` as paragraph breaks.
  */
 function renderMessageWithLineBreaks(message: string) {
-  const parts = message.split('||');
-  if (parts.length === 1) {
-    return <>{message}</>;
-  }
-  return (
-    <>
-      {parts.map((part, index) => (
-        <Fragment key={index}>
-          {part}
-          {index < parts.length - 1 && <br />}
-        </Fragment>
-      ))}
-    </>
-  );
+  return <CmsText text={message} />;
 }
 
 /** Status glyph beside entry name (mobile layout). */

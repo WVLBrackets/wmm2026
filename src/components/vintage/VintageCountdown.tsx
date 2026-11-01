@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import CmsText from "@/components/cms/CmsText";
 
 const DEFAULT_LIVE = "The tournament is underway!";
 
@@ -31,12 +32,12 @@ export default function VintageCountdown({
   if (seconds === 0) {
     const message = liveMessage.trim() || DEFAULT_LIVE;
     return (
-      <p
+      <CmsText
+        as="p"
         className="v-live-tourney-message"
         data-testid="vintage-live-tourney-message"
-      >
-        {message}
-      </p>
+        text={message}
+      />
     );
   }
   const values =

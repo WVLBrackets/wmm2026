@@ -1,89 +1,34 @@
-import { getVintageDbPool, hasVintageDatabase } from "./dbPool";
-import { splitHomepageDocument } from "./homepageDocument";
+import "server-only";
+import { getPublishedCmsBundle } from "./cmsBundle";
+import { hasVintageDatabase } from "./dbPool";
 import {
-  DEFAULT_VINTAGE_STANDINGS_CONTENT,
-  normalizeVintageStandingsContent,
-  type VintageStandingsContent,
-  validateVintageStandingsContent,
-} from "./standingsContent";
-import { writeVintageSidecarContent } from "./sidecarWriter";
+  readVintageSectionState,
+  writeVintageSection,
+  type VintageSectionState,
+} from "./sectionStore";
+import type { SidecarWriteInput } from "./sidecarWriter";
+import type { VintageStandingsContent } from "./standingsContent";
 
-export interface VintageStandingsState {
-  version: number;
-  draft: VintageStandingsContent;
-  published: VintageStandingsContent;
-}
-
-const EMPTY = (): VintageStandingsState => ({
-  version: 0,
-  draft: structuredClone(DEFAULT_VINTAGE_STANDINGS_CONTENT),
-  published: structuredClone(DEFAULT_VINTAGE_STANDINGS_CONTENT),
-});
+export type VintageStandingsState = VintageSectionState<VintageStandingsContent>;
 
 export function hasVintageStandingsDatabase(): boolean {
   return hasVintageDatabase();
 }
 
-/**
- * Read Standings copy draft/published from the homepage row sidecar.
- */
+/** Standings copy draft/published for the admin editor. */
 export async function readVintageStandingsState(): Promise<VintageStandingsState> {
-  if (!hasVintageStandingsDatabase()) return EMPTY();
-  const result = await getVintageDbPool().query(
-    "SELECT version, draft, published FROM vintage_homepage WHERE id = 1",
-  );
-  const row = result.rows[0];
-  if (!row) return EMPTY();
-  const draftStandings = normalizeVintageStandingsContent(
-    splitHomepageDocument(row.draft).standings,
-  );
-  const publishedStandings = normalizeVintageStandingsContent(
-    splitHomepageDocument(row.published).standings,
-  );
-  validateVintageStandingsContent(draftStandings);
-  validateVintageStandingsContent(publishedStandings);
-  return {
-    version: Number(row.version),
-    draft: draftStandings,
-    published: publishedStandings,
-  };
+  return readVintageSectionState("standings");
 }
 
-/**
- * Published Standings copy for the primary-admin Live Standings page.
- */
+/** Published Standings copy (cached bundle; throws when CMS is unavailable). */
 export async function getPublishedVintageStandingsContent(): Promise<VintageStandingsContent> {
-  try {
-    return (await readVintageStandingsState()).published;
-  } catch (error) {
-    console.error(
-      "[Vintage Standings] Published content unavailable:",
-      error instanceof Error ? error.message : "storage error",
-    );
-    return structuredClone(DEFAULT_VINTAGE_STANDINGS_CONTENT);
-  }
+  return (await getPublishedCmsBundle()).standings;
 }
 
-/**
- * Save or publish Standings copy on the shared homepage row.
- */
+/** Save or publish Standings copy. */
 export async function writeVintageStandingsContent(
-  input: {
-    action: "save" | "publish";
-    version: number;
-    content: VintageStandingsContent;
-  },
+  input: SidecarWriteInput<VintageStandingsContent>,
   _author: string,
 ): Promise<VintageStandingsState> {
-  await writeVintageSidecarContent<VintageStandingsContent>({
-    slot: "standings",
-    input,
-    normalizeSidecar: normalizeVintageStandingsContent,
-    validateSidecar: validateVintageStandingsContent,
-    readPublishedSidecar: (publishedRow) =>
-      normalizeVintageStandingsContent(
-        splitHomepageDocument(publishedRow).standings,
-      ),
-  });
-  return readVintageStandingsState();
+  return writeVintageSection("standings", input);
 }

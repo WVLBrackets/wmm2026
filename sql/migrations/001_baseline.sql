@@ -1,0 +1,4 @@
+-- Baseline schema is created in application code, not this file.
+-- Live tables historically come from initializeDatabase() in
+-- src/lib/database/migrations.ts (CREATE TABLE IF NOT EXISTS / ALTER TABLE).
+-- Add new numbered SQL files in this directory for incremental schema changes.

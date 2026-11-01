@@ -1,6 +1,7 @@
 "use client";
 
 import { Megaphone } from "lucide-react";
+import CmsText from "@/components/cms/CmsText";
 import {
   formatAnnouncementAt,
   type VintageAnnouncementBoard,
@@ -55,7 +56,7 @@ export default function AnnouncementBoard({
                     data-testid={`vintage-announce-item-${item.id}`}
                   >
                     <time dateTime={item.at}>{when || "—"}</time>
-                    <p>{item.text}</p>
+                    <CmsText as="p" text={item.text} />
                   </li>
                 );
               })}

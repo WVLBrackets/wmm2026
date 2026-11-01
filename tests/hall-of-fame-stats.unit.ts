@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import type { HallOfFameEntry } from "../src/lib/googleSheets";
+import type { HallOfFameEntry } from "../src/lib/hallOfFameStats";
 import {
   buildHofViewModel,
   classifyHofYear,

@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
-import { Press_Start_2P } from 'next/font/google';
 import { Trophy, Plus, Edit, Clock, CheckCircle, LogOut, Trash2, Copy, Eye, Info, X, Mail, RotateCcw, Undo2, Search, Pencil, Send, DollarSign, ChevronDown } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { useCSRF } from '@/hooks/useCSRF';
@@ -19,31 +19,35 @@ import {
   getValidChampionId,
 } from '@/lib/bracketPickValidity';
 import { LoggedButton } from '@/components/LoggedButton';
+import CmsText from '@/components/cms/CmsText';
 import { useServerTime } from '@/hooks/useServerTime';
-import PaymentModal from '@/components/bracket/PaymentModal';
 import {
-  evaluatePicksAccess,
-  formatPriorYearWarningMessage,
-  isBracketsAvailableFlag,
-  type PicksAccessResult,
-} from '@/lib/services/picksAccessPolicy';
+  getAvailablePaymentMethods,
+  isPaymentMasterAllowed,
+  normalizePaymentProviderConfig,
+} from '@/lib/payments/paymentProviders';
 import {
   evaluateVintageActionLock,
   formatVintagePriorYearMessage,
+  type VintageActionLockResult,
 } from '@/lib/services/vintageActionLock';
-import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 import { useIsMdUp } from '@/hooks/useIsMdUp';
+import type { VintageBracketEditorContent } from '@/lib/vintage/bracketEditorContent';
+import { formatEmailCopy, type VintagePdfDialogCopy } from '@/lib/vintage/emailsContent';
 import {
-  DEFAULT_VINTAGE_PICKS_CONTENT,
   formatMessageBoxText,
   formatVintagePicksLabel,
   messageBoxCssVars,
   vintagePicksChromeCssVars,
   type VintageMessageBoxStateKey,
   type VintagePicksContent,
+  type VintagePicksLabelsCopy,
 } from '@/lib/vintage/picksContent';
+import { formatCopy } from '@/lib/vintage/copyTree';
+import ConfirmDialog from '@/components/vintage/feedback/ConfirmDialog';
+import LoadingBasketball from '@/components/vintage/feedback/LoadingBasketball';
+import '@/components/vintage/feedback/feedback.css';
 import {
-  DEFAULT_VINTAGE_STANDINGS_CONTENT,
   standingsPickResultA11yPhrases,
   standingsResultChromeStyle,
   type VintageStandingsContent,
@@ -59,24 +63,28 @@ import PicksConfirmModal from '@/components/vintage/picks/PicksConfirmModal';
 import PicksActionTip from '@/components/vintage/picks/PicksActionTip';
 import './vintage/picks/picks.css';
 
-/** Accessible names / tooltip copy for My Picks row icon actions. */
-const PICKS_ACTION_LABELS = {
-  view: 'View bracket',
-  edit: 'Edit bracket',
-  return:
-    'Unsubmit bracket — removes it from the pool until resubmitted',
-  copy: 'Copy bracket',
-  email: 'Email bracket',
-  submit: 'Submit bracket',
-  delete: 'Delete bracket',
-  restore: 'Restore bracket',
-  permanentDelete: 'Permanently delete bracket',
-} as const;
-
-const scoreboardFont = Press_Start_2P({
-  weight: '400',
-  subsets: ['latin'],
+const PaymentModal = dynamic(() => import('@/components/bracket/PaymentModal'), {
+  ssr: false,
+  loading: () => <LoadingBasketball variant="plain" testId="payment-modal-loading" />,
 });
+
+/** Row icon actions → My Picks CMS label fields (accessible names and tooltips). */
+const PICKS_ACTION_LABEL_FIELDS = {
+  view: 'actionView',
+  edit: 'actionEdit',
+  return: 'actionReturn',
+  copy: 'actionCopy',
+  email: 'actionEmail',
+  submit: 'actionSubmit',
+  delete: 'actionDelete',
+  restore: 'actionRestore',
+  permanentDelete: 'actionPermanentDelete',
+} as const satisfies Record<string, keyof VintagePicksLabelsCopy>;
+
+type PicksActionKey = keyof typeof PICKS_ACTION_LABEL_FIELDS;
+
+/** Row action button class; colors come from CMS CSS vars via `data-vp-action`. */
+const ROW_ACTION_CLASS = 'v-picks__action-btn flex items-center justify-center';
 
 export interface Bracket {
   id: string;
@@ -229,27 +237,6 @@ function bracketMatchesEntrySearch(bracket: Bracket, queryLower: string): boolea
 }
 
 /**
- * Parses `pool_header_font_size`: two positive integers separated by `|`, e.g. `14|12`.
- * First = font/icon size for header and message on desktop (`md` and up); second = same on mobile.
- */
-function parsePoolHeaderFontSizes(raw: string | undefined): { desktopPx: number; mobilePx: number } {
-  const defaults = { desktopPx: 14, mobilePx: 12 };
-  if (!raw?.trim()) return defaults;
-
-  const parts = raw
-    .trim()
-    .split('|')
-    .map((s) => parseInt(s.trim(), 10));
-  const desktopPx = parts[0];
-  const mobilePx = parts[1];
-
-  return {
-    desktopPx: !Number.isNaN(desktopPx) && desktopPx > 0 ? desktopPx : defaults.desktopPx,
-    mobilePx: !Number.isNaN(mobilePx) && mobilePx > 0 ? mobilePx : defaults.mobilePx,
-  };
-}
-
-/**
  * Expands `in_the_pool_message` placeholders: each `{X}` becomes
  * `"{count} submitted entry"` (when count is 1) or `"{count} submitted entries"` otherwise.
  * If `template` does not contain `{X}`, it is returned unchanged.
@@ -267,14 +254,16 @@ function formatInThePoolMessage(template: string, submittedCount: number): strin
 }
 
 interface MyPicksLandingProps {
-  /** Visual treatment: `legacy` (default) keeps the blue/white UI; `vintage` uses the cream/navy editorial layout. */
-  variant?: 'legacy' | 'vintage';
   /** Published My Picks CMS copy (timer, flavors for header/pool/empty). */
-  picksCopy?: VintagePicksContent;
+  picksCopy: VintagePicksContent;
   /**
    * Published Standings CMS — shared FF/Champ result chrome (colors, sizes, border width).
    */
-  standingsChrome?: VintageStandingsContent;
+  standingsChrome: VintageStandingsContent;
+  /** Published Bracket Editor Messages (duplicate-name / readiness hints on Submit). */
+  bracketEditorCopy: VintageBracketEditorContent;
+  /** Published Emails & Account → Email PDF dialog copy. */
+  pdfDialogCopy: VintagePdfDialogCopy;
   /**
    * Homepage Tourney Tipoff ISO (`tournament.tipoffAt`).
    * Vintage only — no Config Sheet datetime.
@@ -286,7 +275,7 @@ interface MyPicksLandingProps {
    */
   bracketsReadyAt?: string;
   /** Homepage live-tourney message — shown on My Picks after tipoff. */
-  liveTourneyMessage?: string;
+  liveTourneyMessage: string;
   /** When true, show admin edit gear on the vintage landing. */
   admin?: boolean;
   brackets?: Bracket[];
@@ -320,13 +309,12 @@ interface MyPicksLandingProps {
   returningBracketId?: string | null;
   tournamentData?: TournamentData | null;
   bracket?: TournamentBracket | null;
-  siteConfig?: SiteConfigData | null;
-  killSwitchEnabled?: boolean;
-  killSwitchMessage?: string;
+  /** Payment provider settings (Key Data). */
+  siteConfig: SiteConfigData | null;
   /** Year currently displayed (from `?year=` or active year). */
   viewingYear?: number;
-  /** Active tournament year from site config (only this year accepts mutations). */
-  activeYear?: number;
+  /** Active tournament year from homepage Key Data (only this year accepts mutations). */
+  activeYear: number;
   /** Years available in the switcher (user brackets ∪ active year). */
   availableYears?: number[];
   /** Switch My Picks viewing year (parent updates URL). */
@@ -363,7 +351,7 @@ const FinalFourLogo = React.memo(function FinalFourLogo({
   return (
     <Image
       src={logoPath}
-      alt={teamName ? `${teamName} logo` : 'Team logo'}
+      alt=""
       width={fillCell ? 64 : 24}
       height={fillCell ? 64 : 24}
       className={fillCell ? undefined : 'max-h-[22px] max-w-[22px] object-contain'}
@@ -374,12 +362,13 @@ const FinalFourLogo = React.memo(function FinalFourLogo({
 });
 
 export default function MyPicksLanding({
-  variant = 'legacy',
-  picksCopy = DEFAULT_VINTAGE_PICKS_CONTENT,
-  standingsChrome = DEFAULT_VINTAGE_STANDINGS_CONTENT,
+  picksCopy,
+  standingsChrome,
+  bracketEditorCopy,
+  pdfDialogCopy,
   tipoffAt = '',
   bracketsReadyAt = '',
-  liveTourneyMessage = 'The tournament is underway!',
+  liveTourneyMessage,
   admin = false,
   brackets = [],
   onCreateNew,
@@ -408,10 +397,8 @@ export default function MyPicksLanding({
   tournamentData,
   bracket: emptyBracketTemplate = null,
   siteConfig,
-  killSwitchEnabled = true,
-  killSwitchMessage,
   viewingYear: viewingYearProp,
-  activeYear: activeYearProp,
+  activeYear,
   availableYears = [],
   onViewingYearChange,
   isYearSwitching = false,
@@ -420,10 +407,8 @@ export default function MyPicksLanding({
 }: MyPicksLandingProps) {
   const { data: session, update: updateSession } = useSession();
   const { fetchWithCSRF } = useCSRF();
-  const [expandedStatus, setExpandedStatus] = useState<'info' | null>(null);
   /** In-pool / out-of-pool table section: optional detail shown after clicking the info icon. */
   const [poolBannerExpanded, setPoolBannerExpanded] = useState<'in-pool' | 'out-pool' | null>(null);
-  const [logoError, setLogoError] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailBracket, setEmailBracket] = useState<Bracket | null>(null);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
@@ -436,7 +421,6 @@ export default function MyPicksLanding({
   const [profileSaveError, setProfileSaveError] = useState<string | null>(null);
   const [profileDisplayName, setProfileDisplayName] = useState('');
   const [payModalOpen, setPayModalOpen] = useState(false);
-  const [yearPickerOpen, setYearPickerOpen] = useState(false);
   const [isCurrentUserAdmin, setIsCurrentUserAdmin] = useState(false);
   const [profileDetails, setProfileDetails] = useState<{
     email: string;
@@ -445,8 +429,7 @@ export default function MyPicksLanding({
     bracketsEntered: number;
   } | null>(null);
   const { getServerNowMs } = useServerTime();
-  const isVintage = variant === 'vintage';
-  /** Vintage layout renders only the matching breakpoint so test ids stay unique. */
+  /** Layout renders only the matching breakpoint so test ids stay unique. */
   const isMdUp = useIsMdUp();
   const viewportSuffix: 'desktop' | 'mobile' = isMdUp ? 'desktop' : 'mobile';
   /** KEY-derived chrome for FF / Champ (shared with Standings). */
@@ -454,26 +437,14 @@ export default function MyPicksLanding({
     () => emptyPickResultKeyContext(),
   );
 
-  // Active year from config; viewing year from parent URL / props
-  const activeYear =
-    activeYearProp ??
-    (siteConfig?.tournamentYear
-      ? parseInt(String(siteConfig.tournamentYear), 10)
-      : tournamentData?.year
-        ? parseInt(String(tournamentData.year), 10)
-        : new Date().getFullYear());
+  // Viewing year from parent URL / props
   const viewingYear = viewingYearProp ?? activeYear;
   const isHistoricalView = viewingYear !== activeYear;
-  const historicalReadOnlyMessage = `Brackets from ${viewingYear} are read-only. Switch to ${activeYear} to create or edit.`;
 
   /**
    * Load KEY regional / semi / champ winners + eliminated list for result chrome.
    */
   useEffect(() => {
-    if (!isVintage) {
-      setResultKeyContext(emptyPickResultKeyContext());
-      return;
-    }
     let cancelled = false;
     (async () => {
       try {
@@ -506,13 +477,18 @@ export default function MyPicksLanding({
     return () => {
       cancelled = true;
     };
-  }, [isVintage, viewingYear]);
+  }, [viewingYear]);
 
   /** Current vs historic editorial flavor for vintage landing copy. */
   const picksFlavor = isHistoricalView
     ? picksCopy.flavors.historic
     : picksCopy.flavors.current;
   const picksTokenVars = { year: viewingYear, activeYear };
+  const labels = picksCopy.labels;
+  const feedback = picksCopy.feedback;
+  const profileCopy = picksCopy.profile;
+  /** CMS accessible name / tooltip for a row icon action. */
+  const picksActionLabel = (key: PicksActionKey): string => labels[PICKS_ACTION_LABEL_FIELDS[key]];
 
   /** Shared Standings CMS hover / aria phrases for FF + Champ tiles. */
   const pickResultA11y = useMemo(
@@ -521,31 +497,14 @@ export default function MyPicksLanding({
   );
 
   const priorYearBannerMessage = useMemo(
-    () =>
-      isVintage
-        ? formatVintagePriorYearMessage(picksCopy, viewingYear, activeYear)
-        : formatPriorYearWarningMessage(
-            siteConfig?.priorYearWarningMessage,
-            viewingYear,
-            activeYear,
-          ),
-    [
-      isVintage,
-      picksCopy,
-      siteConfig?.priorYearWarningMessage,
-      viewingYear,
-      activeYear,
-    ],
+    () => formatVintagePriorYearMessage(picksCopy, viewingYear, activeYear),
+    [picksCopy, viewingYear, activeYear],
   );
 
-  /**
-   * Unified Changing-action gate.
-   * Vintage: Action Lock master reference (no Config Sheet stop_submit).
-   * Legacy: Config Sheet evaluatePicksAccess.
-   */
-  const picksAccess = useMemo((): PicksAccessResult => {
-    if (isVintage) {
-      const lock = evaluateVintageActionLock({
+  /** Changing-action gate (vintage Action Lock master reference). */
+  const picksAccess = useMemo(
+    (): VintageActionLockResult =>
+      evaluateVintageActionLock({
         action: 'changing',
         bracketYear: viewingYear,
         activeYear,
@@ -554,52 +513,21 @@ export default function MyPicksLanding({
         bracketsReadyAt,
         tournamentJsonPresent: Boolean(tournamentData),
         nowMs: getServerNowMs(),
-      });
-      return {
-        blocked: lock.blocked,
-        reasonCode: lock.reasonCode,
-        message: lock.message,
-      };
-    }
-    if (isHistoricalView) {
-      return {
-        blocked: true,
-        reasonCode: 'prior_year',
-        message: historicalReadOnlyMessage,
-      };
-    }
-    return evaluatePicksAccess(siteConfig, {
-      tournamentJsonPresent: Boolean(tournamentData),
-      masterLockUnlocked: killSwitchEnabled,
-    });
-  }, [
-    isVintage,
-    picksCopy,
-    tipoffAt,
-    bracketsReadyAt,
-    activeYear,
-    viewingYear,
-    isHistoricalView,
-    historicalReadOnlyMessage,
-    siteConfig,
-    tournamentData,
-    killSwitchEnabled,
-    getServerNowMs,
-  ]);
+      }),
+    [
+      picksCopy,
+      tipoffAt,
+      bracketsReadyAt,
+      activeYear,
+      viewingYear,
+      tournamentData,
+      getServerNowMs,
+    ],
+  );
 
   const accessBlockMessage =
     picksAccess.message ||
-    (isVintage
-      ? formatVintagePicksLabel(picksCopy.masterLockMessage, { year: activeYear })
-      : killSwitchMessage || siteConfig?.masterLockMessage) ||
-    FALLBACK_CONFIG.masterLockMessage ||
-    'Bracket actions are temporarily locked by the administrator.';
-
-  const accessMessageClassName =
-    picksAccess.reasonCode === 'brackets_missing_json' ||
-    picksAccess.reasonCode === 'master_lock'
-      ? 'text-sm text-red-600 mt-1 font-medium'
-      : 'text-sm text-amber-800 mt-1 font-medium';
+    formatVintagePicksLabel(picksCopy.masterLockMessage, { year: activeYear });
 
   /** Changing actions blocked (View / Print / Email remain available). */
   const mutationsBlocked = picksAccess.blocked;
@@ -634,9 +562,28 @@ export default function MyPicksLanding({
     [bracketsForYear]
   );
 
-  const entryCost = isVintage ? picksCopy.entryCost : (siteConfig?.entryCost ?? 5);
-  const venmoUser = siteConfig?.venmoUser;
-  const payCapabilityEnabled = siteConfig?.enablePayCapability?.toUpperCase() === 'YES';
+  const entryCost = picksCopy.entryCost;
+
+  const paymentConfig = useMemo(
+    () =>
+      normalizePaymentProviderConfig({
+        enablePayCapability: siteConfig?.enablePayCapability,
+        enableVenmo: siteConfig?.enableVenmo,
+        enableZelle: siteConfig?.enableZelle,
+        venmoUser: siteConfig?.venmoUser,
+        zelleDisplayName: siteConfig?.zelleDisplayName,
+        zelleEmail: siteConfig?.zelleEmail,
+        zellePhone: siteConfig?.zellePhone,
+        zelleQrEnabled: siteConfig?.zelleQrEnabled,
+        zelleQrImageSrc: siteConfig?.zelleQrImageSrc,
+      }),
+    [siteConfig],
+  );
+
+  const availablePaymentMethods = useMemo(
+    () => getAvailablePaymentMethods(paymentConfig, isCurrentUserAdmin),
+    [paymentConfig, isCurrentUserAdmin],
+  );
 
   useEffect(() => {
     if (!session?.user?.email) return;
@@ -647,29 +594,27 @@ export default function MyPicksLanding({
   }, [session?.user?.email]);
 
   /**
-   * Why Pay is disabled (hover / title). Null when Pay can open the Venmo modal.
+   * Why Pay is disabled (hover / title). Null when Pay can open the payment modal.
+   * Additional-only payments are allowed even with zero unpaid brackets.
    */
   const payDisabledReason = useMemo(() => {
     if (isHistoricalView) {
-      return `Payments apply to ${activeYear} only. Switch back to the current year to pay.`;
+      return formatCopy(labels.payPriorYearMessage, { activeYear });
     }
-    if (!venmoUser) {
-      return 'Venmo payments are not configured yet.';
+    if (!isPaymentMasterAllowed(paymentConfig, isCurrentUserAdmin)) {
+      return labels.payAdminOnlyMessage;
     }
-    if (unpaidSubmittedBrackets.length === 0) {
-      return 'No unpaid submitted brackets to pay for.';
-    }
-    if (!payCapabilityEnabled && !isCurrentUserAdmin) {
-      return 'Pay is currently available to administrators only.';
+    if (availablePaymentMethods.length === 0) {
+      return labels.payNoMethodsMessage;
     }
     return null;
   }, [
     isHistoricalView,
     activeYear,
-    venmoUser,
-    unpaidSubmittedBrackets.length,
-    payCapabilityEnabled,
+    paymentConfig,
     isCurrentUserAdmin,
+    availablePaymentMethods.length,
+    labels,
   ]);
   const payEnabled = payDisabledReason === null;
 
@@ -874,29 +819,21 @@ export default function MyPicksLanding({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          bracketId: emailBracket.id,
-          siteConfig: siteConfig, // Pass the already-loaded config to avoid re-fetching
-        }),
+        body: JSON.stringify({ bracketId: emailBracket.id }),
       });
 
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setEmailMessage({ type: 'success', text: 'Email sent successfully! Check your inbox for your bracket PDF.' });
+        setEmailMessage({ type: 'success', text: pdfDialogCopy.successMessage });
         setEmailDialogOpen(false);
         setTimeout(() => setEmailMessage(null), 5000);
       } else {
-        // Show detailed error message if available (staging/development)
-        const errorText = data.details 
-          ? `${data.error}: ${data.details}`
-          : data.error || 'Failed to send email. Please try again.';
-        setEmailMessage({ type: 'error', text: errorText });
+        setEmailMessage({ type: 'error', text: pdfDialogCopy.failureMessage });
         console.error('Email error details:', data);
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      setEmailMessage({ type: 'error', text: `An error occurred: ${errorMessage}` });
+      setEmailMessage({ type: 'error', text: pdfDialogCopy.failureMessage });
       console.error('Email error:', error);
     } finally {
       setIsSendingEmail(false);
@@ -913,85 +850,45 @@ export default function MyPicksLanding({
     return <Clock className="h-5 w-5 text-yellow-500" />;
   };
 
+  /** CMS status name for a row. */
   const getStatusText = (status: string) => {
-    if (status === 'submitted') return 'Submitted';
-    if (status === 'deleted') return 'Deleted';
-    return 'In Progress';
+    if (status === 'submitted') return labels.statusSubmitted;
+    if (status === 'deleted') return labels.statusDeleted;
+    return labels.statusInProgress;
   };
 
-  const getStatusColor = (status: string) => {
-    if (status === 'submitted') return 'bg-green-100 text-green-800';
-    if (status === 'deleted') return 'bg-gray-200 text-gray-800';
-    return 'bg-yellow-100 text-yellow-800';
-  };
-
-  /**
-   * Progress bar fill color aligned with row status (avoids implying “submitted” when still in progress).
-   */
-  const getProgressBarFillClass = (status: string) => {
-    if (status === 'submitted') return 'bg-green-600';
-    if (status === 'deleted') return 'bg-gray-500';
-    return 'bg-yellow-500';
-  };
-
-  // Get first name from full name
-  const getFirstName = (fullName: string | null | undefined) => {
-    if (!fullName) return 'User';
-    return fullName.split(' ')[0];
-  };
+  /** First word of the display name (mobile welcome line). */
+  const getFirstName = (fullName: string | null | undefined) => (fullName || '').split(' ')[0];
 
   // Calculate submitted and in-progress brackets count
   const getBracketsInfo = () => {
     const submittedCount = bracketsForYear.filter((bracket) => bracket.status === 'submitted').length;
     const inProgressCount = bracketsForYear.filter((bracket) => bracket.status === 'in_progress').length;
     const deletedCount = bracketsForYear.filter((bracket) => bracket.status === 'deleted').length;
-    const entryCost = isVintage
-      ? picksCopy.entryCost
-      : siteConfig?.entryCost || 5;
     const totalCost = submittedCount * entryCost;
     return { submittedCount, inProgressCount, deletedCount, totalCost, entryCost };
   };
 
   /**
-   * Header status copy based on bracket counts.
-   * Vintage: My Picks CMS flavor cost lines (no Config Sheet welcome_*).
-   * Legacy: sheet welcome_* keys.
+   * Header status copy based on bracket counts (My Picks CMS flavor cost lines).
    * Returns null when New Bracket is disabled and the user has no entries — avoid
    * prompting them to click a disabled control.
    */
   const getDynamicMessage = (): string | null => {
     const { submittedCount, inProgressCount, totalCost } = getBracketsInfo();
-    
+
     let message = '';
-    
-    if (isVintage) {
     if (submittedCount === 0 && inProgressCount === 0) {
-        if (mutationsBlocked) return null;
-        message = picksFlavor.costNoBrackets;
-      } else if (submittedCount > 0 && inProgressCount === 0) {
-        message = picksFlavor.costNoInProgress;
-      } else if (submittedCount === 0 && inProgressCount > 0) {
-        message = picksFlavor.costNoSubmitted;
-      } else {
-        message = picksFlavor.costBoth;
-      }
-    } else if (submittedCount === 0 && inProgressCount === 0) {
       if (mutationsBlocked) return null;
-      message = siteConfig?.welcomeNoBrackets || 'Click New Bracket to start your first entry';
+      message = picksFlavor.costNoBrackets;
     } else if (submittedCount > 0 && inProgressCount === 0) {
-      message =
-        siteConfig?.welcomeNoInProgress ||
-        `Your total cost so far is $${totalCost}. You can create a new entry and save it for later without submitting it now.`;
+      message = picksFlavor.costNoInProgress;
     } else if (submittedCount === 0 && inProgressCount > 0) {
-      message =
-        siteConfig?.welcomeNoSubmitted ||
-        'You have not submitted any brackets yet. Please complete and submit your bracket(s) to be included in the contest.';
+      message = picksFlavor.costNoSubmitted;
     } else {
-      message =
-        siteConfig?.welcomeYourBrackets ||
-        `Your total cost so far is $${totalCost}. In Progress brackets are not included in the contest until submitted.`;
+      message = picksFlavor.costBoth;
     }
-    
+
     return formatVintagePicksLabel(message, picksTokenVars)
       .replace(/{Submitted}/g, submittedCount.toString())
       .replace(/{In Progress}/g, inProgressCount.toString())
@@ -1000,28 +897,10 @@ export default function MyPicksLanding({
 
   const dynamicMessage = getDynamicMessage();
 
-  // Helper function to render messages with line breaks (using || as delimiter)
-  const renderMessageWithLineBreaks = (message: string) => {
-    // Split by || delimiter and render each part
-    const parts = message.split('||');
-    
-    if (parts.length === 1) {
-      // No line breaks, return as single element
-      return <>{message}</>;
-    }
-    
-    // Render with line breaks
-    return (
-      <>
-        {parts.map((part, index) => (
-          <React.Fragment key={index}>
-            {part}
-            {index < parts.length - 1 && <br />}
-          </React.Fragment>
-        ))}
-      </>
-    );
-  };
+  /** CMS copy with `||` hard line breaks. */
+  const renderMessageWithLineBreaks = (message: string) => (
+    <CmsText text={message} />
+  );
 
   /**
    * Primary row open from entry name or status chip: read-only full-bracket modal when available
@@ -1065,34 +944,16 @@ export default function MyPicksLanding({
   };
 
   /**
-   * Target datetime for the My Picks countdown scoreboard.
-   * Vintage: homepage Brackets Ready (pre-publish) or Tourney Tipoff (published).
-   * Legacy: Config Sheet brackets_available_date_time / tournament_start_date.
+   * Target datetime for the My Picks countdown scoreboard:
+   * homepage Brackets Ready (pre-publish) or Tourney Tipoff (published).
    */
-  const countdownTargetRaw = useMemo(() => {
-    if (isVintage) {
-      if (!picksCopy.bracketsPublished) {
-        return bracketsReadyAt.trim();
-      }
-      return tipoffAt.trim();
-    }
-    if (!isBracketsAvailableFlag(siteConfig)) {
-      return siteConfig?.bracketsAvailableDateTime?.trim() || '';
-    }
-    return siteConfig?.tournamentStartDate?.trim() || '';
-  }, [
-    isVintage,
-    picksCopy.bracketsPublished,
-    bracketsReadyAt,
-    tipoffAt,
-    siteConfig?.bracketsAvailable,
-    siteConfig?.bracketsAvailableDateTime,
-    siteConfig?.tournamentStartDate,
-  ]);
+  const countdownTargetRaw = picksCopy.bracketsPublished
+    ? tipoffAt.trim()
+    : bracketsReadyAt.trim();
 
-  /** Vintage: tipoff has arrived (active tournament) — swap timer for live message. */
+  /** Tipoff has arrived (active tournament) — swap timer for live message. */
   const vintageTourneyLive = useMemo(() => {
-    if (!isVintage || !picksCopy.bracketsPublished) return false;
+    if (!picksCopy.bracketsPublished) return false;
     const tip = Date.parse(tipoffAt);
     if (!Number.isFinite(tip)) return false;
     if (countdownMs !== null && countdownTargetRaw === tipoffAt.trim()) {
@@ -1100,7 +961,6 @@ export default function MyPicksLanding({
     }
     return getServerNowMs() >= tip;
   }, [
-    isVintage,
     picksCopy.bracketsPublished,
     tipoffAt,
     countdownMs,
@@ -1111,11 +971,9 @@ export default function MyPicksLanding({
   /**
    * Convert a millisecond duration into HH:MM:SS or MM:SS.
    * Switches to MM:SS once remaining time is under one hour.
-   * For long horizons (>100 hours): vintage uses “N days to go”; legacy uses sheet templates.
-   *
-   * @param useMobileDaysTemplate When true and the “X days away” branch applies, use `countdownTimerMessageMobile` (fallback: desktop message).
+   * For long horizons (>100 hours) uses the CMS “N days to go” templates.
    */
-  const formatCountdown = (remainingMs: number, useMobileDaysTemplate = false) => {
+  const formatCountdown = (remainingMs: number) => {
     const totalSeconds = Math.max(0, Math.floor(remainingMs / 1000));
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -1123,18 +981,11 @@ export default function MyPicksLanding({
 
     if (hours > 100) {
       const daysAway = Math.max(1, Math.ceil(remainingMs / (24 * 60 * 60 * 1000)));
-      if (isVintage) {
-        const template =
-          daysAway === 1
-            ? picksCopy.countdownDayAwayMessage
-            : picksCopy.countdownDaysAwayMessage;
-        return template.replace(/\{days\}/g, String(daysAway));
-      }
-      const desktopTemplate = siteConfig?.countdownTimerMessage?.trim() || 'X Days Away';
-      const mobileTemplate =
-        siteConfig?.countdownTimerMessageMobile?.trim() || desktopTemplate;
-      const template = useMobileDaysTemplate ? mobileTemplate : desktopTemplate;
-      return template.replace(/X/g, String(daysAway));
+      const template =
+        daysAway === 1
+          ? picksCopy.countdownDayAwayMessage
+          : picksCopy.countdownDaysAwayMessage;
+      return template.replace(/\{days\}/g, String(daysAway));
     }
 
     if (hours < 1) {
@@ -1165,21 +1016,11 @@ export default function MyPicksLanding({
     return () => window.clearInterval(intervalId);
   }, [countdownTargetRaw, getServerNowMs]);
 
-  const countdownDisplayDesktop =
-    countdownMs !== null ? formatCountdown(countdownMs, false) : null;
-  const countdownDisplayMobile =
-    countdownMs !== null ? formatCountdown(countdownMs, true) : null;
-  /** Legacy only — vintage always shows Ready/Tipoff/Live status box (no sheet flag). */
-  const showCountdownTimer = siteConfig?.showCountdownTimer?.trim().toUpperCase() === 'YES';
+  const countdownDisplay = countdownMs !== null ? formatCountdown(countdownMs) : null;
   // Countdown is independent of Application Master Lock (lock is a separate fail-safe).
-  const scoreboardTimeDesktop = countdownDisplayDesktop || '00:00';
-  const scoreboardTimeMobile = countdownDisplayMobile || '00:00';
-  const bracketsFieldOpen = isVintage
-    ? picksCopy.bracketsPublished
-    : isBracketsAvailableFlag(siteConfig);
-  const countdownHoverTitle = bracketsFieldOpen
-    ? 'Countdown to tipoff'
-    : 'Countdown to brackets ready';
+  const scoreboardTimeDesktop = countdownDisplay || '00:00';
+  const scoreboardTimeMobile = scoreboardTimeDesktop;
+  const bracketsFieldOpen = picksCopy.bracketsPublished;
 
   /**
    * Which Message Box CMS state applies for the active side panel.
@@ -1192,9 +1033,7 @@ export default function MyPicksLanding({
         ? 'preTipoff'
         : 'preBracket';
 
-  const messageBoxState =
-    picksCopy.messageBox?.[messageBoxStateKey] ??
-    DEFAULT_VINTAGE_PICKS_CONTENT.messageBox[messageBoxStateKey];
+  const messageBoxState = picksCopy.messageBox[messageBoxStateKey];
 
   const messageBoxCountdownToken = isMdUp
     ? scoreboardTimeDesktop
@@ -1252,13 +1091,13 @@ export default function MyPicksLanding({
    * Hover / title while a mutation is pending for this bracket (or globally).
    */
   const rowMutationBusyTitle = (bracketId: string): string | null => {
-    if (copyingBracketId === bracketId) return 'Copying…';
-    if (restoringBracketId === bracketId) return 'Restoring…';
-    if (deletingBracketId === bracketId) return 'Deleting…';
-    if (returningBracketId === bracketId) return 'Returning…';
-    if (submittingBracketId === bracketId) return 'Submitting…';
-    if (creatingBracketBusy) return 'Creating…';
-    if (rowMutationInFlight) return 'Please wait…';
+    if (copyingBracketId === bracketId) return feedback.copyingMessage;
+    if (restoringBracketId === bracketId) return feedback.restoringMessage;
+    if (deletingBracketId === bracketId) return feedback.deletingMessage;
+    if (returningBracketId === bracketId) return feedback.returningMessage;
+    if (submittingBracketId === bracketId) return feedback.submittingMessage;
+    if (creatingBracketBusy) return feedback.creatingMessage;
+    if (rowMutationInFlight) return labels.pleaseWaitLabel;
     return null;
   };
 
@@ -1275,7 +1114,7 @@ export default function MyPicksLanding({
       const busy = rowMutationBusyTitle(bracketId);
       if (busy) return busy;
     } else if (rowMutationInFlight) {
-      return creatingBracketBusy ? 'Creating…' : 'Please wait…';
+      return creatingBracketBusy ? feedback.creatingMessage : labels.pleaseWaitLabel;
     }
     return null;
   };
@@ -1303,15 +1142,11 @@ export default function MyPicksLanding({
    */
   const getInProgressSubmitDisabledReason = (row: Bracket): string | null => {
     if (row.status !== 'in_progress') return null;
-    if (submittingBracketId === row.id) return 'Submitting…';
-    if (rowMutationInFlight) return rowMutationBusyTitle(row.id) || 'Please wait…';
+    if (submittingBracketId === row.id) return feedback.submittingMessage;
+    if (rowMutationInFlight) return rowMutationBusyTitle(row.id) || labels.pleaseWaitLabel;
     if (mutationsBlocked) return accessBlockMessage;
     if (!tournamentData || !emptyBracketTemplate) {
-  return (
-        siteConfig?.bracketsMissingErrorMessage ||
-        FALLBACK_CONFIG.bracketsMissingErrorMessage ||
-        'Tournament data not loaded. Try refreshing.'
-      );
+      return formatVintagePicksLabel(picksCopy.bracketsMissingErrorMessage, { year: activeYear });
     }
     const picks = row.picks || {};
     const entry = row.entryName || '';
@@ -1322,7 +1157,7 @@ export default function MyPicksLanding({
       picks,
       entry,
       tb,
-      siteConfig
+      bracketEditorCopy
     );
     if (!canProceed) {
       return getBracketSubmitReadinessHint(
@@ -1331,14 +1166,11 @@ export default function MyPicksLanding({
         picks,
         entry,
         tb,
-        siteConfig
+        bracketEditorCopy
       );
     }
-    if (isSubmitDuplicateEntryName(entry, siteConfig, submittedEntryNamesForDuplicateCheck)) {
-      return (
-        siteConfig?.finalMessageDuplicateName ||
-        'An entry with this name already exists for this year. Please choose a different name.'
-      );
+    if (isSubmitDuplicateEntryName(entry, submittedEntryNamesForDuplicateCheck)) {
+      return bracketEditorCopy.duplicateNameMessage;
     }
     return null;
   };
@@ -1404,57 +1236,23 @@ export default function MyPicksLanding({
     });
   };
 
-  const { desktopPx: poolFontDesktopPx, mobilePx: poolFontMobilePx } = parsePoolHeaderFontSizes(
-    siteConfig?.poolHeaderFontSize
-  );
-  const poolSectionFontStyle = {
-    ['--pool-font-mobile' as string]: `${poolFontMobilePx}px`,
-    ['--pool-font-desktop' as string]: `${poolFontDesktopPx}px`,
-  } as React.CSSProperties;
-  /** In-pool / out-of-pool banner: icon + bold + message share one size per breakpoint. */
-  const poolBannerIconClass =
-    'shrink-0 h-[length:var(--pool-font-mobile)] w-[length:var(--pool-font-mobile)] md:h-[length:var(--pool-font-desktop)] md:w-[length:var(--pool-font-desktop)]';
-  const poolBannerHeadingClass =
-    'font-bold text-[length:var(--pool-font-mobile)] md:text-[length:var(--pool-font-desktop)]';
-  /** Desktop: em dash + subtitle after title (same line when space allows). Mobile: hidden; detail via info panel. */
-  const poolBannerDetailClass =
-    'font-normal text-gray-600 text-[length:var(--pool-font-mobile)] md:text-[length:var(--pool-font-desktop)]';
   const submittedEntryCountForPoolMessage = useMemo(
     () => bracketsForYear.filter((b) => b.status === 'submitted').length,
     [bracketsForYear]
   );
 
-  /**
-   * Pool section banners: vintage uses CMS flavors; legacy keeps sheet keys
-   * `in_the_pool_header` / `in_the_pool_message` (and not-in equivalents).
-   */
-  const inPoolCopy = isVintage
-    ? {
-        header: formatVintagePicksLabel(picksFlavor.inPoolHeader, picksTokenVars),
-        detail: formatInThePoolMessage(
-          formatVintagePicksLabel(picksFlavor.inPoolDetail, picksTokenVars),
-          submittedEntryCountForPoolMessage
-        ),
-      }
-    : {
-        header: siteConfig?.inThePoolHeader?.trim() || 'In the pool',
-        detail: formatInThePoolMessage(
-          siteConfig?.inThePoolMessage?.trim() ||
-            'Submitted entries count toward the contest.',
-          submittedEntryCountForPoolMessage
-        ),
-      };
-  const outPoolCopy = isVintage
-    ? {
-        header: formatVintagePicksLabel(picksFlavor.outPoolHeader, picksTokenVars),
-        detail: formatVintagePicksLabel(picksFlavor.outPoolDetail, picksTokenVars),
-      }
-    : {
-        header: siteConfig?.notInThePoolHeader?.trim() || 'Not in the pool',
-        detail:
-          siteConfig?.notInThePoolMessage?.trim() ||
-          'In progress and deleted entries are not included until you submit.',
-      };
+  /** Pool section banners from the CMS picks flavor (blank header hides the band title). */
+  const inPoolCopy = {
+    header: formatVintagePicksLabel(picksFlavor.inPoolHeader, picksTokenVars),
+    detail: formatInThePoolMessage(
+      formatVintagePicksLabel(picksFlavor.inPoolDetail, picksTokenVars),
+      submittedEntryCountForPoolMessage
+    ),
+  };
+  const outPoolCopy = {
+    header: formatVintagePicksLabel(picksFlavor.outPoolHeader, picksTokenVars),
+    detail: formatVintagePicksLabel(picksFlavor.outPoolDetail, picksTokenVars),
+  };
 
   /**
    * Open profile modal and load `/api/user/profile` (display name, email, stats).
@@ -1479,7 +1277,7 @@ export default function MyPicksLanding({
         };
       };
       if (!json.success || !json.data) {
-        throw new Error(json.error || 'Failed to load profile');
+        throw new Error(String(json.error || res.status));
       }
       setProfileDisplayName(json.data.displayName || '');
       setProfileDetails({
@@ -1489,7 +1287,8 @@ export default function MyPicksLanding({
         bracketsEntered: json.data.bracketsEntered,
       });
     } catch (e) {
-      setProfileLoadError(e instanceof Error ? e.message : 'Failed to load profile');
+      console.error('[My Picks] Profile load failed:', e);
+      setProfileLoadError(profileCopy.loadFailed);
     } finally {
       setProfileLoading(false);
     }
@@ -1518,12 +1317,13 @@ export default function MyPicksLanding({
         data?: { displayName: string };
       };
       if (!json.success || !json.data) {
-        throw new Error(json.error || 'Failed to save profile');
+        throw new Error(String(json.error || res.status));
       }
       await updateSession({ name: json.data.displayName });
       closeProfileModal();
     } catch (e) {
-      setProfileSaveError(e instanceof Error ? e.message : 'Failed to save profile');
+      console.error('[My Picks] Profile save failed:', e);
+      setProfileSaveError(profileCopy.saveFailed);
     } finally {
       setProfileSaving(false);
     }
@@ -1534,9 +1334,9 @@ export default function MyPicksLanding({
     <button
       type="button"
       onClick={openProfileModal}
-      title="Edit Profile Information"
-      aria-label="Edit Profile Information"
-      className="inline-flex shrink-0 rounded-md p-1.5 text-blue-600 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      title={profileCopy.editButtonLabel || undefined}
+      aria-label={profileCopy.editButtonLabel || undefined}
+      className="v-picks__profile-btn"
       data-testid={`edit-profile-button-${variant}`}
     >
       <Pencil className="h-5 w-5" aria-hidden />
@@ -1544,118 +1344,10 @@ export default function MyPicksLanding({
   );
 
   /**
-   * Thin orange frame around the WMM logo with a year tab that overlaps the logo
-   * blue and shares a thick orange bottom bar — flat across the bottom.
-   */
-  const renderLogoYearFrame = (variant: 'desktop' | 'mobile') => {
-    const isDesktop = variant === 'desktop';
-    const canPickYear = Boolean(onViewingYearChange);
-    const frameWidth = isDesktop ? 168 : 108;
-    const logoHeight = isDesktop ? 118 : 76;
-    const tabWidth = isDesktop ? 76 : 60;
-    const tabHeight = isDesktop ? 20 : 17;
-    /** How far the tab overlaps up into the logo blue (px). */
-    const tabOverlap = isDesktop ? 10 : 8;
-    /** Thick bottom border height; equals tab height so bottoms align flush. */
-    const bottomBarHeight = tabHeight;
-
-    return (
-      <div
-        className={`relative flex-shrink-0 ${isDesktop ? 'mr-4' : ''}`}
-        style={{ width: frameWidth }}
-        data-testid={`picks-logo-year-frame-${variant}`}
-      >
-        {/*
-          Outer orange shell: 1px top/sides, thick bottom bar (= tab height)
-          so the year tab and frame share one flat bottom edge.
-        */}
-        <div
-          className="rounded-[1px] bg-[#f97316]"
-          style={{
-            paddingTop: 1,
-            paddingLeft: 1,
-            paddingRight: 1,
-            paddingBottom: bottomBarHeight,
-          }}
-        >
-          <div
-            className="overflow-hidden bg-[#0f2744]"
-            style={{ height: logoHeight }}
-          >
-            <div className="flex h-full w-full items-center justify-center">
-              {siteConfig?.wmmLogo && !logoError ? (
-                          <Image
-                  src={`/images/${siteConfig.wmmLogo}`}
-                            alt="Site Logo"
-                  width={isDesktop ? 220 : 140}
-                  height={isDesktop ? 118 : 76}
-                  className="h-full w-full object-contain"
-                            onError={() => setLogoError(true)}
-                          />
-              ) : (
-                <span className="px-1 text-center text-[10px] font-semibold text-gray-300">
-                  {logoError ? 'Image not Found' : 'WMM'}
-                </span>
-                        )}
-                      </div>
-                    </div>
-        </div>
-        {/*
-          Year tab: bumped up into the logo blue, bottom flush with the thick
-          orange bottom bar (trapezoid only visible on the top/sides into blue).
-        */}
-        <button
-          type="button"
-          onClick={() => canPickYear && setYearPickerOpen(true)}
-          disabled={!canPickYear}
-          title={canPickYear ? 'Change tournament year' : undefined}
-          aria-label={`Viewing year ${viewingYear}. Change tournament year`}
-          data-testid={`picks-year-badge-${variant}`}
-          className={`absolute left-1/2 z-10 flex -translate-x-1/2 items-center justify-center gap-0.5 bg-[#f97316] font-bold leading-none text-[#0f2744] transition-colors ${
-            isDesktop ? 'text-[11px]' : 'text-[10px]'
-          } ${
-            canPickYear
-              ? 'cursor-pointer hover:brightness-110'
-              : 'cursor-default'
-          }`}
-          style={{
-            bottom: 0,
-            width: tabWidth,
-            height: tabHeight + tabOverlap,
-            clipPath: 'polygon(12% 0, 88% 0, 100% 100%, 0 100%)',
-          }}
-        >
-          <span className="translate-y-[1px]">{viewingYear}</span>
-          {canPickYear && (
-            <ChevronDown
-              className={`${isDesktop ? 'h-3 w-3' : 'h-2.5 w-2.5'} translate-y-[1px]`}
-              aria-hidden
-              strokeWidth={2.75}
-            />
-          )}
-        </button>
-      </div>
-    );
-  };
-
-  /**
-   * Class names for a row action button. Vintage colors come from CMS CSS vars
-   * via `data-vp-action`; legacy keeps Tailwind fill colors.
-   */
-  const rowActionClass = (disabled: boolean, legacyEnabled: string) =>
-    isVintage
-      ? 'v-picks__action-btn flex items-center justify-center'
-      : `w-8 h-8 rounded flex items-center justify-center transition-colors ${
-          disabled
-            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            : legacyEnabled
-        }`;
-
-  /**
    * Tip label: prefer an explicit disabled reason, else the action’s accessible name.
    */
-  const actionTipLabel = (actionKey: keyof typeof PICKS_ACTION_LABELS, reason: string | null) =>
-    reason || PICKS_ACTION_LABELS[actionKey];
+  const actionTipLabel = (actionKey: PicksActionKey, reason: string | null) =>
+    reason || picksActionLabel(actionKey);
 
   /**
    * Row action controls (view / edit / submit / copy / delete / restore / return / email, plus inline confirmations).
@@ -1677,7 +1369,7 @@ export default function MyPicksLanding({
     const restoreDisabledReason = getMutatingActionDisabledReason('restore', bracket.id);
     const returnDisabledReason = getMutatingActionDisabledReason('return', bracket.id);
     const navLockedReason = rowMutationInFlight
-      ? rowMutationBusyTitle(bracket.id) || 'Please wait…'
+      ? rowMutationBusyTitle(bracket.id) || labels.pleaseWaitLabel
       : null;
     const editDisabledReason =
       navLockedReason || getInProgressEditButtonDisabledReason();
@@ -1686,14 +1378,11 @@ export default function MyPicksLanding({
     const iconClass = 'h-4 w-4';
 
     /**
-     * Wrap a row action with tooltip + accessible name (vintage + legacy).
+     * Wrap a row action with tooltip + accessible name.
      */
-    const tip = (key: keyof typeof PICKS_ACTION_LABELS, reason: string | null, node: React.ReactNode) =>
-      isVintage ? (
-        <PicksActionTip label={actionTipLabel(key, reason)}>{node}</PicksActionTip>
-      ) : (
-        node
-      );
+    const tip = (key: PicksActionKey, reason: string | null, node: React.ReactNode) => (
+      <PicksActionTip label={actionTipLabel(key, reason)}>{node}</PicksActionTip>
+    );
 
     return (
       <>
@@ -1708,10 +1397,7 @@ export default function MyPicksLanding({
                     logLocation={onOpenFullBracketModal ? 'FullBracketModal' : 'Print'}
                     bracketId={pad}
                     disabled={Boolean(navLockedReason)}
-                    className={rowActionClass(
-                      Boolean(navLockedReason),
-                      'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer',
-                    )}
+                    className={ROW_ACTION_CLASS}
                     data-vp-action="view"
                     aria-label={actionTipLabel('view', navLockedReason)}
                   >
@@ -1726,10 +1412,7 @@ export default function MyPicksLanding({
                     logLocation="Edit"
                     bracketId={pad}
                     disabled={Boolean(editDisabledReason)}
-                    className={rowActionClass(
-                      Boolean(editDisabledReason),
-                      'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer',
-                    )}
+                    className={ROW_ACTION_CLASS}
                     data-vp-action="edit"
                     aria-label={actionTipLabel('edit', editDisabledReason)}
                   >
@@ -1747,10 +1430,7 @@ export default function MyPicksLanding({
                 bracketId={pad}
                 disabled={Boolean(submitDisabledReason)}
                 aria-busy={submittingBracketId === bracket.id || undefined}
-                className={`${rowActionClass(
-                  Boolean(submitDisabledReason),
-                  'bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer',
-                )}${submittingBracketId === bracket.id ? ' is-busy' : ''}`}
+                className={`${ROW_ACTION_CLASS}${submittingBracketId === bracket.id ? ' is-busy' : ''}`}
                 data-testid="submit-bracket-landing-button"
                 data-vp-action="submit"
                 aria-label={actionTipLabel('submit', submitDisabledReason)}
@@ -1767,10 +1447,7 @@ export default function MyPicksLanding({
                 bracketId={pad}
                 disabled={Boolean(copyDisabledReason)}
                 aria-busy={copyingBracketId === bracket.id || undefined}
-                className={`${rowActionClass(
-                  Boolean(copyDisabledReason),
-                  'bg-green-600 text-white hover:bg-green-700 cursor-pointer',
-                )}${copyingBracketId === bracket.id ? ' is-busy' : ''}`}
+                className={`${ROW_ACTION_CLASS}${copyingBracketId === bracket.id ? ' is-busy' : ''}`}
                 data-testid="copy-bracket-button"
                 data-vp-action="copy"
                 aria-label={actionTipLabel('copy', copyDisabledReason)}
@@ -1787,10 +1464,7 @@ export default function MyPicksLanding({
                 bracketId={pad}
                 disabled={Boolean(deleteDisabledReason)}
                 aria-busy={deletingBracketId === bracket.id || undefined}
-                className={`${rowActionClass(
-                  Boolean(deleteDisabledReason),
-                  'bg-red-600 text-white hover:bg-red-700 cursor-pointer',
-                )}${deletingBracketId === bracket.id ? ' is-busy' : ''}`}
+                className={`${ROW_ACTION_CLASS}${deletingBracketId === bracket.id ? ' is-busy' : ''}`}
                 data-testid="delete-bracket-button"
                 data-vp-action="delete"
                 aria-label={actionTipLabel('delete', deleteDisabledReason)}
@@ -1809,10 +1483,7 @@ export default function MyPicksLanding({
                 logLocation={onOpenFullBracketModal ? 'FullBracketModal' : 'Print'}
                 bracketId={pad}
                 disabled={Boolean(navLockedReason)}
-                className={rowActionClass(
-                  Boolean(navLockedReason),
-                  'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer',
-                )}
+                className={ROW_ACTION_CLASS}
                 data-testid="print-deleted-bracket-button"
                 data-vp-action="view"
                 aria-label={actionTipLabel('view', navLockedReason)}
@@ -1829,10 +1500,7 @@ export default function MyPicksLanding({
                 bracketId={pad}
                 disabled={Boolean(copyDisabledReason)}
                 aria-busy={copyingBracketId === bracket.id || undefined}
-                className={`${rowActionClass(
-                  Boolean(copyDisabledReason),
-                  'bg-green-600 text-white hover:bg-green-700 cursor-pointer',
-                )}${copyingBracketId === bracket.id ? ' is-busy' : ''}`}
+                className={`${ROW_ACTION_CLASS}${copyingBracketId === bracket.id ? ' is-busy' : ''}`}
                 data-testid="copy-deleted-bracket-button"
                 data-vp-action="copy"
                 aria-label={actionTipLabel('copy', copyDisabledReason)}
@@ -1853,10 +1521,7 @@ export default function MyPicksLanding({
                 bracketId={pad}
                 disabled={Boolean(restoreDisabledReason)}
                 aria-busy={restoringBracketId === bracket.id || undefined}
-                className={`${rowActionClass(
-                  Boolean(restoreDisabledReason),
-                  'bg-amber-600 text-white hover:bg-amber-700 cursor-pointer',
-                )}${restoringBracketId === bracket.id ? ' is-busy' : ''}`}
+                className={`${ROW_ACTION_CLASS}${restoringBracketId === bracket.id ? ' is-busy' : ''}`}
                 data-testid="restore-bracket-button"
                 data-vp-action="restore"
                 aria-label={actionTipLabel('restore', restoreDisabledReason)}
@@ -1877,10 +1542,7 @@ export default function MyPicksLanding({
                 bracketId={pad}
                 disabled={Boolean(deleteDisabledReason)}
                 aria-busy={deletingBracketId === bracket.id || undefined}
-                className={`${rowActionClass(
-                  Boolean(deleteDisabledReason),
-                  'bg-red-900 text-white hover:bg-red-950 cursor-pointer',
-                )}${deletingBracketId === bracket.id ? ' is-busy' : ''}`}
+                className={`${ROW_ACTION_CLASS}${deletingBracketId === bracket.id ? ' is-busy' : ''}`}
                 data-testid="permanent-delete-bracket-button"
                 data-vp-action="permanentDelete"
                 aria-label={actionTipLabel('permanentDelete', deleteDisabledReason)}
@@ -1899,10 +1561,7 @@ export default function MyPicksLanding({
                 logLocation={onOpenFullBracketModal ? 'FullBracketModal' : 'Print'}
                 bracketId={pad}
                 disabled={Boolean(navLockedReason)}
-                className={rowActionClass(
-                  Boolean(navLockedReason),
-                  'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer',
-                )}
+                className={ROW_ACTION_CLASS}
                 data-testid="print-bracket-button"
                 data-vp-action="view"
                 aria-label={actionTipLabel('view', navLockedReason)}
@@ -1923,10 +1582,7 @@ export default function MyPicksLanding({
                 bracketId={pad}
                 disabled={Boolean(returnDisabledReason)}
                 aria-busy={returningBracketId === bracket.id || undefined}
-                className={`${rowActionClass(
-                  Boolean(returnDisabledReason),
-                  'bg-amber-600 text-white hover:bg-amber-700 cursor-pointer',
-                )}${returningBracketId === bracket.id ? ' is-busy' : ''}`}
+                className={`${ROW_ACTION_CLASS}${returningBracketId === bracket.id ? ' is-busy' : ''}`}
                 data-testid="return-bracket-button"
                 data-vp-action="return"
                 aria-label={actionTipLabel('return', returnDisabledReason)}
@@ -1943,10 +1599,7 @@ export default function MyPicksLanding({
                 bracketId={pad}
                 disabled={Boolean(copyDisabledReason)}
                 aria-busy={copyingBracketId === bracket.id || undefined}
-                className={`${rowActionClass(
-                  Boolean(copyDisabledReason),
-                  'bg-green-600 text-white hover:bg-green-700 cursor-pointer',
-                )}${copyingBracketId === bracket.id ? ' is-busy' : ''}`}
+                className={`${ROW_ACTION_CLASS}${copyingBracketId === bracket.id ? ' is-busy' : ''}`}
                 data-testid="copy-bracket-button"
                 data-vp-action="copy"
                 aria-label={actionTipLabel('copy', copyDisabledReason)}
@@ -1962,10 +1615,7 @@ export default function MyPicksLanding({
                 logLocation="Email"
                 bracketId={pad}
                 disabled={Boolean(navLockedReason)}
-                className={rowActionClass(
-                  Boolean(navLockedReason),
-                  'bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer',
-                )}
+                className={ROW_ACTION_CLASS}
                 data-testid="email-bracket-button"
                 data-vp-action="email"
                 aria-label={actionTipLabel('email', navLockedReason)}
@@ -2015,9 +1665,11 @@ export default function MyPicksLanding({
     const selectId = `picks-year-select-${viewportSuffix}`;
     return (
       <div className="v-picks__year" data-testid={`picks-year-control-${viewportSuffix}`}>
-        <label className="v-picks__year-label" htmlFor={selectId}>
-          Year
-        </label>
+        {labels.yearLabel ? (
+          <label className="v-picks__year-label" htmlFor={selectId}>
+            {labels.yearLabel}
+          </label>
+        ) : null}
         <div className="v-picks__select-wrap">
           <select
             id={selectId}
@@ -2027,17 +1679,17 @@ export default function MyPicksLanding({
             aria-busy={isYearSwitching || undefined}
             onChange={(e) => onViewingYearChange?.(Number(e.target.value))}
             title={
-              rowMutationInFlight
-                ? 'Please wait…'
+              (rowMutationInFlight
+                ? labels.pleaseWaitLabel
                 : isYearSwitching
-                  ? 'Loading tournament year…'
+                  ? labels.yearLoadingTooltip
                   : canPickYear
-                    ? 'Change tournament year'
-                    : undefined
+                    ? labels.yearSelectTooltip
+                    : '') || undefined
             }
-            aria-label={`Tournament year, currently ${viewingYear}${
-              isHistoricalView ? ', read-only archive' : ''
-            }`}
+            aria-label={
+              formatCopy(labels.yearSelectAriaLabel, { year: viewingYear }) || undefined
+            }
             data-testid={`picks-year-badge-${viewportSuffix}`}
           >
             {yearOptions.map((y) => (
@@ -2085,7 +1737,7 @@ export default function MyPicksLanding({
     const jKey = resultKeyContext.semifinalKey[1] ?? '';
 
     return (
-      <div className="v-picks__ff" role="group" aria-label="Final Four">
+      <div className="v-picks__ff" role="group" aria-label={labels.finalFourAriaLabel || undefined}>
         {slots.map((slot) => {
           const teamName = slot.name ?? '';
           const isFinalist =
@@ -2171,7 +1823,7 @@ export default function MyPicksLanding({
           <FinalFourLogo logoPath={finalFour.champion} teamName={finalFour.championName} fillCell />
         </div>
         {showName && (
-          <span className="v-picks__champ-name">{finalFour.championName || 'Not picked'}</span>
+          <span className="v-picks__champ-name">{finalFour.championName || labels.championNotPicked}</span>
         )}
       </div>
     );
@@ -2179,8 +1831,9 @@ export default function MyPicksLanding({
 
   /**
    * Payment badge for submitted rows (Paid / Pending / Unpaid).
-   * Desktop: Progress column. Mobile: under the entry name.
-   * Non-submitted rows omit the badge. Copy/colors from My Picks CMS `payment`.
+   * Desktop: Progress column. Mobile: under the entry name (Status column removed).
+   * Non-submitted rows omit the badge (they use under-name status chips instead).
+   * Copy/colors from My Picks CMS `payment`.
    *
    * @param bracket - Entry to render payment state for
    */
@@ -2212,21 +1865,45 @@ export default function MyPicksLanding({
   };
 
   /**
-   * Entry name control; optionally stacks the payment badge (mobile only).
+   * Under-name status chip for mobile non-submitted rows (In Progress / Deleted).
+   * Mirrors payment-badge placement under the entry name; submitted rows use payment instead.
+   *
+   * @param bracket - Entry to render a status chip for
+   */
+  const renderVintageUnderNameStatusChip = (bracket: Bracket) => {
+    if (bracket.status === 'submitted') return null;
+    const label = getStatusText(bracket.status);
+    return (
+      <span
+        className={vintageStatusClass(bracket.status)}
+        title={label}
+        aria-label={label}
+        data-testid={`picks-entry-status-chip-${bracket.status}`}
+      >
+        {renderVintageStatusIcon(bracket.status)}
+        <span>{label}</span>
+      </span>
+    );
+  };
+
+  /**
+   * Entry name control; optionally stacks under-name meta (mobile only).
    *
    * @param bracket - Row entry
    * @param label - Display entry name
    * @param title - Native tooltip for the name button
-   * @param options.showPayment - When true, render payment under the name (mobile)
+   * @param options.showUnderNameMeta - When true, payment under name (submitted) or
+   *   In Progress / Deleted chip (non-submitted)
    */
   const renderVintageEntryCell = (
     bracket: Bracket,
     label: string,
     title: string,
-    options?: { showPayment?: boolean },
+    options?: { showUnderNameMeta?: boolean; showPayment?: boolean },
   ) => {
     const locked = rowMutationInFlight;
-    const tip = locked ? 'Please wait…' : title;
+    const tip = locked ? labels.pleaseWaitLabel : title;
+    const showMeta = Boolean(options?.showUnderNameMeta || options?.showPayment);
     return (
       <div className="v-picks__entry">
         <PicksActionTip label={tip}>
@@ -2236,19 +1913,24 @@ export default function MyPicksLanding({
             onClick={() => openBracketFromLandingRow(bracket)}
             disabled={locked}
             aria-disabled={locked || undefined}
-            aria-label={locked ? `Please wait — ${label}` : title}
+            aria-label={(locked ? labels.pleaseWaitLabel : title) || label}
           >
             {label}
           </button>
         </PicksActionTip>
-        {options?.showPayment ? renderVintagePaymentBadge(bracket) : null}
+        {showMeta
+          ? bracket.status === 'submitted'
+            ? renderVintagePaymentBadge(bracket)
+            : renderVintageUnderNameStatusChip(bracket)
+          : null}
       </div>
     );
   };
 
   /**
-   * Entry-row status mark (desktop + mobile): icon only, not clickable.
+   * Entry-row status mark (desktop table): icon only, not clickable.
    * Hover/accessible name carries the status label; Show filters still work separately.
+   * Mobile cards omit this column — status chips stack under the entry name instead.
    *
    * @param bracket - Entry to render a status mark for
    */
@@ -2285,7 +1967,10 @@ export default function MyPicksLanding({
     return (
       <div className="v-picks__progress">
         <span className="v-picks__progress-text">
-          {progress.completed} / {progress.total} picks
+          {formatCopy(labels.progressPicksLabel, {
+            completed: progress.completed,
+            total: progress.total,
+          })}
         </span>
         <span className="v-picks__bar" aria-hidden>
           <span
@@ -2303,7 +1988,7 @@ export default function MyPicksLanding({
     const key = kind === 'in' ? 'in-pool' : 'out-pool';
     const Icon = kind === 'in' ? CheckCircle : Clock;
     return (
-      <div className="v-picks__section-inner" style={poolSectionFontStyle}>
+      <div className="v-picks__section-inner">
         <div className="v-picks__section-line">
           <Icon className={`v-picks__section-icon v-picks__section-icon--${kind}`} aria-hidden />
           <strong className="v-picks__section-title">{copy.header}</strong>
@@ -2315,7 +2000,10 @@ export default function MyPicksLanding({
               type="button"
               onClick={() => setPoolBannerExpanded((prev) => (prev === key ? null : key))}
               className="v-picks__section-info"
-              aria-label={`More about ${copy.header}`}
+              aria-label={
+                formatCopy(labels.sectionInfoAriaLabel, { section: copy.header }) ||
+                undefined
+              }
               aria-expanded={poolBannerExpanded === key}
               data-testid={`brackets-section-${key}-info`}
             >
@@ -2329,7 +2017,7 @@ export default function MyPicksLanding({
               type="button"
               onClick={() => setPoolBannerExpanded(null)}
               className="v-picks__section-close"
-              aria-label="Close section message"
+              aria-label={labels.closeSectionMessageAriaLabel || undefined}
               data-testid={`brackets-section-${key}-close`}
             >
               <X className="v-picks__icon" aria-hidden />
@@ -2344,7 +2032,8 @@ export default function MyPicksLanding({
   /** Welcome line, header messages, status pills, and cost copy. */
   const renderVintageSummary = () => {
     const counts = getBracketsInfo();
-    const displayName = isMdUp ? session?.user?.name || 'User' : getFirstName(session?.user?.name);
+    const displayName = isMdUp ? session?.user?.name || '' : getFirstName(session?.user?.name);
+    const welcome = formatCopy(labels.welcomeLabel, { name: displayName }).trim();
     const vintageHeaderNote = formatVintagePicksLabel(
       picksFlavor.headerNote,
       picksTokenVars
@@ -2354,7 +2043,7 @@ export default function MyPicksLanding({
     return (
       <div className="v-picks__summary">
         <h1 className="v-picks__welcome" data-testid="picks-page-title">
-          <span>Welcome {displayName}</span>
+          {welcome ? <span>{welcome}</span> : null}
           {renderProfileEditButton(viewportSuffix)}
         </h1>
 
@@ -2373,19 +2062,19 @@ export default function MyPicksLanding({
           )
         )}
 
-        <ul className="v-picks__pills" aria-label="Entry counts">
+        <ul className="v-picks__pills" aria-label={labels.entryCountsAriaLabel || undefined}>
           <li className="v-picks__pill v-picks__pill--submitted">
             {renderVintageStatusIcon('submitted')}
-            Submitted {counts.submittedCount}
+            {labels.statusSubmitted} {counts.submittedCount}
           </li>
           <li className="v-picks__pill v-picks__pill--progress">
             {renderVintageStatusIcon('in_progress')}
-            In Progress {counts.inProgressCount}
+            {labels.statusInProgress} {counts.inProgressCount}
           </li>
           {counts.deletedCount > 0 && (
             <li className="v-picks__pill v-picks__pill--deleted">
               {renderVintageStatusIcon('deleted')}
-              Deleted {counts.deletedCount}
+              {labels.statusDeleted} {counts.deletedCount}
             </li>
           )}
         </ul>
@@ -2405,9 +2094,15 @@ export default function MyPicksLanding({
    */
   const renderVintageActions = () => {
     const isPriorSeason = messageBoxStateKey === 'priorYear';
-    const returnLabel = `Back to ${activeYear} →`;
+    const returnLabel = formatCopy(labels.backToActiveYearLabel, { year: activeYear });
     const canReturn =
       Boolean(onViewingYearChange) && !isYearSwitching && !rowMutationInFlight;
+    const payTitle =
+      (rowMutationInFlight
+        ? labels.pleaseWaitLabel
+        : payEnabled
+          ? labels.payTooltip
+          : payDisabledReason) || undefined;
 
     return (
       <div className="v-picks__side">
@@ -2416,23 +2111,17 @@ export default function MyPicksLanding({
             type="button"
             onClick={onCreateNew}
             disabled={Boolean(getMutatingActionDisabledReason('new'))}
-            title={getMutatingActionDisabledReason('new') || 'Create a new bracket'}
+            title={getMutatingActionDisabledReason('new') || labels.newBracketTooltip || undefined}
             aria-busy={creatingBracketBusy || undefined}
             data-testid={`new-bracket-button-${viewportSuffix}`}
             className="v-picks__btn v-picks__btn--primary"
           >
             <Plus className="v-picks__icon" aria-hidden />
-            <span>New Bracket</span>
+            <span>{labels.newBracketLabel}</span>
           </button>
           <span
             className="v-picks__pay-wrap"
-            title={
-              rowMutationInFlight
-                ? 'Please wait…'
-                : payEnabled
-                  ? 'Pay for submitted brackets via Venmo'
-                  : (payDisabledReason ?? 'Pay unavailable')
-            }
+            title={payTitle}
           >
             <button
               type="button"
@@ -2441,19 +2130,13 @@ export default function MyPicksLanding({
               }}
               className="v-picks__btn v-picks__btn--secondary"
               data-testid={`pay-button-${viewportSuffix}`}
-              aria-label="Pay"
+              aria-label={labels.payLabel || undefined}
               aria-disabled={!payEnabled || rowMutationInFlight}
               disabled={!payEnabled || rowMutationInFlight}
-              title={
-                rowMutationInFlight
-                  ? 'Please wait…'
-                  : payEnabled
-                    ? 'Pay for submitted brackets via Venmo'
-                    : (payDisabledReason ?? 'Pay unavailable')
-              }
+              title={payTitle}
             >
               <DollarSign className="v-picks__icon" aria-hidden />
-              <span>Pay</span>
+              <span>{labels.payLabel}</span>
             </button>
           </span>
           <LoggedButton
@@ -2461,8 +2144,8 @@ export default function MyPicksLanding({
             logLocation="Logout"
             className="v-picks__btn v-picks__btn--ghost v-picks__btn--icon"
             data-testid={`logout-button-${viewportSuffix}`}
-            title="Logout"
-            aria-label="Logout"
+            title={labels.logoutLabel || undefined}
+            aria-label={labels.logoutLabel || undefined}
           >
             <LogOut className="v-picks__icon" aria-hidden />
           </LoggedButton>
@@ -2486,8 +2169,16 @@ export default function MyPicksLanding({
             }
             title={messageBoxTitle}
           >
-            <span className="v-picks__board-title">{messageBoxTitle}</span>
-            <span className="v-picks__board-message">{messageBoxMessage}</span>
+            <CmsText
+              as="span"
+              className="v-picks__board-title"
+              text={messageBoxTitle}
+            />
+            <CmsText
+              as="span"
+              className="v-picks__board-message"
+              text={messageBoxMessage}
+            />
             <div className="v-picks__board-return-slot">
               {isPriorSeason ? (
                 <button
@@ -2520,9 +2211,12 @@ export default function MyPicksLanding({
         {isHistoricalView ? (
           <>
             <h3 className="v-picks__empty-title">{emptyTitle}</h3>
-            <p className="v-picks__empty-text" data-testid="picks-empty-historical-message">
-              {emptyBody}
-            </p>
+            <CmsText
+              as="p"
+              className="v-picks__empty-text"
+              data-testid="picks-empty-historical-message"
+              text={emptyBody}
+            />
           </>
         ) : showNotAvailableInEmptyState ? (
           <p className="v-picks__empty-lead" data-testid="picks-empty-not-available-message">
@@ -2538,9 +2232,12 @@ export default function MyPicksLanding({
         ) : (
           <>
             <h3 className="v-picks__empty-title">{emptyTitle}</h3>
-            <p className="v-picks__empty-text" data-testid="picks-empty-cta-message">
-              {emptyCta}
-            </p>
+            <CmsText
+              as="p"
+              className="v-picks__empty-text"
+              data-testid="picks-empty-cta-message"
+              text={emptyCta}
+            />
           </>
         )}
       </div>
@@ -2565,7 +2262,7 @@ export default function MyPicksLanding({
         aria-pressed={pressed}
         aria-disabled={rowMutationInFlight || undefined}
         disabled={rowMutationInFlight}
-        title={rowMutationInFlight ? 'Please wait…' : undefined}
+        title={rowMutationInFlight ? labels.pleaseWaitLabel || undefined : undefined}
         data-testid={testId}
         className={`v-picks__chip v-picks__chip--${tone}${pressed ? ' is-on' : ''}`}
       >
@@ -2576,14 +2273,16 @@ export default function MyPicksLanding({
     return (
       <div className="v-picks__filters" data-testid="brackets-list-filters">
         <div className="v-picks__filter-group">
-          <span className="v-picks__filter-label">Show:</span>
+          {labels.filterShowLabel ? (
+            <span className="v-picks__filter-label">{labels.filterShowLabel}</span>
+          ) : null}
           <div className="v-picks__chips">
-            {chip('bracket-filter-all', 'All', allStatusFiltersOn, 'all', () =>
+            {chip('bracket-filter-all', labels.filterAllLabel, allStatusFiltersOn, 'all', () =>
               updateStatusVisibility({ ...DEFAULT_STATUS_VISIBILITY }),
             )}
             {chip(
               'bracket-filter-submitted',
-              'Submitted',
+              labels.statusSubmitted,
               statusVisibility.submitted && !allStatusFiltersOn,
               'submitted',
               () => toggleStatusFilter('submitted'),
@@ -2591,7 +2290,7 @@ export default function MyPicksLanding({
             )}
             {chip(
               'bracket-filter-in-progress',
-              'In progress',
+              labels.statusInProgress,
               statusVisibility.in_progress && !allStatusFiltersOn,
               'progress',
               () => toggleStatusFilter('in_progress'),
@@ -2599,7 +2298,7 @@ export default function MyPicksLanding({
             )}
             {chip(
               'bracket-filter-deleted',
-              'Deleted',
+              labels.statusDeleted,
               statusVisibility.deleted && !allStatusFiltersOn,
               'deleted',
               () => toggleStatusFilter('deleted'),
@@ -2608,16 +2307,19 @@ export default function MyPicksLanding({
           </div>
         </div>
         <div className="v-picks__search">
-          <label htmlFor="bracket-entry-search" className="v-picks__sr-only">
-            Search brackets by entry name or ID
-          </label>
+          {labels.searchLabel ? (
+            <label htmlFor="bracket-entry-search" className="v-picks__sr-only">
+              {labels.searchLabel}
+            </label>
+          ) : null}
           <Search className="v-picks__search-icon" aria-hidden />
           <input
             id="bracket-entry-search"
             type="search"
             value={entrySearchQuery}
             onChange={(e) => setEntrySearchQuery(e.target.value)}
-            placeholder="Search by entry name or bracket ID…"
+            placeholder={labels.searchPlaceholder || undefined}
+            aria-label={labels.searchLabel || undefined}
             autoComplete="off"
             disabled={rowMutationInFlight}
             data-testid="bracket-entry-search"
@@ -2640,19 +2342,9 @@ export default function MyPicksLanding({
       const accessForcesViewOnly = bracket.status === 'in_progress' && mutationsBlocked;
       const entriesStillAccepted = !mutationsBlocked;
       const rowOpenTitle =
-        bracket.status === 'submitted' || bracket.status === 'deleted'
-          ? onOpenFullBracketModal
-            ? 'View bracket'
-            : 'View/Print'
-          : accessForcesViewOnly
-            ? onOpenFullBracketModal
-              ? 'View bracket'
-              : 'View/Print'
-            : bracket.status === 'in_progress' && entriesStillAccepted
-              ? 'Edit bracket'
-              : onOpenFullBracketModal
-                ? 'View bracket'
-                : 'View/Print';
+        bracket.status === 'in_progress' && !accessForcesViewOnly && entriesStillAccepted
+          ? labels.actionEdit
+          : labels.actionView;
       const inPool = bracket.status === 'submitted';
       const prev = sortedBrackets[index - 1];
       const prevInPool = prev ? prev.status === 'submitted' : false;
@@ -2662,7 +2354,9 @@ export default function MyPicksLanding({
         submitDisabledReason,
         accessForcesViewOnly,
         rowOpenTitle,
-        rawEntryName: bracket.entryName || `Bracket #${index + 1}`,
+        rawEntryName:
+          bracket.entryName ||
+          formatCopy(labels.untitledEntryLabel, { n: index + 1 }),
         progress: calculateProgress(bracket.picks),
         finalFour: getFinalFourTeams(bracket.picks),
         showInHeader: inPool && (index === 0 || !prevInPool),
@@ -2675,17 +2369,25 @@ export default function MyPicksLanding({
       return (
         <div className="v-picks__table-wrap">
           <table className="v-picks__table">
-            <caption className="v-picks__sr-only">Your bracket entries for {viewingYear}</caption>
+            {labels.tableCaption ? (
+              <caption className="v-picks__sr-only">
+                {formatCopy(labels.tableCaption, { year: viewingYear })}
+              </caption>
+            ) : null}
             <thead>
               <tr>
-                <th scope="col" className="v-picks__th v-picks__th--entry">Entry</th>
-                <th scope="col" className="v-picks__th">Status</th>
-                <th scope="col" className="v-picks__th">Progress</th>
-                <th scope="col" className="v-picks__th">Final Four</th>
-                <th scope="col" className="v-picks__th v-picks__th--champ" title="Champion">
-                  Champ
+                <th scope="col" className="v-picks__th v-picks__th--entry">{labels.columnEntry}</th>
+                <th scope="col" className="v-picks__th">{labels.columnStatus}</th>
+                <th scope="col" className="v-picks__th">{labels.columnProgress}</th>
+                <th scope="col" className="v-picks__th">{labels.columnFinalFour}</th>
+                <th
+                  scope="col"
+                  className="v-picks__th v-picks__th--champ"
+                  title={labels.columnChampion || undefined}
+                >
+                  {labels.columnChamp}
                 </th>
-                <th scope="col" className="v-picks__th v-picks__th--actions">Actions</th>
+                <th scope="col" className="v-picks__th v-picks__th--actions">{labels.columnActions}</th>
               </tr>
             </thead>
             <tbody>
@@ -2708,9 +2410,7 @@ export default function MyPicksLanding({
                     )}
                     <tr className={`v-picks__row v-picks__row--${bracket.status}`}>
                       <td className="v-picks__cell v-picks__cell--entry">
-                        {renderVintageEntryCell(bracket, ctx.rawEntryName, ctx.rowOpenTitle, {
-                          showPayment: false,
-                        })}
+                        {renderVintageEntryCell(bracket, ctx.rawEntryName, ctx.rowOpenTitle)}
                       </td>
                       <td className="v-picks__cell v-picks__cell--status">
                         {renderVintageStatusMark(bracket)}
@@ -2747,11 +2447,10 @@ export default function MyPicksLanding({
     return (
       <div className="v-picks__cards">
         <div className="v-picks__card-headers" aria-hidden>
-          <span className="v-picks__card-h v-picks__card-h--entry">Entry</span>
-          <span className="v-picks__card-h v-picks__card-h--status">Status</span>
-          <span className="v-picks__card-h v-picks__card-h--ff">Final Four</span>
-          <span className="v-picks__card-h v-picks__card-h--champ">Champ</span>
-          <span className="v-picks__card-h v-picks__card-h--actions">Actions</span>
+          <span className="v-picks__card-h v-picks__card-h--entry">{labels.columnEntry}</span>
+          <span className="v-picks__card-h v-picks__card-h--ff">{labels.columnFinalFour}</span>
+          <span className="v-picks__card-h v-picks__card-h--champ">{labels.columnChamp}</span>
+          <span className="v-picks__card-h v-picks__card-h--actions">{labels.columnActions}</span>
         </div>
         {sortedBrackets.map((bracket, index) => {
           const ctx = rowContext(bracket, index);
@@ -2775,15 +2474,16 @@ export default function MyPicksLanding({
                 data-testid="picks-entry-card"
                 data-status={bracket.status}
               >
-                {/* Name (+ pay badge under) | Status | FF 2×2 | Champ | Actions 2×2 */}
+                {/* Name (+ pay / status chip under) | FF 2×2 | Champ square | Actions 2×2 */}
                 <div className="v-picks__card-row">
                   {renderVintageEntryCell(
                     bracket,
                     ctx.rawEntryName,
-                    `${ctx.rowOpenTitle} · ID ${ctx.paddedId}`,
-                    { showPayment: true },
+                    [ctx.rowOpenTitle, formatCopy(labels.entryIdLabel, { id: ctx.paddedId })]
+                      .filter((part) => part.trim())
+                      .join(' · '),
+                    { showUnderNameMeta: true },
                   )}
-                  {renderVintageStatusMark(bracket)}
                   {renderVintageFinalFour(ctx.finalFour)}
                   {renderVintageChampion(ctx.finalFour, false, 'v-picks__champ--mobile')}
                   <div className="v-picks__actions v-picks__actions--grid">
@@ -2808,10 +2508,11 @@ export default function MyPicksLanding({
 
   /** Vintage in-place loader while a year soft-switch is in flight (hides empty-state flash). */
   const renderVintageYearLoading = () => (
-    <div className="v-picks__loading v-picks__loading--year" data-testid="picks-year-loading">
-      <div className="v-picks__loading-spinner" aria-hidden />
-      <p className="v-picks__loading-text">Loading tournament…</p>
-    </div>
+    <LoadingBasketball
+      className="v-picks__loading--year"
+      message={formatCopy(feedback.switchingYearMessage, { year: viewingYear })}
+      testId="picks-year-loading"
+    />
   );
 
   /** Full vintage landing body (rendered inside the `.v-picks` root; modals are shared below). */
@@ -2826,12 +2527,12 @@ export default function MyPicksLanding({
         </div>
       ) : null}
 
-      <section className="v-picks__panel" aria-label="Account and entry summary">
+      <section className="v-picks__panel" aria-label={labels.summaryAriaLabel || undefined}>
         {renderVintageSummary()}
         {renderVintageActions()}
       </section>
 
-      <section className="v-picks__list" aria-label="Your entries">
+      <section className="v-picks__list" aria-label={labels.entriesAriaLabel || undefined}>
         {isYearSwitching ? (
           renderVintageYearLoading()
         ) : bracketsForYear.length === 0 ? (
@@ -2841,10 +2542,12 @@ export default function MyPicksLanding({
             {renderVintageFilters()}
             {filteredDisplayBrackets.length === 0 ? (
               <div className="v-picks__empty v-picks__empty--filtered">
-                <p className="v-picks__empty-title">No brackets match your filters</p>
-                <p className="v-picks__empty-text">
-                  Try turning on more statuses, clearing the search, or click Reset below.
-                </p>
+                {labels.noFilterMatchesTitle ? (
+                  <p className="v-picks__empty-title">{labels.noFilterMatchesTitle}</p>
+                ) : null}
+                {labels.noFilterMatchesBody ? (
+                  <p className="v-picks__empty-text">{labels.noFilterMatchesBody}</p>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => {
@@ -2854,7 +2557,7 @@ export default function MyPicksLanding({
                   data-testid="bracket-filters-reset"
                   className="v-picks__btn v-picks__btn--primary"
                 >
-                  Reset filters
+                  {labels.resetFiltersLabel}
                 </button>
               </div>
             ) : (
@@ -2868,1054 +2571,129 @@ export default function MyPicksLanding({
 
   return (
     <div
-      className={
-        isVintage
-          ? `v-picks${isYearSwitching ? ' v-picks--year-switching' : ''}`
-          : 'min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100'
-      }
+      className={`v-picks${isYearSwitching ? ' v-picks--year-switching' : ''}`}
       style={
-        isVintage
-          ? ({
-              ...vintagePicksChromeCssVars(picksCopy),
-              ...standingsResultChromeStyle(standingsChrome),
-            } as React.CSSProperties)
-          : undefined
+        {
+          ...vintagePicksChromeCssVars(picksCopy),
+          ...standingsResultChromeStyle(standingsChrome),
+        } as React.CSSProperties
       }
-      aria-busy={isVintage && isYearSwitching ? true : undefined}
-      data-testid={isVintage && isYearSwitching ? 'picks-year-switching' : undefined}
+      aria-busy={isYearSwitching ? true : undefined}
+      data-testid={isYearSwitching ? 'picks-year-switching' : undefined}
     >
-      {isVintage ? (
-        renderVintageLanding()
-      ) : (
-      <>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-            {/* Welcome Header */}
-            <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
-              {isHistoricalView && (
-                <div
-                  className="mb-4 rounded-md border border-yellow-300 bg-yellow-100 px-3 py-2 text-sm font-medium text-yellow-800"
-                  data-testid="picks-historical-banner"
-                >
-                  {renderMessageWithLineBreaks(priorYearBannerMessage)}
-                </div>
-              )}
-              {/* Desktop Layout */}
-              <div className="hidden md:block">
-                <div className="flex items-start justify-between">
-                  {renderLogoYearFrame('desktop')}
-                  
-                  <div className="flex-1">
-                    {/* Line 1: Welcome message with full name */}
-                    <h1 className="text-2xl font-bold text-gray-900 flex flex-wrap items-center gap-2">
-                      <span>
-                      Welcome {session?.user?.name || 'User'}
-                      </span>
-                      {renderProfileEditButton('desktop')}
-                    </h1>
-                    
-                    {/* Line 2: Brackets message, or access-block (not-available goes to empty state) */}
-                    {showHeaderAccessMessage ? (
-                      <p className={accessMessageClassName} data-testid="picks-access-message-desktop">
-                        {renderMessageWithLineBreaks(accessBlockMessage)}
-                      </p>
-                    ) : (
-                      !mutationsBlocked &&
-                      siteConfig?.bracketsMessage && (
-                      <p className="text-sm text-gray-600 mt-1">
-                        {renderMessageWithLineBreaks(siteConfig.bracketsMessage)}
-                      </p>
-                      )
-                    )}
-                    
-                    {/* Line 3: Status bubbles - always shown */}
-                    <div className="flex flex-wrap items-center gap-2 mt-2">
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
-                        Submitted {getBracketsInfo().submittedCount}
-                      </span>
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                        <Clock className="h-4 w-4 text-yellow-500 mr-1" />
-                        In Progress {getBracketsInfo().inProgressCount}
-                      </span>
-                      {getBracketsInfo().deletedCount > 0 && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-800">
-                          <Trash2 className="h-4 w-4 text-gray-600 mr-1" />
-                          Deleted {getBracketsInfo().deletedCount}
-                        </span>
-                      )}
-                    </div>
-                    
-                    {/* Line 4: Dynamic message — hidden when it would push a disabled New Bracket */}
-                    {dynamicMessage && (
-                    <p className="text-sm text-gray-600 mt-2">
-                        {renderMessageWithLineBreaks(dynamicMessage)}
-                    </p>
-                    )}
-                  </div>
-                  
-                  {/* Action buttons */}
-                  <div className="flex flex-col gap-2 flex-shrink-0 ml-4">
-                    <div className="flex items-center space-x-3">
-                    <button
-                      onClick={onCreateNew}
-                        disabled={Boolean(getMutatingActionDisabledReason('new'))}
-                        title={getMutatingActionDisabledReason('new') || 'Create a new bracket'}
-                        aria-busy={creatingBracketBusy || undefined}
-                        data-testid="new-bracket-button-desktop"
-                      className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
-                          getMutatingActionDisabledReason('new')
-                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                      }`}
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span>New Bracket</span>
-                    </button>
+      {renderVintageLanding()}
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (payEnabled) setPayModalOpen(true);
-                        }}
-                        disabled={!payEnabled}
-                        className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
-                          payEnabled
-                            ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        }`}
-                        data-testid="pay-button-desktop"
-                        title={
-                          payEnabled
-                            ? 'Pay for submitted brackets via Venmo'
-                            : (payDisabledReason ?? 'Pay unavailable')
-                        }
-                      >
-                        <DollarSign className="h-4 w-4" />
-                        <span>Pay</span>
-                      </button>
-                    
-                    <LoggedButton
-                      onClick={() => signOut({ callbackUrl: '/auth/signin' })}
-                      logLocation="Logout"
-                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
-                        data-testid="logout-button-desktop"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      <span>Logout</span>
-                    </LoggedButton>
-                  </div>
-                    {showCountdownTimer && (
-                      <div
-                        className="flex w-full items-center justify-center rounded border border-gray-700 bg-black px-4 py-2.5 shadow-inner text-amber-300"
-                        title={countdownHoverTitle}
-                        style={{
-                          backgroundImage:
-                            'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.14) 0.7px, transparent 0.7px)',
-                          backgroundSize: '4px 4px',
-                        }}
-                      >
-                        <span
-                          className={`${scoreboardFont.className} text-[16px] tracking-[0.05em]`}
-                          style={{
-                            textShadow: '0 0 5px rgba(252,211,77,0.9)',
-                          }}
-                        >
-                          {scoreboardTimeDesktop}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Mobile Layout */}
-              <div className="flex flex-col md:hidden gap-3">
-                <div className="flex flex-col">
-                  {/* Top row: logo/year frame, welcome, buttons */}
-                  <div className="flex items-start justify-between gap-2">
-                    {renderLogoYearFrame('mobile')}
-                    <div className="min-w-0 flex-1">
-                      {/* Line 1: Welcome message with first name only */}
-                      <h1 className="text-xl font-bold text-gray-900 flex flex-wrap items-center gap-2">
-                        <span>Welcome {getFirstName(session?.user?.name)}</span>
-                        {renderProfileEditButton('mobile')}
-                      </h1>
-                      
-                      {/* Line 2: Mobile brackets message, or access-block (not-available goes to empty state) */}
-                      {showHeaderAccessMessage ? (
-                        <p className={accessMessageClassName} data-testid="picks-access-message-mobile">
-                          {renderMessageWithLineBreaks(accessBlockMessage)}
-                        </p>
-                      ) : (
-                        !mutationsBlocked &&
-                        siteConfig?.mobileBracketsMessage && (
-                        <p className="text-sm text-gray-600 mt-1">
-                          {renderMessageWithLineBreaks(siteConfig.mobileBracketsMessage)}
-                        </p>
-                        )
-                      )}
-                    </div>
-                    
-                    {/* Action buttons */}
-                    <div className="flex flex-col items-end flex-shrink-0 gap-2">
-                      <div className="flex items-center space-x-2">
-                      <button
-                        onClick={onCreateNew}
-                          disabled={Boolean(getMutatingActionDisabledReason('new'))}
-                          title={getMutatingActionDisabledReason('new') || 'Create a new bracket'}
-                          aria-busy={creatingBracketBusy || undefined}
-                          aria-label="New Bracket"
-                          data-testid="new-bracket-button-mobile"
-                        className={`px-2 py-2 rounded-lg flex items-center space-x-2 ${
-                            getMutatingActionDisabledReason('new')
-                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                            : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                        }`}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (payEnabled) setPayModalOpen(true);
-                          }}
-                          disabled={!payEnabled}
-                          className={`px-2 py-2 rounded-lg flex items-center ${
-                            payEnabled
-                              ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
-                              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          }`}
-                          data-testid="pay-button-mobile"
-                          aria-label="Pay"
-                          title={
-                            payEnabled
-                              ? 'Pay for submitted brackets via Venmo'
-                              : (payDisabledReason ?? 'Pay unavailable')
-                          }
-                        >
-                          <DollarSign className="h-4 w-4" />
-                        </button>
-                      
-                      <LoggedButton
-                        onClick={() => signOut({ callbackUrl: '/auth/signin' })}
-                        logLocation="Logout"
-                        className="bg-blue-600 text-white px-2 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 cursor-pointer"
-                          data-testid="logout-button-mobile"
-                      >
-                        <LogOut className="h-4 w-4" />
-                      </LoggedButton>
-                      </div>
-                      {showCountdownTimer && (
-                        <div
-                          className="inline-flex items-center rounded border border-gray-700 bg-black px-2 py-1 shadow-inner text-amber-300"
-                          title={countdownHoverTitle}
-                          style={{
-                            backgroundImage:
-                              'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.14) 0.7px, transparent 0.7px)',
-                            backgroundSize: '4px 4px',
-                          }}
-                        >
-                          <span
-                            className={`${scoreboardFont.className} text-[9px] tracking-[0.05em]`}
-                            style={{
-                              textShadow: '0 0 5px rgba(252,211,77,0.9)',
-                            }}
-                          >
-                            {scoreboardTimeMobile}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Line 3: Status bubbles with info icon on same line - always shown */}
-                  <div className="flex items-center justify-between mt-2 gap-2">
-                    <div className="flex flex-wrap items-center gap-2 min-w-0">
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
-                        Submitted {getBracketsInfo().submittedCount}
-                      </span>
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                        <Clock className="h-4 w-4 text-yellow-500 mr-1" />
-                        In Progress {getBracketsInfo().inProgressCount}
-                      </span>
-                      {getBracketsInfo().deletedCount > 0 && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-800">
-                          <Trash2 className="h-4 w-4 text-gray-600 mr-1" />
-                          Deleted {getBracketsInfo().deletedCount}
-                        </span>
-                      )}
-                    </div>
-                    
-                    {/* Info icon — only when there is header status copy to reveal */}
-                    {dynamicMessage && (
-                    <button
-                      onClick={() => setExpandedStatus(expandedStatus === 'info' ? null : 'info')}
-                      className="text-blue-600 hover:text-blue-700 cursor-pointer flex-shrink-0"
-                      style={{ width: '16px', marginLeft: '8px' }}
-                        aria-label="Show bracket status details"
-                    >
-                      <Info className="h-4 w-4" />
-                    </button>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Line 4: Dynamic message - full width, hidden by default, shown when info icon is clicked */}
-                {expandedStatus === 'info' && dynamicMessage && (
-                  <div className="text-sm text-gray-600 bg-blue-50 p-2 rounded relative w-full">
-                    <button
-                      onClick={() => setExpandedStatus(null)}
-                      className="absolute top-2 text-gray-500 hover:text-gray-700 cursor-pointer"
-                      style={{ right: '8px' }}
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                    <div className="pr-6">
-                      <p>{renderMessageWithLineBreaks(dynamicMessage)}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-
-        {/* Brackets List */}
-        <div className="bg-white rounded-lg shadow-lg p-6">
-
-          {isYearSwitching ? (
-            <div className="text-center py-12" data-testid="picks-year-loading">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
-              <p className="mt-4 text-gray-600">Loading tournament...</p>
-            </div>
-          ) : bracketsForYear.length === 0 ? (
-            <div className="text-center py-12" data-testid="picks-empty-state">
-              <Trophy className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              {isHistoricalView ? (
-                <>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    No entries for {viewingYear}
-                  </h3>
-                  <p className="text-gray-600" data-testid="picks-empty-historical-message">
-                    You have no brackets for {viewingYear}. Switch to {activeYear} to create new picks.
-                  </p>
-                </>
-              ) : showNotAvailableInEmptyState ? (
-                <p
-                  className="mx-auto max-w-2xl text-lg font-bold leading-relaxed text-gray-900 md:text-2xl md:leading-snug"
-                  data-testid="picks-empty-not-available-message"
-                >
-                  {renderMessageWithLineBreaks(accessBlockMessage)}
-                </p>
-              ) : picksAccess.blocked ? (
-                <>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No brackets yet</h3>
-                  <p className={accessMessageClassName.replace('mt-1', '')} data-testid="picks-empty-access-message">
-                    {renderMessageWithLineBreaks(accessBlockMessage)}
-                  </p>
-                </>
-              ) : (
-                <>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No brackets yet</h3>
-              <p className="text-gray-600">
-                    <span className="hidden md:inline">
-                      Use the &quot;New Bracket&quot; button to create your first bracket.
-                    </span>
-                <span className="md:hidden">Use the &quot;+&quot; button to create your first bracket.</span>
-              </p>
-                </>
-              )}
-            </div>
-          ) : (
-            <>
-              <div
-                className="mb-4 flex flex-col gap-3 border-b border-gray-100 pb-4"
-                data-testid="brackets-list-filters"
-              >
-                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-                  <span className="text-sm font-medium text-gray-700 shrink-0">Show:</span>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => updateStatusVisibility({ ...DEFAULT_STATUS_VISIBILITY })}
-                      aria-pressed={allStatusFiltersOn}
-                      data-testid="bracket-filter-all"
-                      className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                        allStatusFiltersOn
-                          ? 'border-blue-600 bg-blue-600 text-white'
-                          : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      All
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleStatusFilter('submitted')}
-                      aria-pressed={statusVisibility.submitted && !allStatusFiltersOn}
-                      data-testid="bracket-filter-submitted"
-                      className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
-                        statusVisibility.submitted && !allStatusFiltersOn
-                          ? 'border-green-400 bg-green-100 text-green-900'
-                          : 'border-gray-200 bg-gray-50 text-gray-400'
-                      }`}
-                    >
-                      Submitted
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleStatusFilter('in_progress')}
-                      aria-pressed={statusVisibility.in_progress && !allStatusFiltersOn}
-                      data-testid="bracket-filter-in-progress"
-                      className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
-                        statusVisibility.in_progress && !allStatusFiltersOn
-                          ? 'border-amber-400 bg-amber-100 text-amber-900'
-                          : 'border-gray-200 bg-gray-50 text-gray-400'
-                      }`}
-                    >
-                      In progress
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleStatusFilter('deleted')}
-                      aria-pressed={statusVisibility.deleted && !allStatusFiltersOn}
-                      data-testid="bracket-filter-deleted"
-                      className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
-                        statusVisibility.deleted && !allStatusFiltersOn
-                          ? 'border-gray-400 bg-gray-200 text-gray-800'
-                          : 'border-gray-200 bg-gray-50 text-gray-400'
-                      }`}
-                    >
-                      Deleted
-                    </button>
-                  </div>
-                </div>
-                <div className="relative w-full max-w-md">
-                  <label htmlFor="bracket-entry-search" className="sr-only">
-                    Search brackets by entry name or ID
-                  </label>
-                  <Search
-                    className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
-                    aria-hidden
-                  />
-                  <input
-                    id="bracket-entry-search"
-                    type="search"
-                    value={entrySearchQuery}
-                    onChange={(e) => setEntrySearchQuery(e.target.value)}
-                    placeholder="Search by entry name or bracket ID…"
-                    autoComplete="off"
-                    data-testid="bracket-entry-search"
-                    className="w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              {filteredDisplayBrackets.length === 0 ? (
-                <div className="py-10 text-center text-gray-600">
-                  <p className="text-sm font-medium text-gray-900">No brackets match your filters</p>
-                  <p className="mt-1 text-sm">
-                    Try turning on more statuses, clearing the search, or click Reset below.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      updateStatusVisibility({ ...DEFAULT_STATUS_VISIBILITY });
-                      setEntrySearchQuery('');
-                    }}
-                    data-testid="bracket-filters-reset"
-                    className="mt-4 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                  >
-                    Reset filters
-                  </button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Entry Name
-                    </th>
-                    <th className="hidden px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider md:table-cell">
-                      ID
-                    </th>
-                    <th className="hidden px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider md:table-cell">
-                      Status
-                    </th>
-                    <th className="hidden px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider md:table-cell">
-                      Progress
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Final Four
-                    </th>
-                    <th className="hidden px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider md:table-cell">
-                      Champ
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {(() => {
-                    const sortedBrackets = sortBracketsForDisplay(filteredDisplayBrackets);
-                    return sortedBrackets.map((bracket, index) => {
-                    const inPool = bracket.status === 'submitted';
-                    const prev = sortedBrackets[index - 1];
-                    const prevInPool = prev ? prev.status === 'submitted' : false;
-                    const showInHeader = inPool && (index === 0 || !prevInPool);
-                    const showOutHeader = !inPool && (index === 0 || prevInPool);
-
-                    const bracketData = bracket as unknown as Record<string, unknown>;
-                    const number = (bracketData.bracketNumber as number) || 0;
-                    const submitDisabledReason =
-                      bracket.status === 'in_progress'
-                        ? getInProgressSubmitDisabledReason(bracket)
-                        : null;
-                    const progress = calculateProgress(bracket.picks);
-                    const finalFour = getFinalFourTeams(bracket.picks);
-                    
-                    const isDeletedRow = bracket.status === 'deleted';
-                    /** In-progress brackets open read-only when picks access blocks mutations. */
-                    const accessForcesViewOnly =
-                      bracket.status === 'in_progress' && mutationsBlocked;
-                    const entriesStillAccepted = !mutationsBlocked;
-                    const rowOpenTitle =
-                      bracket.status === 'submitted' || bracket.status === 'deleted'
-                        ? onOpenFullBracketModal
-                          ? 'View bracket'
-                          : 'View/Print'
-                        : accessForcesViewOnly
-                          ? onOpenFullBracketModal
-                            ? 'View bracket'
-                            : 'View/Print'
-                          : bracket.status === 'in_progress' && entriesStillAccepted
-                            ? 'Edit bracket'
-                            : onOpenFullBracketModal
-                              ? 'View bracket'
-                              : 'View/Print';
-                    return (
-                    <React.Fragment key={bracket.id}>
-                    {showInHeader && (
-                      <tr className="bg-white" data-testid="brackets-section-in-pool">
-                        <td colSpan={6} className="px-4 pt-2 pb-2 border-b border-gray-100 text-left">
-                          <div
-                            className="flex flex-row flex-wrap items-center justify-start gap-x-2 gap-y-1 text-gray-900"
-                            style={poolSectionFontStyle}
-                          >
-                            <CheckCircle className={`${poolBannerIconClass} text-green-600`} aria-hidden />
-                            <strong className={poolBannerHeadingClass}>{inPoolCopy.header}</strong>
-                            {inPoolCopy.detail ? (
-                              <span className={`hidden md:inline ${poolBannerDetailClass}`}>
-                                — {inPoolCopy.detail}
-                              </span>
-                            ) : null}
-                            {inPoolCopy.detail ? (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setPoolBannerExpanded((prev) =>
-                                    prev === 'in-pool' ? null : 'in-pool',
-                                  )
-                                }
-                                className="inline-flex shrink-0 rounded-md p-0.5 text-blue-600 hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 md:hidden"
-                                aria-label={`More about ${inPoolCopy.header}`}
-                                aria-expanded={poolBannerExpanded === 'in-pool'}
-                                data-testid="brackets-section-in-pool-info"
-                              >
-                                <Info className="h-4 w-4" aria-hidden />
-                              </button>
-                            ) : null}
-                        </div>
-                          {poolBannerExpanded === 'in-pool' && inPoolCopy.detail ? (
-                            <div className="relative mt-2 rounded bg-blue-50 p-2 pr-8 text-sm text-gray-700 md:hidden">
-                              <button
-                                type="button"
-                                onClick={() => setPoolBannerExpanded(null)}
-                                className="absolute right-2 top-2 text-gray-500 hover:text-gray-700"
-                                aria-label="Close section message"
-                                data-testid="brackets-section-in-pool-close"
-                              >
-                                <X className="h-4 w-4" aria-hidden />
-                              </button>
-                              <div>{renderMessageWithLineBreaks(inPoolCopy.detail)}</div>
-                            </div>
-                          ) : null}
-                      </td>
-                      </tr>
-                    )}
-                    {showOutHeader && (
-                      <tr className="bg-white" data-testid="brackets-section-out-pool">
-                        <td
-                          colSpan={6}
-                          className={`px-4 pb-2 border-b border-gray-100 text-left ${
-                            index > 0 && prevInPool ? 'pt-8 border-t-2 border-gray-300' : 'pt-2'
-                          }`}
-                        >
-                          <div
-                            className="flex flex-row flex-wrap items-center justify-start gap-x-2 gap-y-1 text-gray-900"
-                            style={poolSectionFontStyle}
-                          >
-                            <Clock className={`${poolBannerIconClass} text-yellow-500`} aria-hidden />
-                            <strong className={poolBannerHeadingClass}>{outPoolCopy.header}</strong>
-                            {outPoolCopy.detail ? (
-                              <span className={`hidden md:inline ${poolBannerDetailClass}`}>
-                                — {outPoolCopy.detail}
-                              </span>
-                            ) : null}
-                            {outPoolCopy.detail ? (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setPoolBannerExpanded((prev) =>
-                                    prev === 'out-pool' ? null : 'out-pool',
-                                  )
-                                }
-                                className="inline-flex shrink-0 rounded-md p-0.5 text-blue-600 hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 md:hidden"
-                                aria-label={`More about ${outPoolCopy.header}`}
-                                aria-expanded={poolBannerExpanded === 'out-pool'}
-                                data-testid="brackets-section-out-pool-info"
-                              >
-                                <Info className="h-4 w-4" aria-hidden />
-                              </button>
-                            ) : null}
-                        </div>
-                          {poolBannerExpanded === 'out-pool' && outPoolCopy.detail ? (
-                            <div className="relative mt-2 rounded bg-blue-50 p-2 pr-8 text-sm text-gray-700 md:hidden">
-                              <button
-                                type="button"
-                                onClick={() => setPoolBannerExpanded(null)}
-                                className="absolute right-2 top-2 text-gray-500 hover:text-gray-700"
-                                aria-label="Close section message"
-                                data-testid="brackets-section-out-pool-close"
-                              >
-                                <X className="h-4 w-4" aria-hidden />
-                              </button>
-                              <div>{renderMessageWithLineBreaks(outPoolCopy.detail)}</div>
-                            </div>
-                          ) : null}
-                      </td>
-                      </tr>
-                    )}
-                    <tr className={`hover:bg-gray-50 ${isDeletedRow ? 'bg-gray-50/80' : ''}`}>
-                      <td className="px-4 py-3 text-left align-top max-md:max-w-[7.25rem] max-md:min-w-0 max-md:pr-2">
-                        {(() => {
-                          const rawEntryName = bracket.entryName || `Bracket #${index + 1}`;
-                          const mobileNameLines = computeMyPicksEntryNameMobileLines(rawEntryName);
-                          return (
-                        <div>
-                          <div
-                            className={`inline-flex max-w-full cursor-pointer flex-row items-start px-2 py-1 rounded-full text-xs font-medium md:items-center ${getStatusColor(bracket.status)}`}
-                            onClick={() => openBracketFromLandingRow(bracket)}
-                            title={rowOpenTitle}
-                          >
-                            <span className="mt-0.5 shrink-0 md:mt-0">{getStatusIcon(bracket.status)}</span>
-                            <span
-                              className="ml-1 min-w-0 text-left md:max-w-none md:whitespace-normal"
-                              title={rawEntryName}
-                            >
-                              <span className="md:hidden">
-                                {mobileNameLines.map((line, li) => (
-                                  <React.Fragment key={li}>
-                                    {li > 0 ? <br /> : null}
-                                    {line}
-                                  </React.Fragment>
-                                ))}
-                              </span>
-                              <span className="hidden md:inline">{rawEntryName}</span>
-                            </span>
-                          </div>
-                        </div>
-                          );
-                        })()}
-                      </td>
-                      <td className="hidden px-4 py-3 whitespace-nowrap text-center text-xs font-medium tabular-nums text-gray-500 md:table-cell">
-                        <span data-testid="bracket-row-entry-id" title={`Bracket ID ${String(number).padStart(6, '0')}`}>
-                          {String(number).padStart(6, '0')}
-                        </span>
-                      </td>
-                      <td className="hidden px-4 py-3 whitespace-nowrap text-center md:table-cell">
-                        <div
-                          className={`inline-flex cursor-pointer items-center rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(bracket.status)}`}
-                          onClick={() => openBracketFromLandingRow(bracket)}
-                          title={rowOpenTitle}
-                        >
-                          <span>{getStatusText(bracket.status)}</span>
-                        </div>
-                      </td>
-                      <td className="hidden px-4 py-3 text-center align-middle md:table-cell">
-                        {bracket.status === 'submitted' ? (
-                          <div className="flex items-center justify-center gap-1.5">
-                            <span title="Submitted — complete">
-                              <CheckCircle
-                                className="h-6 w-6 text-green-600"
-                                aria-label="Submitted — bracket complete"
-                              />
-                            </span>
-                            {venmoUser && (
-                              <span
-                                title={
-                                  bracket.paymentStatus === 'paid'
-                                    ? 'Payment Confirmed'
-                                    : bracket.paymentStatus === 'pending'
-                                      ? 'Payment Pending'
-                                      : 'Not Paid'
-                                }
-                              >
-                                <DollarSign
-                                  className={`h-5 w-5 ${
-                                    bracket.paymentStatus === 'paid'
-                                      ? 'text-green-600'
-                                      : bracket.paymentStatus === 'pending'
-                                        ? 'text-yellow-500'
-                                        : 'text-gray-400'
-                                  }`}
-                                  aria-hidden
-                                />
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                        <div className="flex flex-col items-center space-y-1 mx-auto" style={{ width: 'fit-content' }}>
-                          <div className="text-xs text-gray-600">
-                            {progress.completed} / {progress.total} picks
-                          </div>
-                          <div className="bg-gray-200 rounded-full h-2" style={{ width: '60px' }}>
-                            <div 
-                                className={`${getProgressBarFillClass(bracket.status)} h-2 rounded-full transition-all duration-300`}
-                              style={{ width: `${progress.percentage}%` }}
-                              />
-                          </div>
-                        </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-center max-md:px-2">
-                        {/*
-                          Desktop: one row TL, BL, TR, BR (unchanged).
-                          Mobile (&lt; md): 2×2 grid TL / TR on top, BL / BR below (order utilities only apply below md).
-                        */}
-                        <div className="mx-auto grid w-max grid-cols-2 place-items-center max-md:gap-1 md:flex md:w-auto md:flex-row md:items-center md:justify-center md:gap-1">
-                          {/* Top Left */}
-                          <div
-                            className={`max-md:order-1 md:order-none flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded md:h-8 md:w-8 ${
-                              finalFour.championId &&
-                              finalFour.topLeftId === finalFour.championId
-                                ? 'bg-gray-100 max-md:bg-amber-100'
-                                : 'bg-gray-100'
-                            } ${
-                            finalFour.topLeftId && (finalFour.topLeftId === finalFour.finalist1Id || finalFour.topLeftId === finalFour.finalist2Id)
-                              ? 'border-2 border-blue-600'
-                              : 'border border-gray-300'
-                          }`}
-                          >
-                            <FinalFourLogo logoPath={finalFour.topLeft} teamName={finalFour.topLeftName} />
-                          </div>
-                          {/* Bottom Left */}
-                          <div
-                            className={`max-md:order-3 md:order-none flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded ${
-                              finalFour.championId &&
-                              finalFour.bottomLeftId === finalFour.championId
-                                ? 'bg-gray-100 max-md:bg-amber-100'
-                                : 'bg-gray-100'
-                            } ${
-                            finalFour.bottomLeftId && (finalFour.bottomLeftId === finalFour.finalist1Id || finalFour.bottomLeftId === finalFour.finalist2Id)
-                              ? 'border-2 border-blue-600'
-                              : 'border border-gray-300'
-                          }`}
-                          >
-                            <FinalFourLogo logoPath={finalFour.bottomLeft} teamName={finalFour.bottomLeftName} />
-                          </div>
-                          {/* Top Right */}
-                          <div
-                            className={`max-md:order-2 md:order-none flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded ${
-                              finalFour.championId &&
-                              finalFour.topRightId === finalFour.championId
-                                ? 'bg-gray-100 max-md:bg-amber-100'
-                                : 'bg-gray-100'
-                            } ${
-                            finalFour.topRightId && (finalFour.topRightId === finalFour.finalist1Id || finalFour.topRightId === finalFour.finalist2Id)
-                              ? 'border-2 border-blue-600'
-                              : 'border border-gray-300'
-                          }`}
-                          >
-                            <FinalFourLogo logoPath={finalFour.topRight} teamName={finalFour.topRightName} />
-                          </div>
-                          {/* Bottom Right */}
-                          <div
-                            className={`max-md:order-4 md:order-none flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded ${
-                              finalFour.championId &&
-                              finalFour.bottomRightId === finalFour.championId
-                                ? 'bg-gray-100 max-md:bg-amber-100'
-                                : 'bg-gray-100'
-                            } ${
-                            finalFour.bottomRightId && (finalFour.bottomRightId === finalFour.finalist1Id || finalFour.bottomRightId === finalFour.finalist2Id)
-                              ? 'border-2 border-blue-600'
-                              : 'border border-gray-300'
-                          }`}
-                          >
-                            <FinalFourLogo logoPath={finalFour.bottomRight} teamName={finalFour.bottomRightName} />
-                          </div>
-                        </div>
-                      </td>
-                      <td className="hidden px-4 py-3 text-center md:table-cell">
-                        <div className="flex justify-center">
-                          <div className={`w-10 h-10 flex items-center justify-center overflow-hidden rounded border-2 ${
-                            finalFour.champion
-                              ? 'bg-green-50 border-green-600'
-                              : 'bg-gray-100 border-gray-300'
-                          }`}>
-                            <FinalFourLogo logoPath={finalFour.champion} teamName={finalFour.championName} />
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-center text-sm font-medium max-md:align-top max-md:px-2">
-                        {/*
-                          In a table row, all cells share the row height (often set by Entry / Final Four).
-                          Grid default align-content: stretch distributes extra height between row tracks,
-                          which blows apart a 2×2 button layout — content-start + items-start keeps rows tight.
-                        */}
-                        <div className="mx-auto grid w-max grid-cols-2 justify-items-center max-md:content-start max-md:items-start max-md:gap-1 md:mx-0 md:flex md:w-auto md:max-w-none md:flex-wrap md:items-center md:justify-center md:gap-2">
-                          {/* Action buttons - icon-only squares with tooltips; 2×2 grid on mobile, row on md+ */}
-                          {renderRowActionButtons(bracket, number, submitDisabledReason, accessForcesViewOnly)}
-                                  </div>
-                      </td>
-                    </tr>
-                    </React.Fragment>
-                    );
-                  });
-                  })()}
-                </tbody>
-              </table>
-            </div>
-              )}
-                                </>
-                              )}
-        </div>
-      </div>
-      </>
-      )}
-
-      {/* Edit profile (display name) */}
-      {profileModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="profile-modal-title"
-          data-testid="profile-edit-modal"
-        >
-          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
-            <div className="mb-4 flex items-start justify-between gap-2">
-              <h2 id="profile-modal-title" className="text-lg font-semibold text-gray-900">
-                Edit profile information
-              </h2>
-              <button
-                type="button"
-                onClick={closeProfileModal}
-                className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                aria-label="Close"
-              >
-                <X className="h-5 w-5" />
-              </button>
-                        </div>
-
-            {profileLoading ? (
-              <p className="text-sm text-gray-600">Loading…</p>
-            ) : profileLoadError ? (
-              <p className="text-sm text-red-600">{profileLoadError}</p>
-            ) : profileDetails ? (
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="profile-display-name" className="block text-sm font-medium text-gray-700">
-                    Display name
-                  </label>
-                  <input
-                    id="profile-display-name"
-                    type="text"
-                    value={profileDisplayName}
-                    onChange={(e) => setProfileDisplayName(e.target.value)}
-                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    data-testid="profile-display-name-input"
-                    autoComplete="name"
-                  />
-                </div>
-
-                <dl className="space-y-3 border-t border-gray-100 pt-4 text-sm">
-                  <div className="flex justify-between gap-4">
-                    <dt className="text-gray-500 shrink-0">Account created</dt>
-                    <dd className="text-right text-gray-900">
-                      {new Date(profileDetails.createdAt).toLocaleDateString(undefined, {
-                        dateStyle: 'long',
-                      })}
-                    </dd>
-            </div>
-                  <div className="flex justify-between gap-4">
-                    <dt className="text-gray-500 shrink-0">Email</dt>
-                    <dd className="text-right break-all text-gray-900">{profileDetails.email}</dd>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <dt className="text-gray-500 shrink-0">Tournaments played</dt>
-                    <dd className="text-right text-gray-900">{profileDetails.tournamentsPlayed}</dd>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <dt className="text-gray-500 shrink-0">Brackets entered</dt>
-                    <dd className="text-right text-gray-900">{profileDetails.bracketsEntered}</dd>
-                  </div>
-                </dl>
-
-                {profileSaveError && (
-                  <p className="text-sm text-red-600" data-testid="profile-save-error">
-                    {profileSaveError}
-                  </p>
-                )}
-
-                <div className="flex justify-end gap-2 border-t border-gray-100 pt-4">
-                  <button
-                    type="button"
-                    onClick={closeProfileModal}
-                    disabled={profileSaving}
-                    className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={saveProfileDisplayName}
-                    disabled={profileSaving || !profileDisplayName.trim()}
-                    data-testid="profile-save-button"
-                    className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {profileSaving ? 'Saving…' : 'Save'}
-                  </button>
-        </div>
-      </div>
+      <ConfirmDialog
+        open={profileModalOpen}
+        title={profileCopy.title}
+        message=""
+        confirmLabel={profileCopy.saveLabel}
+        cancelLabel={profileCopy.cancelLabel}
+        tone="neutral"
+        busy={profileSaving}
+        busyMessage={profileCopy.savingLabel}
+        errorMessage={profileSaveError || profileLoadError}
+        confirmDisabled={profileLoading || !profileDetails || !profileDisplayName.trim()}
+        testId="profile-edit-modal"
+        onConfirm={() => void saveProfileDisplayName()}
+        onCancel={closeProfileModal}
+      >
+        {profileLoading ? (
+          <LoadingBasketball
+            variant="plain"
+            message={profileCopy.loadingMessage}
+            testId="profile-edit-loading"
+          />
+        ) : profileDetails ? (
+          <>
+            {profileCopy.displayNameLabel ? (
+              <label htmlFor="profile-display-name" className="v-confirm__label">
+                {profileCopy.displayNameLabel}
+              </label>
             ) : null}
-          </div>
-        </div>
-      )}
+            <input
+              id="profile-display-name"
+              type="text"
+              value={profileDisplayName}
+              onChange={(e) => setProfileDisplayName(e.target.value)}
+              className="v-confirm__input"
+              aria-label={profileCopy.displayNameLabel || undefined}
+              data-testid="profile-display-name-input"
+              autoComplete="name"
+            />
+            <dl className="v-confirm__details">
+              {profileCopy.accountCreatedLabel ? (
+                <div>
+                  <dt>{profileCopy.accountCreatedLabel}</dt>
+                  <dd>
+                    {new Date(profileDetails.createdAt).toLocaleDateString(undefined, {
+                      dateStyle: 'long',
+                    })}
+                  </dd>
+                </div>
+              ) : null}
+              {profileCopy.emailLabel ? (
+                <div>
+                  <dt>{profileCopy.emailLabel}</dt>
+                  <dd>{profileDetails.email}</dd>
+                </div>
+              ) : null}
+              {profileCopy.tournamentsPlayedLabel ? (
+                <div>
+                  <dt>{profileCopy.tournamentsPlayedLabel}</dt>
+                  <dd>{profileDetails.tournamentsPlayed}</dd>
+                </div>
+              ) : null}
+              {profileCopy.bracketsEnteredLabel ? (
+                <div>
+                  <dt>{profileCopy.bracketsEnteredLabel}</dt>
+                  <dd>{profileDetails.bracketsEntered}</dd>
+                </div>
+              ) : null}
+            </dl>
+          </>
+        ) : null}
+      </ConfirmDialog>
 
-      {/* Email Confirmation Dialog */}
-      {emailDialogOpen && emailBracket && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              {siteConfig?.emailWindowTitle || 'Email Bracket PDF'}
-            </h3>
-            <p className="text-sm text-gray-600 mb-6">
-              {(siteConfig?.emailWindowMessage || 'Would you like to send yourself an email with a PDF of your bracket?')
-                .replace(/\{Entry Name\}/g, emailBracket.entryName || `Bracket ${emailBracket.id}`)
-                .replace(/\{email\}/g, session?.user?.email || 'your email address')}
-            </p>
-            {emailMessage && (
-              <div className={`mb-4 p-3 rounded ${
-                emailMessage.type === 'success' 
-                  ? 'bg-green-50 text-green-800 border border-green-200' 
-                  : 'bg-red-50 text-red-800 border border-red-200'
-              }`}>
-                <p className="text-sm">{emailMessage.text}</p>
-              </div>
-            )}
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => {
-                  setEmailDialogOpen(false);
-                  setEmailBracket(null);
-                  setEmailMessage(null);
-                }}
-                disabled={isSendingEmail}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmEmailBracket}
-                disabled={isSendingEmail}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSendingEmail ? 'Sending...' : 'Send Email'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={emailDialogOpen && Boolean(emailBracket)}
+        title={pdfDialogCopy.title}
+        message={formatEmailCopy(pdfDialogCopy.message, {
+          entry: emailBracket?.entryName || '',
+          email: session?.user?.email || '',
+        })}
+        confirmLabel={pdfDialogCopy.sendLabel}
+        cancelLabel={pdfDialogCopy.cancelLabel}
+        tone="neutral"
+        busy={isSendingEmail}
+        busyMessage={pdfDialogCopy.sendingMessage}
+        errorMessage={emailMessage?.type === 'error' ? emailMessage.text : null}
+        testId="email-pdf-dialog"
+        onConfirm={() => void confirmEmailBracket()}
+        onCancel={() => {
+          setEmailDialogOpen(false);
+          setEmailBracket(null);
+          setEmailMessage(null);
+        }}
+      />
 
-      {/* Tournament year picker (from logo year tile) */}
-      {yearPickerOpen && (
-        <div
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="picks-year-picker-title"
-          data-testid="picks-year-picker-modal"
-          onClick={() => setYearPickerOpen(false)}
-        >
-          <div
-            className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2
-              id="picks-year-picker-title"
-              className="text-lg font-bold text-gray-900"
-            >
-              Select tournament year
-            </h2>
-            <p className="mt-1 text-sm text-gray-600">
-              Prior years are read-only. Only {activeYear} accepts new picks.
-            </p>
-            <div className="mt-4 flex flex-col gap-2">
-              {yearOptions.map((y) => {
-                const isCurrentContest = y === activeYear;
-                const isSelected = y === viewingYear;
-                return (
-                  <button
-                    key={y}
-                    type="button"
-                    data-testid={`picks-year-option-${y}`}
-                    onClick={() => {
-                      onViewingYearChange?.(y);
-                      setYearPickerOpen(false);
-                    }}
-                    className={`flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left text-sm font-semibold transition-colors ${
-                      isSelected
-                        ? 'border-blue-600 bg-blue-50 text-blue-900'
-                        : 'border-gray-200 bg-white text-gray-900 hover:bg-gray-50'
-                    }`}
-                  >
-                    <span>
-                      {y}
-                      {isCurrentContest ? ' (current)' : ''}
-                    </span>
-                    {isSelected && <span className="text-blue-600">Selected</span>}
-                  </button>
-                );
-              })}
-            </div>
-            <button
-              type="button"
-              className="mt-4 w-full rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              onClick={() => setYearPickerOpen(false)}
-              data-testid="picks-year-picker-cancel"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Venmo Payment Modal */}
-      {venmoUser && (
+      {/* Payment Slip modal — mount only while open for a fresh form each time */}
+      {payEnabled && payModalOpen && (
         <PaymentModal
           isOpen={payModalOpen}
           onClose={() => setPayModalOpen(false)}
           unpaidBrackets={unpaidSubmittedBrackets.map((b) => ({
             id: b.id,
-            entryName: b.entryName || `Bracket`,
+            entryName:
+              b.entryName ||
+              formatCopy(labels.untitledEntryLabel, {
+                n: (b as unknown as { bracketNumber?: number }).bracketNumber ?? '',
+              }),
             bracketNumber: (b as unknown as { bracketNumber?: number }).bracketNumber,
           }))}
           entryCost={entryCost}
-          venmoUser={venmoUser}
+          paymentConfig={paymentConfig}
+          availableMethods={availablePaymentMethods}
           onPaymentCreated={() => {
             setPayModalOpen(false);
             onPaymentCreated?.();
@@ -3940,7 +2718,7 @@ export default function MyPicksLanding({
               ? pendingPermanentDeleteBracketId
               : pendingReturnBracketId;
         const entry =
-          brackets.find((b) => b.id === pendingId)?.entryName?.trim() || 'this entry';
+          brackets.find((b) => b.id === pendingId)?.entryName?.trim() || '';
         const copy = picksCopy.confirms[confirmKind];
         const busy =
           confirmKind === 'return'
@@ -3959,6 +2737,9 @@ export default function MyPicksLanding({
             entryName={entry}
             tone={confirmKind === 'return' ? 'warn' : 'danger'}
             busy={busy}
+            busyMessage={
+              confirmKind === 'return' ? feedback.returningMessage : feedback.deletingMessage
+            }
             testId={testId}
             onConfirm={() => {
               if (!pendingId) return;
@@ -3982,15 +2763,15 @@ export default function MyPicksLanding({
       })()}
 
       {/* Email Status Message */}
-      {emailMessage && !emailDialogOpen && (
-        <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
-          emailMessage.type === 'success' 
-            ? 'bg-green-50 text-green-800 border border-green-200' 
-            : 'bg-red-50 text-red-800 border border-red-200'
-        }`}>
-          <p className="text-sm font-medium">{emailMessage.text}</p>
+      {emailMessage && !emailDialogOpen && emailMessage.text.trim() ? (
+        <div
+          className={`v-toast${emailMessage.type === 'error' ? ' v-toast--error' : ''}`}
+          role="status"
+          data-testid="email-pdf-result"
+        >
+          {emailMessage.text}
         </div>
-      )}
+      ) : null}
 
     </div>
   );

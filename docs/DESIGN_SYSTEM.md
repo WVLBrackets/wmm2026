@@ -171,6 +171,8 @@ Use navy background, paper icons/text, and a 3px red active underline. Baseline 
 
 Icons come from Lucide by default. Custom SVGs must match the same apparent weight and box, not simply their file dimensions. Decorative icons are hidden from assistive technology; icon-only links have meaningful accessible labels. Preserve selected-page semantics and admin-only visibility.
 
+**Session stability (Warren, 2026-10-27):** Soft navigation must not rebuild or jitter the shortcut bar (admin icon vanishing, Scores flashing an old/default icon, order shifting). CMS toolbar slots lock once for the browser session after the first real page paint (`VintageToolbarSessionProvider`); ops-admin visibility is checked once and only rechecked after login/logout. Route loading shells must not persist DEFAULT toolbar chrome (`persistToolbarSession={false}`).
+
 ### Footer
 
 Reuse the shared publication footer and contact treatment. Environment labels and build stamps belong to application chrome; do not bake them into card artwork or published content.
@@ -264,7 +266,7 @@ Baseline archive grid: three columns above 900px, two at 601–900px, one at 600
 
 Preserve the welcome/entry summary, current versus historical context, year selector, search, status filters, entry list, and appropriate actions. Desktop uses a table; the compact mobile pattern keeps aligned columns rather than turning each entry into a tall generic card.
 
-Mobile baseline below 768px: Entry | Status/payment | Final Four | Champ | Actions; entry name 13px Oswald 600; FF 2 × 2 tiles of 26px with 2px gaps; champ 39px (both CMS-editable). Payment chip stacks under the entry name on mobile. Empty, unavailable, historical/read-only, and action-locked states remain part of the component. Desktop My Picks no longer shows an ID column (search may still match bracket ID).
+Mobile baseline below 768px: Entry | Final Four | Champ | Actions (no Status column). Entry takes leftover width; FF / Champ / Actions are equal fixed columns sized to the 2×2 tile footprint (`2 × --vs-ff-size-card + gap`, default 26px tiles / 3px gap). Champ is one square of that full footprint. Entry name 13px Oswald 600. Under the entry name: payment chip for submitted rows; In Progress / Deleted status chips for non-submitted (same placement/density as payment). Empty, unavailable, historical/read-only, and action-locked states remain part of the component. Desktop My Picks no longer shows an ID column (search may still match bracket ID); desktop Status stays icon-only in its own column.
 
 **Desktop Progress column (Warren, 2026-10-25):** Submitted rows show the payment status chip (Paid / Pending / Unpaid) instead of a 63/63 pick bar—submission already implies a complete bracket. In-progress and deleted rows keep the pick-count progress bar. Payment remains relevant only for submitted entries; entry Status remains the signal for non-submitted rows.
 
@@ -284,7 +286,7 @@ One shared season panel under New Bracket / Pay / Logout. Current-year and prior
 - Intro + cost lines use reserved min-heights so wrapping differences do not jump the layout. Defaults: current “Create and manage your {year} brackets.” / prior “Review your {year} brackets. Editing is closed.”; cost lines keep real `{cost}` totals with current-year submission guidance vs historical read-only guidance.
 - Tournament year comes from application config (`activeYear` / viewing year), never the browser calendar. Do not hardcode years or countdown values in components.
 
-**Status chips (Warren, 2026-10-24 / 2026-10-25):** Welcome count pills and Show filters remain short labeled ovals (content-sized width, shared height/radius tokens in `picks.css`). **Entry-row Status** (desktop table and mobile cards) is icon-only (`v-picks__status--square`), not clickable; `title` / `aria-label` carry the status name. Show filters remain the way to filter by status. Color/border semantics stay as in §2 (solid green Submitted, gold In Progress, dashed gray Deleted).
+**Status chips (Warren, 2026-10-24 / 2026-10-25 / 2026-10-31):** Welcome count pills and Show filters remain short labeled ovals (content-sized width, shared height/radius tokens in `picks.css`). **Desktop entry-row Status** is icon-only (`v-picks__status--square`), not clickable; `title` / `aria-label` carry the status name. **Mobile cards** omit the Status column — submitted rows show payment under the name; in-progress / deleted rows show the labeled In Progress / Deleted chip under the name. Show filters remain the way to filter by status. Color/border semantics stay as in §2 (solid green Submitted, gold In Progress, dashed gray Deleted).
 
 **Action buttons (Warren, 2026-10-25) — component variants**
 
@@ -308,17 +310,37 @@ Prior-year **New Bracket** and **Pay** stay in place but use the Disabled gray t
 
 **Tooltips:** every icon action exposes an accessible name and a hover/focus tip (not `title` alone). Touch devices must not require a first tap for the tip before activation. Unsubmit describes returning a submitted entry to In Progress (out of the pool until resubmitted).
 
+**Entry Payment modal (Option 2 — Payment Slip, Warren, 2026-10-25 / Zelle, 2026-10-31):** My Picks Pay uses a square-cornered slip dialog (max ~420px). Paper body `#f2ead8`; navy `#152c3a` header/text/rules; quiet separators `#b7b09f`; white inputs. Navy header: “Warren’s March Madness” + **ENTRY PAYMENT** (Oswald). Body: **SELECT ENTRIES**, **Additional Payment** stepper, Note when additional > 0. Additional-only payments (no brackets selected) are allowed when dollars + note are present. Footer: **PAYMENT SUMMARY** / **TOTAL** (Alfa Slab One); Cancel (paper + navy outline); **CHOOSE PAYMENT METHOD** with equal navy/paper **PAY {total} WITH VENMO** and **PAY {total} WITH ZELLE** (side-by-side from 480px when both available; full-width when one). Zelle opens an in-slip instruction step (recipient + Copy, amount + Copy Amount, note + Copy Note, optional CMS QR, Back / I’ve Sent) — does not launch a bank app. Venmo deep-link construction unchanged; opening Venmo is not confirmation. I’ve Sent records a pending request with `payment_method` for admin reconciliation — never marks paid. CMS: homepage **Payments** section (master Enable Payments, Enable Venmo/Zelle, recipients, QR on/off + image; FPO QR bundled). Master off → non-admin Pay hidden + server blocks new requests; admins may still pay for testing; history and confirm/reject remain. Text labels only (no provider brand marks). Preserve Escape/Cancel/backdrop close, focus trap, and loading/error states.
+
+### 4.6b Public Scoreboard
+
+**Family:** public data page (same shell as Standings / My Picks).
+
+Pool-facing **Scoreboard** at `/scoreboard` (`?group=` / `?year=` searchParams — same flat-route pattern as Standings) shows three sections: **Live** (tipoff ascending — games closest to ending on top), **Upcoming** (tipoff ascending — next tip on top), then **Final** (completion time descending — newest final on top so earlier finals sink). Legacy `/scoreboard/[slug]` redirects to `?group=`. Desktop group tabs keep `label · gameCount`; section titles do not. Beside each group page title (e.g. ROUND 2), show a compact tipoff date range in Oswald (`3/21/26` or `3/26/26 - 3/29/26` for multi-day groups, America/New_York). Final cards append the play date beside FINAL (`FINAL · 3/28/26`). Finals sort by tipoff descending (later slate / more recently completed first), then `updatedAt`. Ribbon order: Play In → Round 1 days → Round 2 → Rounds 3 & 4 → **Final Four → Championship**. Cards use paper/navy/red, Oswald status labels, tabular scores, school logos, and a small winner mark on finals — not bracket-pick correctness colors. Historical years start at **2026** (never expose 2025 or earlier in the year switcher). CMS default year (Scoreboard gear → Default scoreboard year) controls the landing year when `?year=` is omitted. **2026 Play In** is hard-seeded with Dayton First Four results when the field JSON omitted play-in slots.
+
+**Card layout (Warren, 2026-10-28):** Simple ESPN-style cards — status line (FINAL / FINAL - nOT / live **1ST HALF|2ND HALF|OT|nOT · clock** / upcoming **weekday date · time TZ** from `tipoffAt`), two team rows (logo · seed · name · score; loser muted on finals), footer round + **region name** (not Top Left / etc.). Public is read-only. Admin gear uses the same cards with inline-editable scores, tipoff (`datetime-local` on Upcoming), and game state (Upcoming / Live / Final; live period uncapped OT ladder + clock). One master **Publish**; Close without Publish discards edits. `GET /api/scoreboard` returns `tipoffAt` ISO (or null until sync/admin sets it).
+
+**Big Balls sync:** Admin/cron pull `GET /v1/ncaab/tournament?season=` ([NCAAB docs](https://bigballsdata.com/docs/ncaab-stats)) using `API_KEY_BIGBALL`. App year **2026** maps to BBS **season=2025** (season-start year). Sync writes tipoff from `scheduled_at`, finals (and live when present), then rebuilds the public snapshot. Name match uses school names (+ UConn→Connecticut alias); First Four rows may differ if our FF slate ≠ feed.
+
+Configurable **pages** (label, order, assigned games, desktop 1–4 / mobile 1–2 density) are admin-managed. Default groups: Play In; Round 1 Day 1/2; Round 2; Rounds 3 & 4; Final Four. Density applies to both sections; partial last rows do not stretch card widths. Tablet (≥901px) uses desktop density.
+
+**Admin gear** (primary vintage admin only) opens the on-page editor (`?edit=1`). Writes use `/api/admin/vintage-scoreboard` (session + CSRF). Non-admins never see the gear and cannot mutate. **Newly Final games** update the KEY (bracket picks; First Four → tourney definition results; championship combined score → KEY tie-breaker) and recompute Live Standings — same bridge as Scoreboard of Record / BBS sync (`upsertScoreboardGameAndApply`). Public reads a cached `scoreboard_snapshots` row; admin save / “Publish to public board” rebuilds it. **Header matches Standings:** centered SCOREBOARD headline, Updated stamp directly under it, year select (+ admin gear) on the far right; no subheadline and no visitor Refresh control. Mobile stacks title then centered year row. **Route load:** soft navigation shows Scoreboard chrome immediately (`loading.tsx` + Suspense) with the basketball spinner until the snapshot is ready — peer of Standings under the root layout (no scoreboard-only layout / slug segment). In-page group and year switches soft-update via fetch + `history.replaceState` so brand + toolbar stay mounted. Toolbar default includes **Scores** → `/scoreboard` (older CMS docs fill an empty slot on normalize).
+
 ### 4.7 Live Standings
 
 Live is the public standings experience. Do not add a Daily/Live switch. Preserve year selection, search, and All Entries / My Entries filters.
+
+**Updated + tournament progress (Warren, 2026-10-27):** Under the STANDINGS headline, keep the Updated stamp and, immediately beside it, the shared basketball mark (`/images/basketball icon.png`) plus “N of 63 Games Complete”, where N is KEY results entered for the scored 63-game tree (Round of 64–Championship). Hide progress in roster / 2020 newspaper modes.
+
+**Route load (Warren, 2026-10-27):** Soft navigation must show Standings chrome immediately (`app/standings/loading.tsx` + Suspense fallback): masthead, centered STANDINGS headline, year control, paper background — never a blank/black wait. Body content uses the shared basketball spinner (`v-standings__loading`) until the snapshot/roster is ready (same language as My Picks).
 
 **Legacy finals (≤2025):** Packaged static snapshots from old Webnode final pages (2017–2019, 2021–2025) load through the same Standings UI. Names are display-only (no owner link, no bracket click-through); All / My Entries is hidden. Every archive entry is Paid Yes on Standings (Webnode `NPcell` / Paid?=N is ignored for ≤2025). Final Four / Champ shades use a hardcoded KEY for that year’s real NCAA results — not a live KEY bracket. Rebuild with `node scripts/build-legacy-standings.mjs`. Finalist heavy frames: wide years (2017–2019, 2021–2022) use explicit Finals columns; compact HTML years (2023–2025) recover frames from Webnode `W2`/`L2`/`U2` FF cell classes (3px black border). Entry nicknames need not match Hall of Fame display names (HoF is editorial). First Four placeholder labels (`FF1` / `FF2` / `FF4`) have no ESPN logos. The Standings admin gear stays inline with the year select (including year 2020 newspaper).
 
 **2020 newspaper edition:** Selecting year 2020 shows a short vintage newspaper page (cancellation / no brackets) instead of a standings table. No search, filters, or KEY chrome. Admin gear on year 2020 opens Standings Admin at `#ve-section-2020-newspaper` (CMS nested under Standings as `paper2020`; legacy `/vintage/admin/standings/2020` redirects there). Per-section hide checkboxes omit dateline, headline, lead, sidebar, desk, sources, and page subhead without deleting copy. Publish updates the live 2020 view.
 
-Desktop preserves a readable table with rank, entry, payment when enabled, points, points behind, TB, Final Four, and champion. Mobile uses the compact **Option B** row: rank; entry name with points / gap / TB below; payment when enabled; 2 × 2 FF; champion. It has no My Picks action-button grid.
+Desktop preserves a readable table with rank, entry, payment when enabled, points, points behind, TB, Final Four, and champion. **Paid column** uses the same three My Picks payment cards (Paid / Pending / Unpaid) from Picks CMS `payment.*`. Mobile Option B drops the Paid column so the entry name can use that width; the payment card sits on the second line beside TB (points / gap / TB · badge). Rank; entry; 2 × 2 FF; champion. It has no My Picks action-button grid.
 
-**Rank numerals (F03, 2026-10-25):** Rank numbers use navy (`--v-ink`) on paper for ordinary-text contrast (≥4.5:1). Do not color rank digits gold/silver/bronze — those tokens fail contrast as small text on cream. Places 1–3 show a decorative circular medal beside the numeral filled with `--v-first` / `--v-second` / `--v-third` (CMS theme). Tied ranks share the matching medal. Medals are accent-only (`aria-hidden`); the accessible name includes the place when a medal is present.
+**Rank numerals (F03, 2026-10-25):** Rank numbers use navy (`--v-ink`) on paper for ordinary-text contrast (≥4.5:1). Do not color rank digits gold/silver/bronze — those tokens fail contrast as small text on cream. Places 1–3 show a decorative circular medal filled with `--v-first` / `--v-second` / `--v-third` (CMS theme). Desktop: medal beside the numeral. Mobile Option B: medal stacks under the numeral in a narrow rank column so the entry name can start further left (FF / Champ columns stay put). Tied ranks share the matching medal. Medals are accent-only (`aria-hidden`); the accessible name includes the place when a medal is present.
 
 Display points behind as **(-17)**. Suppress that field for leaders, including tied first-place entries. Do not infer rank/gap from row order after filtering.
 
@@ -328,7 +350,7 @@ The two selected finalists have a heavy frame even before semifinals are decided
 
 **Result hover labels (CMS):** Standings admin → Result hover labels. One shared set of phrases for Standings and My Picks tile tips (empty cell, correct/incorrect/pending by column, finalist-frame meaning). Publish Standings to apply on both pages.
 
-Baseline shared CMS defaults (Standings admin → Logo sizing, used by Standings and My Picks): FF tile 32px, champ 42px on desktop and mobile; My Picks mobile card FF 26px, champ 39px; logo fill 100% of the tile (`--vs-logo-fill`); finalist frame 2px. CSS fallbacks match these defaults. Logo images always size from their tile — do not cap them with fixed pixel classes, or the champ tile reads smaller than FF. Reuse the result styling logic; do not create another color meaning on each page.
+Baseline shared CMS defaults (Standings admin → Logo sizing, used by Standings and My Picks): FF tile 32px, champ 42px on desktop and mobile; My Picks mobile card FF 26px; mobile-card Champ column matches the FF/Actions 2×2 footprint (not the separate CMS card-champ size). Logo fill 100% of the tile (`--vs-logo-fill`); finalist frame 2px. CSS fallbacks match these defaults. Logo images always size from their tile — do not cap them with fixed pixel classes, or the champ tile reads smaller than FF. Reuse the result styling logic; do not create another color meaning on each page.
 
 Undecided play-in pairs render as one composed tile whose layout (default: corner + diagonal cut, 72%, thin white divider) is set per tournament year in the Tournament Builder; see `docs/TOURNAMENT_FIRST_FOUR.md`.
 
@@ -345,6 +367,14 @@ Search/filter/header controls form a secondary sticky band below the masthead: c
 ### 5.1 Relationship to the publication
 
 The bracket is a precision workspace. Carry the site identity at its entry and ordinary navigation, while allowing clean white working surfaces, compact labels, fine connector lines, and diagram-specific spacing. Do not force a paper-card frame, textured background, or slab headline onto every team row.
+
+**Editor chrome theme (Warren, 2026-10-25):** Homepage Key Data `bracketEditorTheme` (`legacy` | `vintage`, default `legacy`) selects presentational chrome for the interactive editor on that environment after Publish. Vintage uses paper/navy/red editor chrome under `[data-bracket-theme="vintage"]` without changing slot geometry, connectors, pick IDs, advancement, save/submit, or scoring. Legacy remains the production default until Vintage is intentionally published. Rollback = republish Legacy.
+
+**Vintage desktop header (Warren, 2026-10-31):** One sticky brand strip: site title + editor meta (left), stacked pick-progress label + bar (center), Layout toggle **Regions** / **Full** equal-width buttons (right). No instructional hint in the strip. Progress is not repeated inside the bracket card. Region and Final Four workspace frames share the same fixed width and ink border (`.be-workspace-card` + `BRACKET_EDITOR_BORDERED_CONTENT_WIDTH_CLASS`).
+
+**Vintage step title bar parity:** Region and Final Four share the same title-bar chrome — `.be-entry-label` (uppercase UI font), `.be-entry-input`, center step title (`uppercase` + `--be-font-ui` at `text-sm` / `sm:text-base`), and `.be-title-bar--ready` when that step’s picks are complete. Banner copy still uses `BracketEditorTopMessage` vintage tones (`be-msg--ready` / `be-msg--soft`).
+
+**Final Four internal composition (Warren, 2026-10-31):** Within the locked regional-sized outer pane, desktop shows Semifinal 1 | Semifinal 2 (with configured regional pairing labels from `getFinalFourSemifinalPairingLabels`), connectors into Championship, a read-only **Your Champion** summary, then **TIEBREAKER: TOTAL POINTS** + explanation. Mobile stacks the same blocks without a Semifinal-1→Semifinal-2 arrow. Games area uses a fixed height matching the regional R64 stack and scrolls internally when needed. Selection keeps blue border/fill + regional green `CheckCircle`; no new pick IDs or advancement rules.
 
 A dedicated full-screen/editor layout is a named working mode. It may prioritize the canvas and Save/Close/Submit controls. That does not authorize a different general site header on unrelated pages.
 
@@ -408,7 +438,7 @@ The common functional standard applies to both: consistent cross-navigation, lab
 8. On mobile, stack fields and wrap controls; keep section navigation reachable and save actions visible without covering inputs.
 9. Keep branding controls global. Ordinary content edits should not require choosing a different font, red, border, or card size.
 10. Every CMS color field uses the shared `AdminColorField`: live swatch, hex text, native color wheel, and eyedropper when the browser supports EyeDropper. Standings Logo sizing shows a three-row live preview; Result shade / Result border sections include a reference sample image plus live tiles.
-11. **CMS export / import (Home admin):** Primary admin can download a JSON package of draft + published documents (Home + Guidebook + HoF + Standings + Picks sidecars) and import it on another environment. Import must show a field-level diff and require explicit confirm before writing. Media object URLs are not rewritten — re-upload on the target env when buckets differ.
+11. **CMS export / import (Home admin):** Primary admin can download a JSON package of the **published** document only (Home + Guidebook + HoF + Standings + Picks sidecars) and import it on another environment. Import must show a published field-level diff with per-row Include toggles (default ON; OFF skips that field) and require explicit confirm before writing. Draft is never exported or overwritten by import. Media object URLs are not rewritten — re-upload on the target env when buckets differ.
 
 ### 6.3 Editable content versus design structure
 
@@ -421,6 +451,8 @@ The common functional standard applies to both: consistent cross-navigation, lab
 | Play-in combined label, through the existing field | Pick IDs, scoring, team identity, winner-resolution behavior |
 
 Existing admin controls expose more flexibility than this distinction. The audit should assess their effective settings and whether to constrain them. This document does not remove those controls.
+
+**CMS line breaks — standard:** Authors use `||` for a hard line break in CMS copy. Visitors must never see the pipes. Implementation: `lib/cms/lineBreaks.ts` + `components/cms/CmsText`. Default for new visitor-facing CMS strings is `CmsText`. Exceptions (single-line chrome → `cmsPlainText`; fitted art with max lines; non-prose fields; raw editor inputs) are listed in `GLOBAL_ENGINEERING_STANDARDS.md`.
 
 ## 7. Accessibility, responsive behavior, and content resilience
 
@@ -495,4 +527,10 @@ Older [standings shading notes](STANDINGS_SHADING_AND_BORDERS.md) describe legac
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.0 proposal | 2026-10-27 | Scoreboard route load: instant headline chrome + basketball spinner (Standings pattern). |
+| 1.0 proposal | 2026-10-27 | Standings route load: instant headline chrome + basketball spinner (My Picks pattern); no blank wait. |
+| 1.0 proposal | 2026-10-26 | Standings Paid: desktop uses My Picks payment cards; mobile badge on stats line (no Paid column). |
+| 1.0 proposal | 2026-10-26 | Mobile Standings: rank flush left, podium medal under #; entry column gains width; FF/Champ unchanged. |
+| 1.0 proposal | 2026-10-26 | Scoreboard header aligned with Standings (centered title + Updated, year right, no Refresh/subhead). |
+| 1.0 proposal | 2026-10-26 | Documented site-wide CMS `||` line-break convention (`CmsText` / `lib/cms/lineBreaks.ts`) and exceptions. |
 | 1.0 proposal | 2026-10-22 | Established the public, bracket, and admin design families; recorded staging evidence, canonical tokens, asset boundaries, component rules, and review workflow. No runtime styles changed. |

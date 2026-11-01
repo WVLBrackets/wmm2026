@@ -7,7 +7,6 @@ import { sendSubmissionConfirmationEmail, processEmailAsync } from '@/lib/bracke
 import { csrfProtection } from '@/lib/csrf';
 import { normalizeStoredDisplayName } from '@/lib/stringNormalize';
 import { evaluateBracketMutationAccess } from '@/lib/services/bracketMutationPolicy';
-import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 
 /**
  * GET /api/tournament-bracket/[id] - Get a specific bracket
@@ -23,6 +22,13 @@ export async function GET(
     if (poolRead) {
       const bracket = await getBracketById(id);
       if (!bracket || bracket.status !== 'submitted' || bracket.isKey) {
+        return NextResponse.json({ success: false, error: 'Bracket not found' }, { status: 404 });
+      }
+      // Until Standings Tournament Live: do not expose picks/TB for the active year.
+      const { isPoolBracketReadBlockedBeforeStandingsLive } = await import(
+        '@/lib/services/standingsRosterGate'
+      );
+      if (await isPoolBracketReadBlockedBeforeStandingsLive(bracket.year)) {
         return NextResponse.json({ success: false, error: 'Bracket not found' }, { status: 404 });
       }
       return NextResponse.json({
@@ -194,12 +200,10 @@ export async function PUT(
       if (siteConfig?.tournamentYear) {
         const parsed = parseInt(String(siteConfig.tournamentYear), 10);
         if (!Number.isNaN(parsed)) tournamentYear = parsed;
-      } else if (FALLBACK_CONFIG.tournamentYear) {
-        tournamentYear = parseInt(String(FALLBACK_CONFIG.tournamentYear), 10);
       }
       
       // Check for duplicate names within the same year
-      const { getBracketsByUserId } = await import('@/lib/secureDatabase');
+      const { getBracketsByUserId } = await import('@/lib/repositories/bracketRepository');
 
       const existingBrackets = await getBracketsByUserId(user.id);
 
@@ -247,25 +251,18 @@ export async function PUT(
     if (isBeingSubmitted) {
       const emailPromise = (async () => {
         try {
-          const { getBracketsByUserId } = await import('@/lib/secureDatabase');
-          const { getSiteConfigFromGoogleSheets } = await import('@/lib/siteConfig');
-          const { FALLBACK_CONFIG } = await import('@/lib/fallbackConfig');
-          
+          const { getBracketsByUserId } = await import('@/lib/repositories/bracketRepository');
+          const { getSiteConfigCached } = await import('@/lib/siteConfigServer');
+
           // Get all submitted brackets for this user to calculate counts
           const allUserBrackets = await getBracketsByUserId(user.id);
           const submittedBrackets = allUserBrackets.filter(b => b.status === 'submitted' && b.year === updatedBracket.year);
           const submissionCount = submittedBrackets.length;
-          
-          // Get entry cost from config
-          let entryCost = 5; // Default
-          let siteConfig = null;
-          try {
-            siteConfig = await getSiteConfigFromGoogleSheets();
-            if (siteConfig?.entryCost) {
-              entryCost = siteConfig.entryCost;
-            }
-          } catch {
-            entryCost = FALLBACK_CONFIG.entryCost;
+
+          const siteConfig = await getSiteConfigCached();
+          const entryCost = siteConfig.entryCost;
+          if (entryCost == null || !Number.isFinite(entryCost)) {
+            throw new Error('Entry cost is not configured in published Key Data.');
           }
           
           const totalCost = submissionCount * entryCost;

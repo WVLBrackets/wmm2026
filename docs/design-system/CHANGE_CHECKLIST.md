@@ -22,6 +22,7 @@ The system is a v1 proposal pending Warren’s review. Use it to make decisions 
 - [ ] Provide normal, hover/focus, loading, disabled, empty, error, historical/read-only, and success states as relevant.
 - [ ] Make full-card links and nested controls semantically valid.
 - [ ] Keep long names/captions readable; use the shared fit/abbreviation helpers.
+- [ ] Visitor-facing CMS strings honor `||` as a line break via `CmsText` / `splitCmsLines` (never show the pipes). Use `cmsPlainText` for single-line chrome; document any new exception.
 - [ ] Preserve distinct meanings for entry status, payment, result correctness, and selection.
 - [ ] My Picks status chips are **locked** (short oval, shared fixed width). Do not alter `--vp-status-chip-*` / `--vp-chip-*` geometry without an explicit product decision.
 

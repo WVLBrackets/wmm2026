@@ -2,7 +2,7 @@
  * Database entity types
  * 
  * Shared type definitions for all database entities.
- * Import from here instead of secureDatabase.ts for cleaner dependencies.
+ * Shared database types for repositories and services.
  */
 
 /**
@@ -123,7 +123,7 @@ export interface BracketCounts {
 }
 
 /**
- * Payment record for a Venmo payment batch (one or more brackets + optional additional).
+ * Payment record for a Venmo/Zelle payment batch (brackets and/or additional dollars).
  */
 export interface Payment {
   id: string;
@@ -131,10 +131,19 @@ export interface Payment {
   userEmail: string;
   bracketIds: string[];
   bracketCount: number;
+  /**
+   * Additional payment in whole dollars (not bracket count).
+   * Persisted as `payments.additional_count`.
+   */
   additionalCount: number;
   additionalNote?: string;
   amountCents: number;
+  /** Payment note snapshot (column `venmo_note` kept for legacy compatibility). */
   venmoNote?: string;
+  /** Provider used for this request; legacy rows default to venmo. */
+  paymentMethod?: 'venmo' | 'zelle';
+  /** Recipient label at request time (Venmo @user or Zelle name · contact). */
+  recipientSnapshot?: string | null;
   status: 'pending' | 'confirmed' | 'rejected';
   requestedAt: Date;
   confirmedAt?: Date | null;

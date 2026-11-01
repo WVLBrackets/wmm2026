@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "test:tournament": "node --import tsx --test tests/tournament-first-four.unit.ts",
+    "test:scoreboard": "node --import tsx --test tests/scoreboard-sync.unit.ts tests/public-scoreboard.unit.ts tests/scoreboard-apply.unit.ts tests/scoreboard-r64-day-buckets.unit.ts",
     "test:tournament:browser": "node --import tsx tests/tournament-builder.browser.ts",
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
@@ -38,17 +39,19 @@
     "preview-uniform": "tsx scripts/preview-uniform.ts",
     "generate-players": "tsx scripts/generate-players-batch.ts",
     "test:vintage": "node --import tsx --test tests/vintage-*.unit.ts tests/hall-of-fame-stats.unit.ts",
-    "test:vintage:browser": "node --import tsx tests/vintage-browser.ts"
+    "test:vintage:browser": "node --import tsx tests/vintage-browser.ts",
+    "test:unit": "node --import tsx --test tests/scoreboard-sync.unit.ts tests/public-scoreboard.unit.ts tests/scoreboard-apply.unit.ts tests/vintage-*.unit.ts tests/hall-of-fame-stats.unit.ts tests/paymentProviders.unit.ts",
+    "hof:import": "tsx scripts/import-hof-seasons.ts",
+    "cms:migrate": "tsx scripts/cms-migrate.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1152.0",
     "@sparticuz/chromium": "^141.0.0",
-    "@types/bcryptjs": "^2.4.6",
-    "@types/nodemailer": "^7.0.3",
+    "@vercel/blob": "^2.8.2",
     "@vercel/functions": "^1.0.3",
     "@vercel/postgres": "^0.10.0",
     "bcryptjs": "^3.0.2",
     "canvas": "^3.2.0",
-    "crypto": "^1.0.1",
     "date-fns": "^4.1.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
@@ -61,23 +64,24 @@
     "react": "^19.1.2",
     "react-dom": "^19.1.2",
     "resend": "^6.5.2",
-    "@aws-sdk/client-s3": "^3.1152.0",
-    "@vercel/blob": "^2.8.2"
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@playwright/test": "^1.56.1",
     "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/nodemailer": "^7.0.3",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "dotenv": "^17.2.3",
     "eslint": "^9",
     "eslint-config-next": "15.5.14",
+    "pg-mem": "^3.0.14",
     "tailwindcss": "^4",
     "tsx": "^4.20.6",
-    "typescript": "^5",
-    "pg-mem": "^3.0.14"
+    "typescript": "^5"
   },
   "overrides": {
     "cookie": "^0.7.0",

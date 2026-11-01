@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Loader2, X } from 'lucide-react';
+import { X } from 'lucide-react';
+import LoadingBasketball from '@/components/vintage/feedback/LoadingBasketball';
+import { DEFAULT_VINTAGE_BRACKET_EDITOR_CONTENT } from '@/lib/vintage/bracketEditorContent';
 import { generate64TeamBracket, updateBracketWithPicks } from '@/lib/bracketGenerator';
 import { tryLoadTournamentData, unpublishedTournamentMessage } from '@/lib/tournamentLoader';
 import {
@@ -887,10 +889,7 @@ export default function KeyBracketPreviewModal({
           )}
 
           {loading && (
-            <div className="flex h-[420px] items-center justify-center text-gray-600">
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Loading bracket preview...
-            </div>
+            <LoadingBasketball message="Loading bracket preview..." testId="key-bracket-preview-loading" />
           )}
 
           {!loading && error && (
@@ -917,6 +916,7 @@ export default function KeyBracketPreviewModal({
               readOnly={readOnly}
               onTieBreakerChange={readOnly ? undefined : setTieBreaker}
               onSelectTeam={readOnly ? undefined : handleTeamPick}
+              copy={DEFAULT_VINTAGE_BRACKET_EDITOR_CONTENT}
             />
           )}
         </div>

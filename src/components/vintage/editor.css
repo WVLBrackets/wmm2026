@@ -647,7 +647,8 @@
   justify-content: center;
   overflow: hidden;
   border: 1px solid transparent;
-  background: var(--vs-shade-pending, #fff);
+  /* Match live standings: neutral tiles are transparent on paper. */
+  background: transparent;
   font-size: 0.55rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -670,7 +671,7 @@
   background: var(--vs-shade-incorrect, #fee2e2);
 }
 .ve-admin-preview__tile[data-status="pending"] {
-  background: var(--vs-shade-pending, #fff);
+  background: transparent;
 }
 .ve-admin-preview__tile--finalist {
   border-width: var(--vs-finalist-border, 2px);
@@ -979,6 +980,32 @@
   word-break: break-word;
   font-family: ui-monospace, Consolas, monospace;
   font-size: 0.72rem;
+}
+.ve-cms-transfer__include {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  user-select: none;
+}
+.ve-cms-transfer__include input {
+  width: 16px;
+  height: 16px;
+  accent-color: #182e3b;
+  cursor: pointer;
+}
+.ve-cms-transfer__row--excluded {
+  opacity: 0.55;
+  background: #f7f5f0;
+}
+.ve-cms-transfer__row--excluded pre:last-child {
+  text-decoration: line-through;
 }
 .ve-cms-transfer__confirm {
   display: flex;

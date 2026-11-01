@@ -1,20 +1,18 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { isVintageEnabled } from "@/lib/vintage/access";
 import { vintageAdminEmail } from "@/lib/vintage/admin";
 import VintageHofEditor from "@/components/vintage/hof/VintageHofEditor";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
-  title: "Vintage Hall of Fame Copy Editor",
+  title: "Vintage Hall of Fame Editor",
   robots: { index: false, follow: false },
 };
 
 /**
- * Primary-admin editor for Hall of Fame display copy.
+ * Primary-admin editor for Hall of Fame labels (CMS) and podium years (DB).
  */
 export default async function VintageHofAdminPage() {
-  if (!isVintageEnabled()) notFound();
   if (!(await vintageAdminEmail())) notFound();
   return (
     <Suspense fallback={<p className="ve-help">Loading editor…</p>}>

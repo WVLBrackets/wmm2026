@@ -590,7 +590,9 @@ export default function VintagePicksEditor() {
               <p className="ve-help" data-testid="vintage-picks-key-data-note">
                 Application Master Lock, Brackets published, Entry cost, Tourney
                 Year, and Tip Off are administered under homepage{" "}
-                <a href="/vintage/admin?focus=keyData">Key Data</a>. Edit the
+                <a href="/vintage/admin?focus=keyData">Key Data</a>. Venmo /
+                Zelle Pay switches and recipient details are under homepage{" "}
+                <a href="/vintage/admin?focus=payments">Payments</a>. Edit the
                 messages and countdown labels here.
               </p>
               {sharedField(

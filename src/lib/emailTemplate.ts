@@ -1,4 +1,5 @@
-import { SiteConfigData } from './siteConfig';
+import { escapeHtml, renderDoNotReplyNotice } from './emailService';
+import type { VintageEmailsContent } from './vintage/emailsContent';
 
 /**
  * Template variables that can be used in email content
@@ -18,257 +19,101 @@ export interface EmailTemplateVariables {
  */
 export type EmailTemplateType = 'pdf' | 'submit';
 
+/** Published CMS inputs for bracket emails. */
+export interface BracketEmailContext {
+  emails: VintageEmailsContent;
+  contactEmail: string;
+}
+
 /**
- * Escape HTML special characters to prevent XSS attacks in email content
- * @param text - The text to escape
- * @returns HTML-safe string
+ * Fill `{token}` placeholders with raw (unescaped) values; unknown tokens stay.
+ *
+ * @param text - CMS copy
+ * @param variables - Token values
  */
-function escapeHtmlForEmail(text: string): string {
-  const map: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;',
+function fillVariables(text: string, variables: EmailTemplateVariables): string {
+  const values: Record<string, string> = {
+    name: variables.name ?? '',
+    entryName: variables.entryName ?? '',
+    tournamentYear: variables.tournamentYear ?? '',
+    siteName: variables.siteName ?? '',
+    bracketId: variables.bracketId ?? '',
+    submissionCount: String(variables.submissionCount ?? 0),
+    totalCost: String(variables.totalCost ?? 0),
   };
-  return text.replace(/[&<>"']/g, (m) => map[m]);
+  return text
+    .replace(/\{\{(\w+)\}\}/g, (m, key: string) => values[key] ?? m)
+    .replace(/\{(\w+)\}/g, (m, key: string) => values[key] ?? m)
+    .trim();
 }
 
 /**
- * Replace template variables in a string
- * Supports both {variable} and {{variable}} syntax
- * SECURITY: All user-provided values are HTML-escaped to prevent XSS
+ * Load an email HTML shell from `src/emails` (server only).
+ *
+ * @param templateType - `pdf` or `submit`
  */
-function replaceVariables(text: string, variables: EmailTemplateVariables): string {
-  let result = text;
-  
-  // Replace {variable} syntax with HTML-escaped values
-  result = result.replace(/\{name\}/g, escapeHtmlForEmail(variables.name || 'there'));
-  result = result.replace(/\{entryName\}/g, escapeHtmlForEmail(variables.entryName || 'your bracket'));
-  result = result.replace(/\{tournamentYear\}/g, escapeHtmlForEmail(variables.tournamentYear || ''));
-  result = result.replace(/\{siteName\}/g, escapeHtmlForEmail(variables.siteName || 'Warren\'s March Madness'));
-  result = result.replace(/\{bracketId\}/g, escapeHtmlForEmail(variables.bracketId || ''));
-  result = result.replace(/\{submissionCount\}/g, escapeHtmlForEmail(variables.submissionCount?.toString() || '0'));
-  result = result.replace(/\{totalCost\}/g, escapeHtmlForEmail(variables.totalCost?.toString() || '0'));
-  
-  return result;
-}
-
-/**
- * Load email template HTML file
- */
-async function loadEmailTemplate(templateType: EmailTemplateType = 'pdf'): Promise<string> {
-  try {
-    // Check if we're in a server environment (Node.js) or browser
-    const isServer = typeof window === 'undefined';
-    
-    if (isServer) {
-      // Server-side: Read directly from filesystem
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const fs = require('fs');
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const path = require('path');
-      
-      const templateFileName = templateType === 'submit' ? 'email-submit.html' : 'email-pdf.html';
-      const templatePath = path.join(process.cwd(), 'src', 'emails', templateFileName);
-      
-      if (!fs.existsSync(templatePath)) {
-        throw new Error(`Email template file not found: ${templatePath}`);
-      }
-      
-      return fs.readFileSync(templatePath, 'utf8');
-    } else {
-      // Client-side: This shouldn't be called, but handle gracefully
-      throw new Error('Email templates can only be loaded server-side');
-    }
-  } catch (error) {
-    console.error('Error loading email template:', error);
-    throw error;
+async function loadEmailTemplate(templateType: EmailTemplateType): Promise<string> {
+  if (typeof window !== 'undefined') {
+    throw new Error('Email templates can only be loaded server-side');
   }
+  const fs = await import('fs');
+  const path = await import('path');
+  const templateFileName = templateType === 'submit' ? 'email-submit.html' : 'email-pdf.html';
+  const templatePath = path.join(process.cwd(), 'src', 'emails', templateFileName);
+  if (!fs.existsSync(templatePath)) {
+    throw new Error(`Email template file not found: ${templatePath}`);
+  }
+  return fs.readFileSync(templatePath, 'utf8');
 }
 
 /**
- * Render email HTML from template and config
- * @param siteConfig - Site configuration data
- * @param variables - Template variables to replace
- * @param templateType - Type of email template ('pdf' for on-demand PDF email, 'submit' for automated submission email)
+ * Render a bracket email (submission confirmation or PDF delivery) from
+ * Emails & Account CMS copy. Blank fields are omitted; a blank subject is a
+ * configuration error.
+ *
+ * @param ctx - Published CMS context
+ * @param variables - Token values (user values are HTML-escaped)
+ * @param templateType - `pdf` (on-demand PDF) or `submit` (automated confirmation)
  */
-/**
- * Generate "Do Not Reply" notice HTML and text
- * Replaces {contactEmail} with the actual contact address from config
- */
-function generateDoNotReplyNotice(
-  siteConfig: SiteConfigData | null
-): { html: string; text: string } {
-  const noticeText = siteConfig?.emailDoNotReplyNotice || 
-    'Please do not reply to this email. This is an automated message from an unmonitored mailbox. If you need assistance, please contact us at {contactEmail}.';
-  const contactEmail = siteConfig?.emailContactAddress || 'support@warrensmm.com';
-  
-  // Replace {contactEmail} variable
-  const noticeWithEmail = noticeText.replace(/\{contactEmail\}/g, contactEmail);
-  
-  // Generate HTML version (escape HTML for safety)
-  const escapeHtml = (text: string): string => {
-    const map: Record<string, string> = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;',
-    };
-    return text.replace(/[&<>"']/g, (m) => map[m]);
-  };
-  
-  const html = `
-    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
-      <p style="font-size: 12px; color: #666; font-style: italic; margin: 0;">
-        ${escapeHtml(noticeWithEmail)}
-      </p>
-    </div>
-  `;
-  
-  // Generate text version
-  const text = `\n\n${noticeWithEmail}\n`;
-  
-  return { html, text };
-}
-
 export async function renderEmailTemplate(
-  siteConfig: SiteConfigData | null,
+  ctx: BracketEmailContext,
   variables: EmailTemplateVariables,
-  templateType: EmailTemplateType = 'pdf'
+  templateType: EmailTemplateType = 'pdf',
 ): Promise<{ html: string; text: string; subject: string }> {
-  // Load the HTML template
-  let template = await loadEmailTemplate(templateType);
-  
-  // Get content from config based on template type
-  let subject: string;
-  let heading: string;
-  let greeting: string;
-  let message1: string;
-  let message2: string;
-  let message3: string;
-  let footer: string;
-  
-  if (templateType === 'submit') {
-    // Automated submission email
-    subject = replaceVariables(
-      siteConfig?.emailSubmitSubject || 'Bracket Submitted Successfully - Warren\'s March Madness',
-      variables
-    );
-    
-    heading = replaceVariables(
-      siteConfig?.emailSubmitHeading || 'Bracket Submitted Successfully!',
-      variables
-    );
-    
-    greeting = siteConfig?.emailSubmitGreeting 
-      ? `<p>${replaceVariables(siteConfig.emailSubmitGreeting, variables)}</p>`
-      : `<p>Hi ${variables.name || 'there'},</p>`;
-    
-    message1 = siteConfig?.emailSubmitMessage1
-      ? `<p>${replaceVariables(siteConfig.emailSubmitMessage1, variables)}</p>`
-      : '';
-    
-    message2 = siteConfig?.emailSubmitMessage2
-      ? `<p>${replaceVariables(siteConfig.emailSubmitMessage2, variables)}</p>`
-      : '';
-    
-    message3 = siteConfig?.emailSubmitMessage3
-      ? `<p>${replaceVariables(siteConfig.emailSubmitMessage3, variables)}</p>`
-      : '';
-    
-    footer = replaceVariables(
-      siteConfig?.emailSubmitFooter || 'This is an automated email from Warren\'s March Madness.',
-      variables
-    );
-  } else {
-    // On-demand PDF email (default)
-    subject = replaceVariables(
-      siteConfig?.emailPdfSubject || 'Your Bracket - Warren\'s March Madness',
-      variables
-    );
-    
-    heading = replaceVariables(
-      siteConfig?.emailPdfHeading || 'Your Bracket is Attached!',
-      variables
-    );
-    
-    greeting = siteConfig?.emailPdfGreeting 
-      ? `<p>${replaceVariables(siteConfig.emailPdfGreeting, variables)}</p>`
-      : `<p>Hi ${variables.name || 'there'},</p>`;
-    
-    message1 = siteConfig?.emailPdfMessage1
-      ? `<p>${replaceVariables(siteConfig.emailPdfMessage1, variables)}</p>`
-      : '';
-    
-    message2 = siteConfig?.emailPdfMessage2
-      ? `<p>${replaceVariables(siteConfig.emailPdfMessage2, variables)}</p>`
-      : '';
-    
-    message3 = siteConfig?.emailPdfMessage3
-      ? `<p>${replaceVariables(siteConfig.emailPdfMessage3, variables)}</p>`
-      : '';
-    
-    footer = replaceVariables(
-      siteConfig?.emailPdfFooter || 'This is an automated email from Warren\'s March Madness.',
-      variables
-    );
+  const copy = templateType === 'submit' ? ctx.emails.submit : ctx.emails.pdf;
+  const subject = fillVariables(copy.subject, variables);
+  if (!subject) {
+    throw new Error(`Emails & Account CMS: ${templateType} email subject is blank.`);
   }
-  
-  // Generate "Do Not Reply" notice
-  const doNotReplyNotice = generateDoNotReplyNotice(siteConfig);
-  
-  // Replace template placeholders
-  template = template.replace(/\{\{subject\}\}/g, subject);
-  template = template.replace(/\{\{heading\}\}/g, heading);
-  template = template.replace(/\{\{greeting\}\}/g, greeting);
-  template = template.replace(/\{\{message1\}\}/g, message1);
-  template = template.replace(/\{\{message2\}\}/g, message2);
-  template = template.replace(/\{\{message3\}\}/g, message3);
-  template = template.replace(/\{\{spamReminder\}\}/g, ''); // Remove spam reminder placeholder
-  template = template.replace(/\{\{doNotReplyNotice\}\}/g, doNotReplyNotice.html);
-  template = template.replace(/\{\{footer\}\}/g, footer);
-  
-  // Generate plain text version
-  const greetingText = templateType === 'submit' 
-    ? (siteConfig?.emailSubmitGreeting || `Hi ${variables.name || 'there'},`)
-    : (siteConfig?.emailPdfGreeting || `Hi ${variables.name || 'there'},`);
-  
-  const message1Text = templateType === 'submit'
-    ? (siteConfig?.emailSubmitMessage1 || '')
-    : (siteConfig?.emailPdfMessage1 || '');
-  
-  const message2Text = templateType === 'submit'
-    ? (siteConfig?.emailSubmitMessage2 || '')
-    : (siteConfig?.emailPdfMessage2 || '');
-  
-  const message3Text = templateType === 'submit'
-    ? (siteConfig?.emailSubmitMessage3 || '')
-    : (siteConfig?.emailPdfMessage3 || '');
-  
-  const footerText = templateType === 'submit'
-    ? (siteConfig?.emailSubmitFooter || 'This is an automated email from Warren\'s March Madness.')
-    : (siteConfig?.emailPdfFooter || 'This is an automated email from Warren\'s March Madness.');
-  
-  const text = `
-${heading}
+  const plain = (s: string) => fillVariables(s, variables);
+  const para = (s: string) => (plain(s) ? `<p>${escapeHtml(plain(s))}</p>` : '');
+  const notice = renderDoNotReplyNotice(ctx.emails.doNotReplyNotice, ctx.contactEmail);
 
-${replaceVariables(greetingText, variables)}
+  let template = await loadEmailTemplate(templateType);
+  template = template
+    .replace(/\{\{subject\}\}/g, escapeHtml(subject))
+    .replace(/\{\{heading\}\}/g, escapeHtml(plain(copy.heading)))
+    .replace(/\{\{greeting\}\}/g, para(copy.greeting))
+    .replace(/\{\{message1\}\}/g, para(copy.message1))
+    .replace(/\{\{message2\}\}/g, para(copy.message2))
+    .replace(/\{\{message3\}\}/g, para(copy.message3))
+    .replace(/\{\{spamReminder\}\}/g, '')
+    .replace(/\{\{doNotReplyNotice\}\}/g, notice.html)
+    .replace(/\{\{footer\}\}/g, escapeHtml(plain(copy.footer)));
 
-${message1Text ? replaceVariables(message1Text, variables) : ''}
+  const text = [
+    plain(copy.heading),
+    plain(copy.greeting),
+    plain(copy.message1),
+    plain(copy.message2),
+    plain(copy.message3),
+  ]
+    .filter(Boolean)
+    .join('\n\n');
 
-${message2Text ? replaceVariables(message2Text, variables) : ''}
-
-${message3Text ? replaceVariables(message3Text, variables) : ''}
-
-${doNotReplyNotice.text}${replaceVariables(footerText, variables)}
-  `.trim();
-  
   return {
     html: template,
-    text,
+    text: `${text}${notice.text}${plain(copy.footer) ? `\n${plain(copy.footer)}` : ''}`,
     subject,
   };
 }
-

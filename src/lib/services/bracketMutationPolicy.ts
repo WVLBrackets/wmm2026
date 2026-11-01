@@ -1,9 +1,9 @@
 import type { SiteConfigData } from '@/lib/siteConfig';
-import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 import type { VintageActionKind } from '@/lib/services/vintageActionLock';
 import { evaluateVintageActionLockFresh } from '@/lib/services/vintageActionLockServer';
-import { getPublishedVintageContent } from '@/lib/vintage/store';
-import { getPublishedVintagePicksContent } from '@/lib/vintage/picksStore';
+import { getSiteConfigCached } from '@/lib/siteConfigServer';
+import type { VintageBracketEditorContent } from '@/lib/vintage/bracketEditorContent';
+import { getPublishedCmsBundle } from '@/lib/vintage/cmsBundle';
 import { applyHomepageKeyDataToPicks } from '@/lib/vintage/seasonKeyData';
 
 export type BracketMutationDenial = {
@@ -16,7 +16,8 @@ export type BracketMutationDenial = {
 export type BracketMutationAllowance = {
   allowed: true;
   activeYear: number;
-  siteConfig: SiteConfigData | null;
+  siteConfig: SiteConfigData;
+  editorCopy: VintageBracketEditorContent;
 };
 
 export type BracketMutationDecision =
@@ -37,11 +38,9 @@ export async function evaluateBracketMutationAccess(
   action: VintageActionKind = 'changing',
   options?: { forCreate?: boolean },
 ): Promise<BracketMutationDecision> {
-  const [home, picksRaw] = await Promise.all([
-    getPublishedVintageContent(),
-    getPublishedVintagePicksContent(),
-  ]);
-  const picksCopy = applyHomepageKeyDataToPicks(home, picksRaw);
+  const bundle = await getPublishedCmsBundle();
+  const home = bundle.home;
+  const picksCopy = applyHomepageKeyDataToPicks(home, bundle.picks);
   const activeYear = parseInt(String(home.tournament.year).trim(), 10);
   if (Number.isNaN(activeYear)) {
     return {
@@ -69,18 +68,7 @@ export async function evaluateBracketMutationAccess(
   return {
     allowed: true,
     activeYear: lock.activeYear,
-    siteConfig: {
-      ...FALLBACK_CONFIG,
-      tournamentYear: String(lock.activeYear),
-      siteName: home.keyData.siteName,
-      bracketsAvailable: 'YES',
-      stopSubmitToggle: 'No',
-      stopSubmitDateTime: '',
-      entryCost: lock.picksCopy.entryCost,
-      bracketsMissingErrorMessage: lock.picksCopy.bracketsMissingErrorMessage,
-      masterLockMessage: lock.picksCopy.masterLockMessage,
-      priorYearWarningMessage: lock.picksCopy.priorYearWarningMessage,
-      finalMessageSubmitOff: lock.picksCopy.tourneyActiveMessage,
-    },
+    siteConfig: await getSiteConfigCached(),
+    editorCopy: bundle.bracketEditor,
   };
 }

@@ -11,6 +11,241 @@
  */
 
 import { resolveVintageYearTokens } from "./yearTokens";
+import { normalizeCopyTree, type CopyTree } from "./copyTree";
+
+/**
+ * My Picks waiting / failure / copy-name copy (busy overlays, notices, dialogs).
+ * Blank strings hide the caption (spinner alone) or the element.
+ */
+export interface VintagePicksFeedbackCopy extends CopyTree {
+  loadingMessage: string;
+  /** Tokens: `{year}`. */
+  switchingYearMessage: string;
+  creatingMessage: string;
+  openingMessage: string;
+  savingMessage: string;
+  submittingMessage: string;
+  copyingMessage: string;
+  deletingMessage: string;
+  restoringMessage: string;
+  returningMessage: string;
+  noticeTitle: string;
+  noticeOkLabel: string;
+  /** Tokens: `{year}`. */
+  switchedYearMessage: string;
+  sessionMissingMessage: string;
+  verifyAccessFailed: string;
+  saveFailed: string;
+  submitFailed: string;
+  copyFailed: string;
+  renameFailed: string;
+  restoreFailed: string;
+  deleteFailed: string;
+  permanentDeleteFailed: string;
+  returnFailed: string;
+  loadFailed: string;
+  /** Tokens: `{entry}`. Default entry name for a copied bracket. */
+  copyEntryName: string;
+  copyNameTitle: string;
+  copyNameMessage: string;
+  copyNameLabel: string;
+  copyNameRequired: string;
+  copyNameStayLabel: string;
+  copyNameOpenLabel: string;
+}
+
+/** Edit-profile dialog copy (display name + account stats). */
+export interface VintagePicksProfileCopy extends CopyTree {
+  editButtonLabel: string;
+  title: string;
+  loadingMessage: string;
+  loadFailed: string;
+  displayNameLabel: string;
+  accountCreatedLabel: string;
+  emailLabel: string;
+  tournamentsPlayedLabel: string;
+  bracketsEnteredLabel: string;
+  saveLabel: string;
+  savingLabel: string;
+  saveFailed: string;
+  cancelLabel: string;
+  closeLabel: string;
+}
+
+/** Editor seed for {@link VintagePicksFeedbackCopy}. */
+export const DEFAULT_VINTAGE_PICKS_FEEDBACK: VintagePicksFeedbackCopy = {
+  loadingMessage: "Loading your picks…",
+  switchingYearMessage: "Loading {year}…",
+  creatingMessage: "Creating your bracket…",
+  openingMessage: "Opening your bracket…",
+  savingMessage: "Saving…",
+  submittingMessage: "Submitting…",
+  copyingMessage: "Copying…",
+  deletingMessage: "Deleting…",
+  restoringMessage: "Restoring…",
+  returningMessage: "Returning to In Progress…",
+  noticeTitle: "Heads up",
+  noticeOkLabel: "OK",
+  switchedYearMessage: "Switched to {year}. Use New Bracket again to create an entry.",
+  sessionMissingMessage: "Your session has expired. Please sign in again.",
+  verifyAccessFailed: "We couldn’t verify bracket access. Please try again.",
+  saveFailed: "We couldn’t save your bracket. Please try again.",
+  submitFailed: "We couldn’t submit your bracket. Please try again.",
+  copyFailed: "We couldn’t copy your bracket. Please try again.",
+  renameFailed: "We couldn’t update the bracket name. Please try again.",
+  restoreFailed: "We couldn’t restore your bracket. Please try again.",
+  deleteFailed: "We couldn’t delete your bracket. Please try again.",
+  permanentDeleteFailed: "We couldn’t permanently delete your bracket. Please try again.",
+  returnFailed: "We couldn’t return your bracket to In Progress. Please try again.",
+  loadFailed: "We couldn’t load your brackets. Please refresh the page.",
+  copyEntryName: "{entry} - Copy",
+  copyNameTitle: "Bracket copied",
+  copyNameMessage:
+    "Your bracket was copied successfully. You can change the entry name before opening it.",
+  copyNameLabel: "Entry name",
+  copyNameRequired: "Please enter a name for the copied bracket.",
+  copyNameStayLabel: "Stay on My Picks",
+  copyNameOpenLabel: "Open bracket",
+};
+
+/** Editor seed for {@link VintagePicksProfileCopy}. */
+export const DEFAULT_VINTAGE_PICKS_PROFILE: VintagePicksProfileCopy = {
+  editButtonLabel: "Edit profile information",
+  title: "Edit profile information",
+  loadingMessage: "Loading…",
+  loadFailed: "We couldn’t load your profile. Please try again.",
+  displayNameLabel: "Display name",
+  accountCreatedLabel: "Account created",
+  emailLabel: "Email",
+  tournamentsPlayedLabel: "Tournaments played",
+  bracketsEnteredLabel: "Brackets entered",
+  saveLabel: "Save",
+  savingLabel: "Saving…",
+  saveFailed: "We couldn’t save your profile. Please try again.",
+  cancelLabel: "Cancel",
+  closeLabel: "Close",
+};
+
+/** My Picks landing chrome: welcome, status names, row actions, toolbar, filters, table headers. */
+export interface VintagePicksLabelsCopy extends CopyTree {
+  /** Tokens: `{name}` (display name; first name on mobile). */
+  welcomeLabel: string;
+  statusSubmitted: string;
+  statusInProgress: string;
+  statusDeleted: string;
+  actionView: string;
+  actionEdit: string;
+  actionReturn: string;
+  actionCopy: string;
+  actionEmail: string;
+  actionSubmit: string;
+  actionDelete: string;
+  actionRestore: string;
+  actionPermanentDelete: string;
+  pleaseWaitLabel: string;
+  newBracketLabel: string;
+  newBracketTooltip: string;
+  payLabel: string;
+  payTooltip: string;
+  /** Tokens: `{activeYear}`. */
+  payPriorYearMessage: string;
+  payAdminOnlyMessage: string;
+  payNoMethodsMessage: string;
+  logoutLabel: string;
+  /** Tokens: `{year}`. Prior-year Message Box return link. */
+  backToActiveYearLabel: string;
+  yearSelectTooltip: string;
+  yearLoadingTooltip: string;
+  finalFourAriaLabel: string;
+  championNotPicked: string;
+  closeSectionMessageAriaLabel: string;
+  entryCountsAriaLabel: string;
+  summaryAriaLabel: string;
+  entriesAriaLabel: string;
+  filterShowLabel: string;
+  filterAllLabel: string;
+  searchLabel: string;
+  searchPlaceholder: string;
+  columnEntry: string;
+  columnStatus: string;
+  columnProgress: string;
+  columnFinalFour: string;
+  columnChampion: string;
+  columnChamp: string;
+  columnActions: string;
+  noFilterMatchesTitle: string;
+  noFilterMatchesBody: string;
+  resetFiltersLabel: string;
+  yearLabel: string;
+  /** Tokens: `{year}`. */
+  yearSelectAriaLabel: string;
+  /** Tokens: `{completed}`, `{total}`. */
+  progressPicksLabel: string;
+  /** Tokens: `{section}`. */
+  sectionInfoAriaLabel: string;
+  /** Tokens: `{year}`. Screen-reader table caption. */
+  tableCaption: string;
+  /** Tokens: `{n}`. Entry with no name. */
+  untitledEntryLabel: string;
+  /** Tokens: `{id}`. Mobile card tooltip suffix. */
+  entryIdLabel: string;
+}
+
+/** Editor seed for {@link VintagePicksLabelsCopy}. */
+export const DEFAULT_VINTAGE_PICKS_LABELS: VintagePicksLabelsCopy = {
+  welcomeLabel: "Welcome {name}",
+  statusSubmitted: "Submitted",
+  statusInProgress: "In Progress",
+  statusDeleted: "Deleted",
+  actionView: "View",
+  actionEdit: "Edit",
+  actionReturn: "Return",
+  actionCopy: "Copy",
+  actionEmail: "Email",
+  actionSubmit: "Submit",
+  actionDelete: "Delete",
+  actionRestore: "Restore",
+  actionPermanentDelete: "Permanently delete",
+  pleaseWaitLabel: "Please wait…",
+  newBracketLabel: "New Bracket",
+  newBracketTooltip: "Create a new bracket",
+  payLabel: "Pay",
+  payTooltip: "Pay for submitted brackets or send an additional payment",
+  payPriorYearMessage: "Payments apply to {activeYear} only. Switch back to the current year to pay.",
+  payAdminOnlyMessage: "Pay is currently available to administrators only.",
+  payNoMethodsMessage: "No payment methods are configured yet.",
+  logoutLabel: "Logout",
+  backToActiveYearLabel: "Back to {year} →",
+  yearSelectTooltip: "Change tournament year",
+  yearLoadingTooltip: "Loading tournament year…",
+  finalFourAriaLabel: "Final Four",
+  championNotPicked: "Not picked",
+  closeSectionMessageAriaLabel: "Close section message",
+  entryCountsAriaLabel: "Entry counts",
+  summaryAriaLabel: "Account and entry summary",
+  entriesAriaLabel: "Your entries",
+  filterShowLabel: "Show:",
+  filterAllLabel: "All",
+  searchLabel: "Search brackets by entry name or ID",
+  searchPlaceholder: "Search by entry name or bracket ID…",
+  columnEntry: "Entry",
+  columnStatus: "Status",
+  columnProgress: "Progress",
+  columnFinalFour: "Final Four",
+  columnChampion: "Champion",
+  columnChamp: "Champ",
+  columnActions: "Actions",
+  noFilterMatchesTitle: "No brackets match your filters",
+  noFilterMatchesBody: "Try turning on more statuses, clearing the search, or click Reset below.",
+  resetFiltersLabel: "Reset filters",
+  yearLabel: "Year",
+  yearSelectAriaLabel: "Tournament year, currently {year}",
+  progressPicksLabel: "{completed} / {total} picks",
+  sectionInfoAriaLabel: "More about {section}",
+  tableCaption: "Your bracket entries for {year}",
+  untitledEntryLabel: "Bracket #{n}",
+  entryIdLabel: "ID {id}",
+};
 
 /** Which Message Box state is shown on My Picks. */
 export type VintageMessageBoxStateKey =
@@ -219,6 +454,12 @@ export interface VintagePicksContent {
    * Site Config still owns email-failure / registration-success CMS strings.
    */
   auth: VintagePicksAuthCopy;
+  /** Busy overlays, failure notices, and the copy-name dialog. */
+  feedback: VintagePicksFeedbackCopy;
+  /** Edit-profile dialog. */
+  profile: VintagePicksProfileCopy;
+  /** Landing chrome labels (status, actions, toolbar, filters, table). */
+  labels: VintagePicksLabelsCopy;
 }
 
 /** Sign In tab labels and placeholders. */
@@ -556,6 +797,9 @@ export const DEFAULT_VINTAGE_PICKS_CONTENT: VintagePicksContent = {
     historic: defaultHistoricFlavor(),
   },
   auth: defaultVintagePicksAuthCopy(),
+  feedback: { ...DEFAULT_VINTAGE_PICKS_FEEDBACK },
+  profile: { ...DEFAULT_VINTAGE_PICKS_PROFILE },
+  labels: { ...DEFAULT_VINTAGE_PICKS_LABELS },
 };
 
 /**
@@ -764,6 +1008,9 @@ export function normalizeVintagePicksContent(
       ),
     },
     auth: normalizeAuthCopy(input.auth, defaults.auth),
+    feedback: normalizeCopyTree(input.feedback, defaults.feedback),
+    profile: normalizeCopyTree(input.profile, defaults.profile),
+    labels: normalizeCopyTree(input.labels, defaults.labels),
   };
 }
 
@@ -1212,14 +1459,34 @@ function normalizeConfirms(
  * Fill `{entry}` in a confirmation title or message.
  *
  * @param template - CMS string
- * @param entryName - Bracket entry name (falls back to "this entry")
+ * @param entryName - Bracket entry name
  */
 export function formatPicksConfirmText(
   template: string,
   entryName: string,
 ): string {
-  const entry = entryName.trim() || "this entry";
-  return template.replace(/\{entry\}/g, entry);
+  return template.replace(/\{entry\}/g, entryName.trim());
+}
+
+/**
+ * CSS custom properties for the Paid / Pending / Unpaid payment chips.
+ *
+ * @param payment - My Picks CMS payment badge styles
+ */
+export function vintagePaymentBadgeCssVars(
+  payment: VintagePicksContent["payment"],
+): Record<string, string> {
+  const vars: Record<string, string> = {};
+  const payStates = ["paid", "pending", "unpaid"] as const;
+  for (const state of payStates) {
+    const badge = payment[state];
+    vars[`--vp-pay-${state}-bg`] = badge.background;
+    vars[`--vp-pay-${state}-fg`] = badge.color;
+    vars[`--vp-pay-${state}-border`] = badge.borderColor;
+    vars[`--vp-pay-${state}-icon-bg`] = badge.iconBackground;
+    vars[`--vp-pay-${state}-icon-fg`] = badge.iconColor;
+  }
+  return vars;
 }
 
 /**
@@ -1231,16 +1498,8 @@ export function vintagePicksChromeCssVars(
 ): Record<string, string> {
   const vars: Record<string, string> = {
     "--vp-row-logo-gap": `${content.rowLogoGapPx}px`,
+    ...vintagePaymentBadgeCssVars(content.payment),
   };
-  const payStates = ["paid", "pending", "unpaid"] as const;
-  for (const state of payStates) {
-    const badge = content.payment[state];
-    vars[`--vp-pay-${state}-bg`] = badge.background;
-    vars[`--vp-pay-${state}-fg`] = badge.color;
-    vars[`--vp-pay-${state}-border`] = badge.borderColor;
-    vars[`--vp-pay-${state}-icon-bg`] = badge.iconBackground;
-    vars[`--vp-pay-${state}-icon-fg`] = badge.iconColor;
-  }
   // Row-action chrome is design-locked (navy / red / paper). Always emit the
   // approved treatments so older CMS drafts with loud blues/greens cannot regress.
   const locked = defaultActionButtons();

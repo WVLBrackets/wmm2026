@@ -1,5 +1,5 @@
 import { getPublishedVintageContent } from '@/lib/vintage/store';
-import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
+import { SiteConfigError } from '@/lib/siteConfig';
 
 // Re-export helpers so server call sites can keep a single import path.
 export {
@@ -23,33 +23,27 @@ function parseFourDigitYear(raw: string | number | null | undefined): number | n
 
 /**
  * Resolve the active Tourney Year from published homepage CMS Key Data.
- * Server-only (pulls Neon via vintage store). Client code must use
- * `tournamentYearHelpers` or values passed from a Server Component / API.
+ * Throws when CMS is unavailable or the year is missing/invalid — no calendar/FALLBACK substitute.
  *
  * @returns Active tournament year as an integer (e.g. 2027)
  */
 export async function getActiveTournamentYear(): Promise<number> {
+  let home;
   try {
-    const home = await getPublishedVintageContent();
-    const fromCms = parseFourDigitYear(home.tournament?.year);
-    if (fromCms != null) {
-      return fromCms;
-    }
+    home = await getPublishedVintageContent();
   } catch (error) {
-    console.warn('[tournamentYearService] Failed to load homepage CMS year; using fallback.', error);
-  }
-
-  const fallback = parseFourDigitYear(FALLBACK_CONFIG.tournamentYear);
-  if (fallback != null) {
-    console.warn(
-      `[tournamentYearService] Using FALLBACK_CONFIG.tournamentYear=${fallback}`
+    throw new SiteConfigError(
+      `Cannot resolve Tourney Year: homepage CMS unavailable (${
+        error instanceof Error ? error.message : String(error)
+      })`,
     );
-    return fallback;
   }
 
-  const calendarYear = new Date().getFullYear();
-  console.warn(
-    `[tournamentYearService] FALLBACK_CONFIG.tournamentYear invalid; using calendar year ${calendarYear}`
-  );
-  return calendarYear;
+  const fromCms = parseFourDigitYear(home.tournament?.year);
+  if (fromCms == null) {
+    throw new SiteConfigError(
+      'Published homepage Key Data is missing a valid Tourney Year (YYYY).',
+    );
+  }
+  return fromCms;
 }

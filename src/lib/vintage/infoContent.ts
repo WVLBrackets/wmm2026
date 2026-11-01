@@ -1,3 +1,4 @@
+import { CMS_LINE_BREAK_TOKEN, splitCmsLines } from "@/lib/cms/lineBreaks";
 import { isAllowedToolbarIcon } from "./toolbarIcons";
 
 /** One TOC / guide nav item. */
@@ -186,10 +187,7 @@ export function resolveInfoPrizeDisplay(
  * Split tracker notes on `||` into display paragraphs.
  */
 export function parseInfoNotesLines(raw: string): string[] {
-  return raw
-    .split("||")
-    .map((part) => part.trim())
-    .filter(Boolean);
+  return splitCmsLines(raw);
 }
 
 /**
@@ -254,20 +252,15 @@ export function formatInfoDeadline(iso: string): string {
 
 /** Soft-migrate pre-break TOC labels to the `||` two-line form. */
 const TOC_LABEL_BREAK_MIGRATIONS: Record<string, string> = {
-  "Entry & Payment": "Entry &||Payment",
-  "Tracker & Results": "Tracker &||Results",
+  "Entry & Payment": `Entry &${CMS_LINE_BREAK_TOKEN}Payment`,
+  "Tracker & Results": `Tracker &${CMS_LINE_BREAK_TOKEN}Results`,
 };
 
 /**
  * Split a TOC label on `||` into at most two display lines.
  */
 export function parseInfoTocLabelLines(label: string): string[] {
-  const parts = label
-    .split("||")
-    .map((part) => part.trim())
-    .filter(Boolean);
-  if (parts.length <= 1) return parts.length ? [parts[0]] : [];
-  return [parts[0], parts.slice(1).join(" ")];
+  return splitCmsLines(label, { maxLines: 2 });
 }
 
 /**
@@ -586,7 +579,7 @@ function normalizeTracker(
     typeof trackerIn.notes === "string" && trackerIn.notes.trim()
       ? trackerIn.notes
       : legacyParts.length
-        ? legacyParts.join("||")
+        ? legacyParts.join(CMS_LINE_BREAK_TOKEN)
         : defaults.notes;
   return {
     heading:

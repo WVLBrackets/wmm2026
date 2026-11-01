@@ -1,6 +1,6 @@
 /**
- * CMS copy for the vintage Hall of Fame page (not historical records —
- * those stay in Google Sheets).
+ * CMS copy for the vintage Hall of Fame page (titles / labels).
+ * Podium history lives in `hof_seasons`.
  */
 export interface VintageHofContent {
   heading: string;

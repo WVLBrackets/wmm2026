@@ -7,27 +7,6 @@
   color: var(--v-ink, #152c3a);
 }
 
-.v-auth-legacy-wrap {
-  --v-ink: #152c3a;
-  --v-red: #b52c26;
-  --v-paper: #f2ead8;
-  --v-rule: #b7b09f;
-  --v-font-headline: "Alfa Slab One", Georgia, serif;
-  --v-font-icons: Oswald, Impact, sans-serif;
-  --v-font-specialty: Georgia, "Times New Roman", serif;
-  --v-font-body: Arial, Helvetica, sans-serif;
-  min-height: 60vh;
-  padding: 16px 20px 40px;
-  background-color: var(--v-paper);
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%237b6246' opacity='.09' filter='url(%23n)' d='M0 0h160v160H0z'/%3E%3C/svg%3E");
-  color: var(--v-ink);
-  color-scheme: light;
-}
-
-.v-auth-legacy-wrap .v-auth {
-  padding-top: 12px;
-}
-
 .v-auth__panel {
   background: color-mix(in srgb, var(--v-paper) 92%, #fff);
   border: 2px double var(--v-ink);

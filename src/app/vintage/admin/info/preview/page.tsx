@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { isVintageEnabled } from "@/lib/vintage/access";
 import { vintageAdminEmail } from "@/lib/vintage/admin";
 import VintageInfoPage from "@/components/vintage/info/VintageInfoPage";
 import { getPublishedVintageContent } from "@/lib/vintage/store";
@@ -14,9 +13,7 @@ export const metadata = {
 /**
  * Preview the saved Info handbook draft with published homepage chrome.
  */
-export default async function VintageInfoPreviewPage() {
-  if (!isVintageEnabled()) notFound();
-  if (!(await vintageAdminEmail())) notFound();
+export default async function VintageInfoPreviewPage() {  if (!(await vintageAdminEmail())) notFound();
   const [infoState, home] = await Promise.all([
     readVintageInfoState(),
     getPublishedVintageContent(),

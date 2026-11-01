@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" role="img" aria-label="Zelle QR placeholder">
+  <rect width="240" height="240" fill="#f2ead8"/>
+  <rect x="16" y="16" width="208" height="208" fill="none" stroke="#152c3a" stroke-width="4"/>
+  <rect x="40" y="40" width="48" height="48" fill="#152c3a"/>
+  <rect x="152" y="40" width="48" height="48" fill="#152c3a"/>
+  <rect x="40" y="152" width="48" height="48" fill="#152c3a"/>
+  <rect x="100" y="100" width="40" height="40" fill="#152c3a"/>
+  <rect x="152" y="152" width="20" height="20" fill="#152c3a"/>
+  <rect x="180" y="180" width="20" height="20" fill="#152c3a"/>
+  <text x="120" y="128" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700" fill="#b52c26">ZELLE QR FPO</text>
+</svg>

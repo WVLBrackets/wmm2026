@@ -8,7 +8,31 @@ import lambdaChromium from '@sparticuz/chromium';
 import { encode } from 'next-auth/jwt';
 import { MATCHUP_SEEDS, REGION_POSITIONS } from '../src/lib/tournamentDefinition';
 import type { TournamentData } from '../src/types/tournament';
-import { FALLBACK_CONFIG } from '../src/lib/fallbackConfig';
+/** Local site-config fixture for the builder (not live CMS). */
+const SITE_CONFIG_FIXTURE = {
+  tournamentYear: '2027',
+  siteName: "Warren's March Madness",
+  siteDescription: 'Local tournament builder verification',
+  standingsYear: '2027',
+  entryCost: 5,
+  masterLockMessage: '',
+  contactEmail: 'admin@example.invalid',
+  footerText: '',
+  lastYearWinner: '',
+  lastYearChampionship: 0,
+  tournamentStartDate: '2027-03-18T00:00:00.000Z',
+  bracketsAvailable: 'YES',
+  bracketsAvailableDateTime: '2027-03-01T00:00:00.000Z',
+  venmoUser: '',
+  enablePayCapability: 'NO',
+  enableVenmo: 'NO',
+  enableZelle: 'NO',
+  zelleDisplayName: '',
+  zelleEmail: '',
+  zellePhone: '',
+  zelleQrEnabled: 'NO',
+  zelleQrImageSrc: '',
+};
 
 const base = 'http://127.0.0.1:3117';
 const secret = 'local-tournament-verification-only';
@@ -54,7 +78,7 @@ async function main() {
       const url = new URL(route.request().url());
       if (url.origin !== base) return route.abort();
       if (url.pathname === '/api/admin/team-data') return route.fulfill({ json: { success: true, data: teams } });
-      if (url.pathname === '/api/site-config') return route.fulfill({ json: { success: true, data: { ...FALLBACK_CONFIG, tournamentYear: '2027' } } });
+      if (url.pathname === '/api/site-config') return route.fulfill({ json: { success: true, data: SITE_CONFIG_FIXTURE } });
       if (url.pathname === '/api/team-data') return route.fulfill({ json: { success: true, data: Object.values(teams) } });
       if (['/api/admin/users', '/api/admin/brackets'].includes(url.pathname)) return route.fulfill({ json: { success: true, data: [] } });
       if (url.pathname === '/api/admin/kill-switch') return route.fulfill({ json: { success: true, data: { enabled: false } } });

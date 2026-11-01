@@ -1,3 +1,4 @@
+import CmsText from "@/components/cms/CmsText";
 import {
   isPaper2020SectionHidden,
   type VintageStandingsPaper2020,
@@ -42,7 +43,7 @@ export default function Standings2020Newspaper({
             {copy.headline}
           </h2>
           {copy.deck.trim() ? (
-            <p className="v-paper-2020__deck">{copy.deck}</p>
+            <CmsText as="p" className="v-paper-2020__deck" text={copy.deck} />
           ) : null}
         </>
       ) : null}
@@ -58,8 +59,12 @@ export default function Standings2020Newspaper({
               {copy.leadSubhead.trim() ? (
                 <h3 className="v-paper-2020__subhead">{copy.leadSubhead}</h3>
               ) : null}
-              {copy.leadBody1.trim() ? <p>{copy.leadBody1}</p> : null}
-              {copy.leadBody2.trim() ? <p>{copy.leadBody2}</p> : null}
+              {copy.leadBody1.trim() ? (
+                <CmsText as="p" text={copy.leadBody1} />
+              ) : null}
+              {copy.leadBody2.trim() ? (
+                <CmsText as="p" text={copy.leadBody2} />
+              ) : null}
             </section>
           ) : null}
 
@@ -70,10 +75,12 @@ export default function Standings2020Newspaper({
                   {copy.sidebarSubhead}
                 </h3>
               ) : null}
-              {copy.sidebarBody.trim() ? <p>{copy.sidebarBody}</p> : null}
+              {copy.sidebarBody.trim() ? (
+                <CmsText as="p" text={copy.sidebarBody} />
+              ) : null}
               {copy.pullQuote.trim() ? (
                 <p className="v-paper-2020__pull">
-                  {copy.pullQuote}
+                  <CmsText text={copy.pullQuote} />
                   {copy.pullCite.trim() ? <cite> {copy.pullCite}</cite> : null}
                 </p>
               ) : null}
@@ -93,7 +100,9 @@ export default function Standings2020Newspaper({
               {copy.wireSubhead.trim() ? (
                 <h3 className="v-paper-2020__subhead">{copy.wireSubhead}</h3>
               ) : null}
-              {copy.wireBody.trim() ? <p>{copy.wireBody}</p> : null}
+              {copy.wireBody.trim() ? (
+                <CmsText as="p" text={copy.wireBody} />
+              ) : null}
             </>
           ) : null}
           {showSourcesLine ? (

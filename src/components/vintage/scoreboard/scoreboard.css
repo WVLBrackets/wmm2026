@@ -1,0 +1,815 @@
+/* Public Scoreboard — newspaper identity; density via CSS vars on .v-scoreboard */
+.v-scoreboard {
+  padding: 8px 0 48px;
+  color: var(--v-ink, #152c3a);
+  --vsb-desktop-cols: 2;
+  --vsb-mobile-cols: 1;
+}
+
+/* Body load — same basketball spinner language as Standings / My Picks. */
+.v-scoreboard__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  min-height: min(52vh, 420px);
+  padding: 48px 16px 64px;
+  text-align: center;
+}
+
+.v-scoreboard__loading-spinner {
+  box-sizing: border-box;
+  width: 44px;
+  height: 44px;
+  background: url("/images/vintage/basketball-loader.svg") center / contain
+    no-repeat;
+  animation: v-scoreboard-spin 1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v-scoreboard__loading-spinner {
+    animation: none;
+  }
+}
+
+.v-scoreboard__loading-text {
+  margin: 0;
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--v-ink, #152c3a) 55%, transparent);
+}
+
+@keyframes v-scoreboard-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/*
+ * Header matches Standings: reserved side columns so year cannot overlay
+ * SCOREBOARD; title + Updated stamp centered.
+ */
+.v-scoreboard__header {
+  display: grid;
+  grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr) minmax(
+      5.5rem,
+      max-content
+    );
+  grid-template-areas: ". title controls";
+  align-items: start;
+  column-gap: 12px;
+  row-gap: 6px;
+  margin-bottom: 18px;
+  padding: 4px 0 14px;
+  border-bottom: 3px double var(--v-ink, #152c3a);
+  text-align: center;
+}
+
+.v-scoreboard__title-block {
+  grid-area: title;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.v-scoreboard__heading {
+  margin: 0;
+  font-family: var(--v-font-headline, "Alfa Slab One", Georgia, serif);
+  font-size: clamp(36px, 6vw, 64px);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  line-height: 1.02;
+  color: var(--v-ink, #152c3a);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.v-scoreboard__header-right {
+  grid-area: controls;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.v-scoreboard__year {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.v-scoreboard__year select {
+  appearance: none;
+  border: 1px solid var(--v-ink, #152c3a);
+  background: color-mix(in srgb, var(--v-paper, #f2ead8) 88%, #fff);
+  color: var(--v-ink, #152c3a);
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 1.35rem;
+  font-weight: 600;
+  padding: 4px 28px 4px 10px;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.v-scoreboard__year-icon {
+  position: absolute;
+  right: 8px;
+  pointer-events: none;
+  width: 14px;
+  height: 14px;
+}
+
+.v-scoreboard__year select:focus-visible,
+.v-scoreboard__group-select:focus-visible,
+.v-scoreboard__tab:focus-visible,
+.v-scoreboard__pager a:focus-visible,
+.v-scoreboard__pager button:focus-visible {
+  outline: 3px solid var(--v-red, #b52c26);
+  outline-offset: 2px;
+}
+
+.v-scoreboard__updated {
+  margin: 0;
+  max-width: 100%;
+  font-family: var(--v-font-specialty, Georgia, serif);
+  font-size: 0.85rem;
+  color: var(--v-ink, #152c3a);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * Scoreboard gear sits inline with the year select. Override homepage
+ * `.v-edit-gear` absolute pin (which lands on the sticky masthead).
+ */
+.v-scoreboard__gear.v-edit-gear,
+.v-scoreboard__gear {
+  position: static;
+  top: auto;
+  right: auto;
+  flex-shrink: 0;
+  opacity: 1;
+}
+
+.v-scoreboard__stale {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--v-ink, #152c3a);
+  background: color-mix(in srgb, var(--v-paper, #f2ead8) 85%, #fff);
+  font-size: 0.85rem;
+}
+
+.v-scoreboard__tabs {
+  display: none;
+  flex-wrap: wrap;
+  gap: 0;
+  margin: 0 0 18px;
+  border: 1px solid var(--v-ink, #152c3a);
+  background: var(--v-ink, #152c3a);
+}
+
+.v-scoreboard__tab {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  border-right: 1px solid color-mix(in srgb, var(--v-paper, #f2ead8) 35%, transparent);
+  background: transparent;
+  color: var(--v-paper, #f2ead8);
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: clamp(0.7rem, 1.1vw, 0.9rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-decoration: none;
+  text-align: center;
+  padding: 10px 8px;
+  cursor: pointer;
+}
+
+.v-scoreboard__tab:last-child {
+  border-right: 0;
+}
+
+.v-scoreboard__tab--active {
+  background: var(--v-paper, #f2ead8);
+  color: var(--v-ink, #152c3a);
+}
+
+.v-scoreboard__mobile-nav {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.v-scoreboard__group-label {
+  display: block;
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.v-scoreboard__group-select {
+  width: 100%;
+  appearance: none;
+  border: 1px solid var(--v-ink, #152c3a);
+  background: color-mix(in srgb, var(--v-paper, #f2ead8) 88%, #fff);
+  color: var(--v-ink, #152c3a);
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 10px 12px;
+  border-radius: 0;
+}
+
+.v-scoreboard__mobile-pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-family: var(--v-font-body, Arial, Helvetica, sans-serif);
+  font-size: 0.8rem;
+}
+
+.v-scoreboard__mobile-pager a {
+  color: var(--v-ink, #152c3a);
+  text-decoration: underline;
+}
+
+.v-scoreboard__mobile-pager a[aria-disabled="true"] {
+  color: color-mix(in srgb, var(--v-ink, #152c3a) 40%, transparent);
+  text-decoration: none;
+  pointer-events: none;
+}
+
+.v-scoreboard__page-intro {
+  margin: 0 0 18px;
+}
+
+.v-scoreboard__page-title {
+  margin: 0;
+  font-family: var(--v-font-headline, "Alfa Slab One", Georgia, serif);
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-weight: 400;
+  text-transform: uppercase;
+  line-height: 1.1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35em 0.55em;
+}
+
+.v-scoreboard__page-dates {
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: clamp(0.95rem, 1.6vw, 1.15rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: color-mix(in srgb, var(--v-ink, #152c3a) 72%, transparent);
+}
+
+.v-scoreboard__page-meta {
+  margin: 4px 0 0;
+  font-family: var(--v-font-body, Arial, Helvetica, sans-serif);
+  font-size: 0.9rem;
+  color: color-mix(in srgb, var(--v-ink, #152c3a) 78%, transparent);
+}
+
+.v-scoreboard__section {
+  margin-bottom: 28px;
+  padding-top: 8px;
+  border-top: 1px solid var(--v-ink, #152c3a);
+}
+
+.v-scoreboard__section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 14px;
+  margin-bottom: 10px;
+}
+
+.v-scoreboard__section-title {
+  margin: 0;
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.v-scoreboard__section-note {
+  margin: 0;
+  font-family: var(--v-font-specialty, Georgia, serif);
+  font-size: 0.85rem;
+  font-style: italic;
+  color: color-mix(in srgb, var(--v-ink, #152c3a) 70%, transparent);
+}
+
+.v-scoreboard__day {
+  margin: 0 0 8px;
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.v-scoreboard__grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(var(--vsb-mobile-cols), minmax(0, 1fr));
+  margin-bottom: 16px;
+}
+
+/* Do not stretch a partial last row — cards keep consistent width */
+.v-scoreboard__grid > * {
+  min-width: 0;
+}
+
+.v-scoreboard__card {
+  border: 1px solid #d0d0d0;
+  border-radius: 2px;
+  background: #fff;
+  padding: 12px 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+  isolation: isolate;
+}
+
+.v-scoreboard__card-status {
+  display: flex;
+  align-items: center;
+  min-height: 1.25rem;
+  border-top: 1px solid #c8c8c8;
+  margin: 0 -2px;
+  padding-top: 0;
+}
+
+.v-scoreboard__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: -1px;
+  padding: 0 6px 0 0;
+  background: #fff;
+  font-family: var(--v-font-body, Arial, Helvetica, sans-serif);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #1a1a1a;
+}
+
+.v-scoreboard__status--live {
+  color: var(--v-red, #b52c26);
+}
+
+.v-scoreboard__status--upcoming {
+  letter-spacing: 0.03em;
+  font-weight: 700;
+}
+
+.v-scoreboard__card--upcoming .v-scoreboard__status {
+  max-width: 100%;
+  white-space: normal;
+  line-height: 1.25;
+}
+
+.v-scoreboard__upcoming-tip {
+  font-family: var(--v-font-body, Arial, Helvetica, sans-serif);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #555;
+}
+
+.v-scoreboard__tipoff-input {
+  max-width: 11.5rem;
+  font-family: var(--v-font-body, Arial, Helvetica, sans-serif);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid #c8c2b4;
+  background: #fff;
+  color: #1a2744;
+}
+
+.v-scoreboard__status-dot,
+.v-scoreboard__live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #1a1a1a;
+  flex-shrink: 0;
+}
+
+.v-scoreboard__live-dot {
+  background: var(--v-red, #b52c26);
+}
+
+.v-scoreboard__card-edit-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: -10px;
+  padding: 2px 4px 0 0;
+  background: #fff;
+}
+
+.v-scoreboard__card-edit-status select,
+.v-scoreboard__clock-input,
+.v-scoreboard__score-input {
+  font-family: var(--v-font-body, Arial, Helvetica, sans-serif);
+  font-size: 0.8rem;
+  border: 1px solid #bbb;
+  border-radius: 2px;
+  background: #fff;
+  color: #1a1a1a;
+  padding: 3px 6px;
+  max-width: 100%;
+}
+
+.v-scoreboard__clock-input {
+  width: 4.25rem;
+}
+
+.v-scoreboard__ot-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--v-font-body, Arial, Helvetica, sans-serif);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.v-scoreboard__teams {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.v-scoreboard__team-row {
+  display: grid;
+  grid-template-columns: 28px 1.4rem minmax(0, 1fr) 2.75rem;
+  align-items: center;
+  gap: 6px 8px;
+  color: #1a1a1a;
+}
+
+.v-scoreboard__team-row--muted {
+  color: #8a8a8a;
+}
+
+.v-scoreboard__seed {
+  font-family: var(--v-font-body, Arial, Helvetica, sans-serif);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: inherit;
+  opacity: 0.7;
+}
+
+.v-scoreboard__logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: 50%;
+}
+
+.v-scoreboard__logo-fallback {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  border: 1px solid #ddd;
+  border-radius: 50%;
+  color: #999;
+}
+
+.v-scoreboard__team-name {
+  font-family: var(--v-font-body, Arial, Helvetica, sans-serif);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.2;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v-scoreboard__score {
+  font-family: var(--v-font-body, Arial, Helvetica, sans-serif);
+  font-size: 1.2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  justify-self: end;
+}
+
+.v-scoreboard__score-input {
+  width: 2.75rem;
+  text-align: right;
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  justify-self: end;
+  padding: 2px 4px;
+}
+
+.v-scoreboard__card-foot {
+  margin: 2px 0 0;
+  font-family: var(--v-font-body, Arial, Helvetica, sans-serif);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9a9a9a;
+}
+
+.v-scoreboard__empty {
+  margin: 8px 0 16px;
+  font-size: 0.9rem;
+  color: color-mix(in srgb, var(--v-ink, #152c3a) 70%, transparent);
+}
+
+.v-scoreboard__pager {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--v-ink, #152c3a);
+}
+
+.v-scoreboard__pager a,
+.v-scoreboard__pager span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 16px;
+  border: 1px solid var(--v-ink, #152c3a);
+  background: var(--v-ink, #152c3a);
+  color: var(--v-paper, #f2ead8);
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.v-scoreboard__pager span {
+  background: transparent;
+  color: color-mix(in srgb, var(--v-ink, #152c3a) 45%, transparent);
+  border-color: color-mix(in srgb, var(--v-ink, #152c3a) 35%, transparent);
+}
+
+.v-scoreboard__edit {
+  margin: 0 0 20px;
+  padding: 14px;
+  border: 1px solid var(--v-ink, #152c3a);
+  background: color-mix(in srgb, var(--v-paper, #f2ead8) 88%, white);
+}
+
+.v-scoreboard__edit-publish-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.v-scoreboard__edit-publish-copy {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.v-scoreboard__edit-publish-copy p {
+  margin: 0;
+  font-family: var(--v-font-body, Arial, Helvetica, sans-serif);
+  font-size: 0.85rem;
+  text-transform: none;
+  letter-spacing: 0;
+  color: color-mix(in srgb, var(--v-ink, #152c3a) 75%, transparent);
+}
+
+.v-scoreboard__edit-ok {
+  margin: 0 0 10px;
+  color: #166534;
+  font-size: 0.85rem;
+}
+
+.v-scoreboard__edit-err {
+  margin: 0 0 10px;
+  color: #991b1b;
+  font-size: 0.85rem;
+}
+
+.v-scoreboard__edit-settings {
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--v-ink, #152c3a) 22%, transparent);
+  background: color-mix(in srgb, var(--v-paper, #f2ead8) 92%, white);
+}
+
+.v-scoreboard__edit-settings label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--v-ink, #152c3a);
+}
+
+.v-scoreboard__edit-settings select {
+  max-width: 12rem;
+  border: 1px solid var(--v-ink, #152c3a);
+  background: #fff;
+  color: var(--v-ink, #152c3a);
+  font-family: var(--v-font-body, Arial, Helvetica, sans-serif);
+  font-size: 0.95rem;
+  padding: 8px 10px;
+  border-radius: 0;
+}
+
+.v-scoreboard__edit-settings-hint {
+  margin: 8px 0 0;
+  font-family: var(--v-font-body, Arial, Helvetica, sans-serif);
+  font-size: 0.8rem;
+  color: color-mix(in srgb, var(--v-ink, #152c3a) 70%, transparent);
+}
+
+/* Screen-reader-only label used by editable card controls */
+.v-scoreboard .v-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.v-scoreboard__edit h3 {
+  margin: 0 0 6px;
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.v-scoreboard__edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.v-scoreboard__edit-actions button {
+  border: 1px solid var(--v-ink, #152c3a);
+  background: var(--v-ink, #152c3a);
+  color: var(--v-paper, #f2ead8);
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 0;
+}
+
+.v-scoreboard__edit-actions button[data-variant="secondary"] {
+  background: transparent;
+  color: var(--v-ink, #152c3a);
+}
+
+.v-scoreboard__edit-actions button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.v-scoreboard__catalog {
+  max-height: 180px;
+  overflow: auto;
+  border: 1px solid var(--v-rule, #b7b09f);
+  padding: 8px;
+  font-size: 0.8rem;
+}
+
+.v-scoreboard__catalog label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: var(--v-font-body, Arial, Helvetica, sans-serif);
+  margin-bottom: 4px;
+}
+
+@media (min-width: 901px) {
+  .v-scoreboard__tabs {
+    display: flex;
+  }
+
+  .v-scoreboard__mobile-nav {
+    display: none;
+  }
+
+  .v-scoreboard__grid {
+    grid-template-columns: repeat(var(--vsb-desktop-cols), minmax(0, 1fr));
+  }
+}
+
+/* Compact treatment when denser than 2 columns */
+@media (min-width: 901px) {
+  .v-scoreboard[data-desktop-cols="3"] .v-scoreboard__team-name,
+  .v-scoreboard[data-desktop-cols="4"] .v-scoreboard__team-name {
+    font-size: 0.8rem;
+  }
+
+  .v-scoreboard[data-desktop-cols="3"] .v-scoreboard__score,
+  .v-scoreboard[data-desktop-cols="4"] .v-scoreboard__score {
+    font-size: 1rem;
+  }
+
+  .v-scoreboard[data-desktop-cols="4"] .v-scoreboard__logo,
+  .v-scoreboard[data-desktop-cols="4"] .v-scoreboard__logo-fallback {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+@media (max-width: 900px) {
+  .v-scoreboard__heading {
+    font-size: clamp(28px, 8vw, 40px);
+  }
+
+  /*
+   * Phone: year selector on its own row so it cannot collide with SCOREBOARD
+   * or the updated timestamp (same pattern as Standings).
+   */
+  .v-scoreboard__header {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "title"
+      "controls";
+    justify-items: center;
+    border-bottom: 1px solid var(--v-ink, #152c3a);
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .v-scoreboard__header-right {
+    justify-content: center;
+    width: 100%;
+  }
+}
+
+@media (max-width: 389px) {
+  .v-scoreboard[data-mobile-cols="2"] .v-scoreboard__team-name {
+    font-size: 0.72rem;
+  }
+
+  .v-scoreboard[data-mobile-cols="2"] .v-scoreboard__score {
+    font-size: 0.95rem;
+  }
+
+  .v-scoreboard[data-mobile-cols="2"] .v-scoreboard__card {
+    padding: 8px;
+  }
+}

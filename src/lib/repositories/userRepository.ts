@@ -9,7 +9,6 @@ import { sql } from '../databaseAdapter';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { getCurrentEnvironment } from '../databaseConfig';
-import { initializeDatabase } from '../database/migrations';
 
 function isUndefinedColumnError(error: unknown): boolean {
   const code = (error as { code?: string })?.code;
@@ -41,12 +40,9 @@ export async function createUser(email: string, name: string, password: string):
       error.message.includes('relation') ||
       (error as { code?: string }).code === '42P01'
     )) {
-      try {
-        await initializeDatabase();
-      } catch (initError) {
-        console.error('[createUser] Failed to initialize database:', initError);
-        throw new Error('Database initialization failed. Please contact the administrator.');
-      }
+      throw new Error(
+        'Database is not initialized. An administrator must run schema migrations.',
+      );
     } else {
       throw error;
     }
@@ -142,7 +138,9 @@ export async function ensureDevBypassUser(email: string, name: string): Promise<
       error.message.includes('relation') ||
       (error as { code?: string }).code === '42P01'
     )) {
-      await initializeDatabase();
+      throw new Error(
+        'Database is not initialized. An administrator must run schema migrations.',
+      );
     } else {
       throw error;
     }
@@ -194,7 +192,9 @@ export async function ensureImportUserByEmail(email: string, name: string): Prom
       error.message.includes('relation') ||
       (error as { code?: string }).code === '42P01'
     )) {
-      await initializeDatabase();
+      throw new Error(
+        'Database is not initialized. An administrator must run schema migrations.',
+      );
     } else {
       throw error;
     }
@@ -593,9 +593,9 @@ export async function updateStandingsViewPreferenceByEmail(
     return result.rows.length > 0;
   } catch (error) {
     if (isUndefinedColumnError(error)) {
-      await initializeDatabase();
-      const retry = await runUpdate();
-      return retry.rows.length > 0;
+      throw new Error(
+        'Database schema is missing a users column. An administrator must run schema migrations.',
+      );
     }
     throw error;
   }

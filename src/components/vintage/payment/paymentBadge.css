@@ -1,0 +1,69 @@
+/*
+ * Shared payment status badge (Paid / Pending / Unpaid).
+ * Colors from My Picks CMS via --vp-pay-* custom properties.
+ */
+.v-pay-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  box-sizing: border-box;
+  max-width: 100%;
+  min-height: 22px;
+  padding: 2px 9px 2px 4px;
+  border: 1px solid var(--vp-pay-badge-border, #9ca3af);
+  border-radius: 999px;
+  background: var(--vp-pay-badge-bg, #e5e7eb);
+  color: var(--vp-pay-badge-fg, #374151);
+  font-family: var(--v-font-body, Arial, Helvetica, sans-serif);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.v-pay-badge--paid {
+  --vp-pay-badge-bg: var(--vp-pay-paid-bg, #dcfce7);
+  --vp-pay-badge-fg: var(--vp-pay-paid-fg, #166534);
+  --vp-pay-badge-border: var(--vp-pay-paid-border, #86efac);
+  --vp-pay-badge-icon-bg: var(--vp-pay-paid-icon-bg, #166534);
+  --vp-pay-badge-icon-fg: var(--vp-pay-paid-icon-fg, #ffffff);
+}
+
+.v-pay-badge--pending {
+  --vp-pay-badge-bg: var(--vp-pay-pending-bg, #f9fafb);
+  --vp-pay-badge-fg: var(--vp-pay-pending-fg, #4b5563);
+  --vp-pay-badge-border: var(--vp-pay-pending-border, #d1d5db);
+  --vp-pay-badge-icon-bg: var(--vp-pay-pending-icon-bg, #d1d5db);
+  --vp-pay-badge-icon-fg: var(--vp-pay-pending-icon-fg, #374151);
+}
+
+.v-pay-badge--unpaid {
+  --vp-pay-badge-bg: var(--vp-pay-unpaid-bg, #e5e7eb);
+  --vp-pay-badge-fg: var(--vp-pay-unpaid-fg, #374151);
+  --vp-pay-badge-border: var(--vp-pay-unpaid-border, #9ca3af);
+  --vp-pay-badge-icon-bg: var(--vp-pay-unpaid-icon-bg, #9ca3af);
+  --vp-pay-badge-icon-fg: var(--vp-pay-unpaid-icon-fg, #ffffff);
+  padding-left: 9px;
+}
+
+.v-pay-badge__icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--vp-pay-badge-icon-bg);
+  color: var(--vp-pay-badge-icon-fg);
+  font-family: var(--v-font-icons, Oswald, Impact, sans-serif);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.v-pay-badge__caption {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

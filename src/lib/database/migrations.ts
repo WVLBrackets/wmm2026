@@ -88,6 +88,10 @@ export async function initializeDatabase(): Promise<void> {
     await addBracketSubmittedAtColumn();
     await addBracketPaymentColumns();
     await createPaymentsTable();
+    await addPaymentMethodColumns();
+    await createScoreboardTables();
+    await createAdminNotificationsTable();
+    await createHofSeasonsTable();
 
     // Admin actions audit table
     await sql`
@@ -445,6 +449,8 @@ async function createIndexes(): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS idx_tokens_expires ON tokens(expires)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_brackets_user_id_env ON brackets(user_id, environment)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_brackets_environment ON brackets(environment)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_brackets_env_user_year ON brackets(environment, user_id, year)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_brackets_env_year_status ON brackets(environment, year, status)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_usage_logs_environment ON usage_logs(environment)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_usage_logs_timestamp ON usage_logs(timestamp)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_usage_logs_username ON usage_logs(username)`;
@@ -471,7 +477,7 @@ async function addBracketPaymentColumns(): Promise<void> {
 }
 
 /**
- * Create payments table for batch payment requests (Venmo deep-link flow).
+ * Create payments table for batch payment requests (Venmo / Zelle).
  */
 async function createPaymentsTable(): Promise<void> {
   try {
@@ -482,10 +488,13 @@ async function createPaymentsTable(): Promise<void> {
         user_email VARCHAR(255) NOT NULL,
         bracket_ids JSONB NOT NULL DEFAULT '[]',
         bracket_count INTEGER NOT NULL DEFAULT 0,
+        -- Whole-dollar additional payment (not bracket count); see Payment.additionalCount.
         additional_count INTEGER NOT NULL DEFAULT 0,
         additional_note TEXT,
         amount_cents INTEGER NOT NULL,
         venmo_note TEXT,
+        payment_method VARCHAR(20) NOT NULL DEFAULT 'venmo',
+        recipient_snapshot TEXT,
         status VARCHAR(20) NOT NULL DEFAULT 'pending',
         requested_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         confirmed_at TIMESTAMPTZ,
@@ -499,6 +508,194 @@ async function createPaymentsTable(): Promise<void> {
   } catch (error) {
     console.error('[createPaymentsTable] Error:', error);
   }
+}
+
+/**
+ * Add payment_method + recipient_snapshot for multi-provider payments (legacy rows = venmo).
+ */
+async function addPaymentMethodColumns(): Promise<void> {
+  try {
+    await sql`ALTER TABLE payments ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20)`;
+    await sql`ALTER TABLE payments ADD COLUMN IF NOT EXISTS recipient_snapshot TEXT`;
+    await sql`
+      UPDATE payments
+      SET payment_method = 'venmo'
+      WHERE payment_method IS NULL OR payment_method = ''
+    `;
+    await sql`ALTER TABLE payments ALTER COLUMN payment_method SET DEFAULT 'venmo'`;
+  } catch (error) {
+    console.error('[addPaymentMethodColumns] Error:', error);
+  }
+}
+
+/**
+ * Official Scoreboard of Record + sync settings + BBS team map.
+ */
+async function createScoreboardTables(): Promise<void> {
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS scoreboard_games (
+        environment VARCHAR(50) NOT NULL,
+        year INTEGER NOT NULL,
+        game_key VARCHAR(80) NOT NULL,
+        kind VARCHAR(20) NOT NULL DEFAULT 'bracket',
+        round_label VARCHAR(40) NOT NULL DEFAULT '',
+        region VARCHAR(40),
+        seed1 INTEGER,
+        seed2 INTEGER,
+        team1_id VARCHAR(40),
+        team2_id VARCHAR(40),
+        team1_name VARCHAR(255),
+        team2_name VARCHAR(255),
+        status VARCHAR(20) NOT NULL DEFAULT 'scheduled',
+        score1 INTEGER,
+        score2 INTEGER,
+        winner_id VARCHAR(40),
+        bbs_match_id VARCHAR(80),
+        bbs_home_team_id VARCHAR(80),
+        bbs_away_team_id VARCHAR(80),
+        last_synced_at TIMESTAMPTZ,
+        source VARCHAR(20) NOT NULL DEFAULT 'seed',
+        admin_locked BOOLEAN NOT NULL DEFAULT FALSE,
+        updated_by VARCHAR(36),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (environment, year, game_key)
+      )
+    `;
+    await sql`
+      CREATE INDEX IF NOT EXISTS idx_scoreboard_games_year_status
+      ON scoreboard_games (environment, year, status)
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS scoreboard_settings (
+        environment VARCHAR(50) NOT NULL,
+        year INTEGER NOT NULL,
+        auto_sync_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+        poll_interval_minutes INTEGER NOT NULL DEFAULT 5,
+        bbs_season VARCHAR(10),
+        last_sync_at TIMESTAMPTZ,
+        last_sync_status VARCHAR(40),
+        last_sync_error TEXT,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (environment, year)
+      )
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS scoreboard_team_map (
+        environment VARCHAR(50) NOT NULL,
+        our_team_id VARCHAR(40) NOT NULL,
+        bbs_team_id VARCHAR(80) NOT NULL,
+        bbs_team_name VARCHAR(255),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (environment, our_team_id)
+      )
+    `;
+    await sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_scoreboard_team_map_bbs
+      ON scoreboard_team_map (environment, bbs_team_id)
+    `;
+    // Public board display fields (manual tipoff / live clock)
+    await sql`
+      ALTER TABLE scoreboard_games
+      ADD COLUMN IF NOT EXISTS tipoff_at TIMESTAMPTZ
+    `;
+    await sql`
+      ALTER TABLE scoreboard_games
+      ADD COLUMN IF NOT EXISTS period_label VARCHAR(20)
+    `;
+    await sql`
+      ALTER TABLE scoreboard_games
+      ADD COLUMN IF NOT EXISTS clock VARCHAR(20)
+    `;
+    await sql`
+      ALTER TABLE scoreboard_games
+      ADD COLUMN IF NOT EXISTS status_note VARCHAR(120)
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS scoreboard_pages (
+        environment VARCHAR(50) NOT NULL,
+        year INTEGER NOT NULL,
+        slug VARCHAR(80) NOT NULL,
+        label VARCHAR(120) NOT NULL,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        desktop_cols INTEGER NOT NULL DEFAULT 2,
+        mobile_cols INTEGER NOT NULL DEFAULT 1,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (environment, year, slug)
+      )
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS scoreboard_page_games (
+        environment VARCHAR(50) NOT NULL,
+        year INTEGER NOT NULL,
+        page_slug VARCHAR(80) NOT NULL,
+        game_key VARCHAR(80) NOT NULL,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (environment, year, page_slug, game_key)
+      )
+    `;
+    await sql`
+      CREATE INDEX IF NOT EXISTS idx_scoreboard_page_games_game
+      ON scoreboard_page_games (environment, year, game_key)
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS scoreboard_snapshots (
+        environment VARCHAR(50) NOT NULL,
+        year INTEGER NOT NULL,
+        payload JSONB NOT NULL,
+        computed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (environment, year)
+      )
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS scoreboard_app_settings (
+        environment VARCHAR(50) PRIMARY KEY,
+        default_year INTEGER NOT NULL DEFAULT 2026,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `;
+  } catch (error) {
+    console.error('[createScoreboardTables] Error:', error);
+  }
+}
+
+/**
+ * Cross-instance dedup for admin error emails (one row per error key).
+ */
+async function createAdminNotificationsTable(): Promise<void> {
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS admin_notifications (
+        environment VARCHAR(50) NOT NULL,
+        notify_key VARCHAR(255) NOT NULL,
+        last_sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (environment, notify_key)
+      )
+    `;
+  } catch (error) {
+    console.error('[createAdminNotificationsTable] Error:', error);
+  }
+}
+
+/**
+ * Hall of Fame podium history (retired Google Sheet).
+ */
+async function createHofSeasonsTable(): Promise<void> {
+  await sql`
+    CREATE TABLE IF NOT EXISTS hof_seasons (
+      year VARCHAR(8) PRIMARY KEY,
+      first_name TEXT NOT NULL DEFAULT '',
+      first_team TEXT NOT NULL DEFAULT '',
+      first_score INTEGER NOT NULL DEFAULT 0,
+      second_name TEXT NOT NULL DEFAULT '',
+      second_score INTEGER NOT NULL DEFAULT 0,
+      third_name TEXT NOT NULL DEFAULT '',
+      third_score INTEGER NOT NULL DEFAULT 0,
+      total_entries INTEGER NOT NULL DEFAULT 0,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `;
 }
 
 /**

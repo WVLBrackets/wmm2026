@@ -16,7 +16,7 @@ const headers = { "Cache-Control": "private, no-store" };
 const MAX_BODY_BYTES = 1_000_000;
 
 /**
- * Export the current environment’s full vintage CMS package (draft + published).
+ * Export the current environment’s published vintage CMS package.
  */
 export async function GET(request: NextRequest) {
   const auth = await authorizeVintageRequest(request);
@@ -46,8 +46,8 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * Preview (diff) or apply a CMS transfer package.
- * Body: `{ action: "preview" | "apply", bundle, version?, expectedChangeCount? }`
+ * Preview (diff) or apply a CMS transfer package (published fields only).
+ * Body: `{ action: "preview" | "apply", bundle, version?, expectedChangeCount?, selectedPaths? }`
  */
 export async function POST(request: NextRequest) {
   const auth = await authorizeVintageRequest(request);
@@ -66,6 +66,7 @@ export async function POST(request: NextRequest) {
     bundle?: unknown;
     version?: number;
     expectedChangeCount?: number;
+    selectedPaths?: string[];
   };
   try {
     input = JSON.parse(text);
@@ -111,18 +112,27 @@ export async function POST(request: NextRequest) {
       !Number.isSafeInteger(input.version) ||
       (input.version ?? -1) < 0 ||
       !Number.isSafeInteger(input.expectedChangeCount) ||
-      (input.expectedChangeCount ?? -1) < 0
+      (input.expectedChangeCount ?? -1) < 0 ||
+      !Array.isArray(input.selectedPaths)
     ) {
       return NextResponse.json(
-        { error: "Apply requires version and expectedChangeCount." },
+        {
+          error:
+            "Apply requires version, expectedChangeCount, and selectedPaths.",
+        },
         { status: 400, headers },
       );
     }
+
+    const selectedPaths = input.selectedPaths.filter(
+      (path): path is string => typeof path === "string" && path.length > 0,
+    );
 
     const result = await applyVintageCmsTransfer({
       version: input.version!,
       bundle: input.bundle,
       expectedChangeCount: input.expectedChangeCount!,
+      selectedPaths,
     });
     return NextResponse.json(
       {
@@ -146,6 +156,8 @@ export async function POST(request: NextRequest) {
     if (
       message.startsWith("CMS package") ||
       message.startsWith("Unsupported") ||
+      message.startsWith("Selected path") ||
+      message.startsWith("Apply requires") ||
       message.includes("missing") ||
       message.includes("kind must") ||
       message.includes("changed since the preview") ||

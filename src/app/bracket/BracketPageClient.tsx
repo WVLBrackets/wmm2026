@@ -1,34 +1,40 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, useMemo, Suspense, Fragment } from 'react';
+import { flushSync } from 'react-dom';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { TournamentData, TournamentBracket, BracketSubmission } from '@/types/tournament';
 import { tryLoadTournamentData } from '@/lib/tournamentLoader';
-import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 import {
   applyDisplayNamesToTournamentData,
   buildTeamIdToDisplayNameMapFromApi,
 } from '@/lib/teamDisplayName';
 import { generate64TeamBracket } from '@/lib/bracketGenerator';
 import { applyPickCascade } from '@/lib/fullBracket/fullBracketGeometry';
-import FullBracketEditorShell from '@/components/bracket/FullBracketEditorShell';
+import dynamic from 'next/dynamic';
 import { SiteConfigData } from '@/lib/siteConfig';
-import StepByStepBracket from '@/components/bracket/StepByStepBracket';
 import MyPicksLanding, { type Bracket as MyPicksBracketRow } from '@/components/MyPicksLanding';
-import BracketViewerModal from '@/components/bracket/BracketViewerModal';
-import { useBracketMode } from '@/contexts/BracketModeContext';
-import { Trophy } from 'lucide-react';
-import { LoggedButton } from '@/components/LoggedButton';
+import LoadingBasketball from '@/components/vintage/feedback/LoadingBasketball';
+
+const FullBracketEditorShell = dynamic(
+  () => import('@/components/bracket/FullBracketEditorShell'),
+  { loading: () => <LoadingBasketball message="" /> },
+);
+const StepByStepBracket = dynamic(
+  () => import('@/components/bracket/StepByStepBracket'),
+  { loading: () => <LoadingBasketball message="" /> },
+);
+const BracketViewerModal = dynamic(
+  () => import('@/components/bracket/BracketViewerModal'),
+  { ssr: false },
+);
 import { useUsageLogger } from '@/hooks/useUsageLogger';
 import { useCSRF } from '@/hooks/useCSRF';
 import {
-  evaluatePicksAccess,
-  type PicksAccessResult,
-} from '@/lib/services/picksAccessPolicy';
-import {
   evaluateVintageActionLock,
   formatVintagePriorYearMessage,
+  type VintageActionLockResult,
 } from '@/lib/services/vintageActionLock';
 import {
   buildYearScopedPath,
@@ -40,9 +46,49 @@ import {
   formatVintagePicksLabel,
   type VintagePicksContent,
 } from '@/lib/vintage/picksContent';
+import {
+  formatEditorCopy,
+  type VintageBracketEditorContent,
+} from '@/lib/vintage/bracketEditorContent';
+import type { VintagePdfDialogCopy } from '@/lib/vintage/emailsContent';
+import type { VintageStandingsContent } from '@/lib/vintage/standingsContent';
+import type { MyPicksBracketRow as MyPicksServerRow } from '@/lib/services/myPicksService';
 import { useServerTime } from '@/hooks/useServerTime';
 import VintageShell from '@/components/vintage/VintageShell';
+import { BracketEditorCopyProvider } from '@/components/bracket/BracketEditorCopyContext';
+import BusyOverlay from '@/components/vintage/feedback/BusyOverlay';
+import ConfirmDialog from '@/components/vintage/feedback/ConfirmDialog';
+import SiteErrorPanel from '@/components/vintage/feedback/SiteErrorPanel';
+import { gamePickIsValid, updateBracketWithValidPicks } from '@/lib/bracketPickValidity';
+import { adminBracketEditorReturnHref } from '@/lib/admin/bracketsListFilters';
 import '@/components/vintage/picks/picks.css';
+import '@/components/bracket/bracket-editor.css';
+
+/**
+ * Count valid picks across the live 63-game tree for editor progress chrome.
+ */
+function countOverallPickProgress(
+  bracket: TournamentBracket,
+  picks: Record<string, string>,
+  tournamentData: TournamentData,
+): { completed: number; total: number } {
+  const live = updateBracketWithValidPicks(bracket, picks, tournamentData);
+  let completed = 0;
+  let total = 0;
+  for (const regionGames of Object.values(live.regions)) {
+    for (const game of regionGames) {
+      total += 1;
+      if (gamePickIsValid(game, picks)) completed += 1;
+    }
+  }
+  for (const game of live.finalFour) {
+    total += 1;
+    if (gamePickIsValid(game, picks)) completed += 1;
+  }
+  total += 1;
+  if (gamePickIsValid(live.championship, picks)) completed += 1;
+  return { completed, total };
+}
 
 /**
  * My Picks table row for submit-from-landing (`entryName` may be unset until the user fills it).
@@ -100,33 +146,65 @@ function bracketFromSaveApiResponse(
 }
 
 /**
- * Default entry name for a copied bracket (Microsoft-style: append `" - Copy"`).
+ * Default entry name for a copied bracket from My Picks CMS (`{entry}` token).
+ *
+ * @param template - `feedback.copyEntryName`
+ * @param sourceEntryName - Entry being copied
  */
-function defaultBracketCopyEntryName(sourceEntryName: string): string {
-  const t = sourceEntryName.trim();
-  return t ? `${t} - Copy` : 'Bracket - Copy';
+function defaultBracketCopyEntryName(template: string, sourceEntryName: string): string {
+  return formatEditorCopy(template, { entry: sourceEntryName.trim() }).trim();
+}
+
+/** Server-rendered My Picks data (no client waterfall on first paint). */
+export interface MyPicksInitialData {
+  activeYear: number;
+  viewingYear: number;
+  availableYears: number[];
+  brackets: MyPicksServerRow[];
+  tournamentData: TournamentData | null;
+}
+
+/** Signed-in viewer (server session). */
+export interface MyPicksViewer {
+  name: string;
+  email: string;
+}
+
+/**
+ * Prefer API error text only for CMS-sourced gate / validation responses (400, 403);
+ * everything else shows the CMS failure message.
+ *
+ * @param response - Fetch response
+ * @param data - Parsed JSON body
+ * @param fallback - CMS failure copy
+ */
+function apiFailureMessage(
+  response: Response,
+  data: { error?: unknown },
+  fallback: string,
+): string {
+  if ((response.status === 400 || response.status === 403) && typeof data.error === 'string' && data.error.trim()) {
+    return data.error;
+  }
+  return fallback;
 }
 
 function BracketContent({
-  vintage = false,
   vintageAdmin = false,
-  vintageHome = null,
-  picksCopy = null,
-  standingsChrome = null,
-}: {
-  vintage?: boolean;
-  /** Primary vintage admin — CMS edit gear only (not the public UX gate). */
-  vintageAdmin?: boolean;
-  vintageHome?: VintageContent | null;
-  picksCopy?: VintagePicksContent | null;
-  /** Published Standings CMS — FF/Champ result chrome colors + sizes. */
-  standingsChrome?: import("@/lib/vintage/standingsContent").VintageStandingsContent | null;
-}) {
-  const { data: session, status } = useSession();
+  vintageHome,
+  picksCopy,
+  bracketEditorCopy,
+  pdfDialogCopy,
+  standingsChrome,
+  siteConfig,
+  viewer,
+  initial,
+}: BracketPageClientProps) {
+  const { status } = useSession();
+  const feedback = picksCopy.feedback;
   useUsageLogger('Pick');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { setInBracketMode } = useBracketMode();
   const { fetchWithCSRF } = useCSRF();
   
   // View states
@@ -135,13 +213,17 @@ function BracketContent({
   const [isReadOnly, setIsReadOnly] = useState(false);
   
   // Tournament data
-  const [tournamentData, setTournamentData] = useState<TournamentData | null>(null);
-  const [bracket, setBracket] = useState<TournamentBracket | null>(null);
+  const [tournamentData, setTournamentData] = useState<TournamentData | null>(initial.tournamentData);
+  const [bracket, setBracket] = useState<TournamentBracket | null>(() =>
+    initial.tournamentData ? generate64TeamBracket(initial.tournamentData) : null,
+  );
   const [picks, setPicks] = useState<{ [gameId: string]: string }>({});
   const [entryName, setEntryName] = useState<string>('');
   const [tieBreaker, setTieBreaker] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [submittedBrackets, setSubmittedBrackets] = useState<BracketSubmission[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [submittedBrackets, setSubmittedBrackets] = useState<BracketSubmission[]>(
+    initial.brackets as unknown as BracketSubmission[],
+  );
   const [bracketResetKey, setBracketResetKey] = useState(0);
   const [deletingBracketId, setDeletingBracketId] = useState<string | null>(null);
   const [pendingDeleteBracketId, setPendingDeleteBracketId] = useState<string | null>(null);
@@ -151,14 +233,15 @@ function BracketContent({
   const [submitError, setSubmitError] = useState<string>('');
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [isLiveResultsMode, setIsLiveResultsMode] = useState(false);
-  const [siteConfig, setSiteConfig] = useState<SiteConfigData | null>(null);
   const [pendingBracketData, setPendingBracketData] = useState<Record<string, unknown> | null>(null);
-  const [killSwitchEnabled, setKillSwitchEnabled] = useState<boolean>(true);
-  const [killSwitchMessage, setKillSwitchMessage] = useState<string>(
-    FALLBACK_CONFIG.masterLockMessage ||
-      'Bracket actions are temporarily locked by the administrator.'
-  );
+  /** CMS notice popup (replaces window.alert). */
+  const [notice, setNotice] = useState<string | null>(null);
   const [submittingBracketId, setSubmittingBracketId] = useState<string | null>(null);
+  /**
+   * Full-page spinner while leaving the editor so My Picks never paints a stale list
+   * (e.g. after Submit → reload brackets → then show landing).
+   */
+  const [viewTransitionMessage, setViewTransitionMessage] = useState<string | null>(null);
   /** Copy in flight — set synchronously so the button disables before network work. */
   const [copyingBracketId, setCopyingBracketId] = useState<string | null>(null);
   /** Restore in flight — set synchronously so the button disables before network work. */
@@ -171,6 +254,7 @@ function BracketContent({
     draftEntryName: string;
   } | null>(null);
   const [copyNameDialogBusy, setCopyNameDialogBusy] = useState(false);
+  const [copyNameError, setCopyNameError] = useState<string | null>(null);
   const [layoutMode, setLayoutMode] = useState<MyBracketLayoutMode>(() => {
     if (typeof window === 'undefined') return '5p';
     return parseStoredLayoutMode(sessionStorage.getItem(MY_BRACKET_LAYOUT_MODE_KEY));
@@ -179,14 +263,10 @@ function BracketContent({
   const [fullBracketModalOpen, setFullBracketModalOpen] = useState(false);
   const [fullBracketModalId, setFullBracketModalId] = useState<string | null>(null);
   const [fullBracketModalTitle, setFullBracketModalTitle] = useState('');
-  const [fullBracketModalYear, setFullBracketModalYear] = useState(() => new Date().getFullYear());
-  const [activeYear, setActiveYear] = useState<number>(() =>
-    parseInt(String(FALLBACK_CONFIG.tournamentYear || new Date().getFullYear()), 10)
-  );
-  const [viewingYear, setViewingYear] = useState<number>(() =>
-    parseInt(String(FALLBACK_CONFIG.tournamentYear || new Date().getFullYear()), 10)
-  );
-  const [availableYears, setAvailableYears] = useState<number[]>([]);
+  const [fullBracketModalYear, setFullBracketModalYear] = useState(initial.activeYear);
+  const [activeYear, setActiveYear] = useState<number>(initial.activeYear);
+  const [viewingYear, setViewingYear] = useState<number>(initial.viewingYear);
+  const [availableYears, setAvailableYears] = useState<number[]>(initial.availableYears);
   /** Soft year switch in progress (keeps landing mounted; no full-page spinner). */
   const [isYearSwitching, setIsYearSwitching] = useState(false);
 
@@ -198,21 +278,12 @@ function BracketContent({
   const viewingHistorical = isHistoricalYear(viewingYear, activeYear);
   const { getServerNowMs } = useServerTime();
 
-  const loadTournamentRef = useRef<(() => Promise<void>) | undefined>(undefined);
   const softSwitchYearRef = useRef<((nextYear: number) => Promise<void>) | undefined>(undefined);
   const hasRestoredState = useRef(false);
-  /** True after the first full tournament load for this session. */
-  const initialLoadDoneRef = useRef(false);
   /** Year already handled by an in-flight soft switch (avoids double-fetch with URL sync). */
   const softSwitchTargetRef = useRef<number | null>(null);
   /** Monotonic id so rapid year changes discard stale field/bracket responses. */
   const yearSwitchGenRef = useRef(0);
-
-  /**
-   * Active tournament year from site config (string form for JSON filename).
-   */
-  const resolveTournamentYear = (config: SiteConfigData | null | undefined): string =>
-    String(config?.tournamentYear || FALLBACK_CONFIG.tournamentYear || new Date().getFullYear());
 
   /**
    * Load and enrich tournament field JSON for a year (null when file is absent).
@@ -274,10 +345,28 @@ function BracketContent({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  // Set bracket mode when view changes
+  /**
+   * Always open the editor at the top of the page.
+   * My Picks list scroll is otherwise preserved across the client-side view swap,
+   * which leaves the sticky brand strip mid-page.
+   */
   useEffect(() => {
-    setInBracketMode(currentView === 'bracket');
-  }, [currentView, setInBracketMode]);
+    if (currentView !== 'bracket' || typeof window === 'undefined') return;
+
+    const scrollEditorToTop = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+
+    scrollEditorToTop();
+    // Re-assert after paint: hiding site nav + mounting sticky chrome can shift layout.
+    const frameId = window.requestAnimationFrame(() => {
+      scrollEditorToTop();
+      window.requestAnimationFrame(scrollEditorToTop);
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [currentView, bracketResetKey]);
 
   useEffect(() => {
     if (currentView !== 'bracket' || typeof window === 'undefined') return;
@@ -416,132 +505,36 @@ function BracketContent({
   }, [isLoading, bracket, tournamentData, searchParams]); // Run when loading completes and bracket/tournament data is available
 
 
-  // Set default entry name when user data is available
+  // Set default entry name from the signed-in viewer
   useEffect(() => {
-    if (session?.user?.name && !entryName) {
-      setEntryName(session.user.name);
+    if (viewer.name && !entryName) {
+      setEntryName(viewer.name);
     }
-  }, [session?.user?.name, entryName]);
+  }, [viewer.name, entryName]);
 
-  const loadKillSwitchState = useCallback(async () => {
-    // Vintage: master lock lives on My Picks CMS — do not hit Config Sheet / kill-switch API.
-    if (vintage && picksCopy) {
-      setKillSwitchEnabled(picksCopy.masterLockUnlocked);
-      setKillSwitchMessage(picksCopy.masterLockMessage);
-      return;
-    }
-    try {
-      const response = await fetch('/api/kill-switch', { cache: 'no-store' });
-      const result = await response.json();
-      if (response.ok && result.success && result.data) {
-        setKillSwitchEnabled(Boolean(result.data.enabled));
-        if (result.data.message) {
-          setKillSwitchMessage(String(result.data.message));
-        }
-      }
-    } catch (error) {
-      console.error('Error loading kill switch state:', error);
-    }
-  }, [vintage, picksCopy]);
+  /** Active Tourney Year (server-resolved from homepage Key Data). */
+  const vintageActiveYear = activeYear;
 
   /**
-   * Fetch latest kill switch / master-lock state to avoid stale client state.
-   */
-  const getLatestKillSwitchState = async (): Promise<{ enabled: boolean; message: string }> => {
-    if (vintage && picksCopy) {
-      const enabled = picksCopy.masterLockUnlocked;
-      const message = picksCopy.masterLockMessage;
-      setKillSwitchEnabled(enabled);
-      setKillSwitchMessage(message);
-      return { enabled, message };
-    }
-    try {
-      const response = await fetch('/api/kill-switch', { cache: 'no-store' });
-      const result = await response.json();
-      if (response.ok && result.success && result.data) {
-        const enabled = Boolean(result.data.enabled);
-        const message = String(result.data.message || killSwitchMessage);
-        setKillSwitchEnabled(enabled);
-        setKillSwitchMessage(message);
-        return { enabled, message };
-      }
-    } catch (error) {
-      console.error('Error checking latest kill switch state:', error);
-    }
-
-    return { enabled: killSwitchEnabled, message: killSwitchMessage };
-  };
-
-  // Seed Active Tourney Year + master lock from vintage CMS on mount / publish refresh.
-  useEffect(() => {
-    if (!vintage) return;
-    if (vintageHome?.tournament.year) {
-      const y = parseInt(String(vintageHome.tournament.year).trim(), 10);
-      if (!Number.isNaN(y)) {
-        setActiveYear(y);
-        setViewingYear((prev) => (searchParams?.get('year') ? prev : y));
-      }
-    }
-    if (picksCopy) {
-      setKillSwitchEnabled(picksCopy.masterLockUnlocked);
-      setKillSwitchMessage(picksCopy.masterLockMessage);
-    }
-  }, [vintage, vintageHome?.tournament.year, picksCopy, searchParams]);
-
-  /** Vintage Active Tourney Year from homepage CMS (fallback: client activeYear). */
-  const vintageActiveYear = useMemo(() => {
-    const raw = vintageHome?.tournament.year?.trim();
-    const parsed = raw ? parseInt(raw, 10) : NaN;
-    return Number.isFinite(parsed) ? parsed : activeYear;
-  }, [vintageHome?.tournament.year, activeYear]);
-
-  /**
-   * Resolve Changing-action access for this page mode.
-   * Vintage: Action Lock master reference (CMS). Legacy: Config Sheet.
+   * Resolve Changing-action access from the CMS Action Lock master reference.
    */
   const resolvePicksAccess = useCallback(
-    (
-      lockUnlocked: boolean,
-      config: SiteConfigData | null,
-      jsonPresent: boolean,
-      yearForLock: number,
-    ): PicksAccessResult => {
-      if (vintage && picksCopy) {
-        const lock = evaluateVintageActionLock({
-          action: 'changing',
-          bracketYear: yearForLock,
-          activeYear: vintageActiveYear,
-          picksCopy,
-          tipoffAt: vintageHome?.tournament.tipoffAt ?? '',
-          bracketsReadyAt: vintageHome?.tournament.bracketsReadyAt,
-          tournamentJsonPresent: jsonPresent,
-          nowMs: getServerNowMs(),
-        });
-        return {
-          blocked: lock.blocked,
-          reasonCode: lock.reasonCode,
-          message: lock.message,
-        };
-      }
-      if (isHistoricalYear(yearForLock, activeYear)) {
-        return {
-          blocked: true,
-          reasonCode: 'prior_year',
-          message: `Brackets from ${yearForLock} are read-only. Switch to ${activeYear} to make changes.`,
-        };
-      }
-      return evaluatePicksAccess(config, {
+    (jsonPresent: boolean, yearForLock: number): VintageActionLockResult =>
+      evaluateVintageActionLock({
+        action: 'changing',
+        bracketYear: yearForLock,
+        activeYear: vintageActiveYear,
+        picksCopy,
+        tipoffAt: vintageHome.tournament.tipoffAt ?? '',
+        bracketsReadyAt: vintageHome.tournament.bracketsReadyAt,
         tournamentJsonPresent: jsonPresent,
-        masterLockUnlocked: lockUnlocked,
-      });
-    },
+        nowMs: getServerNowMs(),
+      }),
     [
-      vintage,
       picksCopy,
-      vintageHome?.tournament.bracketsReadyAt,
-      vintageHome?.tournament.tipoffAt,
+      vintageHome.tournament.bracketsReadyAt,
+      vintageHome.tournament.tipoffAt,
       vintageActiveYear,
-      activeYear,
       getServerNowMs,
     ],
   );
@@ -550,86 +543,44 @@ function BracketContent({
    * Client-side Changing lock (server re-checks on mutate).
    */
   const picksAccess = useMemo(
-    () =>
-      resolvePicksAccess(
-        vintage && picksCopy ? picksCopy.masterLockUnlocked : killSwitchEnabled,
-        siteConfig,
-        Boolean(tournamentData),
-        viewingYear,
-      ),
-    [
-      resolvePicksAccess,
-      vintage,
-      picksCopy,
-      killSwitchEnabled,
-      siteConfig,
-      tournamentData,
-      viewingYear,
-    ],
+    () => resolvePicksAccess(Boolean(tournamentData), viewingYear),
+    [resolvePicksAccess, tournamentData, viewingYear],
   );
+
+  /** Must stay above early returns — used by vintage editor chrome progress. */
+  const overallPickProgress = useMemo(() => {
+    if (!bracket || !tournamentData) return { completed: 0, total: 63 };
+    return countOverallPickProgress(bracket, picks, tournamentData);
+  }, [bracket, picks, tournamentData]);
 
   const mutationsBlockMessage =
     picksAccess.message ||
-    (vintage && picksCopy
-      ? formatVintagePicksLabel(picksCopy.masterLockMessage, {
-          year: vintageActiveYear,
-        })
-      : killSwitchMessage) ||
-    FALLBACK_CONFIG.masterLockMessage ||
-    'Bracket actions are temporarily locked by the administrator.';
+    formatVintagePicksLabel(picksCopy.masterLockMessage, {
+      year: vintageActiveYear,
+    });
 
   /**
    * Editor gates: tipoff / master lock block Submit but allow Save WIP.
-   * Prior year / not published / missing JSON block both. Vintage: same rules for admin.
+   * Admin Edit Picks may Save historical brackets (admin API bypasses user gates).
    */
   const editorDisableSubmit =
-    picksAccess.blocked || viewingHistorical
-      ? !(isAdminMode && !vintage)
-      : false;
-  const editorDisableSave =
-    isAdminMode && !vintage
-      ? false
-      : viewingHistorical ||
-        (picksAccess.blocked &&
-          !(
-            vintage &&
-            (picksAccess.reasonCode === 'tourney_active' ||
-              picksAccess.reasonCode === 'master_lock')
-          ));
-
-  /** Strip Config Sheet stop_submit for vintage editors (tipoff owns that gate). */
-  const editorSiteConfig = useMemo(() => {
-    if (!vintage || !siteConfig) return siteConfig;
-    return {
-      ...siteConfig,
-      stopSubmitToggle: 'No',
-      stopSubmitDateTime: '',
-      tournamentYear: String(vintageActiveYear),
-      bracketsMissingErrorMessage:
-        picksCopy?.bracketsMissingErrorMessage ||
-        siteConfig.bracketsMissingErrorMessage,
-      priorYearWarningMessage:
-        picksCopy?.priorYearWarningMessage || siteConfig.priorYearWarningMessage,
-      finalMessageSubmitOff:
-        picksCopy?.tourneyActiveMessage || siteConfig.finalMessageSubmitOff,
-      masterLockMessage:
-        picksCopy?.masterLockMessage || siteConfig.masterLockMessage,
-      entryCost: picksCopy?.entryCost ?? siteConfig.entryCost,
-    };
-  }, [vintage, siteConfig, vintageActiveYear, picksCopy]);
+    !isAdminMode && (picksAccess.blocked || viewingHistorical);
+  const editorDisableSave = isAdminMode
+    ? false
+    : viewingHistorical ||
+      (picksAccess.blocked &&
+        !(
+          picksAccess.reasonCode === 'tourney_active' ||
+          picksAccess.reasonCode === 'master_lock'
+        ));
 
   /**
    * Sync gate for opening confirms / starting busy UI (no network).
    * Server still re-checks on the actual mutate via {@link ensureMutationsAllowed}.
    */
   const ensureClientMayMutateSync = (): boolean => {
-    if (isAdminMode && !vintage) return true;
     if (viewingHistorical) {
-      alert(
-        vintage && picksCopy
-          ? formatVintagePriorYearMessage(picksCopy, viewingYear, activeYear)
-          : `Brackets from ${viewingYear} are read-only. Switch to ${activeYear} to make changes.`,
-      );
+      setNotice(formatVintagePriorYearMessage(picksCopy, viewingYear, activeYear));
       return false;
     }
     return true;
@@ -642,19 +593,17 @@ function BracketContent({
    */
   const ensureMutationsAllowed = async (): Promise<boolean> => {
     if (!ensureClientMayMutateSync()) return false;
-    if (isAdminMode && !vintage) return true;
     try {
       const response = await fetch('/api/bracket/check-creation', { cache: 'no-store' });
       const data = await response.json();
       if (!data.success || !data.allowed) {
-        alert(data.reason || mutationsBlockMessage);
-        await loadKillSwitchState();
+        setNotice(data.reason || mutationsBlockMessage);
         return false;
       }
       return true;
     } catch (error) {
       console.error('Error verifying bracket mutation access:', error);
-      alert('Failed to verify bracket access. Please try again.');
+      setNotice(feedback.verifyAccessFailed);
       return false;
     }
   };
@@ -678,19 +627,14 @@ function BracketContent({
         if (Array.isArray(data.availableYears)) {
           setAvailableYears(data.availableYears);
         }
-        const userBrackets = data.data.filter(
-          (bracket: unknown) =>
-            bracket &&
-            typeof bracket === 'object' &&
-            'playerEmail' in bracket &&
-            (bracket as { playerEmail: string }).playerEmail === session?.user?.email
-        );
-        setSubmittedBrackets(userBrackets);
+        setSubmittedBrackets(Array.isArray(data.data) ? data.data : []);
       } else {
         console.error('Failed to load brackets:', data.error);
+        setNotice(feedback.loadFailed);
       }
     } catch (error) {
       console.error('Error loading submitted brackets:', error);
+      setNotice(feedback.loadFailed);
     }
   };
 
@@ -731,21 +675,14 @@ function BracketContent({
         if (Array.isArray(data.availableYears)) {
           setAvailableYears(data.availableYears);
         }
-        const userBrackets = Array.isArray(data.data)
-          ? data.data.filter(
-              (bracket: unknown) =>
-                bracket &&
-                typeof bracket === 'object' &&
-                'playerEmail' in bracket &&
-                (bracket as { playerEmail: string }).playerEmail === session?.user?.email
-            )
-          : [];
-        setSubmittedBrackets(userBrackets);
+        setSubmittedBrackets(Array.isArray(data.data) ? data.data : []);
       } else {
         console.error('Failed to load brackets during year switch:', data.error);
+        setNotice(feedback.loadFailed);
       }
     } catch (error) {
       console.error('Error switching tournament year:', error);
+      setNotice(feedback.loadFailed);
     } finally {
       if (gen === yearSwitchGenRef.current) {
         softSwitchTargetRef.current = null;
@@ -777,69 +714,15 @@ function BracketContent({
     void softSwitchYear(nextYear);
   };
 
-  // Assign function to ref after it's declared
-  const loadTournament = async () => {
-    try {
-      setIsLoading(true);
-
-      const configResponse = await fetch('/api/site-config?fresh=true', { cache: 'no-store' });
-      const configResult = await configResponse.json();
-      const config = configResult.success ? configResult.data : null;
-      setSiteConfig(config);
-      await loadKillSwitchState();
-
-      const active = parseInt(resolveTournamentYear(config), 10);
-      const safeActive = Number.isNaN(active) ? new Date().getFullYear() : active;
-      const viewing = parseViewingYear(searchParams?.get('year'), safeActive);
-      setActiveYear(safeActive);
-      setViewingYear(viewing);
-
-      const enriched = await loadFieldDataForYear(String(viewing));
-      if (!enriched) {
-        setTournamentData(null);
-        setBracket(null);
-        await loadSubmittedBrackets(viewing);
-        return;
-      }
-
-      setTournamentData(enriched);
-      setBracket(generate64TeamBracket(enriched));
-      await loadSubmittedBrackets(viewing);
-    } catch (error) {
-      console.error('Error loading tournament:', error);
-    } finally {
-      setIsLoading(false);
-      initialLoadDoneRef.current = true;
-    }
-  };
-
-  // Assign function to ref after it's declared
-  loadTournamentRef.current = loadTournament;
-
-  // Initial auth → full load once (do not re-run on year query changes).
+  // Unauthenticated sessions are redirected server-side; guard client sign-outs too.
   useEffect(() => {
-    if (status === 'loading') return;
-
-    if (status === 'unauthenticated') {
-      router.push('/auth/signin');
-      return;
-    }
-
-    // Don't load tournament if we're in admin edit mode - loadBracketForEdit will handle it
-    if (searchParams?.get('edit') && searchParams?.get('admin') === 'true') {
-      return;
-    }
-
-    if (initialLoadDoneRef.current) return;
-    loadTournamentRef.current?.();
-    // Intentionally omit searchParams: year switches use history.replaceState + softSwitchYear.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot auth gate only
+    if (status === 'unauthenticated') router.push('/auth/signin');
   }, [status, router]);
 
   // Browser back/forward after history.replaceState year sync → soft switch.
   useEffect(() => {
     const onPopState = () => {
-      if (status !== 'authenticated' || !initialLoadDoneRef.current) return;
+      if (status === 'unauthenticated') return;
       const params = new URLSearchParams(window.location.search);
       const next = parseViewingYear(params.get('year'), activeYear);
       if (next === viewingYear) return;
@@ -850,61 +733,61 @@ function BracketContent({
     return () => window.removeEventListener('popstate', onPopState);
   }, [status, activeYear, viewingYear]);
 
-  useEffect(() => {
-    if (currentView !== 'bracket') return;
-
-    loadKillSwitchState();
-    const intervalId = window.setInterval(() => {
-      loadKillSwitchState();
-    }, 15000);
-
-    return () => window.clearInterval(intervalId);
-  }, [currentView, loadKillSwitchState]);
-
+  /**
+   * Load a bracket for edit/view (including Bracket Admin `?edit=&admin=true`).
+   * Field JSON must match the bracket's year — never paint historical picks onto
+   * the active-year SSR field (same rule as {@link handleEditBracket}).
+   */
   const loadBracketForEdit = async (bracketId: string, adminMode = false) => {
     try {
       setIsLoading(true);
-      
-      // Load tournament field for the bracket's year if structure is not ready
-      if (!tournamentData || !bracket) {
-        const configResponse = await fetch('/api/site-config?fresh=true', { cache: 'no-store' });
-        const configResult = await configResponse.json();
-        const config = configResult.success ? configResult.data : null;
-        setSiteConfig(config);
-        await loadKillSwitchState();
 
-        const yearForField = resolveTournamentYear(config);
-        const tournamentDataLoaded = await loadFieldDataForYear(yearForField);
+      // Use admin endpoint if in admin mode
+      const endpoint = adminMode
+        ? `/api/admin/brackets/${bracketId}`
+        : `/api/tournament-bracket/${bracketId}`;
+
+      const response = await fetch(endpoint);
+      const data = await response.json();
+
+      if (!data.success || !data.data) {
+        console.error('Failed to load bracket:', data.error);
+        setNotice(feedback.loadFailed);
+        setIsLoading(false);
+        return;
+      }
+
+      const bracketData = data.data as Record<string, unknown>;
+      const bracketYear =
+        typeof bracketData.year === 'number' ? bracketData.year : activeYear;
+      const loadedFieldYear = tournamentData?.year
+        ? Number.parseInt(String(tournamentData.year), 10)
+        : null;
+      const fieldMatchesBracket =
+        Boolean(tournamentData) &&
+        Boolean(bracket) &&
+        loadedFieldYear === bracketYear;
+
+      // Always align tournament field to the bracket year (My Picks edit path).
+      if (!fieldMatchesBracket) {
+        const tournamentDataLoaded = await loadFieldDataForYear(String(bracketYear));
         if (!tournamentDataLoaded) {
           setTournamentData(null);
           setBracket(null);
           setIsLoading(false);
+          setNotice(feedback.loadFailed);
           return;
         }
         setTournamentData(tournamentDataLoaded);
         setBracket(generate64TeamBracket(tournamentDataLoaded));
       }
-      
-      // Use admin endpoint if in admin mode
-      const endpoint = adminMode 
-        ? `/api/admin/brackets/${bracketId}`
-        : `/api/tournament-bracket/${bracketId}`;
-      
-      const response = await fetch(endpoint);
-      const data = await response.json();
-      
-      if (data.success && data.data) {
-        const bracketData = data.data as Record<string, unknown>;
-        setEditingBracket(bracketData);
-        
-        // Store bracket data to be applied once bracket structure is ready
-        setPendingBracketData(bracketData);
-      } else {
-        console.error('Failed to load bracket:', data.error);
-        setIsLoading(false);
-      }
+
+      setEditingBracket(bracketData);
+      // Applied once bracket structure for this year is ready (see effect below).
+      setPendingBracketData(bracketData);
     } catch (error) {
       console.error('Error loading bracket for edit:', error);
+      setNotice(feedback.loadFailed);
       setIsLoading(false);
     }
   };
@@ -1029,24 +912,20 @@ function BracketContent({
   const handleSubmitBracket = async () => {
     if (editorDisableSubmit) {
       setSubmitError(
-        viewingHistorical && vintage && picksCopy
+        viewingHistorical
           ? formatVintagePriorYearMessage(picksCopy, viewingYear, activeYear)
-          : viewingHistorical
-            ? `Brackets from ${viewingYear} are read-only.`
-            : mutationsBlockMessage
+          : mutationsBlockMessage
       );
       return;
     }
 
-    if (!session?.user?.name || !session?.user?.email) {
-      setSubmitError('User information not available');
-      setTimeout(() => setSubmitError(''), 10000);
-      return;
-    }
+    // Show spinner immediately — do not wait for the submit API to finish
+    flushSync(() => {
+      setSubmitError('');
+      setViewTransitionMessage(feedback.submittingMessage);
+    });
 
     try {
-      setSubmitError(''); // Clear any previous errors
-      
       const { pruneInvalidPicks } = await import('@/lib/bracketPickValidity');
       const picksToSubmit =
         bracket && tournamentData
@@ -1057,8 +936,8 @@ function BracketContent({
       }
 
       const submission = {
-        playerName: session.user.name,
-        playerEmail: session.user.email,
+        playerName: viewer.name,
+        playerEmail: viewer.email,
         entryName: entryName,
         tieBreaker: tieBreaker,
         picks: picksToSubmit,
@@ -1110,16 +989,17 @@ function BracketContent({
         const { usageLogger } = await import('@/lib/usageLogger');
         usageLogger.log('Click', 'Submit', bracketNumber ? String(bracketNumber).padStart(6, '0') : null);
         
-        // Return to landing page without popup (await so bracket list reload finishes)
-        await handleBackToLanding();
+        // Spinner already visible — reload list, then land on My Picks
+        await handleBackToLanding({ transitionMessage: feedback.submittingMessage });
       } else {
-        // Show error message that fades after 10 seconds
-        setSubmitError(data.error || 'Failed to submit bracket');
+        setViewTransitionMessage(null);
+        setSubmitError(apiFailureMessage(response, data, feedback.submitFailed));
         setTimeout(() => setSubmitError(''), 10000);
       }
     } catch (error) {
       console.error('Error submitting bracket:', error);
-      setSubmitError('Failed to submit bracket. Please try again.');
+      setViewTransitionMessage(null);
+      setSubmitError(feedback.submitFailed);
       setTimeout(() => setSubmitError(''), 10000);
     }
   };
@@ -1129,10 +1009,6 @@ function BracketContent({
    */
   const handleSubmitFromLanding = async (row: MyPicksSubmitRow) => {
     if (!ensureClientMayMutateSync()) return;
-    if (!session?.user?.name || !session?.user?.email) {
-      alert('User information not available');
-      return;
-    }
 
     setSubmittingBracketId(row.id);
     try {
@@ -1148,8 +1024,8 @@ function BracketContent({
           : rowPicks;
 
       const submission = {
-        playerName: session.user.name,
-        playerEmail: session.user.email,
+        playerName: viewer.name,
+        playerEmail: viewer.email,
         entryName: row.entryName || '',
         tieBreaker: row.tieBreaker || '',
         picks: picksToSubmit,
@@ -1177,11 +1053,11 @@ function BracketContent({
         usageLogger.log('Click', 'Submit', bracketNumber ? String(bracketNumber).padStart(6, '0') : null);
         await loadSubmittedBrackets();
       } else {
-        alert(data.error || 'Failed to submit bracket');
+        setNotice(apiFailureMessage(response, data, feedback.submitFailed));
       }
     } catch (error) {
       console.error('Error submitting bracket from My Picks:', error);
-      alert('Failed to submit bracket. Please try again.');
+      setNotice(feedback.submitFailed);
     } finally {
       setSubmittingBracketId(null);
     }
@@ -1196,22 +1072,18 @@ function BracketContent({
       setFullBracketModalId(row.id);
       setFullBracketModalTitle(row.entryName?.trim() || '');
       const y =
-        typeof row.year === 'number' && !Number.isNaN(row.year)
-          ? row.year
-          : siteConfig?.tournamentYear
-            ? parseInt(String(siteConfig.tournamentYear), 10)
-            : new Date().getFullYear();
+        typeof row.year === 'number' && !Number.isNaN(row.year) ? row.year : activeYear;
       setFullBracketModalYear(y);
       setFullBracketModalOpen(true);
     },
-    [siteConfig?.tournamentYear]
+    [activeYear]
   );
 
   // Landing page handlers
   const handleCreateNew = async () => {
     if (viewingHistorical) {
       handleViewingYearChange(activeYear);
-      alert(`Switched to ${activeYear}. Use New Bracket again to create an entry.`);
+      setNotice(formatEditorCopy(feedback.switchedYearMessage, { year: activeYear }));
       return;
     }
 
@@ -1223,14 +1095,10 @@ function BracketContent({
       }
 
       if (!tournamentData || !bracket) {
-        alert(
-          (vintage && picksCopy
-            ? formatVintagePicksLabel(picksCopy.bracketsMissingErrorMessage, {
-                year: vintageActiveYear,
-              })
-            : siteConfig?.bracketsMissingErrorMessage) ||
-            FALLBACK_CONFIG.bracketsMissingErrorMessage ||
-            `Bracket field data is missing for ${resolveTournamentYear(siteConfig)}.`
+        setNotice(
+          formatVintagePicksLabel(picksCopy.bracketsMissingErrorMessage, {
+            year: vintageActiveYear,
+          })
         );
         return;
       }
@@ -1242,7 +1110,7 @@ function BracketContent({
       // If we get here, creation is allowed - proceed with creating new bracket
       setEditingBracket(null);
       setPicks({});
-      setEntryName(session?.user?.name || '');
+      setEntryName(viewer.name);
       setTieBreaker('');
       setIsReadOnly(false);
       setCurrentView('bracket');
@@ -1259,33 +1127,11 @@ function BracketContent({
       return;
     }
 
-    const latestLock =
-      isAdminMode && !vintage
-        ? { enabled: true }
-        : await getLatestKillSwitchState();
-    const configActiveYear = vintage
-      ? vintageActiveYear
-      : parseInt(resolveTournamentYear(siteConfig), 10);
     const bracketYear =
-      typeof bracketData.year === 'number'
-        ? bracketData.year
-        : Number.isNaN(configActiveYear)
-          ? activeYear
-          : configActiveYear;
-    const freshAccess = resolvePicksAccess(
-      latestLock.enabled,
-      siteConfig,
-      Boolean(tournamentData),
-      bracketYear,
-    );
-    const isPriorYear =
-      !(isAdminMode && !vintage) &&
-      isHistoricalYear(
-        bracketYear,
-        Number.isNaN(configActiveYear) ? activeYear : configActiveYear,
-      );
-    const bracketMutationsAllowed =
-      (isAdminMode && !vintage) || (!isPriorYear && !freshAccess.blocked);
+      typeof bracketData.year === 'number' ? bracketData.year : vintageActiveYear;
+    const freshAccess = resolvePicksAccess(Boolean(tournamentData), bracketYear);
+    const isPriorYear = isHistoricalYear(bracketYear, vintageActiveYear);
+    const bracketMutationsAllowed = !isPriorYear && !freshAccess.blocked;
 
     // Ensure field JSON matches the bracket year when opening a prior-year entry
     if (isPriorYear || bracketYear !== viewingYear) {
@@ -1299,7 +1145,7 @@ function BracketContent({
     setEditingBracket(bracketToEdit);
     const bracketPicks = (bracketData.picks as Record<string, string>) || {};
     setPicks(bracketPicks);
-    setEntryName((bracketData.entryName as string) || session?.user?.name || '');
+    setEntryName((bracketData.entryName as string) || viewer.name);
     setTieBreaker((bracketData.tieBreaker as string) || '');
     /** Submitted / prior-year / picks-access blocked → view-only. */
     setIsReadOnly(
@@ -1348,25 +1194,65 @@ function BracketContent({
     setBracketResetKey(prev => prev + 1);
   };
 
-  const handleBackToLanding = async (options?: { skipBracketListReload?: boolean }) => {
+  /**
+   * Leave Admin Edit Picks / Live Results editor and return to the admin list.
+   * Uses a full navigation so the editor always unmounts after Save or Cancel.
+   * Brackets tab filters are restored from sessionStorage by {@link BracketsTab}.
+   */
+  const leaveAdminBracketEditor = (liveResults = isLiveResultsMode) => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('bracketState');
+      sessionStorage.removeItem('bracketCurrentStep');
+      window.location.assign(adminBracketEditorReturnHref(liveResults));
+      return;
+    }
+    router.replace(adminBracketEditorReturnHref(liveResults));
+  };
+
+  /**
+   * Leave the bracket editor for My Picks.
+   * When {@link transitionMessage} is set, show the full-page spinner first, reload the
+   * bracket list (unless skipped), then paint landing — so the list never flashes stale rows.
+   */
+  const handleBackToLanding = async (options?: {
+    skipBracketListReload?: boolean;
+    transitionMessage?: string;
+  }) => {
     // Clear sessionStorage when leaving bracket view
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('bracketState');
       sessionStorage.removeItem('bracketCurrentStep');
     }
-    
+
     // If in admin mode, redirect back to admin brackets tab
-    if (isAdminMode) {
-      router.push(isLiveResultsMode ? '/admin?tab=live-results' : '/admin?tab=brackets');
+    if (isAdminMode || searchParams?.get('admin') === 'true') {
+      leaveAdminBracketEditor(
+        isLiveResultsMode || searchParams?.get('live') === 'true',
+      );
       return;
     }
-    
-    setCurrentView('landing');
-    setEditingBracket(null);
-    setPicks({});
-    setIsReadOnly(false);
-    if (!options?.skipBracketListReload) {
-      await loadSubmittedBrackets();
+
+    const transitionMessage = options?.transitionMessage?.trim() || null;
+    if (transitionMessage) {
+      setViewTransitionMessage(transitionMessage);
+      // Let React paint the spinner before the list fetch
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
+    }
+
+    try {
+      if (!options?.skipBracketListReload) {
+        await loadSubmittedBrackets();
+      }
+      setCurrentView('landing');
+      setEditingBracket(null);
+      setPicks({});
+      setIsReadOnly(false);
+    } finally {
+      if (transitionMessage) {
+        setViewTransitionMessage(null);
+      }
     }
   };
 
@@ -1378,20 +1264,30 @@ function BracketContent({
       bracketNumber = bracket.bracketNumber as number | undefined;
     }
     
-    const { usageLogger } = await import('@/lib/usageLogger');
-    usageLogger.log('Click', 'Cancel', bracketNumber ? String(bracketNumber).padStart(6, '0') : null);
+    try {
+      const { usageLogger } = await import('@/lib/usageLogger');
+      usageLogger.log('Click', 'Cancel', bracketNumber ? String(bracketNumber).padStart(6, '0') : null);
+    } catch {
+      // Logging must not block leaving the editor.
+    }
     
-    // If in admin mode, redirect back to admin brackets tab
-    if (isAdminMode) {
-      if (isLiveResultsMode && editingBracket) {
+    // If in admin mode, redirect back to admin brackets tab (preserve list filters).
+    if (isAdminMode || searchParams?.get('admin') === 'true') {
+      const live =
+        isLiveResultsMode || searchParams?.get('live') === 'true';
+      if (live && editingBracket) {
         const bracket = editingBracket as Record<string, unknown>;
-        await fetch(`/api/admin/live-results/${bracket.id}?action=cancel`, {
-          method: 'POST',
-        });
-        router.push('/admin?tab=live-results');
+        try {
+          await fetch(`/api/admin/live-results/${bracket.id}?action=cancel`, {
+            method: 'POST',
+          });
+        } catch (error) {
+          console.error('Error cancelling live-results edit:', error);
+        }
+        leaveAdminBracketEditor(true);
         return;
       }
-      router.push('/admin?tab=brackets');
+      leaveAdminBracketEditor(false);
       return;
     }
     
@@ -1400,10 +1296,6 @@ function BracketContent({
 
   const handleCopyBracket = async (bracketToCopy: unknown) => {
     if (!ensureClientMayMutateSync()) return;
-    if (!session?.user?.name || !session?.user?.email) {
-      alert('User information not available');
-      return;
-    }
 
     const bracket = bracketToCopy as Record<string, unknown>;
     const sourceId = typeof bracket.id === 'string' ? bracket.id : null;
@@ -1415,10 +1307,13 @@ function BracketContent({
         return;
       }
 
-      const copyEntryName = defaultBracketCopyEntryName(String(bracket.entryName ?? ''));
+      const copyEntryName = defaultBracketCopyEntryName(
+        feedback.copyEntryName,
+        String(bracket.entryName ?? ''),
+      );
       const copiedBracket = {
-        playerName: session.user.name,
-        playerEmail: session.user.email,
+        playerName: viewer.name,
+        playerEmail: viewer.email,
         entryName: copyEntryName,
         tieBreaker: bracket.tieBreaker || '',
         picks: bracket.picks || {},
@@ -1440,11 +1335,11 @@ function BracketContent({
           draftEntryName: String(created.entryName ?? copyEntryName),
         });
       } else {
-        alert(data.error || 'Failed to copy bracket. Bracket creation may be disabled.');
+        setNotice(apiFailureMessage(response, data, feedback.copyFailed));
       }
     } catch (error) {
       console.error('Error copying bracket:', error);
-      alert('Failed to copy bracket. Please try again.');
+      setNotice(feedback.copyFailed);
     } finally {
       setCopyingBracketId(null);
     }
@@ -1452,22 +1347,23 @@ function BracketContent({
 
   const handleCopyNameDialogStayOnMyPicks = () => {
     setCopyNameDialog(null);
+    setCopyNameError(null);
   };
 
   const handleCopyNameDialogOpenBracket = async () => {
-    if (!copyNameDialog || !session?.user?.name || !session?.user?.email) return;
+    if (!copyNameDialog) return;
 
     const trimmed = copyNameDialog.draftEntryName.trim();
     if (!trimmed) {
-      alert('Please enter a name for the copied bracket.');
+      setCopyNameError(feedback.copyNameRequired);
       return;
     }
 
     const b = copyNameDialog.newBracket;
     const id = String(b.id ?? '');
     if (!id) {
-      alert('Invalid bracket copy.');
       setCopyNameDialog(null);
+      setNotice(feedback.copyFailed);
       return;
     }
 
@@ -1481,8 +1377,8 @@ function BracketContent({
     setCopyNameDialogBusy(true);
     try {
       const payload = {
-        playerName: session.user.name,
-        playerEmail: session.user.email,
+        playerName: viewer.name,
+        playerEmail: viewer.email,
         entryName: trimmed,
         tieBreaker: String(b.tieBreaker ?? ''),
         picks: (b.picks as Record<string, string>) || {},
@@ -1497,11 +1393,11 @@ function BracketContent({
         setCopyNameDialog(null);
         await handleEditBracket(data.data);
       } else {
-        alert(data.error || 'Could not update the bracket name.');
+        setCopyNameError(apiFailureMessage(response, data, feedback.renameFailed));
       }
     } catch (error) {
       console.error('Error updating copied bracket name:', error);
-      alert('Could not update the bracket name. Please try again.');
+      setCopyNameError(feedback.renameFailed);
     } finally {
       setCopyNameDialogBusy(false);
     }
@@ -1529,11 +1425,11 @@ function BracketContent({
       if (data.success) {
         await loadSubmittedBrackets();
       } else {
-        alert(data.error || 'Failed to restore bracket.');
+        setNotice(apiFailureMessage(response, data, feedback.restoreFailed));
       }
     } catch (error) {
       console.error('Error restoring bracket:', error);
-      alert('Failed to restore bracket. Please try again.');
+      setNotice(feedback.restoreFailed);
     } finally {
       setRestoringBracketId(null);
     }
@@ -1576,11 +1472,11 @@ function BracketContent({
         setPendingPermanentDeleteBracketId(null);
         await loadSubmittedBrackets();
       } else {
-        alert(data.error || 'Failed to permanently delete bracket.');
+        setNotice(apiFailureMessage(response, data, feedback.permanentDeleteFailed));
       }
     } catch (error) {
       console.error('Error permanently deleting bracket:', error);
-      alert('Failed to permanently delete bracket. Please try again.');
+      setNotice(feedback.permanentDeleteFailed);
     } finally {
       setDeletingBracketId(null);
     }
@@ -1621,24 +1517,19 @@ function BracketContent({
         setPendingReturnBracketId(null);
         await loadSubmittedBrackets();
       } else {
-        alert(data.error || 'Failed to return bracket to In Progress.');
+        setNotice(apiFailureMessage(response, data, feedback.returnFailed));
       }
     } catch (error) {
       console.error('Error returning bracket:', error);
-      alert('Failed to return bracket. Please try again.');
+      setNotice(feedback.returnFailed);
     } finally {
       setReturningBracketId(null);
     }
   };
 
   const handleSaveBracket = async () => {
-    // Kill switch is enforced on the server (fast DB check). Skip extra /api/kill-switch round-trip before Save.
-
-    if (!session?.user?.name || !session?.user?.email) {
-      alert('User information not available');
-      return;
-    }
-
+    // Master lock is enforced on the server on every mutate.
+    flushSync(() => setViewTransitionMessage(feedback.savingMessage));
     try {
       const { pruneInvalidPicks } = await import('@/lib/bracketPickValidity');
       const picksToSave =
@@ -1650,8 +1541,8 @@ function BracketContent({
       }
 
       const saveData = {
-        playerName: session.user.name,
-        playerEmail: session.user.email,
+        playerName: viewer.name,
+        playerEmail: viewer.email,
         entryName: entryName,
         tieBreaker: tieBreaker,
         picks: picksToSave,
@@ -1704,21 +1595,33 @@ function BracketContent({
           const newBracket = data.data as Record<string, unknown>;
           bracketNumber = newBracket.bracketNumber as number | undefined;
         }
+
+        // Admin Edit Picks: leave immediately after a successful save (no extra Cancel).
+        if (isAdminMode || searchParams?.get('admin') === 'true') {
+          try {
+            const { usageLogger } = await import('@/lib/usageLogger');
+            usageLogger.log(
+              'Click',
+              'Save',
+              bracketNumber ? String(bracketNumber).padStart(6, '0') : null,
+            );
+          } catch {
+            // Logging must not block closing the editor.
+          }
+          leaveAdminBracketEditor(
+            isLiveResultsMode || searchParams?.get('live') === 'true',
+          );
+          return;
+        }
         
         // Log the save action (New Bracket was already logged when button was clicked)
         const { usageLogger } = await import('@/lib/usageLogger');
         usageLogger.log('Click', 'Save', bracketNumber ? String(bracketNumber).padStart(6, '0') : null);
-        
-        // If in admin mode, redirect back to admin brackets tab
-        if (isAdminMode) {
-          router.push(isLiveResultsMode ? '/admin?tab=live-results' : '/admin?tab=brackets');
-          return;
-        }
 
-        // Merge API row into list — avoids slow GET /api/tournament-bracket (Sheets + DB) after every Save
-        if (data.data && session?.user) {
+        // Merge API row into list — avoids a list refetch after every Save
+        if (data.data) {
           const payload = data.data as Record<string, unknown>;
-          const updated = bracketFromSaveApiResponse(payload, session.user);
+          const updated = bracketFromSaveApiResponse(payload, viewer);
           setSubmittedBrackets((prev) => {
             const idx = prev.findIndex((b) => b.id === updated.id);
             if (idx >= 0) {
@@ -1740,44 +1643,35 @@ function BracketContent({
           await handleBackToLanding();
         }
       } else {
-        // Show validation error from server
-        alert(data.error || 'Failed to save bracket. Bracket creation may be disabled.');
+        setNotice(apiFailureMessage(response, data, feedback.saveFailed));
       }
     } catch (error) {
       console.error('Error saving bracket:', error);
-      alert('Failed to save bracket. Please try again.');
+      setNotice(feedback.saveFailed);
+    } finally {
+      setViewTransitionMessage(null);
     }
   };
 
   const handleDeleteBracket = (bracketId: string) => {
     if (editorDisableSubmit) {
-      alert(
-        viewingHistorical && vintage && picksCopy
+      setNotice(
+        viewingHistorical
           ? formatVintagePriorYearMessage(picksCopy, viewingYear, activeYear)
-          : viewingHistorical
-            ? `Brackets from ${viewingYear} are read-only.`
-            : mutationsBlockMessage
+          : mutationsBlockMessage
       );
       return;
     }
 
-    // For in_progress brackets, show embedded confirmation
-    // For submitted brackets, still use popup (hard delete is more serious)
     const bracketToDelete = submittedBrackets.find(b => b.id === bracketId);
     if (bracketToDelete && 'status' in bracketToDelete && bracketToDelete.status === 'deleted') {
       return;
     }
-    const isInProgress = bracketToDelete && 'status' in bracketToDelete && bracketToDelete.status === 'in_progress';
-    
-    if (isInProgress) {
-      // Show embedded confirmation for in_progress brackets
-      setPendingDeleteBracketId(bracketId);
+    // In-progress → soft delete; submitted → hard delete. Both confirm via the CMS popup.
+    if (bracketToDelete && 'status' in bracketToDelete && bracketToDelete.status === 'submitted') {
+      setPendingPermanentDeleteBracketId(bracketId);
     } else {
-      // For submitted brackets, still use popup confirmation
-      const confirmMessage = 'Are you sure you want to delete this submitted bracket? This action cannot be undone.';
-      if (confirm(confirmMessage)) {
-        confirmDeleteBracket(bracketId);
-      }
+      setPendingDeleteBracketId(bracketId);
     }
   };
 
@@ -1813,7 +1707,7 @@ function BracketContent({
           setPendingDeleteBracketId(null);
           await loadSubmittedBrackets();
         } else {
-          alert(`Error: ${data.error}`);
+          setNotice(apiFailureMessage(response, data, feedback.deleteFailed));
         }
       } else {
         // Hard delete: Actually remove the bracket
@@ -1826,97 +1720,64 @@ function BracketContent({
           setPendingDeleteBracketId(null);
           await loadSubmittedBrackets();
         } else {
-          alert(`Error: ${data.error}`);
+          setNotice(apiFailureMessage(response, data, feedback.deleteFailed));
         }
       }
     } catch (error) {
       console.error('Error deleting bracket:', error);
-      alert('Failed to delete bracket. Please try again.');
+      setNotice(feedback.deleteFailed);
     } finally {
       setDeletingBracketId(null);
     }
   };
 
-  if (status === 'loading' || isLoading) {
-    const loadingBody = (
-      <div
-        className={
-          vintage
-            ? 'v-picks v-picks--loading'
-            : 'min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100'
-        }
-        data-testid="bracket-loading"
+  const noticeDialog = (
+    <ConfirmDialog
+      open={Boolean(notice)}
+      title={feedback.noticeTitle}
+      message={notice ?? ''}
+      confirmLabel={feedback.noticeOkLabel}
+      cancelLabel=""
+      tone="neutral"
+      testId="picks-notice"
+      onConfirm={() => setNotice(null)}
+      onCancel={() => setNotice(null)}
+    />
+  );
+
+  if (status === 'unauthenticated' || isLoading || viewTransitionMessage) {
+    return (
+      <VintageShell
+        content={vintageHome}
+        testId={viewTransitionMessage ? 'vintage-picks-transition' : 'vintage-picks-loading'}
       >
         <div
-          className={
-            vintage
-              ? 'v-picks__loading'
-              : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12'
-          }
+          className="v-picks v-picks--loading"
+          data-testid={viewTransitionMessage ? 'bracket-view-transition' : 'bracket-loading'}
+          aria-busy="true"
         >
-          {vintage ? (
-            <>
-              <div className="v-picks__loading-spinner" aria-hidden />
-              <p className="v-picks__loading-text">Loading tournament…</p>
-            </>
-          ) : (
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto" />
-              <p className="mt-4 text-gray-600">Loading tournament...</p>
-            </div>
-          )}
+          <LoadingBasketball
+            message={viewTransitionMessage || feedback.loadingMessage}
+            testId="bracket-loading-indicator"
+          />
         </div>
-      </div>
-    );
-
-    if (vintage && vintageHome) {
-      return (
-        <VintageShell content={vintageHome} testId="vintage-picks-loading">
-          {loadingBody}
-        </VintageShell>
-      );
-    }
-    return loadingBody;
-  }
-
-  if (status === 'unauthenticated') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center">
-            <div className="bg-white rounded-lg shadow-lg p-12 max-w-md mx-auto">
-              <Trophy className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                My Picks
-              </h2>
-              <p className="text-gray-600 mb-6">
-                Sign in to view and submit your tournament picks.
-              </p>
-              <div className="space-y-3">
-                <LoggedButton
-                  onClick={() => router.push('/auth/signin')}
-                  logLocation="Sign In"
-                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 cursor-pointer"
-                >
-                  Sign In
-                </LoggedButton>
-                <LoggedButton
-                  onClick={() => router.push('/auth/signup')}
-                  logLocation="Create Account"
-                  className="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 cursor-pointer"
-                >
-                  Create Account
-                </LoggedButton>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+        {noticeDialog}
+      </VintageShell>
     );
   }
 
   // Show landing page by default
   if (currentView === 'landing') {
+    /** Row actions without their own confirm popup show a busy overlay while in flight. */
+    const landingBusyMessage = creatingBracketBusy
+      ? feedback.creatingMessage
+      : copyingBracketId
+        ? feedback.copyingMessage
+        : restoringBracketId
+          ? feedback.restoringMessage
+          : submittingBracketId
+            ? feedback.submittingMessage
+            : null;
     const landing = (
       <Fragment>
         <BracketViewerModal
@@ -1930,22 +1791,23 @@ function BracketContent({
           year={fullBracketModalYear}
           title={fullBracketModalTitle || undefined}
           bracketFetchMode="owner"
+          copy={bracketEditorCopy}
         />
         <MyPicksLanding
-          variant={vintage ? 'vintage' : 'legacy'}
-          picksCopy={picksCopy ?? undefined}
-          standingsChrome={standingsChrome ?? undefined}
-          tipoffAt={vintageHome?.tournament.tipoffAt ?? ''}
-          bracketsReadyAt={vintageHome?.tournament.bracketsReadyAt ?? ''}
+          picksCopy={picksCopy}
+          standingsChrome={standingsChrome}
+          bracketEditorCopy={bracketEditorCopy}
+          pdfDialogCopy={pdfDialogCopy}
+          tipoffAt={vintageHome.tournament.tipoffAt ?? ''}
+          bracketsReadyAt={vintageHome.tournament.bracketsReadyAt ?? ''}
           liveTourneyMessage={formatVintagePicksLabel(
-            vintageHome?.tournament.liveTourneyMessage ??
-              'The <year> tournament is underway!',
+            vintageHome.tournament.liveTourneyMessage ?? '',
             { year: vintageActiveYear },
           )}
           admin={vintageAdmin}
           brackets={submittedBrackets}
           viewingYear={viewingYear}
-          activeYear={vintage ? vintageActiveYear : activeYear}
+          activeYear={vintageActiveYear}
           onCreateNew={handleCreateNew}
           onEditBracket={handleEditBracket}
           onDeleteBracket={handleDeleteBracket}
@@ -1972,244 +1834,278 @@ function BracketContent({
           tournamentData={tournamentData}
           bracket={bracket}
           siteConfig={siteConfig}
-          killSwitchEnabled={
-            vintage && picksCopy ? picksCopy.masterLockUnlocked : killSwitchEnabled
-          }
-          killSwitchMessage={
-            vintage && picksCopy
-              ? formatVintagePicksLabel(picksCopy.masterLockMessage, {
-                  year: vintageActiveYear,
-                })
-              : killSwitchMessage
-          }
-          availableYears={
-            availableYears.length > 0
-              ? availableYears
-              : [vintage ? vintageActiveYear : activeYear]
-          }
+          availableYears={availableYears.length > 0 ? availableYears : [vintageActiveYear]}
           onViewingYearChange={handleViewingYearChange}
           isYearSwitching={isYearSwitching}
           onOpenFullBracketModal={handleOpenFullBracketModalFromMyPicks}
           onPaymentCreated={() => loadSubmittedBrackets(viewingYear)}
         />
-        {copyNameDialog && (
-          <div
-            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="copy-bracket-name-title"
-            data-testid="copy-bracket-name-dialog"
-          >
-            <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-              <h2 id="copy-bracket-name-title" className="text-lg font-semibold text-gray-900">
-                Bracket copied
-              </h2>
-              <p className="mt-2 text-sm text-gray-600">
-                Your bracket was copied successfully. You can change the entry name before opening it.
-              </p>
-              <label htmlFor="copy-bracket-entry-name" className="mt-4 block text-sm font-medium text-gray-700">
-                Entry name
-              </label>
-              <input
-                id="copy-bracket-entry-name"
-                type="text"
-                value={copyNameDialog.draftEntryName}
-                onChange={(e) =>
-                  setCopyNameDialog((prev) =>
-                    prev ? { ...prev, draftEntryName: e.target.value } : null
-                  )
-                }
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                disabled={copyNameDialogBusy}
-                autoComplete="off"
-                data-testid="copy-bracket-entry-name-input"
-              />
-              <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                <button
-                  type="button"
-                  onClick={handleCopyNameDialogStayOnMyPicks}
-                  disabled={copyNameDialogBusy}
-                  className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                  data-testid="copy-bracket-stay-on-my-picks"
-                >
-                  Stay on My Picks
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleCopyNameDialogOpenBracket()}
-                  disabled={copyNameDialogBusy}
-                  className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-                  data-testid="copy-bracket-open-bracket"
-                >
-                  {copyNameDialogBusy ? 'Saving…' : 'Open bracket'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <ConfirmDialog
+          open={Boolean(copyNameDialog)}
+          title={feedback.copyNameTitle}
+          message={feedback.copyNameMessage}
+          confirmLabel={feedback.copyNameOpenLabel}
+          cancelLabel={feedback.copyNameStayLabel}
+          tone="neutral"
+          busy={copyNameDialogBusy}
+          busyMessage={feedback.savingMessage}
+          errorMessage={copyNameError}
+          testId="copy-bracket-name-dialog"
+          onConfirm={() => void handleCopyNameDialogOpenBracket()}
+          onCancel={handleCopyNameDialogStayOnMyPicks}
+        >
+          {feedback.copyNameLabel ? (
+            <label htmlFor="copy-bracket-entry-name" className="v-confirm__label">
+              {feedback.copyNameLabel}
+            </label>
+          ) : null}
+          <input
+            id="copy-bracket-entry-name"
+            type="text"
+            className="v-confirm__input"
+            value={copyNameDialog?.draftEntryName ?? ''}
+            onChange={(e) => {
+              setCopyNameError(null);
+              setCopyNameDialog((prev) =>
+                prev ? { ...prev, draftEntryName: e.target.value } : null
+              );
+            }}
+            disabled={copyNameDialogBusy}
+            autoComplete="off"
+            aria-label={feedback.copyNameLabel || undefined}
+            data-testid="copy-bracket-entry-name-input"
+          />
+        </ConfirmDialog>
+        <BusyOverlay
+          open={Boolean(landingBusyMessage)}
+          message={landingBusyMessage ?? ''}
+          testId="picks-busy-overlay"
+        />
+        {noticeDialog}
       </Fragment>
     );
 
-    if (vintage && vintageHome) {
-      return (
-        <VintageShell content={vintageHome} testId="vintage-picks-page">
-          {landing}
-        </VintageShell>
-      );
-    }
-    return landing;
+    return (
+      <VintageShell content={vintageHome} testId="vintage-picks-page">
+        {landing}
+      </VintageShell>
+    );
   }
 
   if (!tournamentData || !bracket) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center">
-            <div className="bg-white rounded-lg shadow-lg p-12">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Tournament Not Available
-              </h2>
-              <p className="text-gray-600">
-                The tournament data could not be loaded. Please try again later.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <VintageShell content={vintageHome} testId="vintage-picks-page">
+        <SiteErrorPanel
+          message={formatVintagePicksLabel(picksCopy.bracketsMissingErrorMessage, {
+            year: vintageActiveYear,
+          })}
+          testId="bracket-tournament-unavailable"
+        />
+      </VintageShell>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-300">
-      <div className="w-full">
-        <div
-          className="sticky top-0 z-20 flex flex-wrap items-center justify-center gap-2 border-b border-gray-400 bg-gray-200 px-3 py-2 shadow-sm"
-          role="group"
-          aria-label="Bracket layout"
-        >
-          <span className="text-xs font-semibold text-gray-700">Layout</span>
-          <div className="inline-flex rounded-lg border border-gray-300 bg-white p-0.5">
-            <button
-              type="button"
-              onClick={() => setLayoutMode('5p')}
-              className={`rounded-md px-2.5 py-1.5 text-xs font-medium ${
-                layoutMode === '5p' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-50'
-              }`}
-              data-testid="my-bracket-layout-5p"
-            >
-              5 Page
-            </button>
-            <button
-              type="button"
-              onClick={() => setLayoutMode('1p')}
-              className={`rounded-md px-2.5 py-1.5 text-xs font-medium ${
-                layoutMode === '1p' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-50'
-              }`}
-              data-testid="my-bracket-layout-1p"
-            >
-              1 Page
-            </button>
-          </div>
-        </div>
+  const editorYear =
+    (editingBracket
+      ? (editingBracket as Record<string, unknown>).year
+      : undefined) ?? viewingYear ?? activeYear;
+  const siteLabel = vintageHome.keyData.siteName?.trim() ?? '';
 
-        {layoutMode === '5p' ? (
-          <StepByStepBracket
-            key={bracketResetKey}
-            tournamentData={tournamentData}
-            bracket={bracket}
-            picks={picks}
-            entryName={entryName}
-            tieBreaker={tieBreaker}
-            onPick={handlePick}
-            onComplete={handleBracketComplete}
-            onSave={handleSaveBracket}
-            onClose={handleCloseBracket}
-            onCancel={handleCloseBracket}
-            onEntryNameChange={isLiveResultsMode ? () => {} : setEntryName}
-            onTieBreakerChange={setTieBreaker}
-            readOnly={isReadOnly}
-            submitError={submitError}
-            bracketNumber={editingBracket ? (editingBracket as Record<string, unknown>).bracketNumber as number : undefined}
-            year={editingBracket ? (editingBracket as Record<string, unknown>).year as number : undefined}
-            siteConfig={editorSiteConfig}
-            existingBracketNames={submittedEntryNames}
-            currentBracketId={editingBracket ? (editingBracket as Record<string, unknown>).id as string : undefined}
-            isAdminMode={isAdminMode}
-            isLiveResultsMode={isLiveResultsMode}
-            disableSaveSubmit={editorDisableSubmit}
-            disableSave={editorDisableSave}
-            disableMessage={
-              viewingHistorical && vintage && picksCopy
-                ? formatVintagePriorYearMessage(picksCopy, viewingYear, activeYear)
-                : viewingHistorical
-                  ? `Brackets from ${viewingYear} are read-only.`
-                  : mutationsBlockMessage
-            }
-          />
-        ) : (
-          // 1 Page layout is always 64-team; 32 is not exposed in the UI (may revisit later).
-          <FullBracketEditorShell
-            key={bracketResetKey}
-            tournamentData={tournamentData}
-            bracket={bracket}
-            bracketSize="64"
-            picks={picks}
-            onPick={handleFullBracketPick}
-            entryName={entryName}
-            tieBreaker={tieBreaker}
-            onEntryNameChange={isLiveResultsMode ? () => {} : setEntryName}
-            onTieBreakerChange={setTieBreaker}
-            readOnly={isReadOnly}
-            submitError={submitError}
-            siteConfig={editorSiteConfig}
-            existingBracketNames={submittedEntryNames}
-            isAdminMode={isAdminMode}
-            isLiveResultsMode={isLiveResultsMode}
-            disableSaveSubmit={editorDisableSubmit}
-            disableSave={editorDisableSave}
-            disableMessage={
-              viewingHistorical && vintage && picksCopy
-                ? formatVintagePriorYearMessage(picksCopy, viewingYear, activeYear)
-                : viewingHistorical
-                  ? `Brackets from ${viewingYear} are read-only.`
-                  : mutationsBlockMessage
-            }
-            onSave={handleSaveBracket}
-            onClose={handleCloseBracket}
-            onCancel={handleCloseBracket}
-            onComplete={handleBracketComplete}
-          />
-        )}
-      </div>
+  const editorDisableMessage = viewingHistorical
+    ? formatVintagePriorYearMessage(picksCopy, viewingYear, activeYear)
+    : mutationsBlockMessage;
+
+  const progressPct =
+    overallPickProgress.total > 0
+      ? Math.min(
+          100,
+          (100 * overallPickProgress.completed) / overallPickProgress.total,
+        )
+      : 0;
+
+  const editorCopy = bracketEditorCopy;
+
+  const editorMeta = [
+    String(editorYear),
+    editorCopy.brandStripLabel.trim(),
+  ].filter(Boolean).join(' · ');
+  const progressLabel = formatEditorCopy(editorCopy.progressLabel, {
+    completed: overallPickProgress.completed,
+    total: overallPickProgress.total,
+  });
+
+  /** Regions / Full layout toggle (embedded in the brand strip). */
+  const layoutToggle = (
+    <div
+      className="be-layout-toggle inline-flex border p-0.5"
+      role="group"
+      aria-label={editorCopy.layoutLabel || undefined}
+    >
+      <button
+        type="button"
+        onClick={() => setLayoutMode('5p')}
+        className={`be-layout-toggle__btn ${
+          layoutMode === '5p' ? 'be-layout-toggle__btn--on' : 'be-layout-toggle__btn--off'
+        }`}
+        aria-pressed={layoutMode === '5p'}
+        data-testid="my-bracket-layout-5p"
+      >
+        {editorCopy.layoutRegionsLabel}
+      </button>
+      <button
+        type="button"
+        onClick={() => setLayoutMode('1p')}
+        className={`be-layout-toggle__btn ${
+          layoutMode === '1p' ? 'be-layout-toggle__btn--on' : 'be-layout-toggle__btn--off'
+        }`}
+        aria-pressed={layoutMode === '1p'}
+        data-testid="my-bracket-layout-1p"
+      >
+        {editorCopy.layoutFullLabel}
+      </button>
     </div>
   );
+
+  return (
+    <BracketEditorCopyProvider copy={editorCopy}>
+      <div
+        className="be-editor min-h-screen be-workspace-page"
+        data-testid="bracket-editor-workspace"
+      >
+        <div className="w-full">
+          <div
+            className="be-brand-strip be-brand-strip--chrome sticky top-0 z-40"
+            data-testid="bracket-editor-brand-strip"
+          >
+            <div className="be-brand-strip__identity">
+              {siteLabel ? <p className="be-brand-strip__title">{siteLabel}</p> : null}
+              <p className="be-brand-strip__meta">{editorMeta}</p>
+            </div>
+            <div className="be-brand-strip__progress" data-testid="bracket-editor-progress">
+              {progressLabel ? <p className="be-progress__label">{progressLabel}</p> : null}
+              <div
+                className="be-progress__track"
+                role="progressbar"
+                aria-valuenow={overallPickProgress.completed}
+                aria-valuemin={0}
+                aria-valuemax={overallPickProgress.total}
+                aria-label={progressLabel || undefined}
+              >
+                <div className="be-progress__fill" style={{ width: `${progressPct}%` }} />
+              </div>
+            </div>
+            <div className="be-brand-strip__layout">
+              {editorCopy.layoutLabel ? (
+                <span className="be-layout-bar__label">{editorCopy.layoutLabel}</span>
+              ) : null}
+              {layoutToggle}
+            </div>
+          </div>
+
+          {layoutMode === '5p' ? (
+            <StepByStepBracket
+              key={bracketResetKey}
+              tournamentData={tournamentData}
+              bracket={bracket}
+              picks={picks}
+              entryName={entryName}
+              tieBreaker={tieBreaker}
+              onPick={handlePick}
+              onComplete={handleBracketComplete}
+              onSave={handleSaveBracket}
+              onClose={handleCloseBracket}
+              onCancel={handleCloseBracket}
+              onEntryNameChange={isLiveResultsMode ? () => {} : setEntryName}
+              onTieBreakerChange={setTieBreaker}
+              readOnly={isReadOnly}
+              submitError={submitError}
+              bracketNumber={
+                editingBracket
+                  ? ((editingBracket as Record<string, unknown>)
+                      .bracketNumber as number)
+                  : undefined
+              }
+              year={
+                editingBracket
+                  ? ((editingBracket as Record<string, unknown>).year as number)
+                  : undefined
+              }
+              existingBracketNames={submittedEntryNames}
+              currentBracketId={
+                editingBracket
+                  ? ((editingBracket as Record<string, unknown>).id as string)
+                  : undefined
+              }
+              isAdminMode={isAdminMode}
+              isLiveResultsMode={isLiveResultsMode}
+              disableSaveSubmit={editorDisableSubmit}
+              disableSave={editorDisableSave}
+              disableMessage={editorDisableMessage}
+            />
+          ) : (
+            <FullBracketEditorShell
+              key={bracketResetKey}
+              tournamentData={tournamentData}
+              bracket={bracket}
+              bracketSize="64"
+              picks={picks}
+              onPick={handleFullBracketPick}
+              entryName={entryName}
+              tieBreaker={tieBreaker}
+              onEntryNameChange={isLiveResultsMode ? () => {} : setEntryName}
+              onTieBreakerChange={setTieBreaker}
+              readOnly={isReadOnly}
+              submitError={submitError}
+              existingBracketNames={submittedEntryNames}
+              isAdminMode={isAdminMode}
+              isLiveResultsMode={isLiveResultsMode}
+              disableSaveSubmit={editorDisableSubmit}
+              disableSave={editorDisableSave}
+              disableMessage={editorDisableMessage}
+              onSave={handleSaveBracket}
+              onClose={handleCloseBracket}
+              onCancel={handleCloseBracket}
+              onComplete={handleBracketComplete}
+            />
+          )}
+        </div>
+        {noticeDialog}
+      </div>
+    </BracketEditorCopyProvider>
+  );
+}
+
+export interface BracketPageClientProps {
+  /** Site admin — CMS edit gear only. */
+  vintageAdmin?: boolean;
+  vintageHome: VintageContent;
+  picksCopy: VintagePicksContent;
+  bracketEditorCopy: VintageBracketEditorContent;
+  pdfDialogCopy: VintagePdfDialogCopy;
+  /** Published Standings CMS — FF/Champ result chrome colors + sizes. */
+  standingsChrome: VintageStandingsContent;
+  /** Payment provider settings from published Key Data. */
+  siteConfig: SiteConfigData;
+  viewer: MyPicksViewer;
+  initial: MyPicksInitialData;
 }
 
 /**
  * Client My Picks / bracket workspace. Vintage shell wraps the landing only.
+ * First paint uses server-loaded list + field data (no client waterfall).
  */
-export default function BracketPageClient({
-  vintage = false,
-  vintageAdmin = false,
-  vintageHome = null,
-  picksCopy = null,
-  standingsChrome = null,
-}: {
-  vintage?: boolean;
-  vintageAdmin?: boolean;
-  vintageHome?: VintageContent | null;
-  picksCopy?: VintagePicksContent | null;
-  standingsChrome?: import("@/lib/vintage/standingsContent").VintageStandingsContent | null;
-}) {
+export default function BracketPageClient(props: BracketPageClientProps) {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <BracketContent
-        vintage={vintage}
-        vintageAdmin={vintageAdmin}
-        vintageHome={vintageHome}
-        picksCopy={picksCopy}
-        standingsChrome={standingsChrome}
-      />
+    <Suspense
+      fallback={
+        <LoadingBasketball
+          variant="screen"
+          message={props.picksCopy.feedback.loadingMessage}
+          testId="bracket-suspense-loading"
+        />
+      }
+    >
+      <BracketContent {...props} />
     </Suspense>
   );
 }

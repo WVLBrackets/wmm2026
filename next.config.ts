@@ -16,8 +16,18 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Exclude test files from production build
-  // Test files are excluded via tsconfig.json exclude patterns
+  async redirects() {
+    return [
+      { source: "/admin/vintage-homepage", destination: "/vintage/admin", permanent: true },
+      { source: "/admin/vintage-homepage/preview", destination: "/vintage/admin/preview", permanent: true },
+      { source: "/admin/vintage-picks", destination: "/vintage/admin/picks", permanent: true },
+      { source: "/admin/vintage-info", destination: "/vintage/admin/info", permanent: true },
+      { source: "/admin/vintage-info/preview", destination: "/vintage/admin/info/preview", permanent: true },
+      { source: "/admin/vintage-hof", destination: "/vintage/admin/hof", permanent: true },
+      { source: "/admin/vintage-hof/preview", destination: "/vintage/admin/hof/preview", permanent: true },
+      { source: "/admin/vintage-standings", destination: "/vintage/admin/standings", permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;

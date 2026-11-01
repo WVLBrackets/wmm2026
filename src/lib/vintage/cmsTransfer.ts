@@ -1,39 +1,25 @@
 import {
-  normalizeVintageContent,
   validateVintageContent,
   type VintageContent,
 } from "./content";
 import {
-  HOF_CONTENT_KEY,
-  INFO_HANDBOOK_KEY,
-  PICKS_CONTENT_KEY,
-  STANDINGS_CONTENT_KEY,
+  SIDECAR_KEYS,
+  SIDECAR_SLOTS,
   mergeHomepageDocument,
-  splitHomepageDocument,
+  type SidecarSlot,
 } from "./homepageDocument";
 import {
-  normalizeVintageHofContent,
-  validateVintageHofContent,
-  type VintageHofContent,
-} from "./hofContent";
-import {
-  normalizeVintageInfoContent,
-  validateVintageInfoContent,
-  type VintageInfoContent,
-} from "./infoContent";
-import {
-  normalizeVintagePicksContent,
-  validateVintagePicksContent,
-  type VintagePicksContent,
-} from "./picksContent";
-import {
-  normalizeVintageStandingsContent,
-  validateVintageStandingsContent,
-  type VintageStandingsContent,
-} from "./standingsContent";
+  SIDECAR_CODECS,
+  homepageFromRow,
+  sidecarsFromRow,
+  type VintageSidecarBag,
+} from "./sidecarPreserve";
 
-/** Bundle format version for export/import packages. */
-export const CMS_TRANSFER_SCHEMA_VERSION = 1;
+/**
+ * Bundle format version — v2 is published-only (v1 packages still import via
+ * their `published` document; `draft` is ignored).
+ */
+export const CMS_TRANSFER_SCHEMA_VERSION = 2;
 
 export const CMS_TRANSFER_KIND = "vintage-cms-transfer" as const;
 
@@ -42,12 +28,36 @@ export type CmsTransferDesk =
   | "guidebook"
   | "hof"
   | "standings"
-  | "picks";
+  | "picks"
+  | "emails"
+  | "bracketEditor"
+  | "scoreboard";
 
-export type CmsTransferEdition = "draft" | "published";
+/** Sidecar slot → transfer desk. */
+const SLOT_DESK: Record<SidecarSlot, CmsTransferDesk> = {
+  info: "guidebook",
+  hof: "hof",
+  picks: "picks",
+  standings: "standings",
+  emails: "emails",
+  bracketEditor: "bracketEditor",
+  scoreboard: "scoreboard",
+};
+
+/** Desk display order in diffs and summaries. */
+const DESK_ORDER: CmsTransferDesk[] = [
+  "home",
+  "guidebook",
+  "hof",
+  "standings",
+  "picks",
+  "emails",
+  "bracketEditor",
+  "scoreboard",
+];
 
 /**
- * Portable CMS package: full draft + published documents (homepage + sidecars).
+ * Portable CMS package: published document only (homepage + sidecars).
  */
 export interface VintageCmsTransferBundle {
   schemaVersion: number;
@@ -55,16 +65,14 @@ export interface VintageCmsTransferBundle {
   exportedAt: string;
   /** Optional label (e.g. local, staging) — display only. */
   sourceLabel?: string;
-  draft: Record<string, unknown>;
   published: Record<string, unknown>;
 }
 
 /**
- * One leaf-level field difference between current env and an import package.
+ * One leaf-level field difference between current published and an import package.
  */
 export interface CmsFieldChange {
   desk: CmsTransferDesk;
-  edition: CmsTransferEdition;
   path: string;
   before: string;
   after: string;
@@ -73,12 +81,8 @@ export interface CmsFieldChange {
 /**
  * Normalized CMS document bag used for transfer and diffs.
  */
-export interface VintageCmsDocumentBag {
+export interface VintageCmsDocumentBag extends VintageSidecarBag {
   homepage: VintageContent;
-  info: VintageInfoContent;
-  hof: VintageHofContent;
-  picks: VintagePicksContent;
-  standings: VintageStandingsContent;
 }
 
 const DESK_LABELS: Record<CmsTransferDesk, string> = {
@@ -87,6 +91,9 @@ const DESK_LABELS: Record<CmsTransferDesk, string> = {
   hof: "Hall of Fame",
   standings: "Standings",
   picks: "Picks",
+  emails: "Emails & Account",
+  bracketEditor: "Bracket Editor Messages",
+  scoreboard: "Scoreboard",
 };
 
 /**
@@ -100,20 +107,9 @@ export function cmsTransferDeskLabel(desk: CmsTransferDesk): string {
  * Map a dotted transfer path to its admin desk.
  */
 export function deskForTransferPath(path: string): CmsTransferDesk {
-  if (path === INFO_HANDBOOK_KEY || path.startsWith(`${INFO_HANDBOOK_KEY}.`)) {
-    return "guidebook";
-  }
-  if (path === HOF_CONTENT_KEY || path.startsWith(`${HOF_CONTENT_KEY}.`)) {
-    return "hof";
-  }
-  if (path === PICKS_CONTENT_KEY || path.startsWith(`${PICKS_CONTENT_KEY}.`)) {
-    return "picks";
-  }
-  if (
-    path === STANDINGS_CONTENT_KEY ||
-    path.startsWith(`${STANDINGS_CONTENT_KEY}.`)
-  ) {
-    return "standings";
+  for (const slot of SIDECAR_SLOTS) {
+    const key = SIDECAR_KEYS[slot];
+    if (path === key || path.startsWith(`${key}.`)) return SLOT_DESK[slot];
   }
   return "home";
 }
@@ -126,7 +122,7 @@ export function formatTransferLeaf(value: unknown): string {
   if (value === null) return "null";
   if (typeof value === "string") {
     if (value.length > 280) return `${value.slice(0, 277)}…`;
-    return value === "" ? '(empty string)' : value;
+    return value === "" ? "(empty string)" : value;
   }
   if (typeof value === "number" || typeof value === "boolean") {
     return String(value);
@@ -144,18 +140,13 @@ export function formatTransferLeaf(value: unknown): string {
  * Normalize a raw homepage row (with sidecars) into validated desk bags.
  */
 export function normalizeCmsDocumentBag(raw: unknown): VintageCmsDocumentBag {
-  const split = splitHomepageDocument(raw);
-  const homepage = normalizeVintageContent(split.homepage);
-  const info = normalizeVintageInfoContent(split.info);
-  const hof = normalizeVintageHofContent(split.hof);
-  const picks = normalizeVintagePicksContent(split.picks);
-  const standings = normalizeVintageStandingsContent(split.standings);
+  const homepage = homepageFromRow(raw);
   validateVintageContent(homepage);
-  validateVintageInfoContent(info);
-  validateVintageHofContent(hof);
-  validateVintagePicksContent(picks);
-  validateVintageStandingsContent(standings);
-  return { homepage, info, hof, picks, standings };
+  const sides = sidecarsFromRow(raw);
+  for (const slot of SIDECAR_SLOTS) {
+    (SIDECAR_CODECS[slot].validate as (c: unknown) => void)(sides[slot]);
+  }
+  return { homepage, ...sides };
 }
 
 /**
@@ -164,17 +155,79 @@ export function normalizeCmsDocumentBag(raw: unknown): VintageCmsDocumentBag {
 export function mergeCmsDocumentBag(
   bag: VintageCmsDocumentBag,
 ): Record<string, unknown> {
-  return mergeHomepageDocument(
-    bag.homepage,
-    bag.info,
-    bag.hof,
-    bag.picks,
-    bag.standings,
-  );
+  const { homepage, ...sides } = bag;
+  return mergeHomepageDocument(homepage, sides);
 }
 
 /**
- * Parse and validate an uploaded CMS transfer package.
+ * Parse a dotted/bracket path into object keys and array indexes.
+ */
+export function parseTransferPath(path: string): (string | number)[] {
+  const segments: (string | number)[] = [];
+  const re = /([^[.\]]+)|\[(\d+)\]/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(path))) {
+    if (match[1] != null) segments.push(match[1]);
+    else if (match[2] != null) segments.push(Number(match[2]));
+  }
+  if (segments.length === 0) {
+    throw new Error(`Invalid CMS field path: ${path}`);
+  }
+  return segments;
+}
+
+/**
+ * Read a value at a transfer path (undefined if missing).
+ */
+export function getAtTransferPath(root: unknown, path: string): unknown {
+  let cursor: unknown = root;
+  for (const segment of parseTransferPath(path)) {
+    if (cursor == null || typeof cursor !== "object") return undefined;
+    if (typeof segment === "number") {
+      if (!Array.isArray(cursor)) return undefined;
+      cursor = cursor[segment];
+    } else {
+      cursor = (cursor as Record<string, unknown>)[segment];
+    }
+  }
+  return cursor;
+}
+
+/**
+ * Immutably set a value at a transfer path (creates objects/arrays as needed).
+ */
+export function setAtTransferPath(
+  root: unknown,
+  path: string,
+  value: unknown,
+): unknown {
+  const segments = parseTransferPath(path);
+
+  const setAt = (node: unknown, index: number): unknown => {
+    const segment = segments[index];
+    const isLast = index === segments.length - 1;
+
+    if (typeof segment === "number") {
+      const arr = Array.isArray(node) ? [...node] : [];
+      while (arr.length <= segment) arr.push(undefined);
+      arr[segment] = isLast ? value : setAt(arr[segment], index + 1);
+      return arr;
+    }
+
+    const obj =
+      node !== null && typeof node === "object" && !Array.isArray(node)
+        ? { ...(node as Record<string, unknown>) }
+        : {};
+    obj[segment] = isLast ? value : setAt(obj[segment], index + 1);
+    return obj;
+  };
+
+  return setAt(root, 0);
+}
+
+/**
+ * Parse and validate an uploaded CMS transfer package (published only).
+ * Accepts schema v1 (ignores `draft`) and v2.
  */
 export function parseVintageCmsTransferBundle(
   raw: unknown,
@@ -188,13 +241,11 @@ export function parseVintageCmsTransferBundle(
       'CMS package kind must be "vintage-cms-transfer". Export from Vintage Admin first.',
     );
   }
-  if (record.schemaVersion !== CMS_TRANSFER_SCHEMA_VERSION) {
+  const version = Number(record.schemaVersion);
+  if (version !== 1 && version !== CMS_TRANSFER_SCHEMA_VERSION) {
     throw new Error(
-      `Unsupported CMS package schemaVersion ${String(record.schemaVersion)} (expected ${CMS_TRANSFER_SCHEMA_VERSION}).`,
+      `Unsupported CMS package schemaVersion ${String(record.schemaVersion)} (expected 1 or ${CMS_TRANSFER_SCHEMA_VERSION}).`,
     );
-  }
-  if (!record.draft || typeof record.draft !== "object" || Array.isArray(record.draft)) {
-    throw new Error("CMS package is missing a draft document.");
   }
   if (
     !record.published ||
@@ -203,9 +254,6 @@ export function parseVintageCmsTransferBundle(
   ) {
     throw new Error("CMS package is missing a published document.");
   }
-  // Validate by normalizing both editions.
-  normalizeCmsDocumentBag(record.draft);
-  normalizeCmsDocumentBag(record.published);
   return {
     schemaVersion: CMS_TRANSFER_SCHEMA_VERSION,
     kind: CMS_TRANSFER_KIND,
@@ -217,16 +265,14 @@ export function parseVintageCmsTransferBundle(
       typeof record.sourceLabel === "string" && record.sourceLabel.trim()
         ? record.sourceLabel.trim().slice(0, 80)
         : undefined,
-    draft: mergeCmsDocumentBag(normalizeCmsDocumentBag(record.draft)),
     published: mergeCmsDocumentBag(normalizeCmsDocumentBag(record.published)),
   };
 }
 
 /**
- * Build a portable export package from raw DB draft/published rows.
+ * Build a portable export package from the published CMS row.
  */
 export function buildVintageCmsTransferBundle(input: {
-  draft: unknown;
   published: unknown;
   sourceLabel?: string;
 }): VintageCmsTransferBundle {
@@ -235,7 +281,6 @@ export function buildVintageCmsTransferBundle(input: {
     kind: CMS_TRANSFER_KIND,
     exportedAt: new Date().toISOString(),
     sourceLabel: input.sourceLabel?.trim().slice(0, 80) || undefined,
-    draft: mergeCmsDocumentBag(normalizeCmsDocumentBag(input.draft)),
     published: mergeCmsDocumentBag(normalizeCmsDocumentBag(input.published)),
   };
 }
@@ -302,60 +347,36 @@ export function diffJsonLeaves(
   };
 
   walk(before, after, basePath);
-  return changes.filter((c) => formatTransferLeaf(c.before) !== formatTransferLeaf(c.after));
+  return changes.filter(
+    (c) => formatTransferLeaf(c.before) !== formatTransferLeaf(c.after),
+  );
 }
 
 /**
- * Compare an import package to the current environment’s draft and published rows.
+ * Compare an import package’s published document to the current published row.
  */
 export function diffCmsTransferBundle(input: {
-  currentDraft: unknown;
   currentPublished: unknown;
   incoming: VintageCmsTransferBundle;
 }): CmsFieldChange[] {
-  const currentDraft = mergeCmsDocumentBag(
-    normalizeCmsDocumentBag(input.currentDraft),
-  );
   const currentPublished = mergeCmsDocumentBag(
     normalizeCmsDocumentBag(input.currentPublished),
   );
-  const incomingDraft = input.incoming.draft;
   const incomingPublished = input.incoming.published;
 
   const out: CmsFieldChange[] = [];
-
-  for (const leaf of diffJsonLeaves(currentDraft, incomingDraft)) {
-    out.push({
-      desk: deskForTransferPath(leaf.path),
-      edition: "draft",
-      path: leaf.path,
-      before: formatTransferLeaf(leaf.before),
-      after: formatTransferLeaf(leaf.after),
-    });
-  }
   for (const leaf of diffJsonLeaves(currentPublished, incomingPublished)) {
     out.push({
       desk: deskForTransferPath(leaf.path),
-      edition: "published",
       path: leaf.path,
       before: formatTransferLeaf(leaf.before),
       after: formatTransferLeaf(leaf.after),
     });
   }
 
-  const deskOrder: CmsTransferDesk[] = [
-    "home",
-    "guidebook",
-    "hof",
-    "standings",
-    "picks",
-  ];
   out.sort((a, b) => {
-    const desk = deskOrder.indexOf(a.desk) - deskOrder.indexOf(b.desk);
+    const desk = DESK_ORDER.indexOf(a.desk) - DESK_ORDER.indexOf(b.desk);
     if (desk !== 0) return desk;
-    if (a.edition !== b.edition) {
-      return a.edition === "published" ? -1 : 1;
-    }
     return a.path.localeCompare(b.path);
   });
   return out;
@@ -367,22 +388,34 @@ export function diffCmsTransferBundle(input: {
 export function summarizeCmsTransferChanges(changes: CmsFieldChange[]): {
   total: number;
   byDesk: Record<CmsTransferDesk, number>;
-  draftCount: number;
-  publishedCount: number;
 } {
-  const byDesk: Record<CmsTransferDesk, number> = {
-    home: 0,
-    guidebook: 0,
-    hof: 0,
-    standings: 0,
-    picks: 0,
-  };
-  let draftCount = 0;
-  let publishedCount = 0;
+  const byDesk = Object.fromEntries(
+    DESK_ORDER.map((desk) => [desk, 0]),
+  ) as Record<CmsTransferDesk, number>;
   for (const change of changes) {
     byDesk[change.desk] += 1;
-    if (change.edition === "draft") draftCount += 1;
-    else publishedCount += 1;
   }
-  return { total: changes.length, byDesk, draftCount, publishedCount };
+  return { total: changes.length, byDesk };
+}
+
+/**
+ * Apply selected leaf paths from an incoming published document onto the
+ * current published document. Unselected paths keep the current values.
+ */
+export function applySelectedPublishedPatches(input: {
+  currentPublished: unknown;
+  incomingPublished: unknown;
+  selectedPaths: string[];
+}): Record<string, unknown> {
+  let next: unknown = mergeCmsDocumentBag(
+    normalizeCmsDocumentBag(input.currentPublished),
+  );
+  const incoming = mergeCmsDocumentBag(
+    normalizeCmsDocumentBag(input.incomingPublished),
+  );
+  const uniquePaths = [...new Set(input.selectedPaths)];
+  for (const path of uniquePaths) {
+    next = setAtTransferPath(next, path, getAtTransferPath(incoming, path));
+  }
+  return mergeCmsDocumentBag(normalizeCmsDocumentBag(next));
 }

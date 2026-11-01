@@ -1,3 +1,4 @@
+import CmsText from "@/components/cms/CmsText";
 import type { VintageContent } from "@/lib/vintage/content";
 import { resolveVintageYearTokens } from "@/lib/vintage/yearTokens";
 import VintageCountdown from "./VintageCountdown";
@@ -56,20 +57,20 @@ export default function VintageHomepage({
         ) : null}
         {c.tournament.countdownEnabled ? (
           <>
-            <h2 id="v-countdown-heading">{countdownTitle}</h2>
+            <CmsText as="h2" id="v-countdown-heading" text={countdownTitle} />
             <VintageCountdown
               at={c.tournament.tipoffAt}
               liveMessage={liveMessage}
             />
           </>
         ) : (
-          <p
+          <CmsText
+            as="p"
             id="v-live-tourney-message"
             className="v-live-tourney-message"
             data-testid="vintage-live-tourney-message"
-          >
-            {liveMessage}
-          </p>
+            text={liveMessage}
+          />
         )}
       </section>
       <HomeCardGrid content={c} admin={admin} />

@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createPasswordResetToken } from '@/lib/services/tokenService';
 import { getUserByEmail } from '@/lib/repositories/userRepository';
 import { sendPasswordResetEmail } from '@/lib/emailService';
-import { getSiteConfigFromGoogleSheets } from '@/lib/siteConfig';
+import { SiteConfigError } from '@/lib/siteConfig';
+import { getAccountEmailContext } from '@/lib/siteConfigServer';
 import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rateLimit';
+import { requireAppOrigin } from '@/lib/env';
 
 export async function POST(request: NextRequest) {
   // SECURITY: Rate limiting to prevent email flooding
@@ -47,31 +49,31 @@ export async function POST(request: NextRequest) {
     // For production, use NEXTAUTH_URL
     const vercelEnv = process.env.VERCEL_ENV;
     let baseUrl: string;
-    
-    if (vercelEnv === 'production') {
-      // Production: Use NEXTAUTH_URL which should be the production domain
-      baseUrl = process.env.NEXTAUTH_URL || 'https://wmm2026.vercel.app';
-    } else if (vercelEnv === 'preview') {
-      // Preview: Use Host header to get the branch URL (stable across deployments)
-      // This ensures emails use the branch URL, not the deployment-specific URL
+    if (vercelEnv === 'preview') {
       const host = request.headers.get('host');
       if (host) {
         const protocol = request.headers.get('x-forwarded-proto') || 'https';
         baseUrl = `${protocol}://${host}`;
+      } else if (process.env.VERCEL_URL) {
+        baseUrl = `https://${process.env.VERCEL_URL}`;
       } else {
-        // Fallback to VERCEL_URL if Host header not available
-        baseUrl = process.env.VERCEL_URL 
-          ? `https://${process.env.VERCEL_URL}` 
-          : process.env.NEXTAUTH_URL || 'https://wmm2026.vercel.app';
+        baseUrl = requireAppOrigin();
       }
     } else {
-      // Fallback to production URL (should not happen in deployed environments)
-      baseUrl = process.env.NEXTAUTH_URL || 'https://wmm2026.vercel.app';
+      baseUrl = requireAppOrigin();
     }
     
     const resetLink = `${baseUrl}/auth/reset-password?token=${resetToken}`;
-    // Get site config for email notice
-    const siteConfig = await getSiteConfigFromGoogleSheets();
+    let emailContext;
+    try {
+      emailContext = await getAccountEmailContext();
+    } catch (error) {
+      const message =
+        error instanceof SiteConfigError
+          ? error.message
+          : 'Site configuration is unavailable.';
+      return NextResponse.json({ error: message }, { status: 503 });
+    }
     
     // Check for email suppression header from test environment
     // SECURITY: Only honor suppression headers in non-production environments
@@ -82,7 +84,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Our email templating builds the link from the provided code, so pass the token as the code
-    const emailSent = await sendPasswordResetEmail(email, user.name, resetLink, resetToken, siteConfig);
+    const emailSent = await sendPasswordResetEmail(email, user.name, resetLink, resetToken, emailContext);
 
     if (!emailSent) {
       return NextResponse.json(

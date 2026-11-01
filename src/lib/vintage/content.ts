@@ -111,7 +111,7 @@ export interface VintageContent {
   };
   /**
    * Season / ops controls (homepage Key Data). Source of truth for Tourney Year
-   * companions: brackets published, entry cost, Venmo / Pay gate, Application Master Lock,
+   * companions: brackets published, entry cost, Payments (Venmo / Zelle), Application Master Lock,
    * site name. Champ name/year live on the Reigning Champ home card; contact on `footer`.
    */
   keyData: {
@@ -122,15 +122,28 @@ export interface VintageContent {
     /** Dollars per submitted bracket (`{cost}` and payment API). */
     entryCost: number;
     /**
-     * Venmo username for Pay deep links (without `@`). Empty → Pay button hidden
-     * (except admins still need a username to open the modal).
-     */
-    venmoUser: string;
-    /**
-     * When true, Pay is shown to all users with unpaid submitted brackets.
-     * When false, Pay is admin-only (ops admin check).
+     * Master Pay switch. When false, Pay is admin-only; when true, any user may pay
+     * if at least one provider is ready. Does not remove payment history.
      */
     enablePayCapability: boolean;
+    /** Independent Venmo provider switch (still requires `venmoUser`). */
+    enableVenmo: boolean;
+    /** Independent Zelle provider switch (still requires name + email or phone). */
+    enableZelle: boolean;
+    /** Venmo username for Pay deep links (without `@`). */
+    venmoUser: string;
+    /** Zelle recipient display name shown in the instruction step. */
+    zelleDisplayName: string;
+    /** Zelle registered email (optional if phone set). */
+    zelleEmail: string;
+    /** Zelle registered U.S. mobile (optional if email set). */
+    zellePhone: string;
+    /** When true and image set, show QR on the Zelle instruction step. */
+    zelleQrEnabled: boolean;
+    /** QR image src (media library). Blank hides the QR. */
+    zelleQrImageSrc: string;
+    /** Site description for page metadata and link previews. */
+    siteDescription: string;
     /**
      * Application Master Lock: `true` = Unlocked; `false` = Locked
      * (Changing actions blocked).
@@ -210,6 +223,13 @@ export function defaultToolbar(): VintageToolbarItem[] {
       adminOnly: false,
     },
     {
+      id: "scoreboard",
+      label: "Scores",
+      href: "/scoreboard",
+      icon: "ClipboardList",
+      adminOnly: false,
+    },
+    {
       id: "standings",
       label: "Standings",
       href: "/standings",
@@ -230,7 +250,6 @@ export function defaultToolbar(): VintageToolbarItem[] {
       icon: "CircleUserRound",
       adminOnly: true,
     },
-    emptyToolbarSlot(6),
     emptyToolbarSlot(7),
   ];
 }
@@ -298,6 +317,29 @@ export function normalizeToolbar(
   while (items.length < VINTAGE_TOOLBAR_SLOTS) {
     items.push(emptyToolbarSlot(items.length));
   }
+
+  // Ensure public Scores slot exists for older CMS docs (fill first empty slot).
+  const hasScores = items.some(
+    (item) =>
+      item.id === "scoreboard" ||
+      item.href.trim() === "/scoreboard" ||
+      item.href.trim().startsWith("/scoreboard/"),
+  );
+  if (!hasScores) {
+    const emptyIndex = items.findIndex((item) => !isToolbarItemPopulated(item));
+    const scoresDefault =
+      defaults.find((d) => d.id === "scoreboard") || {
+        id: "scoreboard",
+        label: "Scores",
+        href: "/scoreboard",
+        icon: "ClipboardList",
+        adminOnly: false,
+      };
+    if (emptyIndex >= 0) {
+      items[emptyIndex] = { ...scoresDefault };
+    }
+  }
+
   return items;
 }
 
@@ -562,6 +604,10 @@ export function normalizeVintageContent(value: unknown): VintageContent {
         keyIn.masterLockMessage.trim()
           ? keyIn.masterLockMessage.trim()
           : defaults.keyData.masterLockMessage;
+      const zelleQrImageSrc =
+        typeof keyIn.zelleQrImageSrc === "string"
+          ? keyIn.zelleQrImageSrc.trim()
+          : defaults.keyData.zelleQrImageSrc;
       return {
         siteName,
         bracketsPublished:
@@ -577,6 +623,35 @@ export function normalizeVintageContent(value: unknown): VintageContent {
           typeof keyIn.enablePayCapability === "boolean"
             ? keyIn.enablePayCapability
             : defaults.keyData.enablePayCapability,
+        enableVenmo:
+          typeof keyIn.enableVenmo === "boolean"
+            ? keyIn.enableVenmo
+            : defaults.keyData.enableVenmo,
+        enableZelle:
+          typeof keyIn.enableZelle === "boolean"
+            ? keyIn.enableZelle
+            : defaults.keyData.enableZelle,
+        zelleDisplayName:
+          typeof keyIn.zelleDisplayName === "string"
+            ? keyIn.zelleDisplayName.trim()
+            : defaults.keyData.zelleDisplayName,
+        zelleEmail:
+          typeof keyIn.zelleEmail === "string"
+            ? keyIn.zelleEmail.trim()
+            : defaults.keyData.zelleEmail,
+        zellePhone:
+          typeof keyIn.zellePhone === "string"
+            ? keyIn.zellePhone.trim()
+            : defaults.keyData.zellePhone,
+        zelleQrEnabled:
+          typeof keyIn.zelleQrEnabled === "boolean"
+            ? keyIn.zelleQrEnabled
+            : defaults.keyData.zelleQrEnabled,
+        zelleQrImageSrc,
+        siteDescription:
+          typeof keyIn.siteDescription === "string"
+            ? keyIn.siteDescription.trim()
+            : defaults.keyData.siteDescription,
         masterLockUnlocked:
           typeof keyIn.masterLockUnlocked === "boolean"
             ? keyIn.masterLockUnlocked
@@ -700,6 +775,14 @@ export const DEFAULT_VINTAGE_CONTENT: VintageContent = {
     entryCost: 5,
     venmoUser: "",
     enablePayCapability: false,
+    enableVenmo: true,
+    enableZelle: true,
+    zelleDisplayName: "",
+    zelleEmail: "",
+    zellePhone: "",
+    zelleQrEnabled: true,
+    zelleQrImageSrc: "/images/vintage/zelle-qr-fpo.svg",
+    siteDescription: "Annual March Madness Bracket Challenge",
     masterLockUnlocked: true,
     masterLockMessage:
       "Bracket actions are temporarily locked by the administrator.",

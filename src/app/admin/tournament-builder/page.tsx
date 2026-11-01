@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { getCSRFHeaders } from '@/hooks/useCSRF';
+import { useAdminConfirm } from '@/components/admin/useAdminConfirm';
 import { getTeamReferenceDisplayName } from '@/lib/teamDisplayName';
 import { getPlayInDisplayName, PLAY_IN_LABEL_MAX_LENGTH } from '@/lib/playInDisplayName';
 import {
@@ -127,6 +128,7 @@ const btnSecondaryStyle = { borderColor: TB.border, background: TB.panel, color:
 export default function TournamentBuilderPage() {
   const { status } = useSession();
   const router = useRouter();
+  const { confirm, dialog } = useAdminConfirm();
   const searchParams = useSearchParams();
   const previewRef = useRef<HTMLElement | null>(null);
   const [year, setYear] = useState('');
@@ -300,13 +302,15 @@ export default function TournamentBuilderPage() {
       setErrors(issues);
       return;
     }
-    if (
-      action === 'publish' &&
-      !window.confirm(
-        `Publish tournament ${year} to ${environment}? This makes this field available here. Existing site availability and deadline settings remain in effect.`
-      )
-    ) {
-      return;
+    if (action === 'publish') {
+      const ok = await confirm({
+        title: 'Publish tournament',
+        message: `Publish tournament ${year} to ${environment}? This makes this field available here. Existing site availability and deadline settings remain in effect.`,
+        confirmLabel: 'Publish',
+        testId: 'tournament-builder-publish-confirm',
+        tone: 'warn',
+      });
+      if (!ok) return;
     }
     setBusy(true);
     setErrors([]);
@@ -382,17 +386,21 @@ export default function TournamentBuilderPage() {
    * Builds the next document outside setState so React Strict Mode double-invoke
    * cannot consume the pick list twice via a shared cursor.
    */
-  const fillRandom = () => {
+  const fillRandom = async () => {
     if (!data || readOnly) return;
     if (schools.length < 64) {
       setErrors([`Need at least 64 schools to randomize (found ${schools.length}).`]);
       return;
     }
-    if (
-      dirty &&
-      !window.confirm('Replace the current field with a random 64-team draw? Unsaved edits will be lost.')
-    ) {
-      return;
+    if (dirty) {
+      const ok = await confirm({
+        title: 'Replace field',
+        message: 'Replace the current field with a random 64-team draw? Unsaved edits will be lost.',
+        confirmLabel: 'Replace',
+        testId: 'tournament-builder-random-confirm',
+        tone: 'danger',
+      });
+      if (!ok) return;
     }
     const picks = shuffled(schools).slice(0, 64);
     const regionNames = shuffled([...STANDARD_REGION_NAMES]);
@@ -544,7 +552,17 @@ export default function TournamentBuilderPage() {
         <Link
           href="/admin?tab=tourney"
           onClick={(e) => {
-            if (dirty && !window.confirm('Leave without saving your draft?')) e.preventDefault();
+            if (!dirty) return;
+            e.preventDefault();
+            void confirm({
+              title: 'Leave builder',
+              message: 'Leave without saving your draft?',
+              confirmLabel: 'Leave',
+              testId: 'tournament-builder-leave-confirm',
+              tone: 'warn',
+            }).then((ok) => {
+              if (ok) router.push('/admin?tab=tourney');
+            });
           }}
           className="text-sm underline"
           style={{ color: TB.action }}
@@ -583,7 +601,18 @@ export default function TournamentBuilderPage() {
                   setErrors(['Enter a four-digit tournament year.']);
                   return;
                 }
-                if (dirty && !window.confirm('Discard unsaved changes and change year?')) return;
+                if (dirty) {
+                  void confirm({
+                    title: 'Change year',
+                    message: 'Discard unsaved changes and change year?',
+                    confirmLabel: 'Change year',
+                    testId: 'tournament-builder-year-confirm',
+                    tone: 'warn',
+                  }).then((ok) => {
+                    if (ok) setYear(yearInput);
+                  });
+                  return;
+                }
                 setYear(yearInput);
               }}
               className="ml-2 rounded border px-3 py-2 disabled:opacity-50"
@@ -609,7 +638,19 @@ export default function TournamentBuilderPage() {
               type="button"
               disabled={busy}
               onClick={() => {
-                if (!dirty || window.confirm('Reload and discard unsaved changes?')) void load(year);
+                if (!dirty) {
+                  void load(year);
+                  return;
+                }
+                void confirm({
+                  title: 'Reload workspace',
+                  message: 'Reload and discard unsaved changes?',
+                  confirmLabel: 'Reload',
+                  testId: 'tournament-builder-reload-confirm',
+                  tone: 'warn',
+                }).then((ok) => {
+                  if (ok) void load(year);
+                });
               }}
               className="mt-2 underline"
               style={{ color: TB.action }}
@@ -964,6 +1005,7 @@ export default function TournamentBuilderPage() {
           </>
         )}
       </div>
+      {dialog}
     </main>
   );
 }

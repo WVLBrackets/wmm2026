@@ -1,5 +1,4 @@
 import { TournamentData } from '@/types/tournament';
-import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
 
 /**
  * Friendly copy when a year’s published field JSON is missing (expected before Tourney publish).
@@ -11,7 +10,7 @@ export function unpublishedTournamentMessage(year: string): string {
 }
 
 /** Browser loader. Server callers use tournamentLoaderServer to avoid HTTP self-fetches. */
-export async function tryLoadTournamentData(year = String(FALLBACK_CONFIG.tournamentYear)): Promise<TournamentData | null> {
+export async function tryLoadTournamentData(year: string): Promise<TournamentData | null> {
   if (!/^20\d{2}$/.test(year)) throw new Error('Invalid tournament year.');
   const response = await fetch(`/api/tournament-data?year=${year}`, { cache: 'no-store' });
   if (response.status === 404) return null;
@@ -23,7 +22,7 @@ export async function tryLoadTournamentData(year = String(FALLBACK_CONFIG.tourna
  * Load published tournament JSON or throw. Prefer {@link tryLoadTournamentData} in admin
  * UIs that should show a calm “not published” state instead of throwing.
  */
-export async function loadTournamentData(year = String(FALLBACK_CONFIG.tournamentYear)): Promise<TournamentData> {
+export async function loadTournamentData(year: string): Promise<TournamentData> {
   const data = await tryLoadTournamentData(year);
   if (!data) throw new Error(unpublishedTournamentMessage(year));
   return data;

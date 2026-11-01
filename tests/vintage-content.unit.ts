@@ -7,10 +7,7 @@ import {
   validateVintageContent,
   safeHref,
 } from "../src/lib/vintage/content";
-import {
-  isVintageEnabled,
-  isPrimaryVintageAdmin,
-} from "../src/lib/vintage/access";
+import { isPrimaryVintageAdmin } from "../src/lib/vintage/access";
 import { assertDedicatedVintageDatabase } from "../src/lib/vintage/databaseSafety";
 test("default content validates; URLs cannot execute scripts or escape to protocol-relative hosts", () => {
   validateVintageContent(DEFAULT_VINTAGE_CONTENT);
@@ -128,26 +125,6 @@ test("rejects invalid theme colors, fonts, and unknown toolbar icons", () => {
   customIcon.toolbar[0].icon =
     "custom:https://example.com/bucket/vintage/icon.svg";
   assert.doesNotThrow(() => validateVintageContent(customIcon));
-});
-test("production requires the explicit vintage availability flag", () => {
-  const env = { ...process.env };
-  try {
-    Object.assign(process.env, {
-      NODE_ENV: "production",
-      VERCEL_ENV: "production",
-    });
-    process.env.VINTAGE_HOMEPAGE_ENABLED = "true";
-    assert.equal(isVintageEnabled(), true);
-    delete process.env.VINTAGE_HOMEPAGE_ENABLED;
-    assert.equal(isVintageEnabled(), false);
-    process.env.VINTAGE_HOMEPAGE_ENABLED = "true";
-    process.env.VERCEL_ENV = "preview";
-    assert.equal(isVintageEnabled(), true);
-    delete process.env.VINTAGE_HOMEPAGE_ENABLED;
-    assert.equal(isVintageEnabled(), false);
-  } finally {
-    process.env = env;
-  }
 });
 test("dedicated database guard detects equivalent pooled URLs with different credentials", () => {
   const env = {

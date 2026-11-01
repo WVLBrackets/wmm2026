@@ -1,17 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { createBracket, getBracketsByUserId, updateBracket } from '@/lib/repositories/bracketRepository';
+import {
+  createBracket,
+  getUserBracketsForYear,
+  updateBracket,
+} from '@/lib/repositories/bracketRepository';
 import { getUserByEmail } from '@/lib/repositories/userRepository';
-import { getSiteConfigFromGoogleSheetsFresh } from '@/lib/siteConfig';
+import { SiteConfigError } from '@/lib/siteConfig';
 import { sendSubmissionConfirmationEmail, processEmailAsync } from '@/lib/bracketEmailService';
 import { validateBracketSubmission } from '@/lib/bracketSubmissionValidator';
 import { tryLoadTournamentData } from '@/lib/tournamentLoaderServer';
 import { logError } from '@/lib/serverErrorLogger';
 import { csrfProtection } from '@/lib/csrf';
 import { normalizeStoredDisplayName } from '@/lib/stringNormalize';
-import { evaluateBracketMutationAccess } from '@/lib/services/bracketMutationPolicy';
-import { FALLBACK_CONFIG } from '@/lib/fallbackConfig';
+import {
+  evaluateBracketMutationAccess,
+  type BracketMutationDecision,
+} from '@/lib/services/bracketMutationPolicy';
+import { getActiveTournamentYear, parseViewingYear } from '@/lib/services/tournamentYearService';
+import { loadMyPicksList } from '@/lib/services/myPicksService';
+import { formatVintagePicksLabel } from '@/lib/vintage/picksContent';
+import { getPublishedCmsBundle } from '@/lib/vintage/cmsBundle';
+
+/**
+ * Mutation gate for creating a bracket in the active year. CMS outages map to 503.
+ *
+ * @param action - `changing` (submit) or `save_wip` (first save)
+ */
+async function evaluateCreateAccess(
+  action: 'changing' | 'save_wip',
+): Promise<BracketMutationDecision> {
+  try {
+    const activeYearHint = await getActiveTournamentYear();
+    return await evaluateBracketMutationAccess(activeYearHint, action, { forCreate: true });
+  } catch (error) {
+    return {
+      allowed: false,
+      status: 503,
+      error:
+        error instanceof SiteConfigError
+          ? error.message
+          : 'Site configuration is unavailable.',
+    };
+  }
+}
+
+/**
+ * Published "brackets missing" error for a year (My Picks CMS).
+ *
+ * @param year - Tournament year
+ */
+async function bracketsMissingMessage(year: number): Promise<string> {
+  const bundle = await getPublishedCmsBundle();
+  return formatVintagePicksLabel(bundle.picks.bracketsMissingErrorMessage, { year });
+}
 
 /**
  * POST /api/tournament-bracket - Create a new tournament bracket (submit)
@@ -88,73 +131,46 @@ export async function POST(request: NextRequest) {
     }
 
     // Resolve year + Changing gates (submit creates a submitted bracket)
-    let siteConfig = null;
-    try {
-      siteConfig = await getSiteConfigFromGoogleSheetsFresh();
-    } catch {
-      siteConfig = FALLBACK_CONFIG;
-    }
-    const sheetYear = siteConfig?.tournamentYear
-      ? parseInt(String(siteConfig.tournamentYear), 10)
-      : parseInt(String(FALLBACK_CONFIG.tournamentYear), 10);
-
-    const mutationAccess = await evaluateBracketMutationAccess(
-      sheetYear,
-      'changing',
-      { forCreate: true },
-    );
+    const mutationAccess = await evaluateCreateAccess('changing');
     if (!mutationAccess.allowed) {
       return NextResponse.json(
         { success: false, error: mutationAccess.error },
         { status: mutationAccess.status }
       );
     }
-    siteConfig = mutationAccess.siteConfig;
+    const { siteConfig, editorCopy } = mutationAccess;
     const tournamentYear = mutationAccess.activeYear;
 
-    // Get all existing brackets for this user
-    const existingBrackets = await getBracketsByUserId(user.id);
-
+    const existingBrackets = await getUserBracketsForYear(user.id, tournamentYear);
     const normalizedEntryName = normalizeStoredDisplayName(String(body.entryName ?? ''));
-    
+
     // Check if there's already a submitted bracket with this name for the same year
     const duplicateNameExists = existingBrackets.some(
-      bracket => bracket.entryName === normalizedEntryName && 
-                 bracket.status === 'submitted' && 
-                 bracket.year === tournamentYear
+      (bracket) => bracket.entryName === normalizedEntryName && bracket.status === 'submitted'
     );
 
     if (duplicateNameExists) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: `A submitted bracket with the name "${normalizedEntryName}" already exists for ${tournamentYear}. Please choose a different name.`
-        },
+        { success: false, error: editorCopy.duplicateNameMessage },
         { status: 400 }
       );
     }
 
-    // Load tournament data for pick validation (mutation gate already verified JSON when available=YES)
+    // Load tournament data for pick validation (mutation gate already verified JSON when published)
     const tournamentData = await tryLoadTournamentData(tournamentYear.toString());
     if (!tournamentData) {
       return NextResponse.json(
-        {
-          success: false,
-          error:
-            siteConfig?.bracketsMissingErrorMessage ||
-            FALLBACK_CONFIG.bracketsMissingErrorMessage ||
-            `Bracket field data is missing for ${tournamentYear}.`,
-        },
+        { success: false, error: await bracketsMissingMessage(tournamentYear) },
         { status: 403 }
       );
     }
 
-    // Validate bracket submission server-side (for data validation, not deadline/toggle)
+    // Validate bracket submission server-side (data validation; gates ran above)
     const validation = await validateBracketSubmission(
       picks,
       body.tieBreaker,
       tournamentData,
-      siteConfig
+      editorCopy
     );
 
     // Create new bracket stamped with CMS active Tourney Year (always create, even if invalid data)
@@ -202,18 +218,14 @@ export async function POST(request: NextRequest) {
       // Process asynchronously using centralized service with waitUntil
       const emailPromise = (async () => {
         try {
-          // Get all submitted brackets for this user to calculate counts
-          const allUserBrackets = await getBracketsByUserId(user.id);
-          const submittedBrackets = allUserBrackets.filter(b => b.status === 'submitted' && b.year === tournamentYear);
+          // Submitted brackets for this user + year drive the email counts
+          const yearBrackets = await getUserBracketsForYear(user.id, tournamentYear);
+          const submittedBrackets = yearBrackets.filter((b) => b.status === 'submitted');
           const submissionCount = submittedBrackets.length;
           
-          // Get entry cost from config
-          let entryCost = 5; // Default
-          if (siteConfig?.entryCost) {
-            entryCost = siteConfig.entryCost;
-          } else {
-            const { FALLBACK_CONFIG } = await import('@/lib/fallbackConfig');
-            entryCost = FALLBACK_CONFIG.entryCost;
+          const entryCost = siteConfig?.entryCost;
+          if (entryCost == null || !Number.isFinite(entryCost)) {
+            throw new Error('Entry cost is not configured in published Key Data.');
           }
           
           const totalCost = submissionCount * entryCost;
@@ -322,41 +334,20 @@ export async function PUT(request: NextRequest) {
     }
 
     // First Save of a new editor session → create in_progress (save_wip).
-    // Year comes from mutation policy (CMS active year for vintage).
-    let siteConfig = null;
-    try {
-      siteConfig = await getSiteConfigFromGoogleSheetsFresh();
-    } catch {
-      siteConfig = FALLBACK_CONFIG;
-    }
-    const sheetYear = siteConfig?.tournamentYear
-      ? parseInt(String(siteConfig.tournamentYear), 10)
-      : parseInt(String(FALLBACK_CONFIG.tournamentYear), 10);
-
-    const mutationAccess = await evaluateBracketMutationAccess(
-      sheetYear,
-      'save_wip',
-      { forCreate: true },
-    );
+    // Year comes from mutation policy (CMS active year).
+    const mutationAccess = await evaluateCreateAccess('save_wip');
     if (!mutationAccess.allowed) {
       return NextResponse.json(
         { success: false, error: mutationAccess.error },
         { status: mutationAccess.status }
       );
     }
-    siteConfig = mutationAccess.siteConfig;
     const createYear = mutationAccess.activeYear;
 
     const fieldData = await tryLoadTournamentData(String(createYear));
     if (!fieldData) {
       return NextResponse.json(
-        {
-          success: false,
-          error:
-            mutationAccess.siteConfig?.bracketsMissingErrorMessage ||
-            FALLBACK_CONFIG.bracketsMissingErrorMessage ||
-            `Bracket field data is missing for ${createYear}.`,
-        },
+        { success: false, error: await bracketsMissingMessage(createYear) },
         { status: 403 }
       );
     }
@@ -437,56 +428,23 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { getActiveTournamentYear, mergeAvailableYears, parseViewingYear } = await import(
-      '@/lib/services/tournamentYearService'
+    // Active year = published homepage CMS Tourney Year.
+    const activeYear = await getActiveTournamentYear();
+    const viewingYear = parseViewingYear(request.nextUrl.searchParams.get('year'), activeYear);
+    const list = await loadMyPicksList(
+      { id: user.id, name: user.name, email: user.email },
+      viewingYear,
+      activeYear,
     );
 
-    // Active year = published homepage CMS Tourney Year (not Config Sheet).
-    const safeActiveYear = await getActiveTournamentYear();
-
-    const yearParam = request.nextUrl.searchParams.get('year');
-    const viewingYear = parseViewingYear(yearParam, safeActiveYear);
-    
-    // Get all brackets for this user
-    const brackets = await getBracketsByUserId(user.id);
-    const availableYears = mergeAvailableYears(
-      brackets.map((b) => b.year),
-      safeActiveYear
-    );
-    
-    const yearBrackets = brackets.filter((bracket) => bracket.year === viewingYear);
-    
-    // Transform to frontend format
-    const formattedBrackets = yearBrackets.map(bracket => ({
-      id: bracket.id,
-      playerName: user.name,
-      playerEmail: user.email,
-      entryName: bracket.entryName,
-      tieBreaker: bracket.tieBreaker,
-      submittedAt:
-        bracket.status === 'submitted' && bracket.submittedAt
-          ? bracket.submittedAt.toISOString()
-          : undefined,
-      updatedAt: bracket.updatedAt.toISOString(),
-      lastSaved: bracket.status === 'in_progress' ? bracket.updatedAt.toISOString() : undefined,
-      picks: bracket.picks,
-      totalPoints: 0,
-      isComplete: bracket.status === 'submitted',
-      bracketNumber: bracket.bracketNumber,
-      year: bracket.year,
-      isPublic: bracket.status === 'submitted',
-      status: bracket.status,
-      paymentStatus: bracket.paymentStatus || null,
-    }));
-    
     return NextResponse.json(
       {
         success: true,
-        data: formattedBrackets,
-        count: formattedBrackets.length,
-        activeYear: safeActiveYear,
-        viewingYear,
-        availableYears,
+        data: list.brackets,
+        count: list.brackets.length,
+        activeYear: list.activeYear,
+        viewingYear: list.viewingYear,
+        availableYears: list.availableYears,
       },
       {
         headers: {

@@ -2,102 +2,110 @@
 
 ## Overview
 
-The application now uses a hybrid template system for two types of emails:
-- **On-Demand PDF Email** - User clicks button to email their bracket PDF
-- **Automated Submission Email** - Sent automatically when user submits a bracket
+Transactional emails use a hybrid of:
 
-Both use:
-- **HTML Template Files**: Contains the structure and styling
-- **Google Sheets Config**: Contains the editable text content
+- **HTML template files** in `src/emails/` (structure and styling)
+- **Emails & Account CMS** (`__emailsContent` on the published `vintage_homepage` row) for editable copy
+
+Published CMS is the only source of email copy. There is no Google Sheets Config Sheet. `DEFAULT_VINTAGE_EMAILS_CONTENT` seeds the **editor** only; the public send path uses `blankMissingStrings` after normalize.
+
+Edit copy in Vintage Admin → **Emails & Account**. Publish before expecting live mail to change. CMS writes invalidate the `vintage-cms` cache.
 
 ## Email Types
 
 ### 1. On-Demand PDF Email (Button-Triggered)
 
 **Template File**: `src/emails/email-pdf.html`  
-**Config Prefix**: `email_pdf_*`  
-**Trigger**: User clicks "Email PDF" button on My Brackets page  
+**CMS object**: `pdf`  
+**Trigger**: User clicks "Email PDF" on My Picks  
 **Includes**: PDF attachment of the bracket
 
-**Config Fields**:
-- `email_pdf_subject` - Email subject line
-- `email_pdf_heading` - Main heading in email
-- `email_pdf_greeting` - Greeting paragraph
-- `email_pdf_message1` - First content paragraph
-- `email_pdf_message2` - Second content paragraph
-- `email_pdf_message3` - Third content paragraph
-- `email_pdf_footer` - Footer text
+| CMS field | Purpose |
+|-----------|---------|
+| `pdf.subject` | Email subject line |
+| `pdf.heading` | Main heading |
+| `pdf.greeting` | Greeting paragraph |
+| `pdf.message1` … `pdf.message3` | Body paragraphs (blank = omitted) |
+| `pdf.footer` | Footer text |
+
+On-site dialog copy is `pdfDialog` (title, message, send/cancel, status strings).
 
 ### 2. Automated Submission Email
 
 **Template File**: `src/emails/email-submit.html`  
-**Config Prefix**: `email_submit_*`  
-**Trigger**: Automatically sent when user submits a bracket  
-**Purpose**: Congratulates user, shows submission count and total cost, encourages more submissions
+**CMS object**: `submit`  
+**Trigger**: Automatically sent when a user submits a bracket
 
-**Config Fields**:
-- `email_submit_subject` - Email subject line
-- `email_submit_heading` - Main heading in email
-- `email_submit_greeting` - Greeting paragraph
-- `email_submit_message1` - First content paragraph
-- `email_submit_message2` - Second content paragraph
-- `email_submit_message3` - Third content paragraph
-- `email_submit_footer` - Footer text
+Same field shape as `pdf` (`subject`, `heading`, `greeting`, `message1`–`message3`, `footer`).
+
+### 3. Account emails
+
+**Templates**: `src/emails/confirm.html`, `src/emails/reset.html`  
+**CMS objects**: `registration`, `passwordReset`
+
+These include `buttonLabel`, `linkFallbackLabel`, `codeLabel` (`{code}`), and `expiryNote` in addition to subject/heading/greeting/body/footer.
+
+### 4. Auto-reply
+
+Sent when someone replies to the do-not-reply mailbox. CMS object `autoReply` plus shared `doNotReplyNotice` (`{contactEmail}`). See `docs/AUTO_REPLY_SETUP.md`.
 
 ## Available Variables
 
-You can use these variables in your Google Sheets config fields (use `{variable}` syntax):
+Use `{variable}` syntax in CMS fields.
 
-**Common Variables** (available in both email types):
-- `{name}` - User's name (falls back to "there" if not available)
-- `{entryName}` - Bracket entry name
-- `{tournamentYear}` - Tournament year
-- `{siteName}` - Site name
-- `{bracketId}` - Bracket ID
+**Common** (PDF + submit): `{name}`, `{entryName}`, `{tournamentYear}`, `{siteName}`, `{bracketId}`
 
-**Submission Email Only**:
-- `{submissionCount}` - Number of submitted brackets for this user
-- `{totalCost}` - Total cost (submissionCount × entryCost)
+`{name}` uses `"there"` only when the user record has no name — that is a mail merge fallback, not CMS copy.
 
-## Example Config Values
+**Submission email only**: `{submissionCount}`, `{totalCost}`
+
+**Account emails**: `{name}`, `{year}`, `{code}`, and contact tokens as implemented in `emailService.ts`
+
+**PDF dialog**: `{entry}`, `{email}`
+
+**Do-not-reply notice**: `{contactEmail}` (from homepage footer / Key Data contact)
+
+## Example CMS values
 
 ### On-Demand PDF Email
 
-| Parameter | Value |
-|-----------|-------|
-| `email_pdf_subject` | Your {tournamentYear} Bracket - {entryName} |
-| `email_pdf_heading` | Your Bracket is Attached! |
-| `email_pdf_greeting` | Hi {name}, |
-| `email_pdf_message1` | Great news! Your bracket "{entryName}" has been successfully submitted and is ready for the tournament! |
-| `email_pdf_message2` | We've attached a PDF copy of your bracket for your records. Good luck with your picks! |
-| `email_pdf_message3` | Let the madness begin! 🏀 |
-| `email_pdf_footer` | This is an automated email from {siteName}. |
+| Field | Example |
+|-------|---------|
+| `pdf.subject` | Your {tournamentYear} Bracket - {entryName} |
+| `pdf.heading` | Your Bracket is Attached! |
+| `pdf.greeting` | Hi {name}, |
+| `pdf.message1` | Great news! Your bracket "{entryName}" has been successfully submitted and is ready for the tournament! |
+| `pdf.message2` | We've attached a PDF copy of your bracket for your records. Good luck with your picks! |
+| `pdf.message3` | Let the madness begin! 🏀 |
+| `pdf.footer` | This is an automated email from {siteName}. |
 
 ### Automated Submission Email
 
-| Parameter | Value |
-|-----------|-------|
-| `email_submit_subject` | Bracket Submitted Successfully - {siteName} |
-| `email_submit_heading` | Bracket Submitted Successfully! |
-| `email_submit_greeting` | Hi {name}, |
-| `email_submit_message1` | Congratulations! Your bracket "{entryName}" has been successfully submitted for the {tournamentYear} tournament. |
-| `email_submit_message2` | You currently have {submissionCount} submitted bracket(s) with a total cost of ${totalCost}. |
-| `email_submit_message3` | Want to increase your chances? Submit more brackets and invite your friends to join the fun! |
-| `email_submit_footer` | This is an automated email from {siteName}. |
+| Field | Example |
+|-------|---------|
+| `submit.subject` | Bracket Submitted Successfully - {siteName} |
+| `submit.heading` | Bracket Submitted Successfully! |
+| `submit.greeting` | Hi {name}, |
+| `submit.message1` | Congratulations! Your bracket "{entryName}" has been successfully submitted for the {tournamentYear} tournament. |
+| `submit.message2` | You currently have {submissionCount} submitted bracket(s) with a total cost of ${totalCost}. |
+| `submit.message3` | Want to increase your chances? Submit more brackets and invite your friends to join the fun! |
+| `submit.footer` | This is an automated email from {siteName}. |
 
 ## Making Changes
 
-### To Change Text Content:
-1. Edit the values in your Google Sheets config
-2. Changes take effect immediately (no deployment needed)
+### To Change Text Content
 
-### To Change Email Structure/Styling:
-1. Edit the appropriate template file:
-   - `src/emails/email-pdf.html` for on-demand PDF email
-   - `src/emails/email-submit.html` for automated submission email
-2. Commit and deploy the changes
+1. Open Vintage Admin → Emails & Account
+2. Edit and **publish**
+3. Cache invalidates on publish (`vintage-cms`). No code deploy needed for copy.
 
-## Fallback Values
+### To Change Email Structure/Styling
 
-If the Google Sheets config is unavailable or fields are missing, the system uses fallback values defined in `src/lib/fallbackConfig.ts`. These provide sensible defaults for both email types.
+1. Edit the template file under `src/emails/`
+2. Commit and deploy
 
+## Blank fields and required subjects
+
+- Empty `message1` / `message2` / `message3` (and other optional paragraphs) are **omitted** from the rendered email.
+- A **blank subject** is an error (`Emails & Account CMS: … subject is blank`) — the send fails rather than substituting editor seed copy.
+- CMS load failure follows the site-wide rule: throw, vintage `SiteErrorPanel` on pages, `notifyAdminOfError` for the admin.

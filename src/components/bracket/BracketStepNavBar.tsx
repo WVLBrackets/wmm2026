@@ -2,34 +2,50 @@
 
 import { useMemo, useSyncExternalStore } from 'react';
 import { CheckCircle } from 'lucide-react';
+import { useBracketEditorCopy } from '@/components/bracket/BracketEditorCopyContext';
+import { formatEditorCopy } from '@/lib/vintage/bracketEditorContent';
 
 const MQ_MAX_SM = '(max-width: 639px)';
 
+/**
+ * Subscribe to the small-screen media query.
+ *
+ * @param callback - Store change notifier
+ */
 function subscribeMaxSm(callback: () => void) {
   const mq = window.matchMedia(MQ_MAX_SM);
   mq.addEventListener('change', callback);
   return () => mq.removeEventListener('change', callback);
 }
 
+/** Current small-screen media query match. */
 function getMaxSmSnapshot() {
   return window.matchMedia(MQ_MAX_SM).matches;
 }
 
-/** First grapheme (handles basic Unicode); uppercased for nav initials. */
-function stepLabelInitial(label: string): string {
-  const t = label.trim();
-  if (!t) return '?';
-  const first = [...t][0];
-  return first ? first.toUpperCase() : '?';
+/**
+ * Compact nav initials: first letter for regions, word initials for the final step
+ * (e.g. "Final Four" -> "FF").
+ *
+ * @param label - Full step label
+ * @param isFinalStep - True for the Final Four step
+ */
+function stepLabelInitials(label: string, isFinalStep: boolean): string {
+  const words = label.trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return '';
+  const initials = (isFinalStep ? words : words.slice(0, 1)).map((w) => [...w][0] ?? '');
+  return initials.join('').toUpperCase();
 }
 
+/** True below the `sm` breakpoint. */
 function useBracketStepNavCompact(): boolean {
   return useSyncExternalStore(subscribeMaxSm, getMaxSmSnapshot, () => false);
 }
+
 export interface BracketStepNavBarProps {
   totalSteps: number;
   currentStep: number;
-  /** One label per step; last entry is typically "Final Four". */
+  /** One label per step; last entry is the CMS Final Four title. */
   stepLabels: string[];
   /** Fixed column width in `ch` (use {@link computeUniformStepNavWidthCh} from `@/lib/bracketStepNavMetrics`). */
   columnWidthCh: number;
@@ -40,15 +56,8 @@ export interface BracketStepNavBarProps {
 }
 
 /**
- * Resolves the visible label for a step (region name, "Final Four", or fallback).
- */
-function resolveStepLabel(index: number, totalSteps: number, stepLabels: string[]): string {
-  return stepLabels[index]?.trim() || (index === totalSteps - 1 ? 'Final Four' : `Region ${index + 1}`);
-}
-
-/**
  * Text buttons for jumping between regions and Final Four in the bracket editor.
- * Complete steps use green plus a checkmark icon for color-blind clarity.
+ * Navy selected / outlined available / gray unavailable; complete steps add a checkmark.
  */
 export default function BracketStepNavBar({
   totalSteps,
@@ -60,6 +69,7 @@ export default function BracketStepNavBar({
   finalFourDisabledMessage,
 }: BracketStepNavBarProps) {
   const compactNav = useBracketStepNavCompact();
+  const copy = useBracketEditorCopy();
 
   const allRegionsComplete = Array.from({ length: Math.max(0, totalSteps - 1) }, (_, j) =>
     isStepComplete(j),
@@ -67,8 +77,14 @@ export default function BracketStepNavBar({
 
   const resolvedLabels = useMemo(
     () =>
-      Array.from({ length: totalSteps }, (_, i) => resolveStepLabel(i, totalSteps, stepLabels)),
-    [totalSteps, stepLabels],
+      Array.from({ length: totalSteps }, (_, i) => {
+        const raw = stepLabels[i]?.trim();
+        if (raw) return raw;
+        return i === totalSteps - 1
+          ? copy.finalFourTitle
+          : formatEditorCopy(copy.stepRegionFallback, { n: i + 1 });
+      }),
+    [totalSteps, stepLabels, copy.finalFourTitle, copy.stepRegionFallback],
   );
 
   const gridTemplateColumns = compactNav
@@ -77,13 +93,13 @@ export default function BracketStepNavBar({
 
   return (
     <div
-      className={`mx-auto grid max-w-full shrink-0 gap-1.5 px-1 pb-0.5 ${
+      className={`be-step-nav mx-auto grid max-w-full shrink-0 gap-1.5 px-1 pb-0.5 ${
         compactNav ? 'w-full overflow-x-visible' : 'w-max overflow-x-auto'
       }`}
       style={{ gridTemplateColumns }}
       data-testid="bracket-step-nav-bar"
       role="navigation"
-      aria-label="Bracket sections"
+      aria-label={copy.stepNavAriaLabel || undefined}
     >
       {Array.from({ length: totalSteps }, (_, i) => {
         const isFinalStep = i === totalSteps - 1;
@@ -93,22 +109,19 @@ export default function BracketStepNavBar({
         const label = resolvedLabels[i];
 
         let btnClass =
-          'flex h-full min-h-[2rem] w-full items-center justify-center gap-0.5 whitespace-nowrap rounded-md px-1.5 py-1 text-center text-xs font-semibold leading-tight shadow-sm transition-colors';
+          'be-step-nav__btn flex h-full min-h-[2rem] w-full items-center justify-center gap-0.5 whitespace-nowrap rounded-md px-1.5 py-1 text-center text-xs font-semibold leading-tight shadow-sm transition-colors';
         if (disabled) {
-          btnClass += ' bg-gray-200 text-gray-500 cursor-not-allowed';
-        } else if (complete && isCurrent) {
-          btnClass +=
-            ' bg-green-600 text-white hover:bg-green-700 cursor-pointer ring-1 ring-green-800/30 font-bold';
-        } else if (complete) {
-          btnClass +=
-            ' bg-green-600 text-white hover:bg-green-700 cursor-pointer ring-1 ring-green-800/30';
+          btnClass += ' be-step-nav__btn--disabled cursor-not-allowed';
         } else if (isCurrent) {
-          btnClass += ' bg-blue-600 text-white cursor-pointer hover:bg-blue-700 font-bold';
+          btnClass += ' be-step-nav__btn--current cursor-pointer font-bold';
+        } else if (complete) {
+          btnClass += ' be-step-nav__btn--complete be-step-nav__btn--available cursor-pointer';
         } else {
-          btnClass += ' bg-blue-600 text-white hover:bg-blue-700 cursor-pointer';
+          btnClass += ' be-step-nav__btn--available cursor-pointer';
         }
 
-        const ariaLabel = complete ? `${label}, complete` : `${label}, not complete`;
+        const stateLabel = complete ? copy.stepCompleteLabel : copy.stepIncompleteLabel;
+        const ariaLabel = stateLabel ? `${label}, ${stateLabel}` : label;
 
         return (
           <div key={i} className="flex min-w-0 items-center justify-center">
@@ -117,16 +130,11 @@ export default function BracketStepNavBar({
               data-testid={`bracket-step-nav-${i}`}
               onClick={() => !disabled && onStepClick(i)}
               disabled={disabled}
-              title={disabled ? finalFourDisabledMessage : undefined}
+              title={disabled ? finalFourDisabledMessage || undefined : undefined}
               aria-label={ariaLabel}
               aria-current={isCurrent ? 'step' : undefined}
               className={btnClass}
             >
-              {isCurrent && !disabled ? (
-                <span className="shrink-0 text-base font-bold leading-none text-amber-500" aria-hidden>
-                  (
-                </span>
-              ) : null}
               {complete && (
                 <CheckCircle
                   className={`shrink-0 ${compactNav ? 'h-3 w-3' : 'h-3.5 w-3.5'}`}
@@ -138,13 +146,8 @@ export default function BracketStepNavBar({
                 className="shrink-0 text-center"
                 data-testid={compactNav ? `bracket-step-nav-${i}-initial` : `bracket-step-nav-${i}-label`}
               >
-                {compactNav ? (isFinalStep ? 'FF' : stepLabelInitial(label)) : label}
+                {compactNav ? stepLabelInitials(label, isFinalStep) : label}
               </span>
-              {isCurrent && !disabled ? (
-                <span className="shrink-0 text-base font-bold leading-none text-amber-500" aria-hidden>
-                  )
-                </span>
-              ) : null}
             </button>
           </div>
         );

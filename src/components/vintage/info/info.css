@@ -102,8 +102,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  margin: 0 0 24px;
+  gap: 10px;
+  margin: 0 0 28px;
 }
 
 .v-info-toc-chips-label {
@@ -117,8 +117,8 @@
 
 .v-info-toc-chips {
   display: inline-grid;
-  grid-template-columns: repeat(4, 5.25rem);
-  gap: 6px;
+  grid-template-columns: repeat(4, minmax(6.5rem, 1fr));
+  gap: 8px;
   width: max-content;
   max-width: 100%;
   margin: 0;
@@ -131,6 +131,10 @@
   display: flex;
 }
 
+/**
+ * Handbook section jump chips — paper plate + ink frame + red crown rule.
+ * Oswald uppercase matches the public button type recipe (not body Arial).
+ */
 .v-info-toc-chip {
   box-sizing: border-box;
   display: flex;
@@ -140,16 +144,24 @@
   justify-content: center;
   width: 100%;
   /* Match two-line labels so single-line chips sit the same height. */
-  min-height: calc(2 * 1.15em + 12px);
-  padding: 5px 6px;
-  border: 1px solid var(--v-red);
-  background: var(--v-red);
-  color: var(--v-paper);
-  font-family: var(--v-font-body);
-  font-size: 12px;
-  line-height: 1.15;
+  min-height: calc(2 * 1.2em + 18px);
+  padding: 8px 8px 7px;
+  border: 1px solid var(--v-ink);
+  border-top: 3px solid var(--v-red);
+  background: color-mix(in srgb, var(--v-paper) 88%, white);
+  color: var(--v-ink);
+  font-family: var(--v-font-icons);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
   text-align: center;
   text-decoration: none;
+  text-transform: uppercase;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
 }
 
 .v-info-toc-chip span {
@@ -157,9 +169,15 @@
 }
 
 .v-info-toc-chip:hover {
-  background: color-mix(in srgb, var(--v-red) 88%, var(--v-ink));
-  border-color: color-mix(in srgb, var(--v-red) 88%, var(--v-ink));
+  background: var(--v-red);
+  border-color: var(--v-ink);
+  border-top-color: var(--v-ink);
   color: var(--v-paper);
+}
+
+.v-info-toc-chip:focus-visible {
+  outline: 2px solid var(--v-red);
+  outline-offset: 2px;
 }
 
 .v-info-fact-custom-icon {
@@ -491,13 +509,15 @@
 
   .v-info-toc-chips {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
+    gap: 8px;
   }
 
   .v-info-toc-chip {
-    min-height: calc(2 * 1.15em + 10px);
-    font-size: 11px;
+    min-height: calc(2 * 1.2em + 16px);
+    padding: 9px 10px 8px;
+    font-size: 12px;
   }
 
   .v-info-payment,

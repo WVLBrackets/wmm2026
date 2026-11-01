@@ -4,6 +4,7 @@
  */
 export type VintageAdminFocus =
   | { kind: "keyData" }
+  | { kind: "payments" }
   | { kind: "countdown" }
   | { kind: "explore" }
   | { kind: "announcements" }
@@ -17,6 +18,9 @@ export const VINTAGE_ADMIN_PATH = "/vintage/admin";
 export function vintageAdminEditHref(focus: VintageAdminFocus): string {
   if (focus.kind === "keyData") {
     return `${VINTAGE_ADMIN_PATH}?focus=keyData`;
+  }
+  if (focus.kind === "payments") {
+    return `${VINTAGE_ADMIN_PATH}?focus=payments`;
   }
   if (focus.kind === "countdown") {
     return `${VINTAGE_ADMIN_PATH}?focus=countdown`;
@@ -38,6 +42,7 @@ export function parseVintageAdminFocus(
   id: string | null | undefined,
 ): VintageAdminFocus | null {
   if (focus === "keyData") return { kind: "keyData" };
+  if (focus === "payments") return { kind: "payments" };
   if (focus === "countdown") return { kind: "countdown" };
   if (focus === "explore") return { kind: "explore" };
   if (focus === "announcements") return { kind: "announcements" };
@@ -50,6 +55,7 @@ export function parseVintageAdminFocus(
 /** Editor tab labels (must match VintageEditor `tabs`). */
 export const VINTAGE_EDITOR_TAB = {
   keyData: "Key Data",
+  payments: "Payments",
   homeCards: "Home cards",
   explore: "Explore band",
   announcements: "Announcements",

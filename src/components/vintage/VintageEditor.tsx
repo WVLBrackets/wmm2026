@@ -66,6 +66,7 @@ import {
 } from "./sectionNav";
 const tabs = [
   "Key Data",
+  "Payments",
   "Masthead",
   "Toolbar & theme",
   "Home cards",
@@ -153,6 +154,11 @@ export default function VintageEditor() {
       setFocusCardId("__keyData__");
       return;
     }
+    if (focus.kind === "payments") {
+      markActive(sectionIdFor(VINTAGE_EDITOR_TAB.payments));
+      setFocusCardId("__payments__");
+      return;
+    }
     if (focus.kind === "countdown") {
       markActive(sectionIdFor(VINTAGE_EDITOR_TAB.countdown));
       setFocusCardId("__countdown__");
@@ -177,6 +183,7 @@ export default function VintageEditor() {
   useEffect(() => {
     if (!focusCardId) return;
     const isKeyData = focusCardId === "__keyData__";
+    const isPayments = focusCardId === "__payments__";
     const isCountdown = focusCardId === "__countdown__";
     const isExplore = focusCardId === "__explore__";
     const isAnnouncements = focusCardId === "__announcements__";
@@ -185,21 +192,25 @@ export default function VintageEditor() {
       ? document.querySelector<HTMLElement>(
           '[data-testid="vintage-editor-key-data-panel"]',
         )
-      : isCountdown
+      : isPayments
         ? document.querySelector<HTMLElement>(
-            '[data-testid="vintage-editor-countdown-panel"]',
+            `#${CSS.escape(sectionIdFor(VINTAGE_EDITOR_TAB.payments))}`,
           )
-        : isExplore
+        : isCountdown
           ? document.querySelector<HTMLElement>(
-              '[data-testid="vintage-editor-explore-panel"]',
+              '[data-testid="vintage-editor-countdown-panel"]',
             )
-          : isAnnouncements
+          : isExplore
             ? document.querySelector<HTMLElement>(
-                '[data-testid="vintage-editor-announcements-panel"]',
+                '[data-testid="vintage-editor-explore-panel"]',
               )
-            : document.querySelector<HTMLElement>(
-                `[data-editor-card-id="${CSS.escape(focusCardId)}"]`,
-              );
+            : isAnnouncements
+              ? document.querySelector<HTMLElement>(
+                  '[data-testid="vintage-editor-announcements-panel"]',
+                )
+              : document.querySelector<HTMLElement>(
+                  `[data-editor-card-id="${CSS.escape(focusCardId)}"]`,
+                );
     if (!el) return;
     el.classList.add("ve-focus-target");
     el.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -615,6 +626,10 @@ export default function VintageEditor() {
                   {field("keyData.siteName", "Site name", {
                     hint: "Used in admin chrome / emails (e.g. Warren's March Madness).",
                   })}
+                  <h3>Site description</h3>
+                  {field("keyData.siteDescription", "Site description", {
+                    hint: "Search / link-preview description (page metadata). Blank omits it.",
+                  })}
                   <h3>Current Champ</h3>
                   {champCard && champIndex >= 0 ? (
                     <div className="ve-grid">
@@ -703,60 +718,10 @@ export default function VintageEditor() {
                       }}
                     />
                   </label>
-                  <h3>Pay (Venmo)</h3>
-                  <label
-                    className="ve-field"
-                    htmlFor="vintage-key-data-venmoUser"
-                  >
-                    <span>Venmo username</span>
-                    <span className="ve-help">
-                      Without <code>@</code>. Required for the Pay button / deep
-                      link. Leave blank to hide Pay until set.
-                    </span>
-                    <input
-                      id="vintage-key-data-venmoUser"
-                      data-testid="vintage-key-data-venmoUser"
-                      type="text"
-                      autoComplete="off"
-                      spellCheck={false}
-                      placeholder="YourVenmoName"
-                      value={content.keyData.venmoUser}
-                      onChange={(e) => {
-                        const next = e.target.value.replace(/^@+/, "").trim();
-                        setContent((previous) => ({
-                          ...previous,
-                          keyData: {
-                            ...previous.keyData,
-                            venmoUser: next,
-                          },
-                        }));
-                        setDirty(true);
-                      }}
-                    />
-                  </label>
-                  <label
-                    className="ve-field"
-                    htmlFor="vintage-key-data-enablePayCapability"
-                  >
-                    <span>Enable Pay for all users</span>
-                    <span className="ve-help">
-                      On → anyone with unpaid submitted brackets sees Pay. Off →
-                      Pay is admin-only (ops admin). Still requires a Venmo
-                      username.
-                    </span>
-                    <input
-                      id="vintage-key-data-enablePayCapability"
-                      data-testid="vintage-key-data-enablePayCapability"
-                      type="checkbox"
-                      checked={content.keyData.enablePayCapability}
-                      onChange={(e) =>
-                        update(
-                          "keyData.enablePayCapability",
-                          e.target.checked,
-                        )
-                      }
-                    />
-                  </label>
+                  <p className="ve-help">
+                    Venmo, Zelle, and Pay switches live in the{" "}
+                    <strong>Payments</strong> section.
+                  </p>
                   <h3>Application Master Lock</h3>
                   <p className="ve-help">
                     Locked blocks Changing actions (New / Edit / Submit /
@@ -880,6 +845,227 @@ export default function VintageEditor() {
                 </div>
               );
             })()}
+          </SectionPanel>
+          <SectionPanel id={sectionIdFor("Payments")} title="Payments" disabled={busy}>
+            <>
+              <p className="ve-help">
+                My Picks Pay entry point. Master switch overrides both providers
+                for non-admins. A provider is offered only when its switch is on
+                and required recipient fields are filled. Publish to apply.
+                Existing pending payments stay administrable when Pay is off.
+              </p>
+              <div className="ve-grid">
+                <label
+                  className="ve-field"
+                  htmlFor="vintage-payments-enablePayCapability"
+                  style={{ gridColumn: "1 / -1" }}
+                >
+                  <span>Enable Payments</span>
+                  <span className="ve-help">
+                    Master switch. Off → Pay is admin-only. On → all users when
+                    at least one provider is ready. Additional-only payments are
+                    allowed (no unpaid bracket required).
+                  </span>
+                  <input
+                    id="vintage-payments-enablePayCapability"
+                    data-testid="vintage-payments-enablePayCapability"
+                    type="checkbox"
+                    checked={content.keyData.enablePayCapability}
+                    onChange={(e) =>
+                      update("keyData.enablePayCapability", e.target.checked)
+                    }
+                  />
+                </label>
+
+                <h3 style={{ gridColumn: "1 / -1" }}>Venmo</h3>
+                <label
+                  className="ve-field"
+                  htmlFor="vintage-payments-enableVenmo"
+                >
+                  <span>Enable Venmo</span>
+                  <input
+                    id="vintage-payments-enableVenmo"
+                    data-testid="vintage-payments-enableVenmo"
+                    type="checkbox"
+                    checked={content.keyData.enableVenmo}
+                    onChange={(e) =>
+                      update("keyData.enableVenmo", e.target.checked)
+                    }
+                  />
+                </label>
+                <label
+                  className="ve-field"
+                  htmlFor="vintage-key-data-venmoUser"
+                  style={{ gridColumn: "1 / -1" }}
+                >
+                  <span>Venmo username</span>
+                  <span className="ve-help">
+                    Without <code>@</code>. Required for Venmo deep links.
+                  </span>
+                  <input
+                    id="vintage-key-data-venmoUser"
+                    data-testid="vintage-key-data-venmoUser"
+                    type="text"
+                    autoComplete="off"
+                    spellCheck={false}
+                    placeholder="YourVenmoName"
+                    value={content.keyData.venmoUser}
+                    onChange={(e) => {
+                      const next = e.target.value.replace(/^@+/, "").trim();
+                      setContent((previous) => ({
+                        ...previous,
+                        keyData: {
+                          ...previous.keyData,
+                          venmoUser: next,
+                        },
+                      }));
+                      setDirty(true);
+                    }}
+                  />
+                </label>
+
+                <h3 style={{ gridColumn: "1 / -1" }}>Zelle</h3>
+                <label
+                  className="ve-field"
+                  htmlFor="vintage-payments-enableZelle"
+                >
+                  <span>Enable Zelle</span>
+                  <input
+                    id="vintage-payments-enableZelle"
+                    data-testid="vintage-payments-enableZelle"
+                    type="checkbox"
+                    checked={content.keyData.enableZelle}
+                    onChange={(e) =>
+                      update("keyData.enableZelle", e.target.checked)
+                    }
+                  />
+                </label>
+                <label
+                  className="ve-field"
+                  htmlFor="vintage-payments-zelleDisplayName"
+                  style={{ gridColumn: "1 / -1" }}
+                >
+                  <span>Zelle recipient display name</span>
+                  <input
+                    id="vintage-payments-zelleDisplayName"
+                    data-testid="vintage-payments-zelleDisplayName"
+                    type="text"
+                    autoComplete="off"
+                    value={content.keyData.zelleDisplayName}
+                    onChange={(e) =>
+                      update("keyData.zelleDisplayName", e.target.value)
+                    }
+                  />
+                </label>
+                <label
+                  className="ve-field"
+                  htmlFor="vintage-payments-zelleEmail"
+                >
+                  <span>Zelle email</span>
+                  <span className="ve-help">
+                    Registered email and/or U.S. mobile — at least one required
+                    with the display name.
+                  </span>
+                  <input
+                    id="vintage-payments-zelleEmail"
+                    data-testid="vintage-payments-zelleEmail"
+                    type="email"
+                    autoComplete="off"
+                    value={content.keyData.zelleEmail}
+                    onChange={(e) =>
+                      update("keyData.zelleEmail", e.target.value)
+                    }
+                  />
+                </label>
+                <label
+                  className="ve-field"
+                  htmlFor="vintage-payments-zellePhone"
+                >
+                  <span>Zelle U.S. mobile</span>
+                  <input
+                    id="vintage-payments-zellePhone"
+                    data-testid="vintage-payments-zellePhone"
+                    type="tel"
+                    autoComplete="off"
+                    value={content.keyData.zellePhone}
+                    onChange={(e) =>
+                      update("keyData.zellePhone", e.target.value)
+                    }
+                  />
+                </label>
+
+                <h3 style={{ gridColumn: "1 / -1" }}>Zelle QR image</h3>
+                <label
+                  className="ve-field"
+                  htmlFor="vintage-payments-zelleQrEnabled"
+                  style={{ gridColumn: "1 / -1" }}
+                >
+                  <span>Show Zelle QR on payment slip</span>
+                  <span className="ve-help">
+                    When on, the instruction step shows the QR below. Copy
+                    controls for recipient / amount / note remain available.
+                    Turn off to hide the image without removing it.
+                  </span>
+                  <input
+                    id="vintage-payments-zelleQrEnabled"
+                    data-testid="vintage-payments-zelleQrEnabled"
+                    type="checkbox"
+                    checked={content.keyData.zelleQrEnabled}
+                    onChange={(e) =>
+                      update("keyData.zelleQrEnabled", e.target.checked)
+                    }
+                  />
+                </label>
+                <div
+                  className="ve-image-fields"
+                  style={{ gridColumn: "1 / -1" }}
+                >
+                  <Image
+                    src={
+                      content.keyData.zelleQrImageSrc.trim() ||
+                      "/images/vintage/zelle-qr-fpo.svg"
+                    }
+                    alt="Zelle QR preview"
+                    className="ve-image-preview"
+                    width={160}
+                    height={160}
+                    unoptimized
+                    data-testid="vintage-payments-zelle-qr-preview"
+                  />
+                  <p className="ve-help">
+                    {content.keyData.zelleQrImageSrc.trim() ===
+                    "/images/vintage/zelle-qr-fpo.svg"
+                      ? "Bundled FPO placeholder in use — replace with your real QR when ready."
+                      : "Custom QR image in use."}
+                  </p>
+                  <button
+                    className="ve-button"
+                    type="button"
+                    data-testid="vintage-payments-zelle-qr-choose"
+                    onClick={() => {
+                      setImageTarget("keyData.zelleQrImageSrc");
+                      jumpTo(sectionIdFor("Media library"));
+                      void loadMedia();
+                    }}
+                  >
+                    <ImagePlus size={15} /> Upload / choose QR image
+                  </button>
+                  <button
+                    className="ve-button"
+                    type="button"
+                    data-testid="vintage-payments-zelle-qr-reset-fpo"
+                    onClick={() =>
+                      update(
+                        "keyData.zelleQrImageSrc",
+                        "/images/vintage/zelle-qr-fpo.svg",
+                      )
+                    }
+                  >
+                    Reset to FPO placeholder
+                  </button>
+                </div>
+              </div>
+            </>
           </SectionPanel>
           <SectionPanel id={sectionIdFor("Masthead")} title="Masthead" disabled={busy}>
             <>
@@ -1657,7 +1843,10 @@ export default function VintageEditor() {
               <fieldset className="ve-card">
                 <legend>Info panel</legend>
                 {field("exploreBand.info.headline", "Headline")}
-                {field("exploreBand.info.body", "Body", { multiline: true })}
+                {field("exploreBand.info.body", "Body", {
+                  multiline: true,
+                  hint: "Use || for a line break.",
+                })}
                 {field("exploreBand.info.ctaLabel", "Link label")}
                 {field("exploreBand.info.ctaHref", "Link destination", {
                   hint: "Usually /info",
@@ -1666,7 +1855,10 @@ export default function VintageEditor() {
               <fieldset className="ve-card">
                 <legend>Hall of Fame panel</legend>
                 {field("exploreBand.hall.headline", "Headline")}
-                {field("exploreBand.hall.body", "Body", { multiline: true })}
+                {field("exploreBand.hall.body", "Body", {
+                  multiline: true,
+                  hint: "Use || for a line break.",
+                })}
                 {field("exploreBand.hall.ctaLabel", "Link label")}
                 {field("exploreBand.hall.ctaHref", "Link destination", {
                   hint: "Usually /hall-of-fame",
@@ -1831,7 +2023,7 @@ export default function VintageEditor() {
                 content.tournament.countdownEnabled,
               )}
               {field("tournament.liveTourneyMessage", "Live tourney message", {
-                hint: "When Show countdown is off, this replaces the homepage timer. Also shown on My Picks after tipoff. Tokens: {year} or <year>.",
+                hint: "When Show countdown is off, this replaces the homepage timer. Also shown on My Picks after tipoff. Tokens: {year} or <year>. Use || for a line break.",
               })}
             </div>
           </SectionPanel>

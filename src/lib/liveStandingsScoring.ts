@@ -87,6 +87,22 @@ export function buildKeyResolvedGames(
   return getAllBracketGames(resolved);
 }
 
+/** Expected games in the scored KEY tree (Round of 64 through Championship). */
+export const KEY_BRACKET_GAME_TOTAL = 63;
+
+/**
+ * Count KEY results entered for scored bracket games (First Four excluded).
+ */
+export function countKeyGamesComplete(
+  tournamentData: TournamentData,
+  keyPicks: Record<string, string>,
+): { complete: number; total: number } {
+  const games = buildKeyResolvedGames(tournamentData, keyPicks);
+  const total = games.length > 0 ? games.length : KEY_BRACKET_GAME_TOTAL;
+  const complete = games.filter((g) => Boolean(normalizePick(keyPicks[g.id]))).length;
+  return { complete, total };
+}
+
 /**
  * Map every team id in tournament JSON to display name (regions only; advancing teams resolve in-game).
  */

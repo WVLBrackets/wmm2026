@@ -8,10 +8,11 @@ import {
   type RefObject,
   type SetStateAction,
 } from "react";
+import {
+  hasCmsLineBreak,
+  splitCmsLines,
+} from "@/lib/cms/lineBreaks";
 import CardFooterCaption from "./CardFooterCaption";
-
-/** Site-wide line-break token for champ name (same as captions). */
-const NAME_BREAK = "||";
 
 /** One candidate line-break layout for the champ name. */
 type NameLayout = {
@@ -36,15 +37,11 @@ function champWords(name: string): string[] {
  */
 function parseExplicitNameLines(raw: string): string[] | null {
   const upper = raw.trim().toUpperCase();
-  if (!upper.includes(NAME_BREAK)) return null;
-  const parts = upper
-    .split(NAME_BREAK)
-    .map((part) => part.trim().replace(/\s+/g, " "))
-    .filter(Boolean);
-  if (!parts.length) return [""];
-  if (parts.length === 1) return [parts[0]];
-  if (parts.length === 2) return parts;
-  return [parts[0], parts[1], parts.slice(2).join(" ")];
+  if (!hasCmsLineBreak(upper)) return null;
+  const parts = splitCmsLines(upper, { maxLines: 3 }).map((part) =>
+    part.replace(/\s+/g, " "),
+  );
+  return parts.length ? parts : [""];
 }
 
 /**

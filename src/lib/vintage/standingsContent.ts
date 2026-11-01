@@ -180,6 +180,12 @@ export interface VintageStandingsContent {
    */
   standingsYear: string;
   /**
+   * When `"true"`, full scored standings for the active tourney year.
+   * When `"false"` (default), privacy-safe roster (names + count only).
+   * Independent of homepage tipoff (tipoff still locks entries/submits).
+   */
+  tournamentLive: string;
+  /**
    * Text prepended to the snapshot timestamp, e.g. "Updated" or
    * "Standings last updated".
    */
@@ -234,6 +240,17 @@ export interface VintageStandingsContent {
   noMyEntriesMessage: string;
   /** Footer count template. Tokens: {shown}, {total}. */
   showingCountTemplate: string;
+  /**
+   * Pre-tipoff roster page heading (active year before tipoff).
+   * Blank falls back to `heading`.
+   */
+  rosterHeading: string;
+  /** Pre-tipoff intro under the count. Token: {year}. */
+  rosterIntro: string;
+  /** Pre-tipoff hero count. Token: {count}. */
+  rosterCountTemplate: string;
+  /** Hint when signed out (filter My Entries). Blank hides. */
+  rosterSignInHint: string;
   /** Compact legend — Final Four / Champ. */
   legendFinalFourChamp: string;
   /** Compact legend — black finalist frame. */
@@ -312,6 +329,7 @@ export type VintageStandingsStringKey = {
 export const DEFAULT_VINTAGE_STANDINGS_CONTENT: VintageStandingsContent = {
   heading: "Standings",
   standingsYear: "2026",
+  tournamentLive: "false",
   updatedLabel: "Updated",
   searchPlaceholder: "Search entries...",
   filterAllLabel: "All Entries",
@@ -338,6 +356,11 @@ export const DEFAULT_VINTAGE_STANDINGS_CONTENT: VintageStandingsContent = {
   noSearchResultsMessage: "No entries match your search.",
   noMyEntriesMessage: "You have no entries in this year's standings.",
   showingCountTemplate: "Showing {shown} of {total} entries",
+  rosterHeading: "Submitted Entries",
+  rosterIntro:
+    "The {year} field is filling up. Full standings (scores and picks) open when the commissioner sets Tournament Live.",
+  rosterCountTemplate: "{count} submitted entries",
+  rosterSignInHint: "Sign in to filter My Entries.",
   legendFinalFourChamp:
     "Final Four: your 4 selections | Champ.: your champion pick",
   legendFinalistFrame: "Black frame = picked to reach the final",
@@ -535,6 +558,17 @@ export function normalizeVintageStandingsContent(
   if (!/^\d{4}$/.test(year)) {
     next.standingsYear = defaults.standingsYear;
   }
+  const liveFlag = next.tournamentLive.trim().toLowerCase();
+  if (
+    liveFlag === "true" ||
+    liveFlag === "yes" ||
+    liveFlag === "1" ||
+    liveFlag === "on"
+  ) {
+    next.tournamentLive = "true";
+  } else {
+    next.tournamentLive = "false";
+  }
   const flag = next.showPaidIndicator.trim().toLowerCase();
   if (flag === "false" || flag === "no" || flag === "0" || flag === "off") {
     next.showPaidIndicator = "false";
@@ -705,7 +739,12 @@ export function validateVintageStandingsContent(
  */
 export function formatVintageStandingsLabel(
   template: string,
-  vars: { year?: number | string; shown?: number; total?: number },
+  vars: {
+    year?: number | string;
+    shown?: number;
+    total?: number;
+    count?: number;
+  },
 ): string {
   let out = template;
   if (vars.year != null) {
@@ -716,6 +755,9 @@ export function formatVintageStandingsLabel(
   }
   if (vars.total != null) {
     out = out.replace(/\{total\}/g, String(vars.total));
+  }
+  if (vars.count != null) {
+    out = out.replace(/\{count\}/g, String(vars.count));
   }
   return out;
 }

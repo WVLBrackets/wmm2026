@@ -587,7 +587,7 @@ export async function POST(request: NextRequest) {
         // If update mode, update the database
         if (updateMode) {
           // Import update functions
-          const { updateTeamReferenceData } = await import('@/lib/secureDatabase');
+          const { updateTeamReferenceData } = await import('@/lib/repositories/teamDataRepository');
           
           // Download logo if needed
           let logoPath = existingTeam.logo;
@@ -625,7 +625,7 @@ export async function POST(request: NextRequest) {
       // Team doesn't exist in DB
       if (updateMode) {
         // Import update functions
-        const { updateTeamReferenceData } = await import('@/lib/secureDatabase');
+        const { updateTeamReferenceData } = await import('@/lib/repositories/teamDataRepository');
         
         // Download logo - try extracted URL first, then fallback to ESPN CDN pattern
         let logoPath = '';

@@ -1,0 +1,32 @@
+import type { HallOfFameEntry } from "@/lib/hallOfFameStats";
+
+/** Bundled snapshot of the retired Hall of Fame Google Sheet (imported Nov 2026). */
+export const HOF_SEASONS_SEED: HallOfFameEntry[] = [
+  { year: "2026", firstPlace: { name: "Jared Ingram", team: "Michigan Wolverines", score: 145 }, secondPlace: { name: "Nate O'Neil", score: 145 }, thirdPlace: { name: "Brian Elstner", score: 141 }, totalEntries: 572 },
+  { year: "2025", firstPlace: { name: "Randy Phillips", team: "Florida Gators", score: 156 }, secondPlace: { name: "Craig Veldhuizen", score: 155 }, thirdPlace: { name: "Tim Roche", score: 152 }, totalEntries: 420 },
+  { year: "2024", firstPlace: { name: "Darren Miranda", team: "UConn Huskies", score: 142 }, secondPlace: { name: "Brian Hodack", score: 138 }, thirdPlace: { name: "Joey Frontczak", score: 132 }, totalEntries: 454 },
+  { year: "2023", firstPlace: { name: "Jose Jimenez", team: "UConn Huskies", score: 116 }, secondPlace: { name: "Geoff MacPherson", score: 105 }, thirdPlace: { name: "Brett Barry", score: 101 }, totalEntries: 457 },
+  { year: "2022", firstPlace: { name: "Christian Ciciarelli", team: "Kansas Jayhawks", score: 126 }, secondPlace: { name: "Connor Morris", score: 116 }, thirdPlace: { name: "Brett Nenninger", score: 112 }, totalEntries: 428 },
+  { year: "2021", firstPlace: { name: "Barnaby", team: "Baylor Bears", score: 131 }, secondPlace: { name: "Nick Werner", score: 131 }, thirdPlace: { name: "David Privett", score: 129 }, totalEntries: 375 },
+  { year: "2020", firstPlace: { name: "HIATUS", team: "COVID-19", score: 0 }, secondPlace: { name: "", score: 0 }, thirdPlace: { name: "", score: 0 }, totalEntries: 0 },
+  { year: "2019", firstPlace: { name: "Casey Girard", team: "Virginia Cavaliers", score: 141 }, secondPlace: { name: "Ryan Abenes", score: 135 }, thirdPlace: { name: "Joey Frontczak", score: 130 }, totalEntries: 424 },
+  { year: "2018", firstPlace: { name: "Steve Yang", team: "Villanova Wildcats", score: 119 }, secondPlace: { name: "Joey Frontczak", score: 118 }, thirdPlace: { name: "Ben Melton", score: 115 }, totalEntries: 399 },
+  { year: "2017", firstPlace: { name: "Calvin Fulks", team: "North Carolina Tar Heels", score: 142 }, secondPlace: { name: "Rafi Maljian", score: 132 }, thirdPlace: { name: "David Privett", score: 127 }, totalEntries: 376 },
+  { year: "2016", firstPlace: { name: "HIATUS", team: "Villanova Wildcats", score: 0 }, secondPlace: { name: "", score: 0 }, thirdPlace: { name: "", score: 0 }, totalEntries: 0 },
+  { year: "2015", firstPlace: { name: "BAMF", team: "Duke Blue Devils", score: 141 }, secondPlace: { name: "Tim Kapadia", score: 140 }, thirdPlace: { name: "Kip Brown", score: 138 }, totalEntries: 489 },
+  { year: "2014", firstPlace: { name: "Allison Sebaugh", team: "UConn Huskies", score: 106 }, secondPlace: { name: "Heather Urbina", score: 102 }, thirdPlace: { name: "Jack Woodard", score: 100 }, totalEntries: 585 },
+  { year: "2013", firstPlace: { name: "Tom Corcoran", team: "Louisville Cardinals", score: 138 }, secondPlace: { name: "Bruce Tria", score: 130 }, thirdPlace: { name: "Bill Schnitzler", score: 123 }, totalEntries: 521 },
+  { year: "2012", firstPlace: { name: "Kevan Shafizadeh", team: "Kentucky Wildcats", score: 150 }, secondPlace: { name: "Brian Elstner", score: 146 }, thirdPlace: { name: "Chad Mattox", score: 145 }, totalEntries: 494 },
+  { year: "2011", firstPlace: { name: "Lou Shubin", team: "UConn Huskies", score: 120 }, secondPlace: { name: "Ryan Baker", score: 111 }, thirdPlace: { name: "Jennifer Candler", score: 105 }, totalEntries: 375 },
+  { year: "2010", firstPlace: { name: "Rafi Maljian", team: "Duke Blue Devils", score: 116 }, secondPlace: { name: "Scott Clay", score: 115 }, thirdPlace: { name: "Andy Chapman", score: 113 }, totalEntries: 341 },
+  { year: "2009", firstPlace: { name: "Kip Brown", team: "North Carolina Tar Heels", score: 161 }, secondPlace: { name: "Dipam Sharma", score: 161 }, thirdPlace: { name: "Dave Di Santo", score: 152 }, totalEntries: 389 },
+  { year: "2008", firstPlace: { name: "Rafi Maljian", team: "Kansas Jayhawks", score: 146 }, secondPlace: { name: "Brett Barry", score: 146 }, thirdPlace: { name: "Aaron Cohen", score: 145 }, totalEntries: 325 },
+  { year: "2007", firstPlace: { name: "Eric Oaster", team: "Florida Gators", score: 159 }, secondPlace: { name: "Mimo Anema", score: 158 }, thirdPlace: { name: "David D Miller", score: 154 }, totalEntries: 329 },
+  { year: "2006", firstPlace: { name: "Jeff Farley", team: "Florida Gators", score: 116 }, secondPlace: { name: "Gator Fan", score: 111 }, thirdPlace: { name: "Chad Sawinski", score: 111 }, totalEntries: 284 },
+  { year: "2005", firstPlace: { name: "Chad Mattox", team: "North Carolina Tar Heels", score: 136 }, secondPlace: { name: "Mike Keogh", score: 134 }, thirdPlace: { name: "Tom Spahle", score: 133 }, totalEntries: 220 },
+  { year: "2004", firstPlace: { name: "Don Mayfield", team: "UConn Huskies", score: 155 }, secondPlace: { name: "Steve Mac", score: 138 }, thirdPlace: { name: "Ken Germann", score: 131 }, totalEntries: 212 },
+  { year: "2003", firstPlace: { name: "Kip Brown", team: "Syracuse Orangemen", score: 131 }, secondPlace: { name: "WVL", score: 129 }, thirdPlace: { name: "E.J. Bacalzo", score: 128 }, totalEntries: 205 },
+  { year: "2002", firstPlace: { name: "Paul Nester", team: "Maryland Terrapins", score: 120 }, secondPlace: { name: "Kevan Shafizadeh", score: 118 }, thirdPlace: { name: "Suzanne Highland", score: 116 }, totalEntries: 0 },
+  { year: "2001", firstPlace: { name: "Kyle Anema", team: "Duke Blue Devils", score: 0 }, secondPlace: { name: "Unknown", score: 0 }, thirdPlace: { name: "Unknown", score: 0 }, totalEntries: 0 },
+  { year: "2000", firstPlace: { name: "Unknown", team: "Michigan State Spartans", score: 0 }, secondPlace: { name: "Unknown", score: 0 }, thirdPlace: { name: "Unknown", score: 0 }, totalEntries: 0 },
+];

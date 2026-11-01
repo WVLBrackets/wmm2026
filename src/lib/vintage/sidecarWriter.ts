@@ -1,23 +1,13 @@
-import {
-  DEFAULT_VINTAGE_CONTENT,
-  normalizeVintageContent,
-  validateVintageContent,
-} from "./content";
+import { revalidateTag } from "next/cache";
+import { DEFAULT_VINTAGE_CONTENT, validateVintageContent } from "./content";
 import { getVintageDbPool } from "./dbPool";
-import { mergeHomepageDocument, splitHomepageDocument } from "./homepageDocument";
-import type { VintageHofContent } from "./hofContent";
-import type { VintageInfoContent } from "./infoContent";
-import type { VintagePicksContent } from "./picksContent";
-import { sidecarsFromRow, type VintageSidecarBag } from "./sidecarPreserve";
-import type { VintageStandingsContent } from "./standingsContent";
-
-type SidecarPayload =
-  | VintageInfoContent
-  | VintageHofContent
-  | VintagePicksContent
-  | VintageStandingsContent;
-
-export type SidecarSlot = "info" | "hof" | "picks" | "standings";
+import { mergeHomepageDocument, type SidecarSlot } from "./homepageDocument";
+import {
+  SIDECAR_CODECS,
+  homepageFromRow,
+  sidecarsFromRow,
+  type VintageSidecarBag,
+} from "./sidecarPreserve";
 
 export type CmsWriteAction = "save" | "publish";
 
@@ -27,50 +17,66 @@ export interface SidecarWriteInput<T> {
   content: T;
 }
 
-export interface SidecarWriteConfig<T extends SidecarPayload> {
-  slot: SidecarSlot;
-  input: SidecarWriteInput<T>;
-  normalizeSidecar: (content: T | undefined) => T;
-  validateSidecar: (content: T) => void;
-  readPublishedSidecar: (publishedRow: unknown) => T;
+/** Cache tag for every published-CMS read (see `cmsBundle.ts`). */
+export const VINTAGE_CMS_TAG = "vintage-cms";
+
+/**
+ * Invalidate cached published CMS reads after any write. Safe to call
+ * outside a request (scripts) — failures are ignored.
+ */
+export function revalidateVintageCms(): void {
+  try {
+    revalidateTag(VINTAGE_CMS_TAG);
+    revalidateTag("site-config");
+  } catch {
+    /* not in a Next.js request context */
+  }
 }
 
 /**
- * Merge homepage + other sidecars, replacing one sidecar slot.
+ * Build complete draft/published documents from a locked row, applying
+ * `patch` to both. Every section is normalized so the row is fully stored.
+ *
+ * @param current - Locked `vintage_homepage` row
+ * @param patch - Mutates the normalized draft/published bags in place
  */
-function mergeWithSidecar(
-  homepage: ReturnType<typeof normalizeVintageContent>,
-  sides: VintageSidecarBag,
-  slot: SidecarSlot,
-  sidecarValue: SidecarPayload,
-) {
-  const info =
-    slot === "info" ? (sidecarValue as VintageInfoContent) : sides.info;
-  const hof = slot === "hof" ? (sidecarValue as VintageHofContent) : sides.hof;
-  const picks =
-    slot === "picks" ? (sidecarValue as VintagePicksContent) : sides.picks;
-  const standings =
-    slot === "standings"
-      ? (sidecarValue as VintageStandingsContent)
-      : sides.standings;
-  return mergeHomepageDocument(homepage, info, hof, picks, standings);
+export function rebuildHomepageRow(
+  current: { draft: unknown; published: unknown },
+  patch: (docs: {
+    draft: { home: ReturnType<typeof homepageFromRow>; sides: VintageSidecarBag };
+    published: { home: ReturnType<typeof homepageFromRow>; sides: VintageSidecarBag };
+  }) => void,
+): { draft: Record<string, unknown>; published: Record<string, unknown> } {
+  const docs = {
+    draft: { home: homepageFromRow(current.draft), sides: sidecarsFromRow(current.draft) },
+    published: {
+      home: homepageFromRow(current.published),
+      sides: sidecarsFromRow(current.published),
+    },
+  };
+  patch(docs);
+  validateVintageContent(docs.draft.home);
+  validateVintageContent(docs.published.home);
+  return {
+    draft: mergeHomepageDocument(docs.draft.home, docs.draft.sides),
+    published: mergeHomepageDocument(docs.published.home, docs.published.sides),
+  };
 }
 
 /**
- * Transactional write for handbook / HoF / Picks / Standings sidecars on `vintage_homepage`.
- * Draft and published rows are updated in place; no revision history is retained.
+ * Run `fn` against the locked homepage row inside a transaction and persist
+ * the documents it returns.
+ *
+ * @param expectedVersion - Optimistic-lock version (`null` skips the check)
+ * @param fn - Builds the next draft/published documents
  */
-export async function writeVintageSidecarContent<T extends SidecarPayload>(
-  config: SidecarWriteConfig<T>,
+export async function withLockedHomepageRow(
+  expectedVersion: number | null,
+  fn: (current: { version: number; draft: unknown; published: unknown }) => {
+    draft: Record<string, unknown>;
+    published: Record<string, unknown>;
+  },
 ): Promise<void> {
-  const {
-    slot,
-    input,
-    normalizeSidecar,
-    validateSidecar,
-    readPublishedSidecar,
-  } = config;
-
   const client = await getVintageDbPool().connect();
   try {
     await client.query("BEGIN");
@@ -81,43 +87,19 @@ export async function writeVintageSidecarContent<T extends SidecarPayload>(
     const result = await client.query(
       "SELECT version, draft, published FROM vintage_homepage WHERE id = 1 FOR UPDATE",
     );
-    const current = result.rows[0];
-    if (Number(current.version) !== input.version) throw new Error("CONFLICT");
-
-    const normalized = normalizeSidecar(input.content);
-    validateSidecar(normalized);
-
-    const draftHome = normalizeVintageContent(
-      splitHomepageDocument(current.draft).homepage,
-    );
-    validateVintageContent(draftHome);
-    const publishedHome = normalizeVintageContent(
-      splitHomepageDocument(current.published).homepage,
-    );
-    validateVintageContent(publishedHome);
-
-    const draftSides = sidecarsFromRow(current.draft);
-    const publishedSides = sidecarsFromRow(current.published);
-    const previousPublished = readPublishedSidecar(current.published);
-    const publishedSidecar =
-      input.action === "publish" ? normalized : previousPublished;
-
-    const draftOut = mergeWithSidecar(
-      draftHome,
-      draftSides,
-      slot,
-      normalized,
-    );
-    const publishedOut = mergeWithSidecar(
-      publishedHome,
-      publishedSides,
-      slot,
-      publishedSidecar,
-    );
-
+    const row = result.rows[0];
+    const current = {
+      version: Number(row.version),
+      draft: row.draft,
+      published: row.published,
+    };
+    if (expectedVersion !== null && current.version !== expectedVersion) {
+      throw new Error("CONFLICT");
+    }
+    const next = fn(current);
     await client.query(
       "UPDATE vintage_homepage SET version = version + 1, draft = $1, published = $2 WHERE id = 1",
-      [JSON.stringify(draftOut), JSON.stringify(publishedOut)],
+      [JSON.stringify(next.draft), JSON.stringify(next.published)],
     );
     await client.query("COMMIT");
   } catch (error) {
@@ -126,4 +108,27 @@ export async function writeVintageSidecarContent<T extends SidecarPayload>(
   } finally {
     client.release();
   }
+  revalidateVintageCms();
+}
+
+/**
+ * Transactional write for one CMS sidecar on `vintage_homepage`.
+ * Draft is always replaced; published only on `publish`.
+ *
+ * @param slot - Sidecar to write
+ * @param input - Action, optimistic version, and content
+ */
+export async function writeVintageSidecarContent<K extends SidecarSlot>(
+  slot: K,
+  input: SidecarWriteInput<VintageSidecarBag[K]>,
+): Promise<void> {
+  const codec = SIDECAR_CODECS[slot];
+  const normalized = codec.normalize(input.content);
+  codec.validate(normalized);
+  await withLockedHomepageRow(input.version, (current) =>
+    rebuildHomepageRow(current, (docs) => {
+      docs.draft.sides[slot] = normalized;
+      if (input.action === "publish") docs.published.sides[slot] = normalized;
+    }),
+  );
 }

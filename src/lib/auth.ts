@@ -1,6 +1,6 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { verifyPassword } from './secureDatabase';
+import { verifyPassword } from './services/authService';
 import { checkRateLimit, RATE_LIMITS } from './rateLimit';
 import {
   DEV_AUTH_BYPASS_PASSWORD,

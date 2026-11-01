@@ -5,11 +5,14 @@ import { sql } from '@/lib/databaseAdapter';
 import { getCurrentEnvironment } from '@/lib/databaseConfig';
 import { ErrorLogEntry } from '@/lib/errorLogger';
 import crypto from 'crypto';
+import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rateLimit';
 
 /**
  * POST /api/log/error - Log an application error
  */
 export async function POST(request: NextRequest) {
+  const limited = rateLimitMiddleware(request, 'log:error', RATE_LIMITS.API_WRITE);
+  if (limited) return limited;
   try {
     const session = await getServerSession(authOptions);
     const environment = getCurrentEnvironment();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { createContext, useContext, useMemo } from 'react';
 import Image from 'next/image';
 import type {
   TournamentBracket,
@@ -25,8 +25,23 @@ import { getAdvancementResultTone, getChampionKeyTone } from '@/lib/fullBracket/
 import { fullBracketDebugOutline } from '@/lib/fullBracket/fullBracketViewChrome';
 import { filterTieBreakerIntegerString } from '@/lib/bracketTieBreakerHint';
 import { formatBracketPreviewPickAccessibleName } from '@/lib/pickResultChrome';
+import type { VintageBracketEditorContent } from '@/lib/vintage/bracketEditorContent';
+import { formatCopy } from '@/lib/vintage/copyTree';
 
 export type { FullBracketSizeMode } from '@/lib/fullBracket/fullBracketGeometry';
+
+/** Canvas labels from Bracket Editor Messages CMS. */
+export type FullBracketCanvasCopy = Pick<
+  VintageBracketEditorContent,
+  'canvasEmptySlotLabel' | 'canvasChampLabel' | 'canvasTieBreakerLabel' | 'finalistPairingLabel'
+>;
+
+const CanvasCopyContext = createContext<FullBracketCanvasCopy>({
+  canvasEmptySlotLabel: '',
+  canvasChampLabel: '',
+  canvasTieBreakerLabel: '',
+  finalistPairingLabel: '',
+});
 
 function TeamRow({
   team,
@@ -53,6 +68,7 @@ function TeamRow({
   pickResultTone?: 'blue' | 'green' | 'red';
   onClick?: () => void;
 }) {
+  const canvasCopy = useContext(CanvasCopyContext);
   const blueWinnerClasses = 'border-blue-500 bg-blue-50 text-blue-900 font-semibold';
   const goldWinnerClasses = 'border-amber-500 bg-amber-50 text-amber-900 font-semibold';
   const greenWinnerClasses = 'border-green-600 bg-green-50 text-green-900 font-semibold';
@@ -92,7 +108,7 @@ function TeamRow({
         className="flex items-center rounded border border-dashed border-gray-300 bg-gray-50 px-2 text-gray-400"
         style={{ height: `${heightPx}px`, width: widthPx ? `${widthPx}px` : undefined, fontSize: `${fontSizePx ?? 12}px` }}
       >
-        TBD
+        {canvasCopy.canvasEmptySlotLabel}
       </div>
     );
   }
@@ -377,6 +393,7 @@ function FinalsStrip({
   tieBreakerHintTooltip?: string;
   pickResultContext?: PickResultContext | null;
 }) {
+  const canvasCopy = useContext(CanvasCopyContext);
   const finalistLeft = getPickedWinner(updatedBracket.finalFour[0], picks);
   const finalistRight = getPickedWinner(updatedBracket.finalFour[1], picks);
   const champion = getPickedWinner(updatedBracket.championship, picks);
@@ -545,7 +562,7 @@ function FinalsStrip({
               fontSize: `${finalsLayout.champTitleFontSizePx}px`,
             }}
           >
-            CHAMP
+            {canvasCopy.canvasChampLabel}
           </div>
         </div>
         <div
@@ -559,7 +576,7 @@ function FinalsStrip({
               heightPx={finalsLayout.finalScoreHeightPx}
               widthPx={finalsLayout.finalScoreWidthPx}
               fontSizePx={finalsLayout.finalScoreFontSizePx}
-              labelText={tieBreaker.trim() ? tieBreaker : 'TBD'}
+              labelText={tieBreaker.trim() ? tieBreaker : canvasCopy.canvasEmptySlotLabel || '\u00a0'}
               labelDisplayMuted={!tieBreaker.trim()}
             />
           ) : (
@@ -578,7 +595,8 @@ function FinalsStrip({
                   const next = filterTieBreakerIntegerString(event.target.value);
                   if (next !== null) onTieBreakerChange?.(next);
                 }}
-                placeholder="TBD"
+                placeholder={canvasCopy.canvasEmptySlotLabel || undefined}
+                aria-label={canvasCopy.canvasTieBreakerLabel || undefined}
                 className="w-full min-w-0 bg-transparent text-center text-gray-900 outline-none placeholder:text-xs placeholder:text-gray-400"
                 style={{ fontSize: `${finalsLayout.finalScoreFontSizePx}px` }}
                 data-testid="full-bracket-tiebreaker-input"
@@ -594,7 +612,7 @@ function FinalsStrip({
             }}
             title={tieBreakerHintTooltip || undefined}
           >
-            Tie Breaker
+            {canvasCopy.canvasTieBreakerLabel}
           </div>
         </div>
       </div>
@@ -616,6 +634,8 @@ export interface FullBracketCanvasProps {
   tieBreakerHintTooltip?: string;
   /** When set (e.g. bracket viewer modal), color user picks vs KEY results. */
   pickResultContext?: PickResultContext | null;
+  /** Bracket Editor Messages labels (TBD / CHAMP / Tie Breaker). */
+  copy: FullBracketCanvasCopy;
 }
 
 /**
@@ -633,7 +653,13 @@ export default function FullBracketCanvas({
   onSelectTeam,
   tieBreakerHintTooltip,
   pickResultContext = null,
+  copy,
 }: FullBracketCanvasProps) {
+  /**
+   * Finalist caption from the CMS pairing template; blank when a region name is missing.
+   */
+  const pairingTitle = (left?: string, right?: string): string =>
+    left && right ? formatCopy(copy.finalistPairingLabel, { left, right }).trim() : '';
   const getRegionByPosition = (position: string) => tournamentData.regions.find((region) => region.position === position);
 
   const topLeft = getRegionByPosition('Top Left');
@@ -643,6 +669,7 @@ export default function FullBracketCanvas({
   const bracketRegions = updatedBracket.regions;
 
   return (
+    <CanvasCopyContext.Provider value={copy}>
     <div
       className={`min-w-0 w-full max-lg:mx-auto max-lg:w-max max-lg:max-w-none lg:w-full ${fullBracketDebugOutline('canvasRoot')}`.trim()}
       data-testid="full-bracket-canvas"
@@ -728,7 +755,7 @@ export default function FullBracketCanvas({
           </div>
 
           <div
-            className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center"
+            className="pointer-events-none absolute inset-0 z-[1] flex items-center justify-center"
             data-testid="full-bracket-finals-overlay"
             style={{
               padding: `${layout.finals.finalsOverlayPaddingPx}px`,
@@ -743,8 +770,8 @@ export default function FullBracketCanvas({
                 tieBreaker={tieBreaker}
                 readOnly={readOnly}
                 onTieBreakerChange={onTieBreakerChange}
-                finalistLeftTitle={`${topLeft?.name ?? 'Top Left'} vs. ${bottomLeft?.name ?? 'Bottom Left'}`}
-                finalistRightTitle={`${topRight?.name ?? 'Top Right'} vs. ${bottomRight?.name ?? 'Bottom Right'}`}
+                finalistLeftTitle={pairingTitle(topLeft?.name, bottomLeft?.name)}
+                finalistRightTitle={pairingTitle(topRight?.name, bottomRight?.name)}
                 onSelectTeam={readOnly ? undefined : onSelectTeam}
                 tieBreakerHintTooltip={tieBreakerHintTooltip}
                 pickResultContext={pickResultContext}
@@ -754,5 +781,6 @@ export default function FullBracketCanvas({
         </div>
       </div>
     </div>
+    </CanvasCopyContext.Provider>
   );
 }

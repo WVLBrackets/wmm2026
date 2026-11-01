@@ -14,46 +14,19 @@ import { normalizeStoredDisplayName } from '../stringNormalize';
 import { parseDbInstant } from '../dbInstant';
 
 const KEY_ENTRY_NAME = 'KEY';
-const KEY_LOCK_TIMEOUT_MINUTES = 30;
+/** KEY edit lock TTL (minutes). Exported for scoreboard sync skip-if-locked. */
+export const KEY_LOCK_TIMEOUT_MINUTES = 30;
 
 interface BracketQueryOptions {
   includeKey?: boolean;
 }
 
-let bracketLiveResultsColumnsEnsured = false;
-
+/**
+ * Historical ALTER TABLE helper. Schema now lives in sql/migrations and
+ * `initializeDatabase` — request paths must not run DDL.
+ */
 async function ensureBracketLiveResultsColumns(): Promise<void> {
-  if (bracketLiveResultsColumnsEnsured) {
-    return;
-  }
-
-  try {
-    await sql`ALTER TABLE brackets ADD COLUMN IF NOT EXISTS is_key BOOLEAN DEFAULT FALSE`;
-    await sql`ALTER TABLE brackets ADD COLUMN IF NOT EXISTS lock_user_id VARCHAR(36)`;
-    await sql`ALTER TABLE brackets ADD COLUMN IF NOT EXISTS lock_acquired_at TIMESTAMPTZ`;
-    await sql`ALTER TABLE brackets ADD COLUMN IF NOT EXISTS source VARCHAR(50)`;
-    await sql`UPDATE brackets SET is_key = FALSE WHERE is_key IS NULL`;
-    await sql`UPDATE brackets SET source = 'site' WHERE source IS NULL OR source = ''`;
-    await sql`ALTER TABLE brackets ALTER COLUMN is_key SET DEFAULT FALSE`;
-    await sql`ALTER TABLE brackets ALTER COLUMN is_key SET NOT NULL`;
-    await sql`ALTER TABLE brackets ALTER COLUMN source SET DEFAULT 'site'`;
-    await sql`ALTER TABLE brackets ALTER COLUMN source SET NOT NULL`;
-    await sql`
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_brackets_one_key_per_year_env
-      ON brackets (year, environment)
-      WHERE is_key = TRUE
-    `;
-    await sql`ALTER TABLE brackets ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMPTZ`;
-    await sql`
-      UPDATE brackets
-      SET submitted_at = updated_at
-      WHERE status = 'submitted' AND submitted_at IS NULL
-    `;
-    bracketLiveResultsColumnsEnsured = true;
-  } catch (error) {
-    // Do not hard-fail normal bracket reads if schema migration cannot run here.
-    console.warn('[ensureBracketLiveResultsColumns] Non-blocking migration check failed:', error);
-  }
+  return;
 }
 
 async function getNextBracketNumber(year: number, environment: string): Promise<number> {
@@ -156,6 +129,46 @@ export async function getBracketsByUserId(userId: string, options?: BracketQuery
   }
   
   return result.rows.map(mapRowToBracket);
+}
+
+/**
+ * A user's non-KEY brackets for one tournament year (My Picks list).
+ * Uses `idx_brackets_env_user_year`.
+ *
+ * @param userId - Owner
+ * @param year - Tournament year
+ * @returns Brackets newest first
+ */
+export async function getUserBracketsForYear(userId: string, year: number): Promise<Bracket[]> {
+  const environment = getCurrentEnvironment();
+  const result = await sql`
+    SELECT * FROM brackets
+    WHERE environment = ${environment}
+      AND user_id = ${userId}
+      AND year = ${year}
+      AND COALESCE(is_key, FALSE) = FALSE
+    ORDER BY created_at DESC
+  `;
+  return result.rows.map(mapRowToBracket);
+}
+
+/**
+ * Distinct tournament years in which a user has any non-KEY bracket.
+ *
+ * @param userId - Owner
+ * @returns Years (unsorted)
+ */
+export async function listUserBracketYears(userId: string): Promise<number[]> {
+  const environment = getCurrentEnvironment();
+  const result = await sql`
+    SELECT DISTINCT year FROM brackets
+    WHERE environment = ${environment}
+      AND user_id = ${userId}
+      AND COALESCE(is_key, FALSE) = FALSE
+  `;
+  return result.rows
+    .map((row) => Number(row.year))
+    .filter((year) => Number.isFinite(year));
 }
 
 /**
@@ -368,6 +381,40 @@ export async function getSubmittedBracketsForLiveStandingsYear(
     ...mapRowToBracket(row),
     userEmail: row.user_email as string,
     userName: row.user_name as string,
+  }));
+}
+
+/** Privacy-safe roster row: entry name + owner id only (no picks/payment). */
+export type SubmittedEntryRosterRow = {
+  entryName: string;
+  userId: string;
+};
+
+/**
+ * Lightweight submitted-entry roster for pre-tipoff standings (names only).
+ * Does not select picks, payment, or email columns.
+ *
+ * @param year - Tournament year
+ */
+export async function listSubmittedEntryRosterForYear(
+  year: number,
+): Promise<SubmittedEntryRosterRow[]> {
+  await ensureBracketLiveResultsColumns();
+  const environment = getCurrentEnvironment();
+
+  const result = await sql`
+    SELECT b.entry_name, b.user_id
+    FROM brackets b
+    WHERE b.environment = ${environment}
+      AND b.year = ${year}
+      AND b.status = 'submitted'
+      AND COALESCE(b.is_key, FALSE) = FALSE
+    ORDER BY b.entry_name ASC, b.id ASC
+  `;
+
+  return result.rows.map((row: Record<string, unknown>) => ({
+    entryName: String(row.entry_name ?? ''),
+    userId: String(row.user_id ?? ''),
   }));
 }
 

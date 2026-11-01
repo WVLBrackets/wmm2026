@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import {
   isToolbarItemPopulated,
@@ -11,66 +11,45 @@ import {
   customToolbarIconUrl,
   resolveToolbarIcon,
 } from "@/lib/vintage/toolbarIcons";
+import { useVintageToolbarSession } from "@/contexts/VintageToolbarSessionContext";
+
+type VintageToolbarProps = {
+  items: VintageToolbarItem[];
+  /**
+   * When true (default), lock these CMS slots for the browser session.
+   * Loading shells set false so DEFAULT chrome cannot overwrite published slots.
+   */
+  persistSession?: boolean;
+};
 
 /**
  * Render populated toolbar buttons from CMS content.
- * Slots marked admin-only stay hidden until `/api/check-admin` confirms ops admin.
+ * Slots and ops-admin visibility are session-cached so soft navigation does not
+ * rebuild or jitter the menu. Admin-only slots refresh after login/logout.
  */
 export default function VintageToolbar({
   items,
-}: {
-  items: VintageToolbarItem[];
-}) {
+  persistSession = true,
+}: VintageToolbarProps) {
   const pathname = usePathname() || "/";
-  const populated = items.filter(isToolbarItemPopulated);
-  const needsAdminCheck = populated.some((item) => item.adminOnly);
-  const [viewerIsAdmin, setViewerIsAdmin] = useState(false);
-  const [adminCheckReady, setAdminCheckReady] = useState(!needsAdminCheck);
+  const {
+    sessionItems,
+    registerItems,
+    viewerIsAdmin,
+    adminCheckReady,
+  } = useVintageToolbarSession();
 
   useEffect(() => {
-    if (!needsAdminCheck) {
-      setAdminCheckReady(true);
-      setViewerIsAdmin(false);
-      return;
+    if (persistSession) {
+      registerItems(items);
     }
+  }, [persistSession, items, registerItems]);
 
-    let cancelled = false;
-    setAdminCheckReady(false);
-
-    /**
-     * Resolve ops-admin status for admin-only toolbar slots.
-     */
-    async function loadAdminStatus() {
-      try {
-        const response = await fetch("/api/check-admin", { cache: "no-store" });
-        if (!response.ok) {
-          if (!cancelled) {
-            setViewerIsAdmin(false);
-            setAdminCheckReady(true);
-          }
-          return;
-        }
-        const data = (await response.json()) as { isAdmin?: boolean };
-        if (!cancelled) {
-          setViewerIsAdmin(Boolean(data.isAdmin));
-          setAdminCheckReady(true);
-        }
-      } catch {
-        if (!cancelled) {
-          setViewerIsAdmin(false);
-          setAdminCheckReady(true);
-        }
-      }
-    }
-
-    void loadAdminStatus();
-    return () => {
-      cancelled = true;
-    };
-  }, [needsAdminCheck]);
-
+  const resolvedItems = sessionItems ?? items;
+  const populated = resolvedItems.filter(isToolbarItemPopulated);
   const visible = populated.filter((item) => {
     if (!item.adminOnly) return true;
+    // Keep admin buttons stable once known; only hide before the first session check.
     return adminCheckReady && viewerIsAdmin;
   });
 

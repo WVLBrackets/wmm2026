@@ -2,11 +2,14 @@
 
 This is a step-by-step guide to set up the auto-reply system for do-not-reply email addresses.
 
+Auto-reply **copy** is edited in Vintage Admin → Emails & Account (`__emailsContent.autoReply`, `doNotReplyNotice`) and must be **published**. Contact email is homepage CMS, not a Config Sheet.
+
 ## Prerequisites
 
 - Access to Resend dashboard (https://resend.com)
 - Access to your domain registrar (where you manage `warrensmm.com` DNS)
 - Access to Vercel dashboard for your project
+- Published Emails & Account CMS in the target environment
 
 ---
 
@@ -90,8 +93,7 @@ This is a step-by-step guide to set up the auto-reply system for do-not-reply em
 
 2. **URL**: Enter your webhook endpoint URL
    - **For Production**: `https://warrensmm.com/api/email/inbound`
-   - **For Staging**: `https://wmm2026-git-staging-ncaatourney-gmailcoms-projects.vercel.app/api/email/inbound`
-   - Or your actual staging URL from Vercel
+   - **For Staging**: your actual staging URL from Vercel + `/api/email/inbound`
 
 3. **Events**: Select the events you want to receive
    - Look for: `email.received` or `email.replied` or `inbound.email`
@@ -129,7 +131,7 @@ This is a step-by-step guide to set up the auto-reply system for do-not-reply em
 2. Enter:
    - **Key**: `RESEND_WEBHOOK_SECRET`
    - **Value**: Paste the webhook secret from Step 3.3
-   - **Environments**: 
+   - **Environments**:
      - ✅ Production
      - ✅ Preview (for staging)
      - ✅ Development (optional)
@@ -183,17 +185,17 @@ This is a step-by-step guide to set up the auto-reply system for do-not-reply em
 
 3. **Check Your Test Email**:
    - You should receive an auto-reply email
-   - Subject: "Re: Test Reply - Do Not Reply"
-   - Contains message about the mailbox not being monitored
-   - Includes contact email address
+   - Subject follows CMS `autoReply.subject` (`{subject}` = original subject)
+   - Contains the published contact email
 
 ### 5.3 Verify Auto-Reply Content
 
 The auto-reply should:
-- ✅ Clearly state the mailbox is not monitored
-- ✅ Include the contact email from your site config (`emailContactAddress`)
-- ✅ Be professionally formatted
-- ✅ Include the "Do Not Reply" notice from your config
+
+- Clearly state the mailbox is not monitored (CMS `autoReply` + `doNotReplyNotice`)
+- Include the contact email from homepage CMS
+- Be professionally formatted
+- Omit any CMS fields you left blank
 
 ---
 
@@ -229,9 +231,10 @@ The auto-reply should:
 2. Check if regular emails are sending (to verify email service works)
 3. Look for email service errors in logs
 
-**Check Site Config:**
-1. Verify `emailContactAddress` is set in your Google Sheets config
-2. The auto-reply uses this for the contact email
+**Check CMS:**
+1. Vintage Admin → Emails & Account is **published**
+2. `autoReply.subject` is not blank
+3. Homepage contact email is set if you expect it in `doNotReplyNotice`
 
 ### Signature Verification Failing
 
@@ -256,9 +259,10 @@ Before considering setup complete, verify:
 - [ ] Webhook created in Resend with correct URL
 - [ ] `RESEND_WEBHOOK_SECRET` added to Vercel environment variables
 - [ ] Webhook endpoint returns 200 OK when accessed
+- [ ] Emails & Account CMS published (auto-reply + do-not-reply notice)
 - [ ] Test reply sent to do-not-reply address
 - [ ] Auto-reply email received
-- [ ] Auto-reply contains correct contact email
+- [ ] Auto-reply contains correct contact email from CMS
 - [ ] Vercel logs show successful webhook processing
 
 ---
@@ -271,12 +275,13 @@ Before considering setup complete, verify:
    - Watch for unusual activity
 
 2. **Customize Auto-Reply:**
-   - Update `emailContactAddress` in Google Sheets config
-   - Update `emailDoNotReplyNotice` if you want to customize the message
+   - Update `autoReply` and `doNotReplyNotice` in Emails & Account CMS
+   - Update contact email on the homepage CMS Footer / Key Data
+   - Publish; no Config Sheet
 
 3. **Set Up Gmail Auto-Reply (for staging):**
    - If using Gmail for staging, set up Gmail's vacation responder
-   - See `AUTO_REPLY_SETUP.md` for Gmail instructions
+   - See `docs/AUTO_REPLY_SETUP.md` for Gmail instructions
 
 ---
 
@@ -292,4 +297,3 @@ If you encounter issues:
 For Resend-specific issues, check:
 - Resend Documentation: https://resend.com/docs
 - Resend Support: support@resend.com
-

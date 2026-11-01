@@ -7,7 +7,10 @@ export type VintageAdminNavId =
   | "guidebook"
   | "hof"
   | "standings"
-  | "picks";
+  | "picks"
+  | "emails"
+  | "bracketEditor"
+  | "scoreboard";
 
 const ADMIN_NAV_ITEMS: {
   id: VintageAdminNavId;
@@ -19,6 +22,9 @@ const ADMIN_NAV_ITEMS: {
   { id: "hof", label: "Hall of Fame", href: "/vintage/admin/hof" },
   { id: "standings", label: "Standings", href: "/vintage/admin/standings" },
   { id: "picks", label: "Picks", href: "/vintage/admin/picks" },
+  { id: "emails", label: "Emails", href: "/vintage/admin/emails" },
+  { id: "bracketEditor", label: "Editor", href: "/vintage/admin/bracket-editor" },
+  { id: "scoreboard", label: "Scoreboard", href: "/vintage/admin/scoreboard" },
 ];
 
 /**

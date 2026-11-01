@@ -14,8 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   DollarSign,
+  ClipboardList,
 } from 'lucide-react';
-import { useBracketMode } from '@/contexts/BracketModeContext';
 import UsersTab from '@/components/admin/UsersTab';
 import BracketsTab from '@/components/admin/BracketsTab';
 import TeamDataTab from '@/components/admin/TeamDataTab';
@@ -23,6 +23,7 @@ import TourneyTab from '@/components/admin/TourneyTab';
 import LogsTab from '@/components/admin/LogsTab';
 import LiveResultsTab from '@/components/admin/LiveResultsTab';
 import PaymentsTab from '@/components/admin/PaymentsTab';
+import ScoreboardTab from '@/components/admin/ScoreboardTab';
 
 interface User {
   id: string;
@@ -61,6 +62,7 @@ type AdminTab =
   | 'brackets'
   | 'users'
   | 'live-results'
+  | 'scoreboard'
   | 'data'
   | 'tourney'
   | 'logs'
@@ -70,6 +72,7 @@ const ADMIN_TABS: AdminTab[] = [
   'brackets',
   'users',
   'live-results',
+  'scoreboard',
   'data',
   'tourney',
   'logs',
@@ -80,17 +83,11 @@ export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { setInBracketMode } = useBracketMode();
-
   const [users, setUsers] = useState<User[]>([]);
   const [brackets, setBrackets] = useState<Bracket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<AdminTab>('users');
-
-  useEffect(() => {
-    setInBracketMode(false);
-  }, [setInBracketMode]);
 
   const loadDataRef = useRef<((options?: { silent?: boolean }) => Promise<void>) | undefined>(
     undefined,
@@ -349,6 +346,20 @@ export default function AdminPage() {
               </button>
               <button
                 type="button"
+                aria-label="Scoreboard"
+                onClick={() => handleSetActiveTab('scoreboard')}
+                className={`flex shrink-0 items-center justify-center whitespace-nowrap border-b-2 px-2.5 py-2 text-sm font-medium lg:justify-start lg:px-4 ${
+                  activeTab === 'scoreboard'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                }`}
+                data-testid="admin-tab-scoreboard"
+              >
+                <ClipboardList className="inline h-5 w-5 shrink-0 lg:mr-2 lg:h-4 lg:w-4" aria-hidden />
+                <span className="hidden lg:inline">Scoreboard</span>
+              </button>
+              <button
+                type="button"
                 aria-label="Teams"
                 onClick={() => handleSetActiveTab('data')}
                 className={`flex shrink-0 items-center justify-center whitespace-nowrap border-b-2 px-2.5 py-2 text-sm font-medium lg:justify-start lg:px-4 ${
@@ -421,6 +432,8 @@ export default function AdminPage() {
         )}
 
         {activeTab === 'live-results' && <LiveResultsTab brackets={brackets} />}
+
+        {activeTab === 'scoreboard' && <ScoreboardTab brackets={brackets} />}
 
         {activeTab === 'data' && <TeamDataTab />}
 

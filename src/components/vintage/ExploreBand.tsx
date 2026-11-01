@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowRight, BookOpen, Star, Trophy } from "lucide-react";
+import CmsText from "@/components/cms/CmsText";
 import type { VintageExploreBand } from "@/lib/vintage/content";
 import VintageEditGear from "./VintageEditGear";
 
@@ -35,7 +36,7 @@ function ExplorePanel({
       </div>
       <div className="v-explore-copy">
         <h3>{headline}</h3>
-        <p>{body}</p>
+        <CmsText as="p" text={body} />
         <Link
           href={href}
           className="v-explore-cta"

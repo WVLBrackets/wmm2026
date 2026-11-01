@@ -4,7 +4,12 @@ import { useEffect, useRef, RefObject } from 'react';
 import Image from 'next/image';
 import { TournamentGame } from '@/types/tournament';
 import { CheckCircle, Save, KeyRound, ArrowRight, Send, X } from 'lucide-react';
-import { BRACKET_EDITOR_BAR_ACTION_CLASSES } from '@/lib/bracketStepNavMetrics';
+import {
+  BRACKET_EDITOR_BAR_ACTION_CLASSES,
+  BRACKET_EDITOR_BORDERED_CONTENT_WIDTH_CLASS,
+} from '@/lib/bracketStepNavMetrics';
+import { useBracketEditorCopy } from '@/components/bracket/BracketEditorCopyContext';
+import { formatEditorCopy } from '@/lib/vintage/bracketEditorContent';
 import BracketEditorTopMessage from './BracketEditorTopMessage';
 import BracketStepNavBar from './BracketStepNavBar';
 interface RegionBracketLayoutProps {
@@ -41,9 +46,9 @@ interface RegionBracketLayoutProps {
   isLiveResultsMode?: boolean;
   disableSave?: boolean;
   disableSaveMessage?: string;
-  /** Site config `bracket_regional_message` — banner above the bracket on regional steps (incomplete region). */
+  /** Bracket Editor Messages `regionalMessage` — banner above the bracket on regional steps (incomplete region). */
   bracketRegionalMessage?: string;
-  /** Site config `bracket_regional_message_done` — same bar when the region is complete (green styling). */
+  /** Bracket Editor Messages `regionalMessageDone` — same bar when the region is complete (green styling). */
   bracketRegionalMessageDone?: string;
   /** True when entry name matches another submitted bracket (yellow field, same tone as validation warnings). */
   entryNameDuplicate?: boolean;
@@ -81,6 +86,7 @@ export default function RegionBracketLayout({
   bracketRegionalMessageDone = '',
   entryNameDuplicate = false,
 }: RegionBracketLayoutProps) {
+  const copy = useBracketEditorCopy();
   const hasScrolledRoundOf64Ref = useRef(false);
   const hasScrolledRoundOf32Ref = useRef(false);
   const hasScrolledSweet16Ref = useRef(false);
@@ -249,28 +255,34 @@ export default function RegionBracketLayout({
         style={{ paddingLeft: '2px', paddingRight: '2px', paddingBottom: '2px' }}
       >
         <div className="inline-flex w-max max-w-full flex-col">
-          <div className="min-w-0 overflow-hidden rounded-lg border-2 border-gray-300 bg-white shadow-sm">
+          <div
+            className={`be-workspace-card be-region-frame min-w-0 overflow-hidden rounded-lg border-2 border-gray-300 bg-white shadow-sm ${BRACKET_EDITOR_BORDERED_CONTENT_WIDTH_CLASS}`}
+          >
             {/* Title bar: entry (left) · region (center) · champion (right); single row on mobile with condensed copy */}
             <div
-              className={`grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-1 gap-y-0 border-b px-2 py-2 sm:gap-x-2 ${
-                isComplete ? 'border-green-200/90 bg-green-50' : 'border-gray-200'
+              className={`be-title-bar grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-1 gap-y-0 border-b px-2 py-2 sm:gap-x-2 ${
+                isComplete ? 'be-title-bar--ready' : 'border-gray-200'
               }`}
               data-testid="bracket-region-title-bar"
             >
               <div className="flex min-w-0 flex-nowrap items-center gap-x-1 justify-self-start sm:gap-x-2">
-                <label htmlFor="entryName" className="sr-only">
-                  Entry Name:
-                </label>
-                <span
-                  className="hidden shrink-0 text-xs font-medium whitespace-nowrap text-gray-700 sm:inline"
-                  aria-hidden="true"
-                >
-                  Entry Name:
-                </span>
+                {copy.entryNameLabel ? (
+                  <>
+                    <label htmlFor="entryName" className="sr-only">
+                      {copy.entryNameLabel}
+                    </label>
+                    <span
+                      className="be-entry-label hidden shrink-0 text-xs font-medium whitespace-nowrap text-gray-700 sm:inline"
+                      aria-hidden="true"
+                    >
+                      {copy.entryNameLabel}
+                    </span>
+                  </>
+                ) : null}
                 {isLiveResultsMode ? (
                   <div className="flex min-w-0 max-w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-gray-100 px-2 py-1.5 text-xs font-bold text-gray-800 sm:min-w-[200px] sm:px-3 sm:py-2 sm:text-sm">
                     <KeyRound className="h-4 w-4 shrink-0 text-amber-600" />
-                    <span>KEY</span>
+                    <span>{copy.keyEntryLabel}</span>
                   </div>
                 ) : (
                   <input
@@ -279,21 +291,25 @@ export default function RegionBracketLayout({
                     value={entryName}
                     onChange={(e) => onEntryNameChange?.(e.target.value)}
                     disabled={readOnly}
-                    className={`min-w-0 w-full max-w-full flex-1 px-2 py-1.5 text-xs sm:min-w-[180px] sm:max-w-[20rem] sm:px-3 sm:py-2 sm:text-sm ${
+                    className={`be-entry-input min-w-0 w-full max-w-full flex-1 px-2 py-1.5 text-xs sm:min-w-[180px] sm:max-w-[20rem] sm:px-3 sm:py-2 sm:text-sm ${
                       readOnly
                         ? 'cursor-not-allowed rounded-lg border border-gray-300 bg-gray-100 text-gray-500'
                         : entryNameDuplicate
                           ? 'rounded-lg border-2 border-yellow-400 bg-yellow-50 text-yellow-800 shadow-sm focus:border-yellow-500 focus:ring-2 focus:ring-yellow-300'
                           : 'rounded-lg border border-gray-300 !bg-white text-gray-900 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500'
                     }`}
-                    placeholder="Enter your bracket name"
+                    placeholder={copy.entryNamePlaceholder || undefined}
                     data-testid="entry-name-input"
                   />
                 )}
               </div>
-              <div className="flex items-center justify-center px-0.5 text-center text-sm font-bold leading-tight text-gray-800 sm:text-lg">
+              <div
+                className="flex items-center justify-center px-0.5 text-center font-bold leading-tight text-gray-800 font-[family-name:var(--be-font-ui)] text-sm uppercase tracking-wider sm:text-base"
+              >
                 <span className="sm:hidden">{regionName}</span>
-                <span className="hidden sm:inline">{regionName} Region</span>
+                <span className="hidden sm:inline">
+                  {formatEditorCopy(copy.regionTitle, { region: regionName }).trim() || regionName}
+                </span>
               </div>
               <div className="flex min-w-0 shrink-0 items-center justify-end gap-1 justify-self-end text-right sm:gap-2">
                 {regionalChampion ? (
@@ -369,32 +385,17 @@ export default function RegionBracketLayout({
                   <div className="relative z-[45] flex min-w-[3rem] flex-1 shrink-0 flex-col items-center justify-center py-2">
                     <button
                       type="button"
-                      aria-label="Next region"
+                      aria-label={copy.nextRegionAriaLabel || undefined}
                       data-testid="bracket-region-next-arrow"
                       onClick={isComplete ? onNext : undefined}
                       disabled={!isComplete || !canProceed}
-                      className={`
-                        flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-all
-                        ${
-                          isComplete && canProceed
-                            ? 'cursor-pointer bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-lg hover:from-blue-700 hover:to-blue-800 hover:shadow-xl active:shadow-md'
-                            : 'cursor-not-allowed bg-gradient-to-br from-gray-300 to-gray-400 text-gray-500 shadow'
-                        }
-                      `}
-                      style={{
-                        boxShadow:
-                          isComplete && canProceed
-                            ? '0 4px 6px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -1px 0 rgba(0, 0, 0, 0.2)'
-                            : '0 2px 4px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
-                      }}
+                      className={`be-next-region flex h-12 w-12 shrink-0 items-center justify-center rounded-none border transition-all ${
+                        isComplete && canProceed
+                          ? 'cursor-pointer border-[var(--be-ink)] bg-[var(--be-ink)] text-[var(--be-paper)]'
+                          : 'cursor-not-allowed border-[#9ca3af] bg-[var(--be-disabled-bg)] text-[var(--be-disabled-fg)]'
+                      }`}
                     >
-                      <ArrowRight
-                        className="h-7 w-7"
-                        style={{
-                          filter:
-                            isComplete && canProceed ? 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3))' : 'none',
-                        }}
-                      />
+                      <ArrowRight className="h-7 w-7" />
                     </button>
                   </div>
                 ) : null}
@@ -412,8 +413,7 @@ export default function RegionBracketLayout({
                     isStepComplete={isStepComplete}
                     onStepClick={onStepClick}
                     finalFourDisabledMessage={
-                      finalFourDisabledMessage.trim() ||
-                      'Complete all four regions before you can work on the Final Four and championship.'
+                      finalFourDisabledMessage.trim() || copy.finalFourDisabledMessage
                     }
                   />
                 )}
@@ -421,7 +421,7 @@ export default function RegionBracketLayout({
             </div>
           </div>
 
-          <div className="mt-1 flex w-full flex-wrap items-center justify-center gap-1.5 rounded-lg border-2 border-gray-300 bg-white px-2 py-2 shadow-sm">
+          <div className="be-action-bar mt-1 flex w-full flex-wrap items-center justify-center gap-1.5 rounded-lg border-2 border-gray-300 bg-white px-2 py-2 shadow-sm">
             {readOnly ? (
               onClose && (
                 <button
@@ -432,9 +432,10 @@ export default function RegionBracketLayout({
                     minWidth: `${stepButtonWidthCh}ch`,
                     maxWidth: `${stepButtonWidthCh}ch`,
                   }}
-                  className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} bg-red-500 text-white hover:bg-red-600 cursor-pointer`}
+                  className={`be-btn be-btn--close cursor-pointer ${BRACKET_EDITOR_BAR_ACTION_CLASSES}`}
+                  data-testid="bracket-region-close-button"
                 >
-                  <span>Close</span>
+                  <span>{copy.closeLabel}</span>
                 </button>
               )
             ) : (
@@ -444,20 +445,21 @@ export default function RegionBracketLayout({
                     type="button"
                     onClick={() => !disableSave && onSave()}
                     disabled={disableSave}
-                    title={disableSave ? disableSaveMessage : 'Save'}
+                    title={disableSave ? disableSaveMessage : copy.saveLabel}
                     style={{
                       width: `${stepButtonWidthCh}ch`,
                       minWidth: `${stepButtonWidthCh}ch`,
                       maxWidth: `${stepButtonWidthCh}ch`,
                     }}
-                    className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} ${
+                    className={`be-btn be-btn--save ${BRACKET_EDITOR_BAR_ACTION_CLASSES} ${
                       disableSave
-                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        : 'bg-purple-600 text-white hover:bg-purple-700 cursor-pointer'
+                        ? 'be-btn--disabled bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'cursor-pointer'
                     }`}
+                    data-testid="bracket-region-save-button"
                   >
                     <Save className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                    <span>Save</span>
+                    <span>{copy.saveLabel}</span>
                   </button>
                 )}
                 {showBarSubmit ? (
@@ -471,15 +473,15 @@ export default function RegionBracketLayout({
                       minWidth: `${stepButtonWidthCh}ch`,
                       maxWidth: `${stepButtonWidthCh}ch`,
                     }}
-                    className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} ${
+                    className={`be-btn be-btn--submit ${BRACKET_EDITOR_BAR_ACTION_CLASSES} ${
                       submitEnabled
-                        ? 'cursor-pointer bg-blue-600 text-white hover:bg-blue-700'
-                        : 'cursor-not-allowed bg-gray-300 text-gray-500'
+                        ? 'cursor-pointer'
+                        : 'be-btn--disabled cursor-not-allowed bg-gray-300 text-gray-500'
                     }`}
                     data-testid="submit-bracket-editor-button"
                   >
                     <Send className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                    <span>Submit</span>
+                    <span>{copy.submitLabel}</span>
                   </button>
                 ) : null}
                 {onCancel && (
@@ -491,10 +493,11 @@ export default function RegionBracketLayout({
                       minWidth: `${stepButtonWidthCh}ch`,
                       maxWidth: `${stepButtonWidthCh}ch`,
                     }}
-                    className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} bg-red-500 text-white hover:bg-red-600 cursor-pointer`}
+                    className={`be-btn be-btn--cancel cursor-pointer ${BRACKET_EDITOR_BAR_ACTION_CLASSES}`}
+                    data-testid="bracket-region-cancel-button"
                   >
                     <X className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
-                    <span>Cancel</span>
+                    <span>{copy.cancelLabel}</span>
                   </button>
                 )}
               </>

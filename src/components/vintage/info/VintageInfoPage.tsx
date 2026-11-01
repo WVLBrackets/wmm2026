@@ -1,4 +1,5 @@
 import Link from "next/link";
+import CmsText from "@/components/cms/CmsText";
 import type { VintageContent } from "@/lib/vintage/content";
 import {
   formatInfoDeadline,
@@ -49,7 +50,11 @@ export default function VintageInfoPage({
             />
           ) : null}
           <h1 data-testid="vintage-info-heading">{content.intro.heading}</h1>
-          <p className="v-info-supporting">{content.intro.supporting}</p>
+          <CmsText
+            as="p"
+            className="v-info-supporting"
+            text={content.intro.supporting}
+          />
         </header>
 
         <div className="v-info-facts" data-testid="vintage-info-facts">
@@ -122,20 +127,24 @@ export default function VintageInfoPage({
                     </span>
                     <div>
                       <h3>{step.title}</h3>
-                      <p>{step.description}</p>
+                      <CmsText as="p" text={step.description} />
                     </div>
                   </li>
                 ))}
               </ol>
-              <p className="v-info-note">{content.entry.multiEntryNote}</p>
+              <CmsText
+                as="p"
+                className="v-info-note"
+                text={content.entry.multiEntryNote}
+              />
               <div className="v-info-payment">
                 <div>
                   <h3>{content.entry.electronicHeading}</h3>
-                  <p>{content.entry.electronicBody}</p>
+                  <CmsText as="p" text={content.entry.electronicBody} />
                 </div>
                 <div>
                   <h3>{content.entry.cashHeading}</h3>
-                  <p>{content.entry.cashBody}</p>
+                  <CmsText as="p" text={content.entry.cashBody} />
                 </div>
               </div>
             </section>
@@ -178,15 +187,21 @@ export default function VintageInfoPage({
                     +2
                   </p>
                   <h3>{content.scoring.underdogHeading}</h3>
-                  <p>{content.scoring.underdogBody}</p>
+                  <CmsText as="p" text={content.scoring.underdogBody} />
                 </aside>
               </div>
-              <p className="v-info-note">{content.scoring.firstFourNote}</p>
+              <CmsText
+                as="p"
+                className="v-info-note"
+                text={content.scoring.firstFourNote}
+              />
               <div className="v-info-examples">
                 <h3>{content.scoring.examplesHeading}</h3>
                 <ul>
                   {content.scoring.examples.map((example, index) => (
-                    <li key={index}>{example}</li>
+                    <li key={index}>
+                      <CmsText text={example} />
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -208,7 +223,7 @@ export default function VintageInfoPage({
               <div className="v-info-pool">
                 <p className="v-info-pool-label">{prizeDisplay.poolLabel}</p>
                 <p className="v-info-pool-total">{prizeDisplay.poolTotalLabel}</p>
-                <p>{prizeDisplay.poolExplanation}</p>
+                <CmsText as="p" text={prizeDisplay.poolExplanation} />
               </div>
               <div className="v-info-places">
                 {prizeDisplay.places.map((place) => (
@@ -220,7 +235,11 @@ export default function VintageInfoPage({
                 ))}
               </div>
               {prizeDisplay.showFootnote ? (
-                <p className="v-info-footnote">{content.prizes.footnote}</p>
+                <CmsText
+                  as="p"
+                  className="v-info-footnote"
+                  text={content.prizes.footnote}
+                />
               ) : null}
             </section>
 
@@ -255,7 +274,7 @@ export default function VintageInfoPage({
                 />
               ) : null}
               <h2>{content.questions.heading}</h2>
-              <p>{content.questions.body}</p>
+              <CmsText as="p" text={content.questions.body} />
               {content.questions.contactEmail ? (
                 <a
                   className="v-info-questions-cta"

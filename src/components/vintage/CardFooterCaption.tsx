@@ -8,9 +8,14 @@ import {
   type RefObject,
   type SetStateAction,
 } from "react";
+import {
+  CMS_LINE_BREAK_TOKEN,
+  hasCmsLineBreak,
+  splitCmsLines,
+} from "@/lib/cms/lineBreaks";
 
-/** Site-wide line-break token for vintage card footer captions (max two lines). */
-export const FOOTER_CAPTION_BREAK = "||";
+/** @deprecated Prefer {@link CMS_LINE_BREAK_TOKEN}. */
+export const FOOTER_CAPTION_BREAK = CMS_LINE_BREAK_TOKEN;
 
 /**
  * Normalize caption copy: trim, ALL CAPS, and split on `||` into at most two lines.
@@ -19,16 +24,8 @@ export const FOOTER_CAPTION_BREAK = "||";
 export function parseFooterCaptionLines(raw: string): string[] {
   const upper = raw.trim().toUpperCase();
   if (!upper) return [];
-  if (!upper.includes(FOOTER_CAPTION_BREAK)) return [upper];
-
-  const parts = upper
-    .split(FOOTER_CAPTION_BREAK)
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-  if (parts.length <= 1) return parts.length ? [parts[0]] : [];
-  // Never more than two lines — fold extras onto the second line.
-  return [parts[0], parts.slice(1).join(" ")];
+  if (!hasCmsLineBreak(upper)) return [upper];
+  return splitCmsLines(upper, { maxLines: 2 });
 }
 
 /**

@@ -31,29 +31,19 @@ async function testPDFGeneration() {
     }
 
     console.log('\nAttempting to launch browser...');
-    
-    // Determine executable path
-    const isProduction = process.env.VERCEL_ENV === 'production';
-    let executablePath: string;
-    
-    if (isProduction) {
-      executablePath = await chromium.executablePath();
-    } else {
-      // For local development, try to use system Chrome or set PUPPETEER_EXECUTABLE_PATH
-      executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || 
-                      (process.platform === 'win32' 
-                        ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
-                        : '/usr/bin/google-chrome');
-    }
 
-    console.log(`Using executable path: ${executablePath}`);
+    const { resolvePdfBrowserLaunch } = await import('../src/lib/pdfBrowser');
+    const launchConfig = await resolvePdfBrowserLaunch(chromium);
+    console.log(
+      `Using ${launchConfig.useServerlessChromium ? 'sparticuz' : 'local'} executable: ${launchConfig.executablePath}`,
+    );
 
     // Launch browser
     const browser = await puppeteer.launch({
-      args: isProduction ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox'],
-      defaultViewport: chromium.defaultViewport,
-      executablePath: executablePath,
-      headless: chromium.headless,
+      args: launchConfig.args,
+      defaultViewport: launchConfig.defaultViewport,
+      executablePath: launchConfig.executablePath,
+      headless: launchConfig.headless,
     });
 
     console.log('✓ Browser launched successfully');

@@ -8,20 +8,18 @@ import { updateBracketWithPicks } from '@/lib/bracketGenerator';
 import {
   computeCanProceedToSubmit,
   getBracketSubmitReadinessHint,
-  getBracketSubmissionClosedMessage,
-  isBracketSubmissionClosed,
   isSubmitDuplicateEntryName,
 } from '@/lib/bracketSubmitReadiness';
-import type { SiteConfigData } from '@/lib/siteConfig';
 import { BRACKET_EDITOR_BAR_ACTION_CLASSES } from '@/lib/bracketStepNavMetrics';
 import BracketEditorTopMessage from '@/components/bracket/BracketEditorTopMessage';
 import FullBracketCanvas, { type FullBracketSizeMode } from '@/components/bracket/FullBracketCanvas';
+import { useBracketEditorCopy } from '@/components/bracket/BracketEditorCopyContext';
 import {
   DEFAULT_FULL_BRACKET_LAYOUT,
   type LayoutSettings,
 } from '@/lib/fullBracket/fullBracketGeometry';
 import { FULL_BRACKET_VIEWPORT_PADDING_X, fullBracketDebugOutline } from '@/lib/fullBracket/fullBracketViewChrome';
-import { getTieBreakerHintTooltipText } from '@/lib/bracketTieBreakerHint';
+import { tieBreakerHintTooltip as formatTieBreakerHintTooltip } from '@/lib/vintage/bracketEditorContent';
 
 export interface FullBracketEditorShellProps {
   tournamentData: TournamentData;
@@ -34,7 +32,6 @@ export interface FullBracketEditorShellProps {
   onTieBreakerChange: (value: string) => void;
   readOnly?: boolean;
   submitError?: string;
-  siteConfig?: SiteConfigData | null;
   existingBracketNames?: string[];
   isAdminMode?: boolean;
   isLiveResultsMode?: boolean;
@@ -66,7 +63,6 @@ export default function FullBracketEditorShell({
   onTieBreakerChange,
   readOnly = false,
   submitError = '',
-  siteConfig,
   existingBracketNames = [],
   isAdminMode = false,
   isLiveResultsMode = false,
@@ -79,11 +75,12 @@ export default function FullBracketEditorShell({
   onComplete,
   bracketSize,
 }: FullBracketEditorShellProps) {
+  const copy = useBracketEditorCopy();
   const saveDisabled = disableSave ?? disableSaveSubmit;
   /** Geometry from committed full-bracket layout JSON (bundled at build time). */
   const [fullBracketLayout] = useState<LayoutSettings>(DEFAULT_FULL_BRACKET_LAYOUT);
 
-  const tieBreakerHintTooltip = useMemo(() => getTieBreakerHintTooltipText(siteConfig), [siteConfig]);
+  const tieBreakerHintTooltip = formatTieBreakerHintTooltip(copy.tieBreakerHint);
 
   const updatedBracket = useMemo(
     () => updateBracketWithPicks(bracket, picks, tournamentData),
@@ -91,8 +88,8 @@ export default function FullBracketEditorShell({
   );
 
   const entryNameDuplicate = useMemo(
-    () => isSubmitDuplicateEntryName(entryName, siteConfig, existingBracketNames),
-    [entryName, siteConfig, existingBracketNames]
+    () => isSubmitDuplicateEntryName(entryName, existingBracketNames),
+    [entryName, existingBracketNames]
   );
 
   const { submitEnabled, submitDisabledMessage } = useMemo(() => {
@@ -102,22 +99,11 @@ export default function FullBracketEditorShell({
     if (disableSaveSubmit) {
       return {
         submitEnabled: false,
-        submitDisabledMessage: disableMessage?.trim() || 'Saving and submitting are temporarily disabled.',
+        submitDisabledMessage: disableMessage?.trim() || copy.actionsDisabledMessage,
       };
     }
-    if (isBracketSubmissionClosed(siteConfig)) {
-      return {
-        submitEnabled: false,
-        submitDisabledMessage: getBracketSubmissionClosedMessage(siteConfig),
-      };
-    }
-    if (isSubmitDuplicateEntryName(entryName, siteConfig, existingBracketNames)) {
-      return {
-        submitEnabled: false,
-        submitDisabledMessage:
-          siteConfig?.finalMessageDuplicateName ||
-          'An entry with this name already exists for this year. Please choose a different name.',
-      };
+    if (isSubmitDuplicateEntryName(entryName, existingBracketNames)) {
+      return { submitEnabled: false, submitDisabledMessage: copy.duplicateNameMessage };
     }
     if (
       !computeCanProceedToSubmit(
@@ -126,7 +112,7 @@ export default function FullBracketEditorShell({
         picks,
         entryName,
         tieBreaker,
-        siteConfig
+        copy
       )
     ) {
       return {
@@ -137,17 +123,17 @@ export default function FullBracketEditorShell({
           picks,
           entryName,
           tieBreaker,
-          siteConfig
+          copy
         ),
       };
     }
-    return { submitEnabled: true, submitDisabledMessage: 'Submit your bracket' };
+    return { submitEnabled: true, submitDisabledMessage: copy.submitReadyTooltip };
   }, [
     readOnly,
     isAdminMode,
     disableSaveSubmit,
     disableMessage,
-    siteConfig,
+    copy,
     entryName,
     existingBracketNames,
     tournamentData,
@@ -158,17 +144,15 @@ export default function FullBracketEditorShell({
 
   const validationBanner = useMemo(() => {
     if (readOnly) return null;
-    if (submitEnabled) {
-      return {
-        variant: 'validation-green' as const,
-        message: siteConfig?.finalMessageReadyToSubmit || 'Your bracket is complete and ready to submit!',
-      };
-    }
+    const message = submitEnabled
+      ? copy.readyToSubmitMessage
+      : submitDisabledMessage || copy.completeBeforeSubmitMessage;
+    if (!message.trim()) return null;
     return {
-      variant: 'validation-yellow' as const,
-      message: submitDisabledMessage || 'Complete your bracket to submit.',
+      variant: submitEnabled ? ('validation-green' as const) : ('validation-yellow' as const),
+      message,
     };
-  }, [readOnly, submitEnabled, submitDisabledMessage, siteConfig?.finalMessageReadyToSubmit]);
+  }, [readOnly, submitEnabled, submitDisabledMessage, copy]);
 
   const championshipGame = updatedBracket.championship;
   const championId = picks[championshipGame.id];
@@ -187,35 +171,39 @@ export default function FullBracketEditorShell({
 
   return (
     <div
-      className={`relative w-full min-h-screen overflow-auto bg-gray-200 ${fullBracketDebugOutline('page')}`.trim()}
+      className={`be-workspace-page relative w-full min-h-screen overflow-auto bg-gray-200 ${fullBracketDebugOutline('page')}`.trim()}
     >
       <div
-        className={`mx-auto w-full max-w-[min(100vw,1500px)] rounded-lg bg-white pb-3 pt-2 shadow-lg ${FULL_BRACKET_VIEWPORT_PADDING_X} ${fullBracketDebugOutline('shell')}`.trim()}
+        className={`be-workspace-card mx-auto w-full max-w-[min(100vw,1500px)] rounded-lg bg-white pb-3 pt-2 shadow-lg ${FULL_BRACKET_VIEWPORT_PADDING_X} ${fullBracketDebugOutline('shell')}`.trim()}
       >
         <div className="flex w-full min-w-0 flex-col">
           <div
-            className={`min-w-0 overflow-hidden rounded-lg border-2 border-gray-300 bg-white shadow-sm ${fullBracketDebugOutline('card')}`.trim()}
+            className={`be-workspace-card min-w-0 overflow-hidden rounded-lg border-2 border-gray-300 bg-white shadow-sm ${fullBracketDebugOutline('card')}`.trim()}
           >
             <div
-              className={`grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-1 gap-y-0 border-b px-2 py-2 sm:gap-x-2 ${
-                submitEnabled ? 'border-green-200/90 bg-green-50' : 'border-gray-200'
+              className={`be-title-bar grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-1 gap-y-0 border-b px-2 py-2 sm:gap-x-2 ${
+                submitEnabled ? 'be-title-bar--ready' : 'border-gray-200'
               }`}
               data-testid="full-bracket-editor-title-bar"
             >
               <div className="flex min-w-0 flex-nowrap items-center gap-x-1 justify-self-start sm:gap-x-2">
-                <label htmlFor="full-bracket-entry-name" className="sr-only">
-                  Entry Name:
-                </label>
-                <span
-                  className="hidden shrink-0 text-xs font-medium whitespace-nowrap text-gray-700 sm:inline"
-                  aria-hidden="true"
-                >
-                  Entry Name:
-                </span>
+                {copy.entryNameLabel ? (
+                  <>
+                    <label htmlFor="full-bracket-entry-name" className="sr-only">
+                      {copy.entryNameLabel}
+                    </label>
+                    <span
+                      className="be-entry-label hidden shrink-0 text-xs font-medium whitespace-nowrap text-gray-700 sm:inline"
+                      aria-hidden="true"
+                    >
+                      {copy.entryNameLabel}
+                    </span>
+                  </>
+                ) : null}
                 {isLiveResultsMode ? (
                   <div className="flex min-w-0 max-w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-gray-100 px-2 py-1.5 text-xs font-bold text-gray-800 sm:min-w-[200px] sm:px-3 sm:py-2 sm:text-sm">
                     <KeyRound className="h-4 w-4 shrink-0 text-amber-600" aria-hidden />
-                    <span>KEY</span>
+                    <span>{copy.keyEntryLabel}</span>
                   </div>
                 ) : (
                   <input
@@ -224,14 +212,14 @@ export default function FullBracketEditorShell({
                     value={entryName}
                     onChange={(e) => onEntryNameChange(e.target.value)}
                     disabled={readOnly}
-                    className={`min-w-0 w-full max-w-full flex-1 px-2 py-1.5 text-xs sm:min-w-[180px] sm:max-w-[20rem] sm:px-3 sm:py-2 sm:text-sm ${
+                    className={`be-entry-input min-w-0 w-full max-w-full flex-1 px-2 py-1.5 text-xs sm:min-w-[180px] sm:max-w-[20rem] sm:px-3 sm:py-2 sm:text-sm ${
                       readOnly
                         ? 'cursor-not-allowed rounded-lg border border-gray-300 bg-gray-100 text-gray-500'
                         : entryNameDuplicate
                           ? 'rounded-lg border-2 border-yellow-400 bg-yellow-50 text-yellow-800 shadow-sm focus:border-yellow-500 focus:ring-2 focus:ring-yellow-300'
                           : 'rounded-lg border border-gray-300 !bg-white text-gray-900 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500'
                     }`}
-                    placeholder="Enter your bracket name"
+                    placeholder={copy.entryNamePlaceholder || undefined}
                     data-testid="full-bracket-entry-name-input"
                   />
                 )}
@@ -284,11 +272,12 @@ export default function FullBracketEditorShell({
                 onTieBreakerChange={readOnly ? undefined : onTieBreakerChange}
                 onSelectTeam={readOnly ? undefined : onPick}
                 tieBreakerHintTooltip={tieBreakerHintTooltip || undefined}
+                copy={copy}
               />
             </div>
           </div>
 
-          <div className="mt-1 flex w-full flex-wrap items-center justify-center gap-1.5 rounded-lg border-2 border-gray-300 bg-white px-2 py-2 shadow-sm">
+          <div className="be-action-bar mt-1 flex w-full flex-wrap items-center justify-center gap-1.5 rounded-lg border-2 border-gray-300 bg-white px-2 py-2 shadow-sm">
             {readOnly ? (
               onClose && (
                 <button
@@ -299,9 +288,10 @@ export default function FullBracketEditorShell({
                     minWidth: `${STEP_BUTTON_CH}ch`,
                     maxWidth: `${STEP_BUTTON_CH}ch`,
                   }}
-                  className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} cursor-pointer bg-red-500 text-white hover:bg-red-600`}
+                  className={`be-btn be-btn--close cursor-pointer ${BRACKET_EDITOR_BAR_ACTION_CLASSES}`}
+                  data-testid="full-bracket-close-button"
                 >
-                  <span>Close</span>
+                  <span>{copy.closeLabel}</span>
                 </button>
               )
             ) : (
@@ -311,21 +301,21 @@ export default function FullBracketEditorShell({
                     type="button"
                     onClick={() => !saveDisabled && onSave()}
                     disabled={saveDisabled}
-                    title={saveDisabled ? disableMessage : 'Save'}
+                    title={saveDisabled ? disableMessage : copy.saveLabel}
                     style={{
                       width: `${STEP_BUTTON_CH}ch`,
                       minWidth: `${STEP_BUTTON_CH}ch`,
                       maxWidth: `${STEP_BUTTON_CH}ch`,
                     }}
-                    className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} ${
+                    className={`be-btn be-btn--save ${BRACKET_EDITOR_BAR_ACTION_CLASSES} ${
                       saveDisabled
-                        ? 'cursor-not-allowed bg-gray-300 text-gray-500'
-                        : 'cursor-pointer bg-purple-600 text-white hover:bg-purple-700'
+                        ? 'be-btn--disabled cursor-not-allowed bg-gray-300 text-gray-500'
+                        : 'cursor-pointer'
                     }`}
                     data-testid="full-bracket-save-button"
                   >
                     <Save className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                    <span>Save</span>
+                    <span>{copy.saveLabel}</span>
                   </button>
                 ) : null}
                 {showBarSubmit ? (
@@ -339,15 +329,15 @@ export default function FullBracketEditorShell({
                       minWidth: `${STEP_BUTTON_CH}ch`,
                       maxWidth: `${STEP_BUTTON_CH}ch`,
                     }}
-                    className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} ${
+                    className={`be-btn be-btn--submit ${BRACKET_EDITOR_BAR_ACTION_CLASSES} ${
                       submitEnabled
-                        ? 'cursor-pointer bg-blue-600 text-white hover:bg-blue-700'
-                        : 'cursor-not-allowed bg-gray-300 text-gray-500'
+                        ? 'cursor-pointer'
+                        : 'be-btn--disabled cursor-not-allowed bg-gray-300 text-gray-500'
                     }`}
                     data-testid="full-bracket-submit-button"
                   >
                     <Send className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                    <span>Submit</span>
+                    <span>{copy.submitLabel}</span>
                   </button>
                 ) : null}
                 {onCancel ? (
@@ -359,11 +349,11 @@ export default function FullBracketEditorShell({
                       minWidth: `${STEP_BUTTON_CH}ch`,
                       maxWidth: `${STEP_BUTTON_CH}ch`,
                     }}
-                    className={`${BRACKET_EDITOR_BAR_ACTION_CLASSES} cursor-pointer bg-red-500 text-white hover:bg-red-600`}
+                    className={`be-btn be-btn--cancel cursor-pointer ${BRACKET_EDITOR_BAR_ACTION_CLASSES}`}
                     data-testid="full-bracket-cancel-button"
                   >
                     <X className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
-                    <span>Cancel</span>
+                    <span>{copy.cancelLabel}</span>
                   </button>
                 ) : null}
               </>

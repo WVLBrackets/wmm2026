@@ -2,7 +2,9 @@
 
 ## Overview
 
-This guide explains how to set up automatic replies when users reply to do-not-reply email addresses. The system will automatically send a helpful message directing users to the correct contact email.
+This guide explains how to set up automatic replies when users reply to do-not-reply email addresses. The system sends a message directing users to the correct contact email.
+
+Copy comes from **Emails & Account CMS** (`__emailsContent.autoReply` and `doNotReplyNotice`). Contact email comes from published homepage CMS (footer / Key Data). Blank CMS fields are omitted; a blank auto-reply **subject** fails the send. Editor `DEFAULT_*` seeds are not merged on the send path.
 
 ## Current Setup
 
@@ -37,7 +39,7 @@ Resend supports receiving inbound emails via webhooks. When someone replies to a
 
 2. **Set Webhook URL**
    - URL: `https://your-domain.com/api/email/inbound`
-   - For staging: `https://your-staging-url.vercel.app/api/email/inbound`
+   - For staging: your staging Vercel URL + `/api/email/inbound`
    - For production: `https://warrensmm.com/api/email/inbound`
 
 3. **Select Events**
@@ -74,14 +76,7 @@ Gmail doesn't have a built-in API webhook system like Resend, but you can set up
 2. **Go to Settings → General → Vacation responder**
    - Enable "Vacation responder on"
    - Set subject: "Automatic Reply - Do Not Reply Address"
-   - Set message:
-     ```
-     Thank you for your message. However, you have replied to an automated email address that is not monitored.
-     
-     This mailbox is not monitored. If you need assistance, please contact us directly at: support@warrensmm.com
-     
-     We apologize for any inconvenience.
-     ```
+   - Set message to match Emails & Account CMS (include the published contact email)
    - Set it to reply to all emails (not just contacts)
 
 3. **Limitations**:
@@ -106,27 +101,21 @@ This is more complex and may not be necessary if Resend is working for productio
    - Verifies webhook signature (if configured)
    - Extracts sender email and subject
    - Checks if it's a reply to a do-not-reply address
-   - Calls `sendAutoReplyEmail()` function
-5. **Auto-reply email** is sent with:
-   - Clear message that the mailbox is not monitored
-   - Contact email from site config (`emailContactAddress`)
-   - Professional formatting
+   - Calls `sendAutoReplyEmail()` (`lib/autoReplyService.ts` → `getPublishedCmsBundle()`)
+5. **Auto-reply email** is sent with CMS copy and the published contact email
 
 ## Auto-Reply Email Content
 
-The auto-reply email includes:
-- Clear message that the mailbox is not monitored
-- Contact email address (from `emailContactAddress` in site config)
-- Professional HTML and plain text versions
-- "Do Not Reply" notice from site config
+From Emails & Account CMS:
+
+- `autoReply.subject` — tokens: `{subject}`
+- `autoReply.heading`, `greeting`, `mainMessage`, `closing`
+- `doNotReplyNotice` — tokens: `{contactEmail}`
+- Contact address from homepage CMS (not a Config Sheet)
 
 ## Configuration
 
-The auto-reply uses values from your site config:
-- **Contact Email**: `emailContactAddress` (defaults to `support@warrensmm.com`)
-- **Do Not Reply Notice**: `emailDoNotReplyNotice` (customizable message)
-
-Update these in your Google Sheets site config to customize the auto-reply message.
+Update copy in Vintage Admin → Emails & Account and **publish**. Update contact email in homepage Key Data / Footer.
 
 ## Troubleshooting
 
@@ -141,7 +130,8 @@ Update these in your Google Sheets site config to customize the auto-reply messa
 
 1. **Check Email Service**: Verify Resend/Gmail is configured correctly
 2. **Check Logs**: Look for errors in Vercel function logs
-3. **Test Manually**: Call the API endpoint directly to test
+3. **Check CMS**: Confirm Emails & Account is published and `autoReply.subject` is not blank
+4. **Test Manually**: Call the API endpoint directly to test
 
 ### Signature Verification Failing
 
@@ -178,10 +168,11 @@ You can test the auto-reply function directly by calling the API endpoint with a
 3. ✅ Add `RESEND_WEBHOOK_SECRET` to Vercel environment variables
 4. ✅ Test with a real email reply
 5. ✅ Set up Gmail auto-reply for staging (if needed)
+6. ✅ Confirm Emails & Account CMS is published in each environment
 
 ## Additional Resources
 
 - [Resend Inbound Email Documentation](https://resend.com/docs)
 - [Resend Webhooks Documentation](https://resend.com/docs/dashboard/webhooks)
 - [Gmail Auto-Reply Setup](https://support.google.com/mail/answer/25922)
-
+- Step-by-step: `docs/AUTO_REPLY_SETUP_WALKTHROUGH.md`

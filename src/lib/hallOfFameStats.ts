@@ -1,4 +1,21 @@
-import type { HallOfFameEntry } from "@/lib/googleSheets";
+/** One Hall of Fame podium year (retired Google Sheet shape). */
+export interface HallOfFameEntry {
+  year: string;
+  firstPlace: {
+    name: string;
+    team: string;
+    score: number;
+  };
+  secondPlace: {
+    name: string;
+    score: number;
+  };
+  thirdPlace: {
+    name: string;
+    score: number;
+  };
+  totalEntries: number;
+}
 
 /** Dollars per entry for historical prize-pool math (matches legacy HoF). */
 export const HOF_ENTRY_FEE = 5;

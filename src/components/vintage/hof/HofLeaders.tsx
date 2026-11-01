@@ -6,6 +6,7 @@ import type {
   HofSingleSeasonLeader,
 } from "@/lib/hallOfFameStats";
 import { formatHofDollars } from "@/lib/hallOfFameStats";
+import CmsText from "@/components/cms/CmsText";
 import type { VintageHofContent } from "@/lib/vintage/hofContent";
 import { DEFAULT_VINTAGE_HOF_CONTENT } from "@/lib/vintage/hofContent";
 import HofEditGear from "./HofEditGear";
@@ -70,7 +71,7 @@ function CareerTable({
   return (
     <div className="v-hof-leader-panel" data-testid="vintage-hof-career">
       <h3>{copy.careerHeading}</h3>
-      <p className="v-hof-leader-sub">{copy.careerSubtitle}</p>
+      <CmsText as="p" className="v-hof-leader-sub" text={copy.careerSubtitle} />
       <table className="v-hof-leader-table" id={panelId}>
         <caption className="v-hof-sr-only">Career winnings</caption>
         <thead>
@@ -156,7 +157,11 @@ function SingleSeasonTable({
       data-testid="vintage-hof-single-season"
     >
       <h3>{copy.singleSeasonHeading}</h3>
-      <p className="v-hof-leader-sub">{copy.singleSeasonSubtitle}</p>
+      <CmsText
+        as="p"
+        className="v-hof-leader-sub"
+        text={copy.singleSeasonSubtitle}
+      />
       <table className="v-hof-leader-table" id={panelId}>
         <caption className="v-hof-sr-only">Single-season points</caption>
         <thead>

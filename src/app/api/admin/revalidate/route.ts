@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/lib/adminAuth';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { invalidateSiteConfigModuleCache } from '@/config/site';
-import { clearStandingsCache } from '@/lib/standingsData';
+import { VINTAGE_CMS_TAG } from '@/lib/vintage/sidecarWriter';
 
 type RevalidatePathKey = '/' | '/info' | '/hall-of-fame' | '/standings';
 
@@ -14,7 +14,7 @@ const PATH_LABELS: Record<RevalidatePathKey, string> = {
   '/': 'Home Page',
   '/info': 'Info Page',
   '/hall-of-fame': 'Hall of Fame',
-  '/standings': 'Standings (daily sheet + live pages)',
+  '/standings': 'Standings',
 };
 
 /**
@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     if (body?.action === 'flush-site-config') {
+      revalidateTag(VINTAGE_CMS_TAG);
       revalidateTag('site-config');
       invalidateSiteConfigModuleCache();
       return NextResponse.json({
@@ -64,16 +65,12 @@ export async function POST(request: NextRequest) {
 
     const typedPath = path as RevalidatePathKey;
 
+    revalidateTag(VINTAGE_CMS_TAG);
     revalidateTag('site-config');
     invalidateSiteConfigModuleCache();
 
     if (typedPath === '/') {
       revalidateTag('announcements');
-    }
-
-    if (typedPath === '/standings') {
-      clearStandingsCache();
-      revalidatePath('/standings/live');
     }
 
     revalidatePath(typedPath);

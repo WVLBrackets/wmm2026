@@ -41,6 +41,7 @@ import {
 const SECTION_LABELS = [
   "Snapshot status",
   "Page & year",
+  "Tournament Live & roster",
   "Filters & badges",
   "Logo sizing",
   "Result shade colors",
@@ -365,8 +366,11 @@ export default function VintageStandingsEditor() {
       const when = data.computedAt
         ? new Date(data.computedAt as string).toLocaleString()
         : "now";
+      const blankKeyNote = data.keyCreated
+        ? " Created a blank KEY (no winners yet) so picks can show at 0 points."
+        : "";
       setMessage(
-        `Standings snapshot regenerated for ${year}: ${data.entryCount ?? 0} entries · ${when}.`,
+        `Standings snapshot regenerated for ${year}: ${data.entryCount ?? 0} entries · ${when}.${blankKeyNote}`,
       );
       await loadSnapshotStatus(String(year));
     } catch (err) {
@@ -529,19 +533,66 @@ export default function VintageStandingsEditor() {
             it in the <strong>2020 newspaper</strong> section below.
           </p>
           </SectionPanel>
+          <SectionPanel
+            id={sectionIdFor("Tournament Live & roster")}
+            title="Tournament Live & roster"
+          >
+            <label
+              className="ve-checkbox-row"
+              htmlFor="vintage-standings-tournamentLive"
+            >
+              <input
+                id="vintage-standings-tournamentLive"
+                data-testid="vintage-standings-tournament-live"
+                type="checkbox"
+                checked={content.tournamentLive === "true"}
+                onChange={(e) =>
+                  update("tournamentLive", e.target.checked ? "true" : "false")
+                }
+              />
+              <span>
+                <strong>Tournament Live</strong>
+                <span className="ve-help" style={{ display: "block" }}>
+                  Off (default): active Tourney Year shows submitted entry names
+                  + total count only (sorted by name). On: full scored
+                  standings. Independent of homepage tipoff (tipoff still locks
+                  new entries / edits / submits). Publish after changing.
+                </span>
+              </span>
+            </label>
+            <p className="ve-help" style={{ marginTop: "1rem" }}>
+              Roster copy below appears while Tournament Live is off (the red
+              count line and intro on /standings).
+            </p>
+            <div className="ve-grid" style={{ marginTop: "0.75rem" }}>
+              {field("rosterHeading", "Roster page heading", {
+                help: "Blank uses the main Standings heading.",
+              })}
+              {field("rosterCountTemplate", "Roster count (hero)", {
+                help: 'Token: {count}. Example: "{count} submitted entries"',
+              })}
+              {field("rosterIntro", "Roster intro", {
+                multiline: true,
+                help: "Token: {year}. Shown under the red count. Use || for a line break.",
+              })}
+              {field("rosterSignInHint", "Sign-in hint (signed out)", {
+                help: "Blank hides. Shown when not logged in. Use || for a line break.",
+              })}
+            </div>
+          </SectionPanel>
           <SectionPanel id={sectionIdFor("Filters & badges")} title="Filters & badges">
           <div className="ve-grid">
             {field("filterAllLabel", "All Entries button")}
             {field("filterMineLabel", "My Entries button")}
             {field("yoursBadgeLabel", "YOURS badge (signed-in owner)")}
-            {field("showPaidIndicator", "Show paid indicator", {
-              help: 'Use "true" or "false". When false, paid glyphs are hidden.',
+            {field("showPaidIndicator", "Show payment badges", {
+              help: 'Use "true" or "false". Desktop Paid column and mobile stats-line badge use My Picks payment cards (Paid / Pending / Unpaid).',
             })}
-            {field("paidGlyph", "Paid glyph", {
-              help: 'Shown next to paid entries (default "$").',
+            {field("paidGlyph", "Paid glyph (legacy)", {
+              help: "Deprecated — live UI uses My Picks payment cards. Kept for older copy/export.",
             })}
-            {field("paidAriaLabel", "Paid accessible label", {
-              help: "Title / screen-reader text for the paid glyph.",
+            {field("paidAriaLabel", "Paid accessible label (legacy)", {
+              help: "Deprecated — badge captions come from My Picks CMS payment styles.",
             })}
           </div>
           </SectionPanel>
@@ -797,8 +848,11 @@ export default function VintageStandingsEditor() {
           <SectionPanel id={sectionIdFor("Regenerate snapshot")} title="Regenerate snapshot">
           <p className="ve-help">
             Rebuilds <code>live_standings_snapshots</code> for the year from the
-            current KEY bracket and all submitted pool brackets. Does not change the
-            KEY itself. The public Updated stamp will move to the new compute time.
+            current KEY bracket and all submitted pool brackets. If no KEY exists
+            yet, creates a blank KEY (empty picks) so tipoff-day standings can show
+            everyone’s picks at 0 points before any games are filled in. Does not
+            overwrite an existing KEY. The public Updated stamp will move to the
+            new compute time.
           </p>
           <div className="ve-grid">
             <label className="ve-field" htmlFor="standings-recompute-year">

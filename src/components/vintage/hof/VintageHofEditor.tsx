@@ -19,6 +19,7 @@ import {
 } from "@/lib/vintage/hofContent";
 import type { VintageHofState } from "@/lib/vintage/hofStore";
 import VintageAdminNav from "../VintageAdminNav";
+import HofSeasonsEditor from "./HofSeasonsEditor";
 import "../editor.css";
 import {
   SectionPanel,
@@ -33,6 +34,7 @@ const SECTION_LABELS = [
   "Champions by year",
   "All-time leaders",
   "Closing",
+  "Podium history",
 ] as const;
 
 /**
@@ -211,10 +213,11 @@ export default function VintageHofEditor() {
           <Link href="/hall-of-fame" className="ve-back">
             <ArrowLeft size={16} /> Hall of Fame
           </Link>
-          <h1>Hall of Fame copy</h1>
+          <h1>Hall of Fame</h1>
           <p className="ve-help">
-            Edit titles and subtitles shown on the vintage Hall of Fame. Historical
-            records still come from the Google Sheet.
+            Edit page labels here (Save draft / Publish). Edit winner years,
+            names, and scores in <strong>Podium history</strong> — that data
+            lives in the database, not a Google Sheet.
           </p>
         </div>
         <div className="ve-actions">
@@ -305,6 +308,12 @@ export default function VintageHofEditor() {
           </SectionPanel>
           <SectionPanel id={sectionIdFor("Closing")} title="Closing">
             <div className="ve-grid">{field("closing", "Closing line")}</div>
+          </SectionPanel>
+          <SectionPanel
+            id={sectionIdFor("Podium history")}
+            title="Podium history"
+          >
+            <HofSeasonsEditor />
           </SectionPanel>
         </div>
       </div>

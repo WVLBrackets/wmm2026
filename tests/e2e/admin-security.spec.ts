@@ -11,7 +11,6 @@ import { getBaseURL, getTestUserCredentials } from '../fixtures/test-helpers';
  * 
  * Admin pages tested:
  * - /admin (main admin dashboard)
- * - /admin/users-across-environments
  * - /admin/reset-password
  * - /admin/tournament-builder
  */
@@ -21,13 +20,6 @@ test.describe('Admin Security - Access Control', () => {
   test.describe('Unauthenticated Access', () => {
     test('should redirect unauthenticated user from /admin to sign-in', async ({ page }) => {
       await page.goto('/admin');
-      
-      // Should be redirected to sign-in page
-      await expect(page).toHaveURL(/\/auth\/signin/, { timeout: 10000 });
-    });
-
-    test('should redirect unauthenticated user from /admin/users-across-environments', async ({ page }) => {
-      await page.goto('/admin/users-across-environments');
       
       // Should be redirected to sign-in page
       await expect(page).toHaveURL(/\/auth\/signin/, { timeout: 10000 });
@@ -64,20 +56,6 @@ test.describe('Admin Security - Access Control', () => {
       expect(isRedirected || hasUnauthorized).toBeTruthy();
     });
 
-    test('should block non-admin user from /admin/users-across-environments', async ({ page }, testInfo) => {
-      const credentials = getTestUserCredentials(testInfo.project.name);
-      await signInUser(page, credentials.email, credentials.password);
-      
-      // Try to access admin page
-      await page.goto('/admin/users-across-environments');
-      
-      // Should either redirect away or show unauthorized message
-      const url = page.url();
-      const isRedirected = !url.includes('/admin') || url.includes('/auth/signin') || url.includes('/bracket');
-      const hasUnauthorized = await page.getByText(/unauthorized|access denied|not authorized|forbidden/i).isVisible().catch(() => false);
-      
-      expect(isRedirected || hasUnauthorized).toBeTruthy();
-    });
 
     test('should block non-admin user from /admin/reset-password', async ({ page }, testInfo) => {
       const credentials = getTestUserCredentials(testInfo.project.name);

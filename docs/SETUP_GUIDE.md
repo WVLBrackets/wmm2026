@@ -20,7 +20,7 @@ This guide helps you get up and running on a new machine while preserving all co
    # On Windows PowerShell
    .\scripts\pull-env-all.ps1
    ```
-   This creates `.env.test` with all necessary environment variables from Vercel.
+   This creates `.env.test` / local env files with values from Vercel. Confirm **`NEXTAUTH_URL`** and **`ADMIN_EMAIL`** are present — there is **no** `wmm2026.vercel.app` origin fallback.
 
 4. **Install Playwright browsers** (for local testing/debugging only)
    ```bash
@@ -36,135 +36,131 @@ This guide helps you get up and running on a new machine while preserving all co
 
 ## Environment Variables
 
-The following environment variables are required (automatically pulled via `pull-env-all.ps1`):
+Pulled via `pull-env-all.ps1` or set in Vercel. Names vary slightly by environment; production is validated by `assertProductionEnv` (`src/lib/env.ts`) on `/api/health`.
 
-### Required for Development
-- `POSTGRES_URL` - Database connection string
-- `RESEND_API_KEY` - Email service API key
-- `RESEND_WEBHOOK_SECRET` - Webhook signature verification
-- `FROM_EMAIL_STAGING` / `FROM_EMAIL_PRODUCTION` - Email sender addresses
-- `EMAIL_USER_STAGING` / `EMAIL_PASS_STAGING` - Gmail fallback credentials
-- `EMAIL_USER_PRODUCTION` / `EMAIL_PASS_PRODUCTION` - Gmail fallback credentials
-- `VERCEL_ENV` - Environment identifier
-- `TEST_USER_EMAIL` - Test user email for Playwright tests
-- `TEST_USER_PASSWORD_STAGING` / `TEST_USER_PASSWORD_PRODUCTION` - Test user passwords
+### Required for the app to run
 
-### Standings page (Google Sheet)
+| Variable | Purpose |
+|----------|---------|
+| `NEXTAUTH_SECRET` | Session signing |
+| `NEXTAUTH_URL` | Canonical origin for auth callbacks and emails. **Required. No product-domain fallback.** |
+| `ADMIN_EMAIL` | Comma-separated admin identities (`isAdminEmail` / `requireAdminRequest`). First address receives admin error mail. |
+| `POSTGRES_URL` | Application / bracket database (Neon) |
+| `VINTAGE_DATABASE_URL` | Dedicated vintage **CMS** Neon branch. Never the bracket database. |
+| `RESEND_API_KEY` | Email delivery |
+| `FROM_EMAIL_STAGING` / `FROM_EMAIL_PRODUCTION` | Sender addresses |
 
-The standings tab reads from a **published-format** Google Sheet (via the `gviz` CSV URL).
+### Required in production (`assertProductionEnv`)
 
-- **`STANDINGS_SHEET_ID_PROD`** — Required in **production** (`VERCEL_ENV=production`).
-- **`STANDINGS_SHEET_ID_STAGE`** — Required on **Vercel preview / staging** (any non-production deploy).
-- **Local `npm run dev`:** If `STANDINGS_SHEET_ID_STAGE` is missing but **`STANDINGS_SHEET_ID_PROD`** is set (e.g. from `pull-env-all.ps1`), the app **reuses the prod sheet** and logs a short warning. To use the staging sheet locally, add `STANDINGS_SHEET_ID_STAGE` to `.env.local`.
-- **`STANDINGS_SHEET_ID`** (optional) — If set, **overrides** prod/stage for all environments (handy for one-off local testing).
+- `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `ADMIN_EMAIL`, `CRON_SECRET`
+- `DEV_AUTH_BYPASS` and `NEXT_PUBLIC_DEV_AUTH_BYPASS` **must be unset** (not `true`)
 
-### Optional
-- `SUPPRESS_TEST_EMAILS` - Set to 'true' to suppress emails during test runs
+### Email / webhooks
+
+- `RESEND_WEBHOOK_SECRET` — inbound auto-reply webhook
+- `EMAIL_USER_*` / `EMAIL_PASS_*` — Gmail SMTP fallback
+- `SUPPRESS_TEST_EMAILS` — optional; set `true` to suppress emails during test runs
+
+### Testing
+
+- `TEST_USER_EMAIL`
+- `TEST_USER_PASSWORD_STAGING` / `TEST_USER_PASSWORD_PRODUCTION`
+- `VERCEL_ENV` — environment identifier
+
+### Vintage CMS storage (images)
+
+- `VINTAGE_S3_ENDPOINT`, `VINTAGE_S3_REGION`, `VINTAGE_S3_BUCKET`
+- `VINTAGE_S3_ACCESS_KEY_ID`, `VINTAGE_S3_SECRET_ACCESS_KEY`
+
+### Cron
+
+- `CRON_SECRET` — Bearer token for `/api/cron/scoreboard-sync` (also sent by Vercel Cron)
+- Optional `SCOREBOARD_SYNC_ACTOR_USER_ID` if the `ADMIN_EMAIL` user row is missing
+
+## Neon databases
+
+This product uses **two** Neon databases per environment:
+
+1. **App / brackets** — `POSTGRES_URL` (users, brackets, payments, `hof_seasons`, scoreboard ops tables, live standings snapshots, `admin_notifications`).
+2. **Vintage CMS** — `VINTAGE_DATABASE_URL` (`vintage_homepage` draft/published JSON + sidecars). Isolated from bracket data.
+
+Do not point `VINTAGE_DATABASE_URL` at the app database. Preview/staging and production must use matching pairs of branches.
+
+## CMS (user-facing copy)
+
+**Published CMS is the only source of visitor copy** (`vintage_homepage` + sidecars). There is no Config Sheet.
+
+- Edit and publish at `/vintage/admin/*` (ops admin remains `/admin`).
+- Blank CMS field → hide the element on the public path (`blankMissingStrings` after normalize).
+- Required Key Data (**Tourney Year**, **site name**) missing, or CMS load failure → throw, vintage `SiteErrorPanel`, email via `notifyAdminOfError` (throttled in `admin_notifications`).
+- `DEFAULT_*` objects seed the **editor** only. They are never merged on the public read path.
+
+Promote CMS between environments with **CMS export / import** on the Home admin desk. Code deploy does not copy Neon CMS rows.
 
 ## Key Project Context
-
-### Version History
-- **v5.1** (Current Baseline): Admin UI improvements
-  - Inline delete confirmations
-  - Protect Submitted/Confirmed toggles
-  - Status icons (green check/yellow clock)
-  - Removed Tie Breaker and Status columns
-  - Entry name search on Brackets Admin
-  - Totals row on Brackets Admin
-
-- **v5.0**: Full regression testing setup
-  - Multi-browser testing (Chrome, Firefox, WebKit/Safari)
-  - Mobile device emulation
-  - Email suppression for test users
-  - GitHub Actions workflows for automated testing
 
 ### Architecture Highlights
 
 1. **Email Service**
    - Primary: Resend API
    - Fallback: Gmail SMTP
-   - Auto-reply system for do-not-reply addresses
+   - Auto-reply for do-not-reply addresses (copy from Emails & Account CMS)
    - Test user detection and email suppression
 
 2. **Testing Setup**
    - Playwright for E2E testing
-   - 5 logical test groups:
-     - Group 1: Connect/Simple tests
-     - Group 2: Account creation
-     - Group 3: Authentication
-     - Group 4: Bracket management
-     - Group 5: API tests
-   - GitHub Actions workflows for manual execution
-   - Support for desktop and mobile testing
-   - Support for Chrome, Firefox, and WebKit browsers
+   - GitHub Actions workflows for manual execution on staging previews
+   - Support for desktop and mobile; Chrome, Firefox, and WebKit
 
-3. **Admin Features**
-   - Users Admin: Bulk delete with Protect Confirmed toggle
-   - Brackets Admin: Bulk delete with Protect Submitted toggle
-   - Inline delete confirmations (replaces popup modals)
-   - Status indicators via icons
+3. **Admin**
+   - `/admin` — ops (Users, Brackets, Key, Teams, Tourney, Payments, Logs)
+   - `/vintage/admin` — CMS (Home, Info, Hall of Fame, My Picks, Standings, Emails & Account, Bracket Editor Messages, Scoreboard)
+   - `/admin/vintage-*` URLs redirect in `next.config.ts` (not stub pages)
 
 4. **Configuration**
-   - Site configuration via Google Sheets
-   - Tournament year and other settings pulled from config
-   - Environment-specific settings (staging vs production)
+   - Season controls live in homepage Key Data / Payments (Tourney Year, site name, locks, entry cost, pay methods)
+   - Environment-specific settings (staging vs production) stay in Vercel env
 
 ### Important Files
 
-- `playwright.config.ts` - Test configuration with browser/device projects
-- `src/lib/emailService.ts` - Email sending logic with Resend/Gmail fallback
-- `src/lib/testUserDetection.ts` - Test user identification for email suppression
-- `src/components/admin/UsersTab.tsx` - Users admin interface
-- `src/components/admin/BracketsTab.tsx` - Brackets admin interface
-- `.github/workflows/` - GitHub Actions workflows for testing
+- `playwright.config.ts` — Test configuration with browser/device projects
+- `src/lib/emailService.ts` — Email sending with Resend/Gmail fallback
+- `src/lib/testUserDetection.ts` — Test user identification for email suppression
+- `src/lib/vintage/cmsBundle.ts` — Published CMS cache
+- `src/lib/env.ts` — Production env assertions
+- `.github/workflows/` — GitHub Actions workflows for testing
 
 ### Testing Workflow
 
 **Primary Testing Method: GitHub Actions Workflows**
 - All testing is done via staging preview deployments
 - Manual workflow execution through GitHub Actions
-- Workflows available:
-  - Full Regression Tests
-  - Group 1-5 individual test groups
-  - Configure: Environment (Prod/Preview), Browser (Chrome/Firefox/WebKit/All), Mode (Desktop/Mobile/Both)
+- Workflows available: Full Regression Tests, Group 1–5, environment/browser/mode selectors
 
 **Local Testing (Optional - for debugging only)**
 ```bash
-# Run all tests locally
 npm test
-
-# Run specific test group
 npm run test:group-1
-
-# Run tests for specific environment
 TEST_ENV=staging npm test
-
-# Run mobile tests
 npm run test:mobile
-
-# Run with email suppression
 SUPPRESS_TEST_EMAILS=true npm test
 ```
-Note: Local testing requires `.env.test` file with all environment variables.
-
-### Database
-
-- PostgreSQL database hosted on Vercel
-- Environment-specific databases (staging vs production)
-- Connection via `POSTGRES_URL` environment variable
+Local testing requires `.env.test` with all environment variables.
 
 ### Deployment
 
 - **Staging**: Automatically deploys from `staging` branch
-- **Production**: Automatically deploys from `main` branch
+- **Production**: Automatically deploys from `main` branch — **only after explicit production approval**
 - Both managed via Vercel
+
+Before pushing to `staging`, run `npm run build` so CI/Vercel catches no new compile/type issues.
 
 ## Cursor-Specific Notes
 
 Since Cursor doesn't automatically sync conversation history:
 
 1. **Document important decisions** in this file or `docs/` folder
-2. **Use Git commits** with descriptive messages (already done)
+2. **Use Git commits** with descriptive messages
 3. **Review recent commits** to understand recent changes:
    ```bash
    git log --oneline -20
@@ -177,12 +173,15 @@ Since Cursor doesn't automatically sync conversation history:
 ## Troubleshooting
 
 ### Missing Environment Variables
-Run `.\scripts\pull-env-all.ps1` to pull all environment variables from Vercel.
+Run `.\scripts\pull-env-all.ps1`. Confirm `NEXTAUTH_URL`, `ADMIN_EMAIL`, `POSTGRES_URL`, and `VINTAGE_DATABASE_URL`.
+
+### CMS / SiteErrorPanel on `/`
+Published CMS could not load or required Key Data is blank. Check the vintage Neon branch, then Vintage Admin → Key Data, then `/api/health`.
 
 ### Playwright Tests Failing
 1. Ensure browsers are installed: `npx playwright install`
 2. Check `.env.test` exists and has `TEST_USER_EMAIL` and passwords
-3. Verify `POSTGRES_URL` is set correctly
+3. Verify `POSTGRES_URL` and `VINTAGE_DATABASE_URL` are set correctly
 
 ### Build Errors
 1. Clear `.next` folder: `rm -rf .next` (or `rmdir /s .next` on Windows)
@@ -191,9 +190,8 @@ Run `.\scripts\pull-env-all.ps1` to pull all environment variables from Vercel.
 
 ## Next Steps After Setup
 
-1. Verify environment variables are loaded: Check `.env.test` exists (only needed for local testing)
+1. Verify environment variables are loaded
 2. Review recent changes: `git log --oneline -10`
-3. Push changes to staging branch to trigger preview deployment
+3. Push changes to **staging** (after `npm run build`) to trigger preview deployment
 4. Execute workflows via GitHub Actions for testing on staging preview
 5. (Optional) Run local tests for debugging: `npm run test:group-1`
-

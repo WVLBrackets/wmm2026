@@ -43,6 +43,15 @@ import {
   type VintageStandingsContent,
 } from "@/lib/vintage/standingsContent";
 import type { VintageContent } from "@/lib/vintage/content";
+import type { VintageBracketEditorContent } from "@/lib/vintage/bracketEditorContent";
+import {
+  vintagePaymentBadgeCssVars,
+  type VintagePicksContent,
+} from "@/lib/vintage/picksContent";
+import CmsText from "@/components/cms/CmsText";
+import VintagePaymentBadge, {
+  resolvePaymentBadgeKind,
+} from "@/components/vintage/payment/VintagePaymentBadge";
 import VintageShell from "../VintageShell";
 import Standings2020Newspaper from "./Standings2020Newspaper";
 import "./standings.css";
@@ -51,6 +60,14 @@ import "./paper-2020.css";
 type FilterMode = "all" | "mine";
 
 type PlaceMedal = "first" | "second" | "third";
+
+/** Privacy-safe pre-tipoff roster row from GET /api/live-standings. */
+type RosterEntry = {
+  entryName: string;
+  mine?: boolean;
+};
+
+type StandingsViewMode = "standings" | "roster";
 
 /**
  * Map competition rank 1–3 to place-medal tokens (ties share the same place).
@@ -241,28 +258,48 @@ function formatUpdatedAt(iso: string | undefined): string {
 export default function VintageLiveStandings({
   home,
   copy,
+  paymentBadges,
+  bracketEditorCopy,
   admin = false,
   standingsDefaultYear,
   viewingYear: initialViewingYear,
   availableYears,
+  initialSnapshot = null,
 }: {
   home: VintageContent;
   copy: VintageStandingsContent;
+  /** My Picks CMS payment badge styles (Paid / Pending / Unpaid). */
+  paymentBadges: VintagePicksContent["payment"];
+  /** Bracket Editor Messages CMS (bracket viewer popup). */
+  bracketEditorCopy: VintageBracketEditorContent;
   admin?: boolean;
   /** CMS Standings Year — default for the selector (not Tourney Year). */
   standingsDefaultYear: number;
   viewingYear: number;
   availableYears: number[];
+  /** Server-rendered snapshot for the first paint (scored years only). */
+  initialSnapshot?: {
+    standingsData: StandingsData;
+    computedAt: string;
+  } | null;
 }) {
   const { data: session } = useSession();
   const sessionUserId = session?.user?.id ?? null;
-  const isAuthenticated = Boolean(sessionUserId);
+  const isAuthenticated = Boolean(session?.user);
 
   const [viewingYear, setViewingYear] = useState(initialViewingYear);
-  const [standingsData, setStandingsData] = useState<StandingsData | null>(null);
-  const [computedAt, setComputedAt] = useState<string | null>(null);
+  const [standingsMode, setStandingsMode] =
+    useState<StandingsViewMode>("standings");
+  const [standingsData, setStandingsData] = useState<StandingsData | null>(
+    initialSnapshot?.standingsData ?? null,
+  );
+  const [rosterEntries, setRosterEntries] = useState<RosterEntry[]>([]);
+  const [totalEntryCount, setTotalEntryCount] = useState(0);
+  const [computedAt, setComputedAt] = useState<string | null>(
+    initialSnapshot?.computedAt ?? null,
+  );
   const [available, setAvailable] = useState(true);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialSnapshot);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -274,8 +311,12 @@ export default function VintageLiveStandings({
     () => new Map(),
   );
   const stickyBarRef = useRef<HTMLDivElement>(null);
+  const skipFetchYearRef = useRef<number | null>(
+    initialSnapshot ? initialViewingYear : null,
+  );
   /** Pixel height of the sticky controls band (feeds sticky thead `top`). */
   const [stickyControlsHeight, setStickyControlsHeight] = useState(54);
+  const isRosterMode = standingsMode === "roster";
 
   const yearOptions = useMemo(() => {
     const set = new Set<number>(
@@ -299,36 +340,31 @@ export default function VintageLiveStandings({
     () => standingsPickResultA11yPhrases(copy),
     [copy],
   );
-  const showPaidColumn = isStandingsFlagOn(copy.showPaidIndicator);
+  /** Desktop Paid column + mobile stats-line badge (My Picks payment cards). */
+  const showPaymentBadges = isStandingsFlagOn(copy.showPaidIndicator);
   /** Static finals (≤2025 archives): no My Entries / no bracket open. */
   const legacyYear = isLegacyStandingsYear(viewingYear);
   /** 2020 (and similar): newspaper edition instead of a table. */
   const newspaperYear = isNewspaperStandingsYear(viewingYear);
 
+  const paymentChromeVars = useMemo(
+    () => vintagePaymentBadgeCssVars(paymentBadges),
+    [paymentBadges],
+  );
+
   /**
-   * Paid glyph cell — empty when unpaid or paid column disabled.
+   * Paid / Pending / Unpaid card (same CMS styles as My Picks).
    */
-  const renderPaidCell = (entry: StandingsEntry) => {
-    if (!showPaidColumn || !entry.paid) {
-      return (
-        <span className="v-standings__paid v-standings__paid--empty" aria-hidden>
-          {"\u00a0"}
-        </span>
-      );
-    }
+  const renderPaymentBadge = (entry: StandingsEntry) => {
+    if (!showPaymentBadges) return null;
+    const kind = resolvePaymentBadgeKind(entry.paymentStatus, entry.paid);
     return (
-      <span
-        className="v-standings__paid"
-        title={copy.paidAriaLabel}
-        aria-label={copy.paidAriaLabel}
-      >
-        {copy.paidGlyph}
-      </span>
+      <VintagePaymentBadge kind={kind} style={paymentBadges[kind]} />
     );
   };
 
   /**
-   * Load live standings for a year; keep last good data on refresh failure.
+   * Load live standings or pre-tipoff roster for a year.
    */
   const loadStandings = useCallback(
     async (year: number, isRefresh: boolean) => {
@@ -336,6 +372,9 @@ export default function VintageLiveStandings({
       else {
         setLoading(true);
         setStandingsData(null);
+        setRosterEntries([]);
+        setTotalEntryCount(0);
+        setStandingsMode("standings");
       }
       setError("");
       try {
@@ -355,11 +394,39 @@ export default function VintageLiveStandings({
         }
         if (!json.available) {
           setAvailable(false);
-          if (!isRefresh) setStandingsData(null);
+          if (!isRefresh) {
+            setStandingsData(null);
+            setRosterEntries([]);
+            setTotalEntryCount(0);
+          }
           setComputedAt(null);
+          setStandingsMode("standings");
           return;
         }
         setAvailable(true);
+        if (json.mode === "roster") {
+          setStandingsMode("roster");
+          setStandingsData(null);
+          setComputedAt(null);
+          const rows = Array.isArray(json.entries)
+            ? (json.entries as RosterEntry[])
+            : [];
+          setRosterEntries(
+            rows.map((row) => ({
+              entryName: String(row.entryName ?? ""),
+              ...(typeof row.mine === "boolean" ? { mine: row.mine } : {}),
+            })),
+          );
+          setTotalEntryCount(
+            typeof json.totalEntryCount === "number"
+              ? json.totalEntryCount
+              : rows.length,
+          );
+          return;
+        }
+        setStandingsMode("standings");
+        setRosterEntries([]);
+        setTotalEntryCount(0);
         setStandingsData(json.standingsData as StandingsData);
         setComputedAt(
           (json.computedAt as string) ||
@@ -385,8 +452,16 @@ export default function VintageLiveStandings({
       setRefreshing(false);
       setAvailable(true);
       setStandingsData(null);
+      setRosterEntries([]);
+      setTotalEntryCount(0);
+      setStandingsMode("standings");
       setComputedAt(null);
       setError("");
+      return;
+    }
+    if (skipFetchYearRef.current === viewingYear) {
+      skipFetchYearRef.current = null;
+      setLoading(false);
       return;
     }
     void loadStandings(viewingYear, false);
@@ -395,6 +470,10 @@ export default function VintageLiveStandings({
   useEffect(() => {
     if ((legacyYear || newspaperYear) && filter !== "all") setFilter("all");
   }, [legacyYear, newspaperYear, filter]);
+
+  useEffect(() => {
+    if (!isAuthenticated && filter !== "all") setFilter("all");
+  }, [isAuthenticated, filter]);
 
   /**
    * Keep sticky column headers parked under the measured sticky controls band.
@@ -413,9 +492,10 @@ export default function VintageLiveStandings({
     newspaperYear,
     loading,
     standingsData,
+    isRosterMode,
     isAuthenticated,
     legacyYear,
-    showPaidColumn,
+    showPaymentBadges,
   ]);
 
   /**
@@ -450,6 +530,18 @@ export default function VintageLiveStandings({
     }
     return rows;
   }, [standingsData, filter, search, sessionUserId]);
+
+  const filteredRosterEntries = useMemo(() => {
+    let rows = rosterEntries;
+    if (filter === "mine" && isAuthenticated) {
+      rows = rows.filter((e) => e.mine === true);
+    }
+    const q = search.trim().toLowerCase();
+    if (q) {
+      rows = rows.filter((e) => e.entryName.toLowerCase().includes(q));
+    }
+    return rows;
+  }, [rosterEntries, filter, search, isAuthenticated]);
 
   const openBracket = (entry: StandingsEntry) => {
     if (!entry.bracketId) return;
@@ -550,7 +642,7 @@ export default function VintageLiveStandings({
   };
 
   /**
-   * Mobile Option B stats line under the entry name.
+   * Mobile Option B stats line under the entry name (payment badge beside TB).
    */
   const mobileStatsLine = (entry: StandingsEntry) => {
     const gap = formatPointsGap(entry.points, leaderPoints);
@@ -560,20 +652,25 @@ export default function VintageLiveStandings({
     // Strip leading "TB: " for compact mobile line: `145 PTS · TB 138`
     const tbNum = tbRaw.replace(/^TB:\s*/i, "");
     const pts = `${entry.points} PTS`;
-    if (gap.text) {
-      return (
-        <p className="v-standings__m-stats">
-          <span>{pts}</span>{" "}
-          <span aria-label={gap.ariaLabel ?? undefined}>{gap.text}</span>
-          {" · "}
-          <span>TB {tbNum}</span>
-        </p>
-      );
-    }
+    const badge = renderPaymentBadge(entry);
     return (
-      <p className="v-standings__m-stats">
-        {pts} · TB {tbNum}
-      </p>
+      <div className="v-standings__m-stats">
+        <p className="v-standings__m-stats-text">
+          {gap.text ? (
+            <>
+              <span>{pts}</span>{" "}
+              <span aria-label={gap.ariaLabel ?? undefined}>{gap.text}</span>
+              {" · "}
+              <span>TB {tbNum}</span>
+            </>
+          ) : (
+            <>
+              {pts} · TB {tbNum}
+            </>
+          )}
+        </p>
+        {badge}
+      </div>
     );
   };
 
@@ -581,8 +678,42 @@ export default function VintageLiveStandings({
     ? `${copy.updatedLabel} ${formatUpdatedAt(computedAt)}`
     : "";
 
+  const keyGamesComplete =
+    typeof standingsData?.keyGamesComplete === "number" &&
+    Number.isFinite(standingsData.keyGamesComplete)
+      ? Math.max(0, Math.floor(standingsData.keyGamesComplete))
+      : null;
+  const keyGamesTotal =
+    typeof standingsData?.keyGamesTotal === "number" &&
+    Number.isFinite(standingsData.keyGamesTotal) &&
+    standingsData.keyGamesTotal > 0
+      ? Math.floor(standingsData.keyGamesTotal)
+      : 63;
+  const gamesProgressText =
+    keyGamesComplete != null
+      ? `${keyGamesComplete} of ${keyGamesTotal} Games Complete`
+      : null;
+
   const emptyMessage = (() => {
     if (newspaperYear || loading) return null;
+    if (isRosterMode) {
+      if (!available) {
+        return formatVintageStandingsLabel(copy.notAvailableMessage, {
+          year: viewingYear,
+        });
+      }
+      if (
+        filter === "mine" &&
+        filteredRosterEntries.length === 0 &&
+        !search.trim()
+      ) {
+        return copy.noMyEntriesMessage;
+      }
+      if (search.trim() && filteredRosterEntries.length === 0) {
+        return copy.noSearchResultsMessage;
+      }
+      return null;
+    }
     if (!available || !standingsData) {
       return formatVintageStandingsLabel(copy.notAvailableMessage, {
         year: viewingYear,
@@ -597,35 +728,67 @@ export default function VintageLiveStandings({
     return null;
   })();
 
+  const pageHeading = newspaperYear
+    ? copy.paper2020.pageHeading
+    : isRosterMode
+      ? copy.rosterHeading.trim() || copy.heading
+      : copy.heading;
+
+  const rosterCountLabel = formatVintageStandingsLabel(
+    copy.rosterCountTemplate,
+    { count: totalEntryCount },
+  );
+  const rosterIntroText = formatVintageStandingsLabel(copy.rosterIntro, {
+    year: viewingYear,
+  });
+
   return (
     <VintageShell content={home} testId="vintage-standings-page">
       <div
-        className="v-standings"
+        className={`v-standings${isRosterMode ? " v-standings--roster" : ""}`}
         data-testid="vintage-live-standings"
+        data-mode={isRosterMode ? "roster" : "standings"}
         style={
           {
             ...(standingsResultChromeStyle(copy) as CSSProperties),
+            ...(paymentChromeVars as CSSProperties),
             ["--vs-sticky-controls-height" as string]: `${stickyControlsHeight}px`,
           } as CSSProperties
         }
       >
         <header className="v-standings__header">
           <div className="v-standings__title-block">
-            <h1 className="v-standings__heading">
-              {newspaperYear ? copy.paper2020.pageHeading : copy.heading}
-            </h1>
+            <h1 className="v-standings__heading">{pageHeading}</h1>
             {newspaperYear &&
             !isPaper2020SectionHidden(copy.paper2020.hidePageSubhead) ? (
               <p className="v-standings__updated" data-testid="standings-updated">
                 {copy.paper2020.pageSubhead}
               </p>
-            ) : !newspaperYear && updatedText ? (
+            ) : !newspaperYear && !isRosterMode && updatedText ? (
               <p
                 className="v-standings__updated"
                 data-testid="standings-updated"
               >
-                {updatedText}
-                {refreshing ? " · Refreshing…" : ""}
+                <span>
+                  {updatedText}
+                  {refreshing ? " · Refreshing…" : ""}
+                </span>
+                {gamesProgressText ? (
+                  <span
+                    className="v-standings__progress"
+                    data-testid="standings-games-complete"
+                  >
+                    <Image
+                      src="/images/basketball icon.png"
+                      alt=""
+                      width={16}
+                      height={16}
+                      className="v-standings__progress-ball"
+                      unoptimized
+                    />
+                    <span>{gamesProgressText}</span>
+                  </span>
+                ) : null}
               </p>
             ) : null}
           </div>
@@ -686,7 +849,7 @@ export default function VintageLiveStandings({
           <Standings2020Newspaper copy={copy.paper2020} />
         ) : null}
 
-        {!newspaperYear ? (
+        {!newspaperYear && !loading ? (
         <div
           ref={stickyBarRef}
           className="v-standings__sticky-bar"
@@ -735,22 +898,17 @@ export default function VintageLiveStandings({
             ) : null}
           </div>
 
-          {!loading && !emptyMessage && standingsData ? (
+          {!loading && !emptyMessage && standingsData && !isRosterMode ? (
             <div
               className="v-standings__mobile"
               data-testid="standings-mobile-head"
             >
               <div
-                className={`v-standings__m-head${
-                  showPaidColumn ? "" : " v-standings__m-head--no-paid"
-                }`}
+                className="v-standings__m-head v-standings__m-head--no-paid"
                 aria-hidden
               >
                 <span>{copy.colRankHeaderMobile}</span>
                 <span>{copy.colEntryHeaderMobile}</span>
-                {showPaidColumn ? (
-                  <span>{copy.colPaidHeaderMobile}</span>
-                ) : null}
                 <span>{copy.colFinalFourHeaderMobile}</span>
                 <span>{copy.colChampHeaderMobile}</span>
               </div>
@@ -759,24 +917,100 @@ export default function VintageLiveStandings({
         </div>
         ) : null}
 
-        {error && standingsData ? (
+        {isRosterMode && !loading && available ? (
+          <div
+            className="v-standings__roster-hero"
+            data-testid="standings-roster-hero"
+          >
+            <p
+              className="v-standings__roster-count"
+              data-testid="standings-roster-count"
+            >
+              {rosterCountLabel}
+            </p>
+            {rosterIntroText.trim() ? (
+              <CmsText
+                as="p"
+                className="v-standings__roster-intro"
+                text={rosterIntroText}
+              />
+            ) : null}
+            {!isAuthenticated && copy.rosterSignInHint.trim() ? (
+              <CmsText
+                as="p"
+                className="v-standings__roster-signin"
+                data-testid="standings-roster-signin-hint"
+                text={copy.rosterSignInHint.trim()}
+              />
+            ) : null}
+          </div>
+        ) : null}
+
+        {error && (standingsData || isRosterMode) ? (
           <p className="v-standings__status v-standings__status--error" role="status">
             {error} — showing last successful data.
           </p>
         ) : null}
 
         {loading ? (
-          <p className="v-standings__status" role="status">
-            Loading standings…
-          </p>
+          <div
+            className="v-standings__loading"
+            role="status"
+            data-testid="standings-loading"
+          >
+            <div className="v-standings__loading-spinner" aria-hidden />
+            <p className="v-standings__loading-text">Loading standings…</p>
+          </div>
         ) : emptyMessage ? (
-          <p
+          <CmsText
+            as="p"
             className="v-standings__status"
             role="status"
             data-testid="standings-empty"
-          >
-            {emptyMessage}
-          </p>
+            text={emptyMessage}
+          />
+        ) : isRosterMode ? (
+          <>
+            <div
+              className="v-standings__roster-list"
+              data-testid="standings-roster-list"
+            >
+              <ul className="v-standings__roster-ul">
+                {filteredRosterEntries.map((entry, index) => (
+                  <li
+                    key={`${entry.entryName}-${index}`}
+                    className={
+                      entry.mine
+                        ? "v-standings__roster-item is-yours"
+                        : "v-standings__roster-item"
+                    }
+                    data-testid={
+                      entry.mine
+                        ? "standings-roster-row-yours"
+                        : "standings-roster-row"
+                    }
+                  >
+                    <span className="v-standings__roster-name">
+                      {entry.entryName}
+                    </span>
+                    {entry.mine ? (
+                      <span className="v-standings__yours">
+                        {copy.yoursBadgeLabel}
+                      </span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <footer className="v-standings__footer">
+              <p data-testid="standings-showing-count">
+                {formatVintageStandingsLabel(copy.showingCountTemplate, {
+                  shown: filteredRosterEntries.length,
+                  total: totalEntryCount,
+                })}
+              </p>
+            </footer>
+          </>
         ) : standingsData ? (
           <>
             {/* One semantic table: sticky thead + body (F05). */}
@@ -793,7 +1027,7 @@ export default function VintageLiveStandings({
                 <colgroup>
                   <col className="v-standings__col-rank" />
                   <col className="v-standings__col-entry" />
-                  {showPaidColumn ? (
+                  {showPaymentBadges ? (
                     <col className="v-standings__col-paid" />
                   ) : null}
                   <col className="v-standings__col-points" />
@@ -806,7 +1040,7 @@ export default function VintageLiveStandings({
                   <tr>
                     <th scope="col">{copy.colRankHeader}</th>
                     <th scope="col">{copy.colEntryHeader}</th>
-                    {showPaidColumn ? (
+                    {showPaymentBadges ? (
                       <th scope="col">{copy.colPaidHeader}</th>
                     ) : null}
                     <th scope="col">{copy.colPointsHeader}</th>
@@ -849,9 +1083,9 @@ export default function VintageLiveStandings({
                             </span>
                           ) : null}
                         </td>
-                        {showPaidColumn ? (
+                        {showPaymentBadges ? (
                           <td className="v-standings__paid-cell">
-                            {renderPaidCell(entry)}
+                            {renderPaymentBadge(entry)}
                           </td>
                         ) : null}
                         <td className="v-standings__points">{entry.points}</td>
@@ -888,9 +1122,9 @@ export default function VintageLiveStandings({
                 return (
                   <div
                     key={entry.bracketId || `${entry.rank}-${entry.player}`}
-                    className={`v-standings__m-row${
+                    className={`v-standings__m-row v-standings__m-row--no-paid${
                       mine ? " is-yours" : ""
-                    }${showPaidColumn ? "" : " v-standings__m-row--no-paid"}`}
+                    }`}
                     data-testid={
                       mine ? "standings-m-row-yours" : "standings-m-row"
                     }
@@ -910,11 +1144,6 @@ export default function VintageLiveStandings({
                       </div>
                       {mobileStatsLine(entry)}
                     </div>
-                    {showPaidColumn ? (
-                      <div className="v-standings__m-paid">
-                        {renderPaidCell(entry)}
-                      </div>
-                    ) : null}
                     <div className="v-standings__m-ff">
                       {renderFinalFour(entry, standingsData, true)}
                     </div>
@@ -934,12 +1163,15 @@ export default function VintageLiveStandings({
                 })}
               </p>
               <p className="v-standings__legend">
-                {copy.legendFinalFourChamp}
+                <CmsText text={copy.legendFinalFourChamp} />
                 {" · "}
-                {copy.legendFinalistFrame}
-                {copy.legendYoursPaid.trim()
-                  ? ` · ${copy.legendYoursPaid.trim()}`
-                  : ""}
+                <CmsText text={copy.legendFinalistFrame} />
+                {copy.legendYoursPaid.trim() ? (
+                  <>
+                    {" · "}
+                    <CmsText text={copy.legendYoursPaid.trim()} />
+                  </>
+                ) : null}
               </p>
             </footer>
           </>
@@ -956,6 +1188,7 @@ export default function VintageLiveStandings({
           year={viewingYear}
           title={bracketViewerTitle}
           bracketFetchMode="pool"
+          copy={bracketEditorCopy}
         />
       </div>
     </VintageShell>
