@@ -52,7 +52,7 @@ Pulled via `pull-env-all.ps1` or set in Vercel. Names vary slightly by environme
 
 ### Required in production (`assertProductionEnv`)
 
-- `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `ADMIN_EMAIL`, `CRON_SECRET`
+- `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `ADMIN_EMAIL`
 - `DEV_AUTH_BYPASS` and `NEXT_PUBLIC_DEV_AUTH_BYPASS` **must be unset** (not `true`)
 
 ### Email / webhooks

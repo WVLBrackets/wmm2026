@@ -7,14 +7,17 @@ const PROD_REQUIRED = [
   "NEXTAUTH_SECRET",
   "NEXTAUTH_URL",
   "ADMIN_EMAIL",
-  "CRON_SECRET",
 ] as const;
 
 /**
- * True when this process is a Vercel production deployment.
+ * True for Vercel Production only (not Preview/staging).
+ * Off Vercel, falls back to NODE_ENV === "production" (e.g. local `next start`).
  */
 export function isProductionRuntime(): boolean {
-  return process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production";
+  if (process.env.VERCEL_ENV) {
+    return process.env.VERCEL_ENV === "production";
+  }
+  return process.env.NODE_ENV === "production";
 }
 
 /**

@@ -46,8 +46,8 @@ Production (`VERCEL_ENV=production` or `NODE_ENV=production`) must have:
 - `NEXTAUTH_SECRET`
 - `NEXTAUTH_URL` (canonical production origin — **no** `wmm2026.vercel.app` fallback)
 - `ADMIN_EMAIL` (comma-separated admins)
-- `CRON_SECRET`
 - `POSTGRES_URL` and `VINTAGE_DATABASE_URL`
+- Optional: `CRON_SECRET` only if you call `/api/cron/scoreboard-sync` manually
 - Email: `RESEND_API_KEY` and production `FROM_EMAIL_*`
 - Vintage S3 credentials if homepage images are used
 

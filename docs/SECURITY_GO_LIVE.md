@@ -46,7 +46,7 @@ New state-changing routes must call `csrfProtection` and an appropriate `RATE_LI
 
 ## Cron
 
-`/api/cron/scoreboard-sync` (optional scripted sync; not Vercel-scheduled on Hobby) requires `Authorization: Bearer CRON_SECRET`. Production still expects `CRON_SECRET` for env validation. Prefer Admin **Sync now** for day-to-day score pulls.
+`/api/cron/scoreboard-sync` (optional scripted sync; not Vercel-scheduled on Hobby) requires `Authorization: Bearer CRON_SECRET` when used. Prefer Admin **Sync now** for day-to-day score pulls. `CRON_SECRET` is not required by `assertProductionEnv`.
 
 ## Remaining operator vigilance
 
