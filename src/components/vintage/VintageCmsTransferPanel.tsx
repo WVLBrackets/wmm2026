@@ -62,6 +62,37 @@ export default function VintageCmsTransferPanel({
   }, [preview, includedPaths]);
 
   /**
+   * Stamp this environment’s CMS as schema v2 (idempotent one-time migrate).
+   */
+  async function completeCmsSections() {
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const token = await csrfToken();
+      const response = await fetch("/api/admin/vintage-cms-complete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-csrf-token": token,
+        },
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "CMS complete failed.");
+      }
+      setMessage(
+        `CMS schema v${data.schema} ready (row version ${data.version}). Public pages should load.`,
+      );
+      onApplied?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "CMS complete failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /**
    * Download the current environment’s published CMS package as JSON.
    */
   async function exportPackage() {
@@ -250,6 +281,16 @@ export default function VintageCmsTransferPanel({
             disabled={busy}
           />
         </label>
+        <button
+          type="button"
+          className="ve-button"
+          disabled={busy}
+          onClick={() => void completeCmsSections()}
+          data-testid="vintage-cms-complete-sections"
+        >
+          {busy ? <Loader2 size={16} className="ve-spin" /> : <CheckCircle2 size={16} />}
+          Complete CMS sections
+        </button>
         <button
           type="button"
           className="ve-button"

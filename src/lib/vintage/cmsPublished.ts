@@ -41,7 +41,7 @@ export function parsePublishedCmsBundle(
   const split = splitHomepageDocument(published);
   if (split.schema < CMS_SCHEMA_VERSION) {
     throw new CmsUnavailableError(
-      "Published CMS content has not been migrated to schema v2. Open Vintage Admin → CMS Transfer and run “Complete CMS sections”, or run `npm run cms:migrate`.",
+      "Published CMS content has not been migrated to schema v2. Sign in as admin, then open /api/admin/vintage-cms-complete (or Vintage Admin → Home → Complete CMS sections).",
     );
   }
   const home = blankMissingStrings(
