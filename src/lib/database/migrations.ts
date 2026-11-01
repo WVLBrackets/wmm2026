@@ -530,6 +530,14 @@ async function addPaymentMethodColumns(): Promise<void> {
 
 /**
  * Official Scoreboard of Record + sync settings + BBS team map.
+ * Safe to call from admin/scoreboard paths when Preview/staging DBs lag migrations.
+ */
+export async function ensureScoreboardTables(): Promise<void> {
+  await createScoreboardTables();
+}
+
+/**
+ * Official Scoreboard of Record + sync settings + BBS team map.
  */
 async function createScoreboardTables(): Promise<void> {
   try {
@@ -657,6 +665,7 @@ async function createScoreboardTables(): Promise<void> {
     `;
   } catch (error) {
     console.error('[createScoreboardTables] Error:', error);
+    throw error;
   }
 }
 

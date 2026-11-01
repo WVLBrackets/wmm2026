@@ -19,7 +19,16 @@ Before production cutover (and before any destructive CMS import):
 
 ## 2. Scoreboard sync (manual)
 
-Hobby Vercel does not run multi-daily crons. Scoreboard refresh is **manual**:
+Hobby Vercel does not run multi-daily crons. Scoreboard refresh is **manual**.
+
+**First time on a new Preview/staging DB** (error `relation "scoreboard_games" does not exist` / empty public board):
+
+1. Sign in as admin on that environment.
+2. Open `/api/init-database` once (creates scoreboard tables), or reload **Admin → Scoreboard** after a deploy that auto-ensures tables.
+3. On **Admin → Scoreboard**, year **2026**, click **Sync now** (seeds from tournament JSON + pulls Big Balls when `API_KEY_BIGBALL` is set).
+4. On public **Scores**, open **Edit scoreboard** → **Publish** (no edits) to rebuild Day 1/Day 2 tipoff pages if needed.
+
+Ongoing:
 
 1. Sign in as admin → **Admin** → **Scoreboard** tab.
 2. Confirm year / BBS season.

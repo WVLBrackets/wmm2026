@@ -1,5 +1,6 @@
 import { sql } from '@/lib/databaseAdapter';
 import { getCurrentEnvironment } from '@/lib/databaseConfig';
+import { ensureScoreboardTables } from '@/lib/database/migrations';
 import type {
   ScoreboardGame,
   ScoreboardGameKind,
@@ -11,11 +12,20 @@ import type {
 } from '@/lib/types/scoreboard';
 import type { ScoreboardPage } from '@/lib/types/publicScoreboard';
 
+let scoreboardSchemaReady: Promise<void> | null = null;
+
 /**
- * Schema is applied via sql/migrations / initializeDatabase — never DDL on reads.
+ * Ensure scoreboard tables exist (CREATE IF NOT EXISTS). Cached per process.
+ * Public snapshot reads stay DDL-free; admin/sync/seed paths call this first.
  */
 async function ensureScoreboardSchema(): Promise<void> {
-  return;
+  if (!scoreboardSchemaReady) {
+    scoreboardSchemaReady = ensureScoreboardTables().catch((error) => {
+      scoreboardSchemaReady = null;
+      throw error;
+    });
+  }
+  await scoreboardSchemaReady;
 }
 
 /**
