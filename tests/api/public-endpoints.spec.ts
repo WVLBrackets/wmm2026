@@ -62,6 +62,42 @@ test.describe('Public API Endpoints', () => {
       }
       // Test passes even if endpoint requires auth
     });
+
+    test('GET must never expose happy_path / email_test fields', async ({ request }) => {
+      const baseURL = getBaseURL();
+      const response = await request.get(`${baseURL}/api/site-config`);
+      if (!response.ok()) {
+        expect([302, 401, 403]).toContain(response.status());
+        return;
+      }
+      const json = await response.json();
+      expect(json.success).toBe(true);
+      const data = json.data as Record<string, unknown>;
+      expect(data).toBeTruthy();
+      for (const key of Object.keys(data)) {
+        expect(key).not.toMatch(/happy_path|email_test/i);
+      }
+      const blob = JSON.stringify(data);
+      expect(blob).not.toMatch(/happy_path_email_test/i);
+    });
+  });
+
+  // =============================================================================
+  // KEY PICKS API (gated by Tournament Live for active year)
+  // =============================================================================
+  test.describe('/api/key-picks', () => {
+    test('GET responds without server error for a year query', async ({ request }) => {
+      const baseURL = getBaseURL();
+      const response = await request.get(`${baseURL}/api/key-picks?year=2026`);
+      expect(response.status()).not.toBe(500);
+      if (response.ok()) {
+        const json = await response.json();
+        expect(json).toHaveProperty('success', true);
+        expect(json.data).toHaveProperty('available');
+        expect(json.data).toHaveProperty('picks');
+        expect(typeof json.data.picks).toBe('object');
+      }
+    });
   });
 
   // =============================================================================

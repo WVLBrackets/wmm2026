@@ -40,7 +40,7 @@
     "generate-players": "tsx scripts/generate-players-batch.ts",
     "test:vintage": "node --import tsx --test tests/vintage-*.unit.ts tests/hall-of-fame-stats.unit.ts",
     "test:vintage:browser": "node --import tsx tests/vintage-browser.ts",
-    "test:unit": "node --import tsx --test tests/scoreboard-sync.unit.ts tests/public-scoreboard.unit.ts tests/scoreboard-apply.unit.ts tests/vintage-*.unit.ts tests/hall-of-fame-stats.unit.ts tests/paymentProviders.unit.ts",
+    "test:unit": "node --import tsx --test tests/scoreboard-sync.unit.ts tests/public-scoreboard.unit.ts tests/scoreboard-apply.unit.ts tests/public-site-config.unit.ts tests/vintage-*.unit.ts tests/hall-of-fame-stats.unit.ts tests/paymentProviders.unit.ts",
     "hof:import": "tsx scripts/import-hof-seasons.ts",
     "cms:migrate": "tsx scripts/cms-migrate.ts"
   },

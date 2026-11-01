@@ -228,6 +228,22 @@ test.describe('Security Tests', () => {
   // CSRF PROTECTION TESTS
   // =============================================================================
   test.describe('CSRF Protection', () => {
+    test('POST /api/bracket/email-pdf rejects missing CSRF', async ({ request }) => {
+      const baseURL = getBaseURL();
+      const response = await request.post(`${baseURL}/api/bracket/email-pdf`, {
+        data: { bracketId: '00000000-0000-0000-0000-000000000000' },
+        headers: { 'Content-Type': 'application/json' },
+      });
+      // Unauthenticated may be 401; with session but no CSRF → 403. Never 500.
+      expect(response.status()).not.toBe(500);
+      expect([401, 403]).toContain(response.status());
+      if (response.status() === 403) {
+        const json = await response.json().catch(() => ({}));
+        const err = String(json.error || json.message || '');
+        expect(err.toLowerCase()).toMatch(/csrf|unauthorized|forbidden/);
+      }
+    });
+
     test('should require CSRF token for authentication', async ({ request }) => {
       const baseURL = getBaseURL();
       

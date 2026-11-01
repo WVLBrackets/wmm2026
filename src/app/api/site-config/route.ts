@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { toPublicSiteConfig } from '@/lib/publicSiteConfig';
 import { SiteConfigError } from '@/lib/siteConfig';
 import { getSiteConfigCached } from '@/lib/siteConfigServer';
 
@@ -6,6 +7,7 @@ import { getSiteConfigCached } from '@/lib/siteConfigServer';
  * Site configuration from the published vintage CMS bundle.
  * Missing required Key Data (Tourney Year, site name) or CMS failure → 503.
  *
+ * Returns allowlisted public fields only (no env test emails / secrets).
  * The server bundle is invalidated on CMS publish (`revalidateTag`), so `fresh=true`
  * only skips the CDN layer (`no-store`); it never bypasses the published CMS.
  */
@@ -14,7 +16,7 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const bypassCdn =
       url.searchParams.has('_t') || url.searchParams.get('fresh') === 'true';
-    const config = await getSiteConfigCached();
+    const config = toPublicSiteConfig(await getSiteConfigCached());
     return NextResponse.json(
       { success: true, data: config },
       {

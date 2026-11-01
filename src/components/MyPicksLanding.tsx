@@ -814,11 +814,8 @@ export default function MyPicksLanding({
     setEmailMessage(null);
 
     try {
-      const response = await fetch('/api/bracket/email-pdf', {
+      const response = await fetchWithCSRF('/api/bracket/email-pdf', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ bracketId: emailBracket.id }),
       });
 

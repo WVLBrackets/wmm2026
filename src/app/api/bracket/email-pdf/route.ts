@@ -1,6 +1,7 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { csrfProtection } from '@/lib/csrf';
 import { getBracketById } from '@/lib/repositories/bracketRepository';
 import { getUserByEmail } from '@/lib/repositories/userRepository';
 import { SiteConfigData, SiteConfigError } from '@/lib/siteConfig';
@@ -8,6 +9,9 @@ import { getSiteConfigCached } from '@/lib/siteConfigServer';
 import { sendOnDemandPdfEmail, processEmailAsync } from '@/lib/bracketEmailService';
 
 export async function POST(request: NextRequest) {
+  const csrfError = csrfProtection(request);
+  if (csrfError) return csrfError;
+
   try {
     const session = await getServerSession(authOptions);
 
