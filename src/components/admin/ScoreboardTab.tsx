@@ -24,7 +24,7 @@ type ScoreboardTabProps = {
 };
 
 /**
- * Admin Scoreboard of Record — edit finals, kill switch, Sync now.
+ * Admin Scoreboard of Record — edit finals and manual Sync now.
  */
 export default function ScoreboardTab({ brackets }: ScoreboardTabProps) {
   const bracketYears = useMemo(() => {
@@ -272,9 +272,9 @@ export default function ScoreboardTab({ brackets }: ScoreboardTabProps) {
 
       <p className="text-sm text-gray-600">
         Official results hub. Marking a game <strong>Final</strong> updates the
-        KEY (or First Four results) and refreshes live standings. Auto-sync
-        polls Big Balls when enabled; admin-locked rows are never overwritten by
-        sync.
+        KEY (or First Four results) and refreshes live standings. Use{' '}
+        <strong>Sync now</strong> to pull Big Balls scores into the board;
+        admin-locked rows are never overwritten by sync.
       </p>
 
       {settings ? (
@@ -282,43 +282,12 @@ export default function ScoreboardTab({ brackets }: ScoreboardTabProps) {
           className="rounded-lg border border-gray-200 bg-white p-4 space-y-3"
           data-testid="admin-scoreboard-settings"
         >
-          <h3 className="text-sm font-semibold text-gray-800">Auto-sync</h3>
-          <label className="flex items-start gap-2 text-sm text-gray-800">
-            <input
-              type="checkbox"
-              className="mt-1"
-              checked={settings.autoSyncEnabled}
-              onChange={(e) =>
-                setSettings({
-                  ...settings,
-                  autoSyncEnabled: e.target.checked,
-                })
-              }
-              data-testid="admin-scoreboard-auto-sync"
-            />
-            <span>
-              <strong>Enable auto-sync</strong> (kill switch). Off by default.
-              Cron no-ops when disabled; manual Sync now still works.
-            </span>
-          </label>
+          <h3 className="text-sm font-semibold text-gray-800">Big Balls sync</h3>
+          <p className="text-sm text-gray-600">
+            Scheduled Vercel cron is not used on this plan. Refresh scores with{' '}
+            <strong>Sync now</strong> whenever you want an update.
+          </p>
           <div className="flex flex-wrap gap-4 items-end">
-            <label className="text-sm text-gray-700">
-              Poll interval (minutes)
-              <input
-                type="number"
-                min={1}
-                max={120}
-                className="mt-1 block w-24 rounded border border-gray-300 px-2 py-1"
-                value={settings.pollIntervalMinutes}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    pollIntervalMinutes: Number(e.target.value) || 5,
-                  })
-                }
-                data-testid="admin-scoreboard-poll-interval"
-              />
-            </label>
             <label className="text-sm text-gray-700">
               BBS season (blank = year − 1; March 2026 → 2025)
               <input

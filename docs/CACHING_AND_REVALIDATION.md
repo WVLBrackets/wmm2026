@@ -39,7 +39,7 @@ Publishing in Vintage Admin already invalidates `vintage-cms` (and `site-config`
 | **Site config (published CMS)** | Server: `getSiteConfigCached` → `getPublishedCmsBundle` (`vintage-cms` tag). Client: **`GET /api/site-config`** uses **`s-maxage=300`**. Flushing the tag clears the server layer; **browsers/CDN may still serve `/api/site-config` for up to ~5 minutes** unless the client uses `?fresh=true` or `Cache-Control: no-store`. `fresh=true` skips the CDN layer only; it never bypasses the published CMS. |
 | **Homepage announcements** | Stored on the homepage CMS document (`announcementBoard`). They refresh when the CMS tag is invalidated (publish or Rebuild Home). |
 | **Live standings** | Snapshot in **Postgres**; recomputed when the KEY bracket is saved, on cold start, or admin **Regenerate**. **`LiveStandingsPanel`** fetches with **`cache: 'no-store'`**. Stale UI is usually snapshot age, not HTTP cache. |
-| **Scoreboard** | Public path reads `scoreboard_snapshots`. Admin edits rebuild the snapshot. Cron `/api/cron/scoreboard-sync` (Bearer `CRON_SECRET`) may update scores on a schedule. |
+| **Scoreboard** | Public path reads `scoreboard_snapshots`. Admin edits rebuild the snapshot. Scores refresh via Admin **Sync now** (or optional Bearer `CRON_SECRET` to `/api/cron/scoreboard-sync` — not scheduled on Hobby). |
 | **Static / ISR pages** | On-demand `revalidatePath` when you click Rebuild. **`revalidatePath`** forces a fresh generation. |
 
 ## Client `fetch` behavior (summary)

@@ -17,16 +17,15 @@ Before production cutover (and before any destructive CMS import):
 
 `hof_seasons`, scoreboard tables, live standings snapshots, users/brackets, and `admin_notifications` live on the **app** database. `vintage_homepage` lives on the **CMS** database.
 
-## 2. Cron secrets
+## 2. Scoreboard sync (manual)
 
-| Item | Detail |
-|------|--------|
-| Path | `POST /api/cron/scoreboard-sync` (`vercel.json`: `*/5 * * * *`) |
-| Auth | `Authorization: Bearer <CRON_SECRET>` (Vercel Cron sends this when `CRON_SECRET` is set) |
-| Production | `CRON_SECRET` is required (`assertProductionEnv`) |
-| Actor | Sync writes use the `ADMIN_EMAIL` user row, or `SCOREBOARD_SYNC_ACTOR_USER_ID` |
+Hobby Vercel does not run multi-daily crons. Scoreboard refresh is **manual**:
 
-Confirm the secret is set for Production (and Preview if you rely on staging sync). Confirm scoreboard auto-sync flags in ops if you expect BBS polling.
+1. Sign in as admin → **Admin** → **Scoreboard** tab.
+2. Confirm year / BBS season.
+3. Click **Sync now** (requires `API_KEY_BIGBALL`).
+
+Optional: `POST /api/cron/scoreboard-sync` with `Authorization: Bearer <CRON_SECRET>` still exists for scripted pulls, but it is **not** scheduled in `vercel.json`. Sync writes use the `ADMIN_EMAIL` user row, or `SCOREBOARD_SYNC_ACTOR_USER_ID`.
 
 ## 3. CMS publish checklist
 
@@ -79,7 +78,7 @@ On CMS/config failure you should see vintage **`SiteErrorPanel`**, and `ADMIN_EM
 
 ## 6. After smoke
 
-- Watch Vercel runtime logs for CMS / cron / payment errors.
+- Watch Vercel runtime logs for CMS / sync / payment errors.
 - Confirm inbound auto-reply only if MX/webhook is already production-ready (`docs/AUTO_REPLY_SETUP.md`).
 - Do not flush caches as a substitute for publishing CMS.
 

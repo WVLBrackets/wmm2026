@@ -33,7 +33,8 @@ async function resolveSyncActorUserId(): Promise<string | null> {
 
 /**
  * POST /api/cron/scoreboard-sync
- * Vercel Cron entry: gated by autoSyncEnabled + pollIntervalMinutes.
+ * Optional scripted sync (Bearer CRON_SECRET). Not scheduled on Hobby —
+ * day-to-day pulls use Admin → Scoreboard → Sync now.
  * Optional query `year=` overrides active tourney year (ops only).
  */
 export async function POST(request: NextRequest) {

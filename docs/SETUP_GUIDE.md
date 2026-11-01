@@ -74,7 +74,7 @@ Pulled via `pull-env-all.ps1` or set in Vercel. Names vary slightly by environme
 
 ### Cron
 
-- `CRON_SECRET` — Bearer token for `/api/cron/scoreboard-sync` (also sent by Vercel Cron)
+- `CRON_SECRET` — Bearer token for optional `/api/cron/scoreboard-sync` (not scheduled on Hobby; prefer Admin **Sync now**)
 - Optional `SCOREBOARD_SYNC_ACTOR_USER_ID` if the `ADMIN_EMAIL` user row is missing
 
 ## Neon databases
