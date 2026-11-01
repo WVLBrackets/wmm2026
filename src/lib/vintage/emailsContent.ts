@@ -133,21 +133,24 @@ export const DEFAULT_VINTAGE_EMAILS_CONTENT: VintageEmailsContent = {
     greeting: "Hi {name},",
     message1:
       'Congratulations! Your bracket "{entryName}" has been successfully submitted for the {tournamentYear} tournament.',
+    /** Tokens: `{bracketsUrl}`, `{tipoff}`. Use `||` for a paragraph break. */
     message2:
-      "You currently have {submissionCount} submitted bracket(s) with a total cost of ${totalCost}.",
+      "You can view your {tournamentYear} brackets here: {bracketsUrl}||Please ensure you Submit all entries you want to include before tipoff at {tipoff}.",
     message3:
       "Want to increase your chances? Submit more brackets and invite your friends to join the fun!",
     footer: "This is an automated email from Warren's March Madness.",
   },
   pdf: {
-    subject: "Your Bracket - Warren's March Madness",
+    subject: "Your {tournamentYear} Bracket - Warren's March Madness",
     heading: "Your Bracket is Attached!",
     greeting: "Hi {name},",
+    /** Tokens: `{entryName}`, `{tournamentYear}`. */
     message1:
-      'Great news! Your bracket "{entryName}" has been successfully submitted and is ready for the tournament!',
+      'Here is a PDF of your bracket "{entryName}" for the {tournamentYear} tournament.',
+    /** Tokens: `{tournamentYear}`, `{bracketsUrl}` (year-scoped My Picks URL). */
     message2:
-      "We've attached a PDF copy of your bracket for your records. Good luck with your picks!",
-    message3: "Let the madness begin! 🏀",
+      "You can view your {tournamentYear} brackets here: {bracketsUrl}",
+    message3: "Good luck with your picks — let the madness begin!",
     footer: "This is an automated email from Warren's March Madness.",
   },
   registration: {
@@ -257,15 +260,84 @@ export const DEFAULT_VINTAGE_EMAILS_CONTENT: VintageEmailsContent = {
   },
 };
 
+/** Stock submit `message2` before the My Picks link / tipoff rewrite. */
+const LEGACY_SUBMIT_COUNT_COST_MESSAGE2 =
+  "You currently have {submissionCount} submitted bracket(s) with a total cost of ${totalCost}.";
+
+/** Earlier submit `message2` that said “current year” instead of `{tournamentYear}`. */
+const LEGACY_SUBMIT_CURRENT_YEAR_MESSAGE2 =
+  "You can view all your brackets for the current year here: {bracketsUrl}||Please ensure you Submit all entries you want to include before tipoff at {tipoff}.";
+
+/** Stock PDF fields before the year + My Picks link rewrite. */
+const LEGACY_PDF_SUBJECT = "Your Bracket - Warren's March Madness";
+const LEGACY_PDF_MESSAGE1 =
+  'Great news! Your bracket "{entryName}" has been successfully submitted and is ready for the tournament!';
+const LEGACY_PDF_MESSAGE2 =
+  "We've attached a PDF copy of your bracket for your records. Good luck with your picks!";
+const LEGACY_PDF_MESSAGE3 = "Let the madness begin! 🏀";
+
+/**
+ * Swap a stored leaf for the new default when it still matches a known stock value.
+ *
+ * @param current - Stored / normalized value
+ * @param legacy - Exact stock text to replace
+ * @param next - Replacement from current defaults
+ */
+function replaceLegacyStock(
+  current: string,
+  legacy: string,
+  next: string,
+): string {
+  return current.trim() === legacy ? next : current;
+}
+
 /**
  * Coerce stored JSON into the Emails & Account shape (editor seed fill).
+ * Upgrades known stock submit/PDF lines to the year-aware My Picks copy when
+ * the stored text still matches the old defaults.
  *
  * @param value - Raw sidecar JSON
  */
 export function normalizeVintageEmailsContent(
   value: unknown,
 ): VintageEmailsContent {
-  return normalizeCopyTree(value, DEFAULT_VINTAGE_EMAILS_CONTENT);
+  const normalized = normalizeCopyTree(value, DEFAULT_VINTAGE_EMAILS_CONTENT);
+  const submitDefaults = DEFAULT_VINTAGE_EMAILS_CONTENT.submit;
+  const pdfDefaults = DEFAULT_VINTAGE_EMAILS_CONTENT.pdf;
+
+  normalized.submit.message2 = replaceLegacyStock(
+    normalized.submit.message2,
+    LEGACY_SUBMIT_COUNT_COST_MESSAGE2,
+    submitDefaults.message2,
+  );
+  normalized.submit.message2 = replaceLegacyStock(
+    normalized.submit.message2,
+    LEGACY_SUBMIT_CURRENT_YEAR_MESSAGE2,
+    submitDefaults.message2,
+  );
+
+  normalized.pdf.subject = replaceLegacyStock(
+    normalized.pdf.subject,
+    LEGACY_PDF_SUBJECT,
+    pdfDefaults.subject,
+  );
+  normalized.pdf.message1 = replaceLegacyStock(
+    normalized.pdf.message1,
+    LEGACY_PDF_MESSAGE1,
+    pdfDefaults.message1,
+  );
+  normalized.pdf.message2 = replaceLegacyStock(
+    normalized.pdf.message2,
+    LEGACY_PDF_MESSAGE2,
+    pdfDefaults.message2,
+  );
+  normalized.pdf.message3 = replaceLegacyStock(
+    normalized.pdf.message3,
+    LEGACY_PDF_MESSAGE3,
+    pdfDefaults.message3,
+  );
+
+  return normalized;
 }
 
 /**

@@ -20,6 +20,7 @@ import {
 } from '@/lib/bracketPickValidity';
 import { LoggedButton } from '@/components/LoggedButton';
 import CmsText from '@/components/cms/CmsText';
+import { cmsPlainText } from '@/lib/cms/lineBreaks';
 import { useServerTime } from '@/hooks/useServerTime';
 import {
   getAvailablePaymentMethods,
@@ -2094,48 +2095,64 @@ export default function MyPicksLanding({
     const returnLabel = formatCopy(labels.backToActiveYearLabel, { year: activeYear });
     const canReturn =
       Boolean(onViewingYearChange) && !isYearSwitching && !rowMutationInFlight;
-    const payTitle =
+    const payTitleRaw =
       (rowMutationInFlight
         ? labels.pleaseWaitLabel
         : payEnabled
           ? labels.payTooltip
-          : payDisabledReason) || undefined;
+          : payDisabledReason) || '';
+    const newBracketTipRaw =
+      getMutatingActionDisabledReason('new') || labels.newBracketTooltip || '';
+    /** Native `title` cannot break on `||`; collapse for fallback / a11y. */
+    const payTitlePlain = payTitleRaw ? cmsPlainText(payTitleRaw) : undefined;
+    const newBracketTipPlain = newBracketTipRaw
+      ? cmsPlainText(newBracketTipRaw)
+      : undefined;
+
+    /**
+     * Hover tip with CMS line breaks; optional native title as plain fallback.
+     */
+    const withTip = (tipRaw: string, node: React.ReactNode) =>
+      tipRaw ? <PicksActionTip label={tipRaw}>{node}</PicksActionTip> : node;
 
     return (
       <div className="v-picks__side">
         <div className="v-picks__buttons">
-          <button
-            type="button"
-            onClick={onCreateNew}
-            disabled={Boolean(getMutatingActionDisabledReason('new'))}
-            title={getMutatingActionDisabledReason('new') || labels.newBracketTooltip || undefined}
-            aria-busy={creatingBracketBusy || undefined}
-            data-testid={`new-bracket-button-${viewportSuffix}`}
-            className="v-picks__btn v-picks__btn--primary"
-          >
-            <Plus className="v-picks__icon" aria-hidden />
-            <span>{labels.newBracketLabel}</span>
-          </button>
-          <span
-            className="v-picks__pay-wrap"
-            title={payTitle}
-          >
+          {withTip(
+            newBracketTipRaw,
             <button
               type="button"
-              onClick={() => {
-                if (payEnabled && !rowMutationInFlight) setPayModalOpen(true);
-              }}
-              className="v-picks__btn v-picks__btn--secondary"
-              data-testid={`pay-button-${viewportSuffix}`}
-              aria-label={labels.payLabel || undefined}
-              aria-disabled={!payEnabled || rowMutationInFlight}
-              disabled={!payEnabled || rowMutationInFlight}
-              title={payTitle}
+              onClick={onCreateNew}
+              disabled={Boolean(getMutatingActionDisabledReason('new'))}
+              title={newBracketTipPlain}
+              aria-busy={creatingBracketBusy || undefined}
+              data-testid={`new-bracket-button-${viewportSuffix}`}
+              className="v-picks__btn v-picks__btn--primary"
             >
-              <DollarSign className="v-picks__icon" aria-hidden />
-              <span>{labels.payLabel}</span>
-            </button>
-          </span>
+              <Plus className="v-picks__icon" aria-hidden />
+              <span>{labels.newBracketLabel}</span>
+            </button>,
+          )}
+          {withTip(
+            payTitleRaw,
+            <span className="v-picks__pay-wrap" title={payTitlePlain}>
+              <button
+                type="button"
+                onClick={() => {
+                  if (payEnabled && !rowMutationInFlight) setPayModalOpen(true);
+                }}
+                className="v-picks__btn v-picks__btn--secondary"
+                data-testid={`pay-button-${viewportSuffix}`}
+                aria-label={labels.payLabel || undefined}
+                aria-disabled={!payEnabled || rowMutationInFlight}
+                disabled={!payEnabled || rowMutationInFlight}
+                title={payTitlePlain}
+              >
+                <DollarSign className="v-picks__icon" aria-hidden />
+                <span>{labels.payLabel}</span>
+              </button>
+            </span>,
+          )}
           <LoggedButton
             onClick={() => signOut({ callbackUrl: '/auth/signin' })}
             logLocation="Logout"

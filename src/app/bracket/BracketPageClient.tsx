@@ -1345,33 +1345,32 @@ function BracketContent({
     }
   };
 
-  const handleCopyNameDialogStayOnMyPicks = () => {
-    setCopyNameDialog(null);
-    setCopyNameError(null);
-  };
-
-  const handleCopyNameDialogOpenBracket = async () => {
-    if (!copyNameDialog) return;
+  /**
+   * Save the copy-dialog entry name when it differs from the created bracket.
+   * Shared by "Stay on My Picks" and "Open bracket" so rename persists either way.
+   * @returns Updated bracket (or original when unchanged), or null on validation/API failure
+   */
+  const persistCopyDialogEntryName = async (): Promise<Record<string, unknown> | null> => {
+    if (!copyNameDialog) return null;
 
     const trimmed = copyNameDialog.draftEntryName.trim();
     if (!trimmed) {
       setCopyNameError(feedback.copyNameRequired);
-      return;
+      return null;
     }
 
     const b = copyNameDialog.newBracket;
     const id = String(b.id ?? '');
     if (!id) {
       setCopyNameDialog(null);
+      setCopyNameError(null);
       setNotice(feedback.copyFailed);
-      return;
+      return null;
     }
 
     const currentName = String(b.entryName ?? '').trim();
     if (trimmed === currentName) {
-      setCopyNameDialog(null);
-      await handleEditBracket(b);
-      return;
+      return b;
     }
 
     setCopyNameDialogBusy(true);
@@ -1390,17 +1389,32 @@ function BracketContent({
       const data = await response.json();
       if (data.success && data.data) {
         await loadSubmittedBrackets();
-        setCopyNameDialog(null);
-        await handleEditBracket(data.data);
-      } else {
-        setCopyNameError(apiFailureMessage(response, data, feedback.renameFailed));
+        return data.data as Record<string, unknown>;
       }
+      setCopyNameError(apiFailureMessage(response, data, feedback.renameFailed));
+      return null;
     } catch (error) {
       console.error('Error updating copied bracket name:', error);
       setCopyNameError(feedback.renameFailed);
+      return null;
     } finally {
       setCopyNameDialogBusy(false);
     }
+  };
+
+  const handleCopyNameDialogStayOnMyPicks = async () => {
+    const saved = await persistCopyDialogEntryName();
+    if (!saved) return;
+    setCopyNameDialog(null);
+    setCopyNameError(null);
+  };
+
+  const handleCopyNameDialogOpenBracket = async () => {
+    const saved = await persistCopyDialogEntryName();
+    if (!saved) return;
+    setCopyNameDialog(null);
+    setCopyNameError(null);
+    await handleEditBracket(saved);
   };
 
   /**
@@ -1852,7 +1866,7 @@ function BracketContent({
           errorMessage={copyNameError}
           testId="copy-bracket-name-dialog"
           onConfirm={() => void handleCopyNameDialogOpenBracket()}
-          onCancel={handleCopyNameDialogStayOnMyPicks}
+          onCancel={() => void handleCopyNameDialogStayOnMyPicks()}
         >
           {feedback.copyNameLabel ? (
             <label htmlFor="copy-bracket-entry-name" className="v-confirm__label">

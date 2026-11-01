@@ -8,11 +8,13 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import CmsText from '@/components/cms/CmsText';
 
 /**
- * Accessible hover/focus tooltip for My Picks icon actions.
+ * Accessible hover/focus tooltip for My Picks actions.
  * Shown only on devices that support hover (or keyboard focus).
  * Escape dismisses; first touch does not steal activation.
+ * CMS `||` tokens render as hard line breaks (never as pipes).
  */
 export default function PicksActionTip({
   label,
@@ -65,7 +67,7 @@ export default function PicksActionTip({
         className="v-picks__tip-bubble"
         hidden={!open}
       >
-        {label}
+        <CmsText text={label} />
       </span>
     </span>
   );

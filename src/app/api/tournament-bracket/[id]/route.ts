@@ -251,30 +251,9 @@ export async function PUT(
     if (isBeingSubmitted) {
       const emailPromise = (async () => {
         try {
-          const { getBracketsByUserId } = await import('@/lib/repositories/bracketRepository');
           const { getSiteConfigCached } = await import('@/lib/siteConfigServer');
-
-          // Get all submitted brackets for this user to calculate counts
-          const allUserBrackets = await getBracketsByUserId(user.id);
-          const submittedBrackets = allUserBrackets.filter(b => b.status === 'submitted' && b.year === updatedBracket.year);
-          const submissionCount = submittedBrackets.length;
-
           const siteConfig = await getSiteConfigCached();
-          const entryCost = siteConfig.entryCost;
-          if (entryCost == null || !Number.isFinite(entryCost)) {
-            throw new Error('Entry cost is not configured in published Key Data.');
-          }
-          
-          const totalCost = submissionCount * entryCost;
-          
-          // Use centralized email service
-          await sendSubmissionConfirmationEmail(
-            updatedBracket,
-            user,
-            siteConfig,
-            submissionCount,
-            totalCost
-          );
+          await sendSubmissionConfirmationEmail(updatedBracket, user, siteConfig);
         } catch (emailError) {
           // Log error but don't fail the submission (already returned success)
           console.error('[Submit Bracket] Error sending confirmation email:', emailError);

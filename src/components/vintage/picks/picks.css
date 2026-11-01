@@ -444,6 +444,40 @@
   gap: 8px;
 }
 
+/* Header CTA tips (New Bracket / Pay) — honor CMS || line breaks */
+.v-picks__buttons .v-picks__tip {
+  position: relative;
+  display: inline-flex;
+}
+
+.v-picks__buttons .v-picks__tip-bubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 6;
+  width: max-content;
+  max-width: min(20rem, 80vw);
+  padding: 6px 10px;
+  border: 1px solid var(--vp-ink, #152c3a);
+  background: var(--vp-ink, #152c3a);
+  color: var(--vp-paper, #f2ead8);
+  font-family: var(--v-font-body, Arial, Helvetica, sans-serif);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.35;
+  text-transform: none;
+  white-space: normal;
+  text-align: left;
+  pointer-events: none;
+}
+
+@media (hover: none) {
+  .v-picks__buttons .v-picks__tip-bubble {
+    display: none;
+  }
+}
+
 .v-picks__btn {
   display: inline-flex;
   align-items: center;
@@ -951,13 +985,15 @@
   bottom: calc(100% + 6px);
   left: 0;
   z-index: 5;
-  max-width: min(16rem, 70vw);
+  width: max-content;
+  max-width: min(20rem, 80vw);
   padding: 6px 10px;
   border: 1px solid var(--vp-ink, #152c3a);
   background: var(--vp-ink, #152c3a);
   color: var(--vp-paper, #f2ead8);
   font-size: 12px;
   line-height: 1.35;
+  white-space: normal;
   pointer-events: none;
 }
 
@@ -1331,9 +1367,12 @@
 .v-picks__actions .v-picks__tip-bubble {
   position: absolute;
   bottom: calc(100% + 8px);
-  left: 50%;
+  /* Right-align: actions sit at the table edge; avoid icon-width collapse */
+  left: auto;
+  right: 0;
   z-index: 5;
-  max-width: min(16rem, 70vw);
+  width: max-content;
+  max-width: min(20rem, 80vw);
   padding: 6px 10px;
   border: 1px solid var(--vp-ink, #152c3a);
   border-radius: 0;
@@ -1346,10 +1385,9 @@
   line-height: 1.35;
   text-transform: none;
   white-space: normal;
-  text-align: center;
+  text-align: left;
   box-shadow: none;
   pointer-events: none;
-  transform: translateX(-50%);
 }
 
 @media (hover: none) {

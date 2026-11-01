@@ -24,6 +24,29 @@ async function loadBracketEmailContext(siteConfig: SiteConfigData): Promise<Brac
 }
 
 /**
+ * Absolute My Picks URL for emails. Adds `?year=` when the bracket year is
+ * not the active tournament year.
+ *
+ * @param bracketYear - Year stamped on the emailed bracket
+ * @param activeYear - Published active Tourney Year
+ */
+async function buildBracketsEmailUrl(
+  bracketYear: string | number,
+  activeYear: string | number,
+): Promise<string> {
+  const { requireAppOrigin } = await import('@/lib/env');
+  const { buildYearScopedPath } = await import('@/lib/services/tournamentYearHelpers');
+  const yearNum = typeof bracketYear === 'number' ? bracketYear : parseInt(String(bracketYear), 10);
+  const activeNum = typeof activeYear === 'number' ? activeYear : parseInt(String(activeYear), 10);
+  const path = buildYearScopedPath(
+    '/bracket',
+    Number.isFinite(yearNum) ? yearNum : activeNum,
+    Number.isFinite(activeNum) ? activeNum : yearNum,
+  );
+  return `${requireAppOrigin()}${path}`;
+}
+
+/**
  * Generate a sanitized filename for bracket PDF
  */
 function generateBracketFilename(entryName: string | null | undefined, tournamentYear: string, bracketId: string): string {
@@ -50,8 +73,6 @@ export async function sendSubmissionConfirmationEmail(
   bracket: Bracket,
   user: { id: string; name: string | null; email: string },
   siteConfig: SiteConfigData,
-  submissionCount: number,
-  totalCost: number
 ): Promise<void> {
   // Prefer the bracket’s stamped year (historical email/print), else the active Tourney Year.
   const tournamentYear = bracket.year?.toString() || siteConfig.tournamentYear;
@@ -97,6 +118,10 @@ export async function sendSubmissionConfirmationEmail(
       
       // Continue without PDF - email will still be sent
     }
+
+    const { formatVintageTipoffDate } = await import('@/lib/vintage/picksContent');
+    const bracketsUrl = await buildBracketsEmailUrl(tournamentYear, siteConfig.tournamentYear);
+    const tipoff = formatVintageTipoffDate(siteConfig.tournamentStartDate);
     
     // Render email template
     const emailContent = await renderEmailTemplate(await loadBracketEmailContext(siteConfig), {
@@ -105,8 +130,8 @@ export async function sendSubmissionConfirmationEmail(
       tournamentYear,
       siteName: siteConfig.siteName,
       bracketId: bracket.id.toString(),
-      submissionCount,
-      totalCost,
+      bracketsUrl,
+      tipoff,
     }, 'submit');
     
     // Prepare email with optional PDF attachment
@@ -207,19 +232,8 @@ export async function sendOnDemandPdfEmail(
     
     // Generate PDF
     const pdfBuffer = await generateBracketPDF(bracket, bracketWithPicks, tournamentData, siteConfig);
-    
-    // Get all submitted brackets for this user to calculate counts (same logic as submission email)
-    const { getBracketsByUserId } = await import('@/lib/repositories/bracketRepository');
-    const allUserBrackets = await getBracketsByUserId(bracket.userId);
-    const submittedBrackets = allUserBrackets.filter(b => b.status === 'submitted' && b.year === parseInt(tournamentYear));
-    const submissionCount = submittedBrackets.length;
-    
-    const entryCost = siteConfig.entryCost;
-    if (entryCost == null || !Number.isFinite(entryCost)) {
-      throw new Error('Entry cost is not configured in published Key Data.');
-    }
-    
-    const totalCost = submissionCount * entryCost;
+
+    const bracketsUrl = await buildBracketsEmailUrl(tournamentYear, siteConfig.tournamentYear);
     
     // Render email template
     const entryName = bracket.entryName || `Bracket ${bracket.id}`;
@@ -229,8 +243,7 @@ export async function sendOnDemandPdfEmail(
       tournamentYear,
       siteName: siteConfig.siteName,
       bracketId: bracket.id.toString(),
-      submissionCount,
-      totalCost,
+      bracketsUrl,
     }, 'pdf');
     
     // Send email with PDF attachment

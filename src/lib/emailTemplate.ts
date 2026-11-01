@@ -10,7 +10,13 @@ export interface EmailTemplateVariables {
   tournamentYear?: string;
   siteName?: string;
   bracketId?: string;
+  /** Absolute My Picks / brackets URL (e.g. https://warrensmm.com/bracket). */
+  bracketsUrl?: string;
+  /** Formatted homepage tipoff (Eastern), e.g. "Mar 18, 2027, 12:15 PM EST". */
+  tipoff?: string;
+  /** @deprecated Kept for older CMS copy that still references these tokens. */
   submissionCount?: number;
+  /** @deprecated Kept for older CMS copy that still references these tokens. */
   totalCost?: number;
 }
 
@@ -38,6 +44,8 @@ function fillVariables(text: string, variables: EmailTemplateVariables): string 
     tournamentYear: variables.tournamentYear ?? '',
     siteName: variables.siteName ?? '',
     bracketId: variables.bracketId ?? '',
+    bracketsUrl: variables.bracketsUrl ?? '',
+    tipoff: variables.tipoff ?? '',
     submissionCount: String(variables.submissionCount ?? 0),
     totalCost: String(variables.totalCost ?? 0),
   };
@@ -45,6 +53,48 @@ function fillVariables(text: string, variables: EmailTemplateVariables): string 
     .replace(/\{\{(\w+)\}\}/g, (m, key: string) => values[key] ?? m)
     .replace(/\{(\w+)\}/g, (m, key: string) => values[key] ?? m)
     .trim();
+}
+
+/**
+ * Wrap absolute http(s) URLs in anchors. Input must already be HTML-escaped.
+ *
+ * @param escaped - Escaped plain text
+ */
+function linkifyEscapedUrls(escaped: string): string {
+  return escaped.replace(
+    /(https?:\/\/[^\s<]+)/g,
+    '<a href="$1" style="color:#1a5f9e;word-break:break-all;">$1</a>',
+  );
+}
+
+/**
+ * Turn filled CMS copy into HTML paragraphs. `||` becomes a paragraph break;
+ * plain https?:// URLs become links after escaping.
+ *
+ * @param filled - Token-filled plain text
+ */
+function cmsEmailHtml(filled: string): string {
+  if (!filled) return '';
+  return filled
+    .split(/\|\|/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => `<p>${linkifyEscapedUrls(escapeHtml(part))}</p>`)
+    .join('');
+}
+
+/**
+ * Plain-text body from filled CMS copy (`||` → blank line).
+ *
+ * @param filled - Token-filled plain text
+ */
+function cmsEmailPlain(filled: string): string {
+  if (!filled) return '';
+  return filled
+    .split(/\|\|/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join('\n\n');
 }
 
 /**
@@ -85,35 +135,34 @@ export async function renderEmailTemplate(
   if (!subject) {
     throw new Error(`Emails & Account CMS: ${templateType} email subject is blank.`);
   }
-  const plain = (s: string) => fillVariables(s, variables);
-  const para = (s: string) => (plain(s) ? `<p>${escapeHtml(plain(s))}</p>` : '');
+  const filled = (s: string) => fillVariables(s, variables);
   const notice = renderDoNotReplyNotice(ctx.emails.doNotReplyNotice, ctx.contactEmail);
 
   let template = await loadEmailTemplate(templateType);
   template = template
     .replace(/\{\{subject\}\}/g, escapeHtml(subject))
-    .replace(/\{\{heading\}\}/g, escapeHtml(plain(copy.heading)))
-    .replace(/\{\{greeting\}\}/g, para(copy.greeting))
-    .replace(/\{\{message1\}\}/g, para(copy.message1))
-    .replace(/\{\{message2\}\}/g, para(copy.message2))
-    .replace(/\{\{message3\}\}/g, para(copy.message3))
+    .replace(/\{\{heading\}\}/g, escapeHtml(filled(copy.heading)))
+    .replace(/\{\{greeting\}\}/g, cmsEmailHtml(filled(copy.greeting)))
+    .replace(/\{\{message1\}\}/g, cmsEmailHtml(filled(copy.message1)))
+    .replace(/\{\{message2\}\}/g, cmsEmailHtml(filled(copy.message2)))
+    .replace(/\{\{message3\}\}/g, cmsEmailHtml(filled(copy.message3)))
     .replace(/\{\{spamReminder\}\}/g, '')
     .replace(/\{\{doNotReplyNotice\}\}/g, notice.html)
-    .replace(/\{\{footer\}\}/g, escapeHtml(plain(copy.footer)));
+    .replace(/\{\{footer\}\}/g, escapeHtml(filled(copy.footer)));
 
   const text = [
-    plain(copy.heading),
-    plain(copy.greeting),
-    plain(copy.message1),
-    plain(copy.message2),
-    plain(copy.message3),
+    filled(copy.heading),
+    cmsEmailPlain(filled(copy.greeting)),
+    cmsEmailPlain(filled(copy.message1)),
+    cmsEmailPlain(filled(copy.message2)),
+    cmsEmailPlain(filled(copy.message3)),
   ]
     .filter(Boolean)
     .join('\n\n');
 
   return {
     html: template,
-    text: `${text}${notice.text}${plain(copy.footer) ? `\n${plain(copy.footer)}` : ''}`,
+    text: `${text}${notice.text}${filled(copy.footer) ? `\n${filled(copy.footer)}` : ''}`,
     subject,
   };
 }

@@ -218,26 +218,7 @@ export async function POST(request: NextRequest) {
       // Process asynchronously using centralized service with waitUntil
       const emailPromise = (async () => {
         try {
-          // Submitted brackets for this user + year drive the email counts
-          const yearBrackets = await getUserBracketsForYear(user.id, tournamentYear);
-          const submittedBrackets = yearBrackets.filter((b) => b.status === 'submitted');
-          const submissionCount = submittedBrackets.length;
-          
-          const entryCost = siteConfig?.entryCost;
-          if (entryCost == null || !Number.isFinite(entryCost)) {
-            throw new Error('Entry cost is not configured in published Key Data.');
-          }
-          
-          const totalCost = submissionCount * entryCost;
-          
-          // Use centralized email service
-          await sendSubmissionConfirmationEmail(
-            updatedBracket,
-            user,
-            siteConfig,
-            submissionCount,
-            totalCost
-          );
+          await sendSubmissionConfirmationEmail(updatedBracket, user, siteConfig);
         } catch (emailError) {
           // Log error but don't fail the submission (already returned success)
           console.error('[Submit Bracket] Error sending confirmation email:', emailError);

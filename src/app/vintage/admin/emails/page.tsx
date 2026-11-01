@@ -22,7 +22,7 @@ export default async function VintageEmailsAdminPage() {
         title="Emails & Account"
         navId="emails"
         seed={DEFAULT_VINTAGE_EMAILS_CONTENT}
-        intro="Registration, password reset, submit confirmation, PDF email, auto-reply, and on-site account messages."
+        intro="Registration, password reset, submit confirmation, PDF email, auto-reply, and on-site account messages. Tokens: {tournamentYear}, {bracketsUrl} (year-scoped /bracket?year=), {tipoff}. Use || for a paragraph break."
       />
     </Suspense>
   );
