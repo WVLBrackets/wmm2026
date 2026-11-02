@@ -22,6 +22,7 @@ import {
   type VintagePicksConfirmCopy,
   type VintagePicksContent,
   type VintagePicksFlavor,
+  type VintagePicksLabelsCopy,
 } from "@/lib/vintage/picksContent";
 import type { VintagePicksState } from "@/lib/vintage/picksStore";
 import AdminColorField from "../AdminColorField";
@@ -145,6 +146,14 @@ type FlavorKey = keyof VintagePicksFlavor;
 type FlavorName = "current" | "historic";
 type AuthSignInKey = keyof VintagePicksAuthSignIn;
 type AuthCreateKey = keyof VintagePicksAuthCreateAccount;
+type LabelsPayKey = keyof Pick<
+  VintagePicksLabelsCopy,
+  | "payLabel"
+  | "payTooltip"
+  | "additionalNoteLabel"
+  | "additionalNotePlaceholder"
+  | "additionalNoteRequiredTip"
+>;
 
 /**
  * Set a top-level shared string field on the My Picks draft.
@@ -208,6 +217,23 @@ function setAuthCreateField(
     auth: {
       ...source.auth,
       createAccount: { ...source.auth.createAccount, [key]: value },
+    },
+  };
+}
+
+/**
+ * Set one Pay / payment-slip label on the My Picks draft.
+ */
+function setLabelsPayField(
+  source: VintagePicksContent,
+  key: LabelsPayKey,
+  value: string,
+): VintagePicksContent {
+  return {
+    ...source,
+    labels: {
+      ...source.labels,
+      [key]: value,
     },
   };
 }
@@ -283,6 +309,34 @@ export default function VintagePicksEditor() {
   function updateAuthCreate(key: AuthCreateKey, value: string) {
     setContent((previous) => setAuthCreateField(previous, key, value));
     setDirty(true);
+  }
+
+  /**
+   * Update one Pay / payment-slip label and mark the draft dirty.
+   */
+  function updateLabelsPay(key: LabelsPayKey, value: string) {
+    setContent((previous) => setLabelsPayField(previous, key, value));
+    setDirty(true);
+  }
+
+  /**
+   * Render a Pay / payment-slip label field.
+   */
+  function labelsPayField(key: LabelsPayKey, label: string, help?: string) {
+    const id = `vintage-picks-labels-${key}`;
+    return (
+      <label className="ve-field" key={id} htmlFor={id}>
+        <span>{label}</span>
+        {help ? <span className="ve-help">{help}</span> : null}
+        <input
+          id={id}
+          data-testid={id}
+          value={content.labels[key]}
+          onChange={(e) => updateLabelsPay(key, e.target.value)}
+          maxLength={500}
+        />
+      </label>
+    );
   }
 
   /**
@@ -743,6 +797,40 @@ export default function VintagePicksEditor() {
                 "Header note",
                 "Shown under the welcome line when mutations are allowed (current) or as archive context (historic).",
               )}
+
+              <h3>Pay button &amp; payment slip</h3>
+              <p className="ve-help">
+                Toolbar Pay control and the additional-amount Note field on the
+                payment slip. Provider recipients stay under homepage{" "}
+                <a href="/vintage/admin?focus=payments">Payments</a>.
+              </p>
+              <div className="ve-grid">
+                {labelsPayField(
+                  "payLabel",
+                  "Pay button label",
+                  "Visible text on the Pay toolbar button.",
+                )}
+                {labelsPayField(
+                  "payTooltip",
+                  "Pay button tooltip",
+                  "Hover / focus tip when Pay is available.",
+                )}
+                {labelsPayField(
+                  "additionalNoteLabel",
+                  "Additional note label",
+                  "Label above the Note field when adding dollars beyond entry fees.",
+                )}
+                {labelsPayField(
+                  "additionalNotePlaceholder",
+                  "Additional note placeholder",
+                  "Shown inside the Note field (optional when amount matches entries).",
+                )}
+                {labelsPayField(
+                  "additionalNoteRequiredTip",
+                  "Pay disabled — notes required tip",
+                  "Hover tip on Pay with Venmo/Zelle when additional dollars are set but the note is empty.",
+                )}
+              </div>
             </>
           </SectionPanel>
 

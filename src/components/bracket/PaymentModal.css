@@ -663,6 +663,12 @@
   width: 100%;
 }
 
+/* Wrapper so disabled Pay buttons still receive hover (native title tip). */
+.pm-slip__pay-tip-wrap {
+  display: block;
+  width: 100%;
+}
+
 .pm-slip__zelle {
   display: flex;
   flex-direction: column;

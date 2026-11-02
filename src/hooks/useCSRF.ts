@@ -151,25 +151,27 @@ function getCookieValue(name: string): string | null {
 }
 
 /**
- * Get CSRF headers for use with standard fetch
- * Call this before making state-changing requests
+ * Get CSRF headers for use with standard fetch.
+ * Always refreshes via `/api/csrf-token` so expired cookie values are not reused
+ * (the API returns a still-valid cookie token or issues a new one and Set-Cookies it).
  */
 export async function getCSRFHeaders(): Promise<Record<string, string>> {
-  // Try to get from cookie first
-  let token = getCookieValue(CSRF_COOKIE_NAME);
-  
-  // If no cookie, fetch from API
-  if (!token) {
-    try {
-      const response = await fetch('/api/csrf-token');
-      if (response.ok) {
-        const data = await response.json();
-        token = data.csrfToken;
+  try {
+    const response = await fetch('/api/csrf-token', {
+      credentials: 'include',
+      cache: 'no-store',
+    });
+    if (response.ok) {
+      const data = await response.json();
+      if (typeof data.csrfToken === 'string' && data.csrfToken) {
+        return { [CSRF_HEADER_NAME]: data.csrfToken };
       }
-    } catch (error) {
-      console.error('Error fetching CSRF token:', error);
     }
+  } catch (error) {
+    console.error('Error fetching CSRF token:', error);
   }
 
+  // Last resort: readable cookie (may still be stale)
+  const token = getCookieValue(CSRF_COOKIE_NAME);
   return token ? { [CSRF_HEADER_NAME]: token } : {};
 }

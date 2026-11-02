@@ -2708,6 +2708,11 @@ export default function MyPicksLanding({
           entryCost={entryCost}
           paymentConfig={paymentConfig}
           availableMethods={availablePaymentMethods}
+          noteCopy={{
+            label: labels.additionalNoteLabel,
+            placeholder: labels.additionalNotePlaceholder,
+            requiredTip: labels.additionalNoteRequiredTip,
+          }}
           onPaymentCreated={() => {
             setPayModalOpen(false);
             onPaymentCreated?.();

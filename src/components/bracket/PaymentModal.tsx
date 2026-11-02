@@ -18,6 +18,22 @@ interface PayableBracket {
   bracketNumber?: number;
 }
 
+/** CMS strings for the additional-amount Note field on the payment slip. */
+export interface PaymentSlipNoteCopy {
+  /** Field label (e.g. "Note"). */
+  label: string;
+  /** Placeholder for the Note field. */
+  placeholder: string;
+  /** Hover tip when Pay is disabled because a required note is missing. */
+  requiredTip: string;
+}
+
+const DEFAULT_NOTE_COPY: PaymentSlipNoteCopy = {
+  label: 'Note',
+  placeholder: 'e.g. Tip, family entries, donation',
+  requiredTip: 'Payment Notes required for this submission',
+};
+
 export interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -30,6 +46,8 @@ export interface PaymentModalProps {
   availableMethods: PaymentMethod[];
   /** Called after payment request is recorded so the parent can refresh bracket list. */
   onPaymentCreated: () => void;
+  /** My Picks CMS copy for the additional Note field (falls back to seed defaults). */
+  noteCopy?: PaymentSlipNoteCopy | null;
 }
 
 type SlipStep = 'select' | 'zelle' | 'confirming' | 'done' | 'error';
@@ -72,9 +90,24 @@ export default function PaymentModal({
   paymentConfig: paymentConfigProp,
   availableMethods,
   onPaymentCreated,
+  noteCopy: noteCopyProp,
 }: PaymentModalProps) {
   const titleId = useId();
   const summaryLiveId = useId();
+  const noteCopy = useMemo((): PaymentSlipNoteCopy => {
+    const label = noteCopyProp?.label?.trim();
+    const placeholder = noteCopyProp?.placeholder?.trim();
+    const requiredTip = noteCopyProp?.requiredTip?.trim();
+    return {
+      label: label || DEFAULT_NOTE_COPY.label,
+      placeholder: placeholder || DEFAULT_NOTE_COPY.placeholder,
+      requiredTip: requiredTip || DEFAULT_NOTE_COPY.requiredTip,
+    };
+  }, [
+    noteCopyProp?.label,
+    noteCopyProp?.placeholder,
+    noteCopyProp?.requiredTip,
+  ]);
   const paymentConfig = useMemo(
     () => normalizePaymentProviderConfig(paymentConfigProp),
     [paymentConfigProp],
@@ -179,10 +212,14 @@ export default function PaymentModal({
     });
   }, [checkedIds, unpaidBrackets, additionalDollars, additionalNote]);
 
+  const notesRequired = additionalDollars > 0;
+  const notesMissing = notesRequired && additionalNote.trim().length === 0;
   const canPay =
     totalDollars > 0 &&
     (checkedIds.size > 0 || additionalDollars > 0) &&
-    (additionalDollars === 0 || additionalNote.trim().length > 0);
+    !notesMissing;
+  /** Tip only when the missing note is why Pay is grayed out. */
+  const payDisabledTip = notesMissing ? noteCopy.requiredTip : undefined;
 
   const formLocked = step === 'confirming' || step === 'zelle' || submitting;
 
@@ -407,8 +444,8 @@ export default function PaymentModal({
 
                 <div className="pm-slip__note-field">
                   <label htmlFor="additional-note" className="pm-slip__note-label">
-                    Note
-                    {additionalDollars > 0 ? (
+                    {noteCopy.label}
+                    {notesRequired ? (
                       <span className="pm-slip__required" aria-hidden>
                         {' '}
                         *
@@ -421,14 +458,9 @@ export default function PaymentModal({
                     className="pm-slip__note-input"
                     value={additionalNote}
                     onChange={(e) => setAdditionalNote(e.target.value)}
-                    disabled={additionalDollars === 0 || formLocked}
-                    readOnly={additionalDollars === 0}
-                    placeholder={
-                      additionalDollars === 0
-                        ? ''
-                        : 'e.g. Tip, family entries, donation'
-                    }
-                    aria-required={additionalDollars > 0}
+                    disabled={formLocked}
+                    placeholder={noteCopy.placeholder}
+                    aria-required={notesRequired}
                     data-testid="payment-additional-note"
                   />
                 </div>
@@ -614,29 +646,52 @@ export default function PaymentModal({
                     aria-labelledby="pm-choose-method-label"
                   >
                     {showVenmo ? (
-                      <button
-                        type="button"
-                        className="pm-slip__btn pm-slip__btn--method"
-                        onClick={handlePayWithVenmo}
-                        disabled={!canPay}
-                        data-testid="payment-venmo-button"
+                      <span
+                        className="pm-slip__pay-tip-wrap"
+                        title={payDisabledTip}
+                        data-testid="payment-venmo-tip-wrap"
                       >
-                        <ExternalLink className="h-4 w-4" aria-hidden />
-                        Pay ${formattedTotal} with Venmo
-                      </button>
+                        <button
+                          type="button"
+                          className="pm-slip__btn pm-slip__btn--method"
+                          onClick={handlePayWithVenmo}
+                          disabled={!canPay}
+                          aria-describedby={
+                            payDisabledTip ? 'pm-pay-notes-required-tip' : undefined
+                          }
+                          data-testid="payment-venmo-button"
+                        >
+                          <ExternalLink className="h-4 w-4" aria-hidden />
+                          Pay ${formattedTotal} with Venmo
+                        </button>
+                      </span>
                     ) : null}
                     {showZelle ? (
-                      <button
-                        type="button"
-                        className="pm-slip__btn pm-slip__btn--method"
-                        onClick={handlePayWithZelle}
-                        disabled={!canPay}
-                        data-testid="payment-zelle-button"
+                      <span
+                        className="pm-slip__pay-tip-wrap"
+                        title={payDisabledTip}
+                        data-testid="payment-zelle-tip-wrap"
                       >
-                        Pay ${formattedTotal} with Zelle
-                      </button>
+                        <button
+                          type="button"
+                          className="pm-slip__btn pm-slip__btn--method"
+                          onClick={handlePayWithZelle}
+                          disabled={!canPay}
+                          aria-describedby={
+                            payDisabledTip ? 'pm-pay-notes-required-tip' : undefined
+                          }
+                          data-testid="payment-zelle-button"
+                        >
+                          Pay ${formattedTotal} with Zelle
+                        </button>
+                      </span>
                     ) : null}
                   </div>
+                  {payDisabledTip ? (
+                    <span id="pm-pay-notes-required-tip" className="pm-slip__sr-live">
+                      {payDisabledTip}
+                    </span>
+                  ) : null}
                 </div>
               </>
             )}

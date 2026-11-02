@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Trophy } from 'lucide-react';
 import LoadingBasketball from '@/components/vintage/feedback/LoadingBasketball';
 import { generate64TeamBracket, updateBracketWithPicks } from '@/lib/bracketGenerator';
 import { loadTournamentData } from '@/lib/tournamentLoader';
@@ -13,6 +14,9 @@ import { formatCopy } from '@/lib/vintage/copyTree';
 import type { VintageBracketEditorContent } from '@/lib/vintage/bracketEditorContent';
 import { TournamentTeam, TournamentData } from '@/types/tournament';
 import Image from 'next/image';
+
+/** Masthead / print headline face (design-system display role). */
+const PRINT_HEADLINE_FONT = '"Alfa Slab One", Georgia, serif';
 
 /** Min canvas width so regions keep desktop-like column sizes; narrow viewports scroll horizontally. */
 const PRINT_BRACKET_MIN_WIDTH_PX = 1200;
@@ -35,9 +39,15 @@ interface PrintBracketClientProps {
   copy: PrintBracketCopy;
   /** Active tournament year (used when the stored bracket has no year). */
   activeYear: number;
+  /** Published site name for the print masthead (Key Data). */
+  siteName: string;
 }
 
-export default function PrintBracketClient({ copy, activeYear }: PrintBracketClientProps) {
+export default function PrintBracketClient({
+  copy,
+  activeYear,
+  siteName,
+}: PrintBracketClientProps) {
   const [bracketData, setBracketData] = useState<Record<string, unknown> | null>(null);
   const [bracket, setBracket] = useState<Record<string, unknown> | null>(null);
   const [tournamentData, setTournamentData] = useState<Record<string, unknown> | null>(null);
@@ -136,8 +146,21 @@ export default function PrintBracketClient({ copy, activeYear }: PrintBracketCli
     window.close();
   };
 
+  /**
+   * Print with a blank document title so Chrome/Edge headers omit the env-prefixed
+   * site name. Date/URL/page# still require “Headers and footers” off in the dialog.
+   */
   const handlePrint = () => {
+    const previousTitle = document.title;
+    document.title = ' ';
+    const restoreTitle = () => {
+      document.title = previousTitle;
+      window.removeEventListener('afterprint', restoreTitle);
+    };
+    window.addEventListener('afterprint', restoreTitle);
     window.print();
+    // Fallback restore if afterprint never fires (some browsers).
+    window.setTimeout(restoreTitle, 1000);
   };
 
   // Helper function to get the winner from a game
@@ -750,26 +773,93 @@ export default function PrintBracketClient({ copy, activeYear }: PrintBracketCli
   return (
     <div className="min-h-screen bg-white" style={{ position: 'relative', color: '#111827' }}>
       {/* Header */}
-      <div style={{ 
-        padding: '8px 0px', 
-        borderBottom: '2px solid #000000',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        fontSize: '20px'
-      }}>
+      <div
+        style={{
+          padding: '8px 0px',
+          borderBottom: '2px solid #000000',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
         {/* Left: Entry Name */}
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', alignItems: 'center', paddingLeft: '20px' }}>
-          <span>{bracketData?.entryName as string || ''}</span>
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            justifyContent: 'flex-start',
+            alignItems: 'center',
+            paddingLeft: '20px',
+            fontFamily: PRINT_HEADLINE_FONT,
+            fontSize: '15px',
+            fontWeight: 400,
+            color: '#152c3a',
+          }}
+        >
+          <span>{(bracketData?.entryName as string) || ''}</span>
         </div>
-        
-        {/* Center: Year only */}
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <span>{printYear}</span>
+
+        {/* Center: site headline + year */}
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            lineHeight: 1.15,
+            textAlign: 'center',
+          }}
+          data-testid="print-bracket-masthead"
+        >
+          <span
+            style={{
+              fontFamily: PRINT_HEADLINE_FONT,
+              fontSize: '22px',
+              fontWeight: 400,
+              color: '#b52c26',
+              letterSpacing: '0.01em',
+            }}
+          >
+            {siteName}
+          </span>
+          <span
+            style={{
+              fontFamily: PRINT_HEADLINE_FONT,
+              fontSize: '16px',
+              fontWeight: 400,
+              color: '#152c3a',
+              marginTop: '2px',
+            }}
+          >
+            {printYear}
+          </span>
         </div>
-        
-        {/* Right: Champ: Team Mascot Logo */}
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '6px', paddingRight: '20px' }}>
+
+        {/* Right: Champ + trophy + champion pick */}
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+            gap: '6px',
+            paddingRight: '20px',
+            fontFamily: PRINT_HEADLINE_FONT,
+            fontSize: '15px',
+            fontWeight: 400,
+            color: '#152c3a',
+          }}
+          data-testid="print-bracket-champ"
+        >
+          <span>Champ</span>
+          <Trophy
+            aria-hidden
+            width={18}
+            height={18}
+            strokeWidth={1.75}
+            style={{ color: '#c9a227', flexShrink: 0 }}
+          />
           {championTeam && (
             <>
               <span className="hidden md:inline print:inline">{championTeam.name}</span>
@@ -780,8 +870,8 @@ export default function PrintBracketClient({ copy, activeYear }: PrintBracketCli
                 <Image
                   src={championTeam.logo}
                   alt=""
-                  width={24} 
-                  height={24} 
+                  width={22}
+                  height={22}
                   style={{ objectFit: 'contain', flexShrink: 0 }}
                 />
               )}
@@ -943,12 +1033,32 @@ export default function PrintBracketClient({ copy, activeYear }: PrintBracketCli
 
       {/* Print Styles */}
       <style jsx global>{`
+        @font-face {
+          font-family: 'Alfa Slab One';
+          src: url('/fonts/vintage/AlfaSlabOne.ttf') format('truetype');
+          font-style: normal;
+          font-weight: 400;
+          font-display: swap;
+        }
+
         @media print {
-          body {
+          @page {
+            size: A4 landscape;
             margin: 0;
-            padding: 0;
           }
-          
+
+          html,
+          body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+          }
+
+          .environment-banner,
+          .environment-banner-spacer {
+            display: none !important;
+          }
+
           .min-h-screen {
             min-height: auto !important;
           }
@@ -956,17 +1066,15 @@ export default function PrintBracketClient({ copy, activeYear }: PrintBracketCli
           .print-bracket-scroll {
             overflow: visible !important;
           }
-          
+
           button {
             display: none !important;
           }
-          
-          /* Hide footer on print */
+
           footer {
             display: none !important;
           }
-          
-          /* Remove any page breaks */
+
           * {
             page-break-inside: avoid;
           }

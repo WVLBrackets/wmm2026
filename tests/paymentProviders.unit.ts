@@ -127,4 +127,12 @@ test('builds additional-only payment notes', () => {
     }),
     'WMM – 1 bracket (Alpha)',
   );
+  assert.equal(
+    buildPaymentNote({
+      entryNames: ['Alpha'],
+      additionalDollars: 0,
+      additionalNote: 'Family entry',
+    }),
+    'WMM – 1 bracket (Alpha) (Family entry)',
+  );
 });

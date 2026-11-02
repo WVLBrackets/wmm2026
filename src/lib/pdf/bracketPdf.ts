@@ -683,20 +683,23 @@ async function generatePrintPageHTML(
         display: flex;
         justify-content: space-between;
         align-items: center;
-        font-size: 20px;
       ">
-        <div style="flex: 1; display: flex; justify-content: flex-start; align-items: center; padding-left: 20px;">
+        <div style="flex: 1; display: flex; justify-content: flex-start; align-items: center; padding-left: 20px; font-family: 'Alfa Slab One', Georgia, serif; font-size: 15px; color: #152c3a;">
           <span>${entryName}</span>
         </div>
-        <div style="flex: 1; display: flex; justify-content: center; align-items: center;">
-          <span>${tournamentYear}</span>
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; line-height: 1.15;">
+          <span style="font-family: 'Alfa Slab One', Georgia, serif; font-size: 22px; color: #b52c26;">${
+            siteConfig?.siteName?.trim() || "Warren's March Madness"
+          }</span>
+          <span style="font-family: 'Alfa Slab One', Georgia, serif; font-size: 16px; color: #152c3a; margin-top: 2px;">${tournamentYear}</span>
         </div>
-        <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center; gap: 6px; padding-right: 20px;">
+        <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center; gap: 6px; padding-right: 20px; font-family: 'Alfa Slab One', Georgia, serif; font-size: 15px; color: #152c3a;">
+          <span>Champ</span>
+          ${trophyIconHTML}
           ${championTeam ? `
-            ${trophyIconHTML}
             <span>${championTeam.name}</span>
             ${championMascot ? `<span>${championMascot}</span>` : ''}
-            ${championLogo ? `<img src="${championLogo}" alt="${championTeam.name} logo" width="24" height="24" style="object-fit: contain; flex-shrink: 0;" />` : ''}
+            ${championLogo ? `<img src="${championLogo}" alt="${championTeam.name} logo" width="22" height="22" style="object-fit: contain; flex-shrink: 0;" />` : ''}
           ` : ''}
         </div>
       </div>

@@ -27,8 +27,14 @@
   .hide-on-print {
     display: none !important;
   }
+
+  /* Local / Staging strip must never appear on printed brackets */
+  .environment-banner,
+  .environment-banner-spacer {
+    display: none !important;
+  }
   
-  /* Ensure full page usage */
+  /* Ensure full page usage — zero margins reduce room for browser chrome */
   @page {
     margin: 0;
     size: A4 landscape;

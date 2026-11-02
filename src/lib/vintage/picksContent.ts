@@ -147,6 +147,14 @@ export interface VintagePicksLabelsCopy extends CopyTree {
   newBracketTooltip: string;
   payLabel: string;
   payTooltip: string;
+  /** Payment slip — additional-amount field label. */
+  additionalNoteLabel: string;
+  /** Payment slip — placeholder for the Note field. */
+  additionalNotePlaceholder: string;
+  /**
+   * Hover tip on Pay when additional dollars require a note and it is empty.
+   */
+  additionalNoteRequiredTip: string;
   /** Tokens: `{activeYear}`. */
   payPriorYearMessage: string;
   payAdminOnlyMessage: string;
@@ -211,6 +219,9 @@ export const DEFAULT_VINTAGE_PICKS_LABELS: VintagePicksLabelsCopy = {
   newBracketTooltip: "Create a new bracket",
   payLabel: "Pay",
   payTooltip: "Pay for submitted brackets or send an additional payment",
+  additionalNoteLabel: "Note",
+  additionalNotePlaceholder: "e.g. Tip, family entries, donation",
+  additionalNoteRequiredTip: "Payment Notes required for this submission",
   payPriorYearMessage: "Payments apply to {activeYear} only. Switch back to the current year to pay.",
   payAdminOnlyMessage: "Pay is currently available to administrators only.",
   payNoMethodsMessage: "No payment methods are configured yet.",

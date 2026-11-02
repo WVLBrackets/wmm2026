@@ -11,6 +11,12 @@
 /** Stored in `users.standings_view_preference` when live standings feature is enabled. */
 export type StandingsViewPreference = 'daily' | 'live';
 
+/**
+ * Stored in `users.payments_admin_year_filter`.
+ * Year number as string (e.g. `"2026"`) or `"all"`; null/undefined → current calendar year.
+ */
+export type PaymentsAdminYearFilter = number | 'all';
+
 export interface User {
   id: string;
   email: string;
@@ -28,6 +34,8 @@ export interface User {
   standingsViewPreference?: StandingsViewPreference;
   /** After user confirms `live_standings_warning` (button 1); stored in `users.live_standings_warning_acknowledged`. */
   liveStandingsWarningAcknowledged?: boolean;
+  /** Admin Payments year filter (`"2026"` | `"all"`); survives logout and syncs across devices. */
+  paymentsAdminYearFilter?: string | null;
 }
 
 /**
@@ -144,7 +152,7 @@ export interface Payment {
   paymentMethod?: 'venmo' | 'zelle';
   /** Recipient label at request time (Venmo @user or Zelle name · contact). */
   recipientSnapshot?: string | null;
-  status: 'pending' | 'confirmed' | 'rejected';
+  status: 'claimed' | 'confirmed' | 'reconciled' | 'rejected' | 'pending';
   requestedAt: Date;
   confirmedAt?: Date | null;
   confirmedBy?: string | null;

@@ -46,6 +46,7 @@ export async function initializeDatabase(): Promise<void> {
     await addLastLoginColumn();
     await addStandingsViewPreferenceColumn();
     await addLiveStandingsWarningAcknowledgedColumn();
+    await addPaymentsAdminYearFilterColumn();
     // Add key/lock columns for live results support
     await addBracketLiveResultsColumns();
     // Add submitted-entry uniqueness constraint for data integrity
@@ -316,6 +317,17 @@ async function addLiveStandingsWarningAcknowledgedColumn(): Promise<void> {
 }
 
 /**
+ * Admin Payments year filter (`"2026"` or `"all"`). Null → UI defaults to current year.
+ */
+export async function addPaymentsAdminYearFilterColumn(): Promise<void> {
+  try {
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS payments_admin_year_filter VARCHAR(16)`;
+  } catch (error) {
+    console.error('[addPaymentsAdminYearFilterColumn] Error:', error);
+  }
+}
+
+/**
  * Add live-results support columns to brackets table if missing.
  */
 async function addBracketLiveResultsColumns(): Promise<void> {
@@ -526,6 +538,77 @@ async function addPaymentMethodColumns(): Promise<void> {
   } catch (error) {
     console.error('[addPaymentMethodColumns] Error:', error);
   }
+}
+
+/**
+ * Friendly year-scoped payment numbers + reconcile columns.
+ */
+async function addPaymentFriendlyIdColumns(): Promise<void> {
+  try {
+    await sql`ALTER TABLE payments ADD COLUMN IF NOT EXISTS year INTEGER`;
+    await sql`ALTER TABLE payments ADD COLUMN IF NOT EXISTS payment_number INTEGER`;
+    await sql`ALTER TABLE payments ADD COLUMN IF NOT EXISTS force_reconciled BOOLEAN NOT NULL DEFAULT FALSE`;
+    // Legacy claim aliases → claimed (do not collapse confirmed↔reconciled).
+    await sql`
+      UPDATE payments
+      SET status = 'claimed'
+      WHERE status IN ('claim', 'pending')
+    `;
+    // Backfill year from earliest linked bracket when possible.
+    await sql`
+      UPDATE payments p
+      SET year = sub.yr
+      FROM (
+        SELECT p2.id AS pid, MIN(b.year) AS yr
+        FROM payments p2
+        CROSS JOIN LATERAL jsonb_array_elements_text(COALESCE(p2.bracket_ids, '[]'::jsonb)) AS bid(id)
+        JOIN brackets b ON b.id = bid.id
+        WHERE p2.year IS NULL
+        GROUP BY p2.id
+      ) sub
+      WHERE p.id = sub.pid AND p.year IS NULL
+    `;
+    await sql`
+      UPDATE payments
+      SET year = EXTRACT(YEAR FROM requested_at)::integer
+      WHERE year IS NULL
+    `;
+    // Assign sequential payment_number per environment+year for rows still missing one.
+    await sql`
+      WITH ranked AS (
+        SELECT
+          id,
+          ROW_NUMBER() OVER (
+            PARTITION BY environment, year
+            ORDER BY requested_at ASC NULLS LAST, id ASC
+          ) AS rn
+        FROM payments
+        WHERE payment_number IS NULL AND year IS NOT NULL
+      )
+      UPDATE payments p
+      SET payment_number = ranked.rn
+      FROM ranked
+      WHERE p.id = ranked.id
+    `;
+    await sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_env_year_number
+      ON payments (environment, year, payment_number)
+      WHERE payment_number IS NOT NULL AND year IS NOT NULL
+    `;
+  } catch (error) {
+    console.error('[addPaymentFriendlyIdColumns] Error:', error);
+  }
+}
+
+/**
+ * Payments table + method columns. Safe for Preview/local DBs that lag full migrations
+ * (CREATE TABLE IF NOT EXISTS does not add columns to an existing older `payments` table).
+ */
+export async function ensurePaymentsTables(): Promise<void> {
+  await createPaymentsTable();
+  await addPaymentMethodColumns();
+  await addBracketPaymentColumns();
+  await addPaymentFriendlyIdColumns();
 }
 
 /**

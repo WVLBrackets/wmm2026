@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
     const recipientSnapshot = buildRecipientSnapshot(requestedMethod, providerConfig);
 
     const paymentId = crypto.randomUUID();
-    await createPaymentRequest({
+    const created = await createPaymentRequest({
       id: paymentId,
       userId: user.id,
       userEmail: user.email,
@@ -195,12 +195,16 @@ export async function POST(request: NextRequest) {
       paymentNote,
       paymentMethod: requestedMethod,
       recipientSnapshot,
+      year: activeYear,
+      entryCostDollars: entryCost,
     });
 
     return NextResponse.json({
       success: true,
       data: {
         paymentId,
+        paymentNumber: created.paymentNumber,
+        year: created.year,
         amountCents,
         amountDollars: amountCents / 100,
         bracketCount: bracketIds.length,
@@ -215,6 +219,17 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     logServerError('POST /api/bracket/payment', error);
-    return ApiErrors.internalError('Failed to create payment request.');
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error('[POST /api/bracket/payment]', detail);
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          detail.includes('does not exist') || detail.includes('relation')
+            ? 'Payment storage is not ready. Refresh and try again (schema will auto-repair).'
+            : 'Failed to create payment request.',
+      },
+      { status: 500 },
+    );
   }
 }

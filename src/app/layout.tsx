@@ -91,12 +91,14 @@ export default function RootLayout({
         {banner.show && (
           <div
             data-testid="environment-banner"
-            className={`fixed top-0 left-0 right-0 z-[60] ${banner.className} text-white text-xs sm:text-sm font-semibold text-center h-7 leading-7 tracking-wide`}
+            className={`environment-banner fixed top-0 left-0 right-0 z-[60] ${banner.className} text-white text-xs sm:text-sm font-semibold text-center h-7 leading-7 tracking-wide`}
           >
             {banner.label}
           </div>
         )}
-        {banner.show && <div className="h-7" aria-hidden="true" />}
+        {banner.show && (
+          <div className="environment-banner-spacer h-7" aria-hidden="true" />
+        )}
         <ErrorBoundary>
           <SessionProvider>
             <VintageToolbarSessionProvider>{children}</VintageToolbarSessionProvider>

@@ -167,12 +167,15 @@ export function buildPaymentNote(options: {
 }): string {
   const { entryNames, additionalDollars, additionalNote } = options;
   const count = entryNames.length;
+  const trimmedNote = additionalNote.trim();
   let note =
     count > 0
       ? `WMM – ${count} bracket${count !== 1 ? 's' : ''} (${entryNames.join(', ')})`
       : 'WMM – additional payment';
   if (additionalDollars > 0) {
-    note += ` + $${additionalDollars} additional (${additionalNote.trim()})`;
+    note += ` + $${additionalDollars} additional (${trimmedNote})`;
+  } else if (trimmedNote) {
+    note += ` (${trimmedNote})`;
   }
   return note;
 }

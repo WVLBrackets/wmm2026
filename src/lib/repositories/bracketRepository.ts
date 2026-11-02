@@ -650,7 +650,8 @@ export async function adminBulkBracketPaymentAction(
       const pr = await sql`SELECT bracket_ids, status FROM payments WHERE id = ${pid}`;
       if (pr.rows.length === 0) continue;
       const paymentRow = pr.rows[0] as { bracket_ids: string[]; status: string };
-      if (paymentRow.status !== 'pending') continue;
+      const st = String(paymentRow.status || '').toLowerCase();
+      if (st !== 'pending' && st !== 'claim' && st !== 'claimed') continue;
       const bids = Array.isArray(paymentRow.bracket_ids) ? paymentRow.bracket_ids : [];
       const allIncluded = bids.length > 0 && bids.every((bid) => idSet.has(bid));
       if (!allIncluded) continue;

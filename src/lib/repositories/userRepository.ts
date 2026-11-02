@@ -14,7 +14,13 @@ function isUndefinedColumnError(error: unknown): boolean {
   const code = (error as { code?: string })?.code;
   return code === '42703';
 }
-import type { User, BracketCounts, StandingsViewPreference } from '../types/database';
+import type {
+  User,
+  BracketCounts,
+  StandingsViewPreference,
+  PaymentsAdminYearFilter,
+} from '../types/database';
+import { addPaymentsAdminYearFilterColumn } from '../database/migrations';
 import { normalizeStoredDisplayName } from '../stringNormalize';
 import { parseDbInstant } from '../dbInstant';
 
@@ -602,6 +608,62 @@ export async function updateStandingsViewPreferenceByEmail(
 }
 
 /**
+ * Parse stored payments year filter (`"2026"` | `"all"`). Invalid → null (caller uses current year).
+ */
+export function parsePaymentsAdminYearFilter(
+  raw: string | null | undefined,
+): PaymentsAdminYearFilter | null {
+  if (raw == null) return null;
+  const trimmed = String(raw).trim().toLowerCase();
+  if (!trimmed) return null;
+  if (trimmed === 'all') return 'all';
+  const year = Number.parseInt(trimmed, 10);
+  if (!Number.isFinite(year) || year < 2000 || year > 2100) return null;
+  return year;
+}
+
+/**
+ * Load admin Payments year filter for a user (cross-device).
+ * Null means the UI should default to the current calendar year.
+ */
+export async function getPaymentsAdminYearFilterByEmail(
+  email: string,
+): Promise<PaymentsAdminYearFilter | null> {
+  await addPaymentsAdminYearFilterColumn();
+  const user = await getUserByEmail(email);
+  if (!user) return null;
+  return parsePaymentsAdminYearFilter(user.paymentsAdminYearFilter);
+}
+
+/**
+ * Persist admin Payments year filter (`2026` or `"all"`). Survives logout; syncs across devices.
+ */
+export async function updatePaymentsAdminYearFilterByEmail(
+  email: string,
+  yearFilter: PaymentsAdminYearFilter,
+): Promise<boolean> {
+  await addPaymentsAdminYearFilterColumn();
+  const environment = getCurrentEnvironment();
+  const stored = yearFilter === 'all' ? 'all' : String(Math.floor(yearFilter));
+  try {
+    const result = await sql`
+      UPDATE users
+      SET payments_admin_year_filter = ${stored}
+      WHERE LOWER(email) = LOWER(${email}) AND environment = ${environment}
+      RETURNING id
+    `;
+    return result.rows.length > 0;
+  } catch (error) {
+    if (isUndefinedColumnError(error)) {
+      throw new Error(
+        'Database schema is missing payments_admin_year_filter. An administrator must run schema migrations.',
+      );
+    }
+    throw error;
+  }
+}
+
+/**
  * Map database row to User type
  */
 function mapRowToUser(row: Record<string, unknown>): User {
@@ -614,6 +676,12 @@ function mapRowToUser(row: Record<string, unknown>): User {
   const rawAck = row.live_standings_warning_acknowledged as boolean | null | undefined;
   const liveStandingsWarningAcknowledged =
     rawAck === true || rawAck === false ? rawAck : false;
+
+  const rawPaymentsYear = row.payments_admin_year_filter as string | null | undefined;
+  const paymentsAdminYearFilter =
+    typeof rawPaymentsYear === 'string' && rawPaymentsYear.trim()
+      ? rawPaymentsYear.trim()
+      : null;
 
   return {
     id: row.id as string,
@@ -632,5 +700,6 @@ function mapRowToUser(row: Record<string, unknown>): User {
     lastLogin: row.last_login ? parseDbInstant(row.last_login) : undefined,
     standingsViewPreference: standingsViewPreference ?? undefined,
     liveStandingsWarningAcknowledged,
+    paymentsAdminYearFilter,
   };
 }
