@@ -207,6 +207,22 @@ export async function PATCH(
       );
     }
 
+    // Unpaid must fully unlink from any payment row (clear payment_id + bracket_ids).
+    if (raw === 'unpaid') {
+      const updated = await adminUnlinkBracketFromPayment(bracketId, entryCost);
+      if (!updated) {
+        return NextResponse.json({ success: false, error: 'Bracket not found.' }, { status: 404 });
+      }
+      return NextResponse.json({
+        success: true,
+        data: {
+          id: updated.id,
+          paymentStatus: updated.paymentStatus ?? null,
+          paymentId: updated.paymentId ?? null,
+        },
+      });
+    }
+
     const updated = await adminUpdateBracketPaymentStatus(bracketId, raw as AdminBracketPaymentStatus);
     if (!updated) {
       return NextResponse.json({ success: false, error: 'Bracket not found.' }, { status: 404 });

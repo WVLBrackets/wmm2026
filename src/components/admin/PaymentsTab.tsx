@@ -101,6 +101,12 @@ const EDITABLE_PAYMENT_STATUSES: PaymentStatusFilter[] = [
   'reconciled',
 ];
 
+const EDITABLE_BRACKET_STATUSES: BracketStatusFilter[] = [
+  'unpaid',
+  'pending',
+  'paid',
+];
+
 const STATUS_COLORS: Record<string, { bg: string; text: string; ring: string }> = {
   unpaid: { bg: 'bg-gray-100', text: 'text-gray-700', ring: 'ring-gray-300' },
   pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', ring: 'ring-yellow-300' },
@@ -111,20 +117,31 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; ring: string }> 
 };
 
 /**
+ * Stored bracket `payment_status` for the editable Status control.
+ */
+function storedBracketPaymentStatus(
+  paymentStatus: string | null,
+): BracketStatusFilter {
+  if (paymentStatus === 'paid') return 'paid';
+  if (paymentStatus === 'pending') return 'pending';
+  return 'unpaid';
+}
+
+/**
  * Bracket lens status from linked payment / bracket flags.
+ * Explicit unpaid/pending/paid on the bracket wins over payment derivation.
  */
 function resolveBracketLensStatus(
   paymentStatus: string | null,
   payment: PaymentRecord | undefined,
 ): BracketStatusFilter {
   if (paymentStatus === 'paid') return 'paid';
+  if (paymentStatus === 'pending') return 'pending';
   if (payment) {
     const st = normalizePaymentStatus(payment.status);
     if (st === 'confirmed' || st === 'reconciled') return 'paid';
     if (st === 'claimed') return 'pending';
-    return 'unpaid';
   }
-  if (paymentStatus === 'pending') return 'pending';
   return 'unpaid';
 }
 
@@ -209,6 +226,9 @@ export default function PaymentsTab() {
   const [confirmingPaymentId, setConfirmingPaymentId] = useState<string | null>(null);
   const [unlinkingBracketId, setUnlinkingBracketId] = useState<string | null>(null);
   const [statusSavingId, setStatusSavingId] = useState<string | null>(null);
+  const [bracketStatusSavingId, setBracketStatusSavingId] = useState<string | null>(
+    null,
+  );
   const [paymentEntryModal, setPaymentEntryModal] = useState<PaymentEntryModalState | null>(
     null,
   );
@@ -592,6 +612,65 @@ export default function PaymentsTab() {
       setError(err instanceof Error ? err.message : 'Delete failed.');
     } finally {
       setDeletingPaymentId(null);
+    }
+  };
+
+  /**
+   * Manually set a bracket's payment status (Unpaid / Pending / Paid).
+   * Unpaid clears the payment link; Pending/Paid update `payment_status` only.
+   */
+  const saveBracketPaymentStatus = async (
+    bracketId: string,
+    status: BracketStatusFilter,
+  ) => {
+    setBracketStatusSavingId(bracketId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/brackets/${bracketId}/payment`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...(await getCSRFHeaders()) },
+        body: JSON.stringify({ paymentStatus: status }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to update bracket payment status.');
+      }
+      const nextStatus =
+        (json.data?.paymentStatus as string | null | undefined) ??
+        (status === 'unpaid' ? null : status);
+      const nextPaymentId =
+        (json.data?.paymentId as string | null | undefined) ?? null;
+
+      setBrackets((prev) =>
+        prev.map((b) =>
+          b.id === bracketId
+            ? {
+                ...b,
+                paymentStatus: nextStatus,
+                paymentId: status === 'unpaid' ? null : (nextPaymentId ?? b.paymentId),
+              }
+            : b,
+        ),
+      );
+
+      if (status === 'unpaid') {
+        setPayments((prev) =>
+          prev.map((p) => {
+            if (!p.bracketIds.includes(bracketId)) return p;
+            const bracketIds = p.bracketIds.filter((id) => id !== bracketId);
+            return { ...p, bracketIds, bracketCount: bracketIds.length };
+          }),
+        );
+        setPaymentIdDrafts((prev) => ({ ...prev, [bracketId]: '' }));
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to update bracket payment status.',
+      );
+    } finally {
+      setBracketStatusSavingId(null);
     }
   };
 
@@ -1456,7 +1535,6 @@ export default function PaymentsTab() {
               {filteredBrackets.map((b) => {
                 const payment = b.paymentId ? paymentsById.get(b.paymentId) : undefined;
                 const statusKey = resolveBracketLensStatus(b.paymentStatus, payment);
-                const colors = STATUS_COLORS[statusKey];
                 const draft = paymentIdDrafts[b.id] ?? '';
                 const currentFriendly = friendlyNumberForBracket(b);
                 return (
@@ -1538,11 +1616,46 @@ export default function PaymentsTab() {
                       )}
                     </td>
                     <td className="px-3 py-2.5 text-center">
-                      <span
-                        className={`inline-flex rounded-lg px-2 py-1 text-xs font-medium ring-1 ${colors.bg} ${colors.text} ${colors.ring}`}
-                      >
-                        {BRACKET_STATUS_LABELS[statusKey]}
-                      </span>
+                      {(() => {
+                        const storedStatus = storedBracketPaymentStatus(
+                          b.paymentStatus,
+                        );
+                        const selectColors = STATUS_COLORS[storedStatus];
+                        const busy = bracketStatusSavingId === b.id;
+                        return (
+                          <div className="inline-flex flex-col items-center gap-1">
+                            <select
+                              value={storedStatus}
+                              disabled={busy}
+                              onChange={(e) =>
+                                void saveBracketPaymentStatus(
+                                  b.id,
+                                  e.target.value as BracketStatusFilter,
+                                )
+                              }
+                              className={`rounded-lg border px-2 py-1 text-xs font-medium ${selectColors.bg} ${selectColors.text} border-transparent ring-1 ${selectColors.ring} disabled:opacity-50`}
+                              data-testid={`bracket-payment-status-${b.id}`}
+                              aria-label={`Payment status for ${b.entryName || b.id}`}
+                            >
+                              {EDITABLE_BRACKET_STATUSES.map((s) => (
+                                <option key={s} value={s}>
+                                  {BRACKET_STATUS_LABELS[s]}
+                                </option>
+                              ))}
+                            </select>
+                            {busy ? (
+                              <Loader2 className="h-3 w-3 animate-spin text-gray-400" />
+                            ) : statusKey !== storedStatus ? (
+                              <span
+                                className="text-[10px] text-gray-500"
+                                title={`Lens shows ${BRACKET_STATUS_LABELS[statusKey]} from linked payment`}
+                              >
+                                via payment
+                              </span>
+                            ) : null}
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-3 py-2.5">
                       {payment ? renderCommentEditor(payment.id) : (
